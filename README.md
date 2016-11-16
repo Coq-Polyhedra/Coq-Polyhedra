@@ -1,8 +1,6 @@
 # Coq-Polyhedra
 Formalizing convex polyhedra in Coq/SSReflect
 
-----------
-
 ## Main features
 
 * basic properties of convex polyhedra and their extreme points (`polyhedron.v`)
@@ -10,9 +8,7 @@ Formalizing convex polyhedra in Coq/SSReflect
 * strong duality theorem in linear programming (`duality.v`), and some corollaries (Farkas lemma, etc)
 * a proof of Minkowski theorem for polyhedra (`minkowski.v`), based on Motzkin's double description method (`double_description_method.v`)
 
-----------
-
 ## Authors
 
 * Xavier Allamigeon (<xavier.allamigeon@inria.fr>)
-* Ricardo D. Katz (<katz@cifasis-conicet.gov.au>)
+* Ricardo D. Katz (<katz@cifasis-conicet.gov.ar>)
