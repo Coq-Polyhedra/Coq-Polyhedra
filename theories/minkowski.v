@@ -96,6 +96,18 @@ apply/idP/idP.
   + by move: (H' k); rewrite !mxE.
 Qed.
 
+Lemma eq_row' (p : nat) (v w : 'cV[R]_(p.+1)) (i : 'I_(p.+1)) :
+        (v == w) = (v i 0 == w i 0) && (row' i v == row' i w).
+Proof.
+apply/idP/idP.
+- move/eqP/colP => H. apply/andP; split.
+  + by rewrite (H _).
+  + by apply/eqP/colP => j; rewrite !mxE; rewrite (H _).
+- move/andP => [/eqP H1 /eqP/colP H2]; apply/eqP/colP => j.
+  case: (unliftP i j) => [k -> | ->] //.
+  + by move: (H2 k); rewrite !mxE.
+Qed.
+
 Lemma mul_row (p q r : nat) (M : 'M[R]_(p.+1, q)) (N : 'M[R]_(q,r)) (i : 'I_p.+1) :
         row' i (M *m N) = (row' i M) *m N.
 Proof.
@@ -103,7 +115,7 @@ apply/matrixP => j k; rewrite !mxE.
 by apply: eq_bigr => l _; rewrite mxE.
 Qed.
 
-Lemma zero_row' (i : 'I_m.+1): row' i 0 = (0:'cV[R]_m).
+Lemma zero_row' (i : 'I_m.+1) : row' i 0 = (0:'cV[R]_m).
 Proof.
 by apply/colP => j; rewrite !mxE.
 Qed.
@@ -297,7 +309,7 @@ split.
         apply: eq_bigr.
         move => i Hi.
         by rewrite (add_first_coord_0K (HS2 i Hi)).
-- case =>  y [z] [Hx] [Hy] [lz] [Hlz] [Hz].
+- case => y [z] [Hx] [Hy] [lz] [Hlz] Hz.
   move: Hy.
   rewrite /is_in_convex_hull.
   move  => [ly [Hly [Hly1 Hy]]].
@@ -362,17 +374,221 @@ Qed.
 
 End Homogenization.
 
-Lemma eq_row' (p : nat) (v w : 'cV[R]_(p.+1)) (i : 'I_(p.+1)) :
-        (v == w) = (v i 0 == w i 0) && (row' i v == row' i w).
+Section Minkowski_Theorem_for_cones.
+
+Variable R : realFieldType.
+Variable m n : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Definition id_mx := (pid_mx n) : ('M[R]_n).
+
+Definition canonical_basis :=
+  [seq (col i id_mx) | i in 'I_n].
+
+Lemma canonical_basis_uniq :
+        uniq canonical_basis.
 Proof.
-apply/idP/idP.
-- move/eqP/colP => H. apply/andP; split.
-  + by rewrite (H _).
-  + by apply/eqP/colP => j; rewrite !mxE; rewrite (H _).
-- move/andP => [/eqP H1 /eqP/colP H2]; apply/eqP/colP => j.
-  case: (unliftP i j) => [k -> | ->] //.
-  + by move: (H2 k); rewrite !mxE.
+rewrite map_inj_in_uniq.
+by apply: enum_uniq.
+- move => i j Hi Hj.
+  move/colP/(_ i); rewrite /id_mx /pid_mx !mxE eq_refl !ltn_ord /=.
+  move/eqP; rewrite eqr_nat andbT eq_sym eqb1; move/eqP.
+  by apply: ord_inj.
 Qed.
+
+Definition minus_canonical_basis :=
+  [seq -v | v <- canonical_basis].
+
+Lemma minus_canonical_basis_uniq :
+        uniq minus_canonical_basis.
+Proof.
+rewrite map_inj_in_uniq.
+by apply: canonical_basis_uniq.
+- move => i j Hi Hj.
+  by apply: oppr_inj.
+Qed.
+
+Lemma canonical_bases v :
+        (v \in minus_canonical_basis) = (-v \in canonical_basis).
+Proof.
+rewrite -[v in v \in _]opprK.
+rewrite mem_map; first by done.
+- by apply: oppr_inj.
+Qed.
+
+Lemma canonical_bases_uniq :
+        uniq (canonical_basis ++ minus_canonical_basis).
+Proof.
+rewrite cat_uniq.
+apply/andP; split; first by apply: canonical_basis_uniq.
+apply/andP; split; last by apply: minus_canonical_basis_uniq.
+- apply/hasPn => v /mapP [w Hw].
+  move/mapP: Hw => [i Hi Hi'].
+  move => ->.
+  apply/negP => /mapP [j Hj Hj'].
+  rewrite Hi' in Hj'.
+  move/colP in Hj'.
+  move: (Hj' i) => H.
+  rewrite !mxE in H.
+  rewrite eq_refl !ltn_ord !andbT mulr1n /= in H.
+  have H'' : (i == j)%:R >= 0 :> R.
+  apply ler0n.
+  rewrite -H in H''.
+  by rewrite ler0N1 in H''.
+Qed.
+
+Lemma Minkowski_Theorem_for_Rplusn :
+  forall x : 'cV_n, (forall i: 'I_n, x i 0 >= 0) -> is_in_conic_hull (canonical_basis) x.
+Proof.
+  move => x.
+  exists (fun v => '[v, x]).
+  split.
+  + move => v /mapP [i Hi Hi'].
+    rewrite /vdot Hi' /id_mx /col.
+    apply: sumr_ge0 => j _.
+    rewrite !mxE.
+    apply: mulr_ge0; by [ apply:ler0n |apply: H].
+  
+  + apply/colP => i.
+    rewrite summxE big_map.
+    rewrite (eq_big_perm (i::(rem i (enum 'I_n)))) /=.
+    rewrite big_cons.
+    have H': ('[ col i id_mx, x] *: col i id_mx) i 0 = x i 0.
+    + rewrite !mxE eq_refl ltn_ord /= mulr1.
+      rewrite /vdot /id_mx /col.
+      rewrite (bigD1 i) //=.
+      rewrite !mxE eq_refl ltn_ord /= mul1r.
+      have H'':  \sum_(i0 < n | i0 != i) (\col_i1 (pid_mx n) i1 i) i0 0 * x i0 0 = 0.
+      + apply: big1_seq => k /andP [/eqP Hk _].
+        rewrite !mxE.
+        have H''': ~~((k == i) && (k < n)%N).
+        apply/andP. by move => [ /eqP H1 _].
+        by rewrite (negbTE H''') mul0r.
+      by rewrite H'' addr0.
+    
+    rewrite H'.
+    have H'': (\sum_(j <- rem i (enum 'I_n)) ('[ col j id_mx, x] *: col j id_mx) i 0)=0.
+    + rewrite big1_seq //.
+      + move => j /andP [_ Hj].
+        rewrite !mxE.
+        have H''' : ((i == j) && (i < n)%N)= false.
+        + rewrite mem_rem_uniq in Hj.
+          + case/predD1P: Hj => [Hineqj _].
+            by apply/andP; move => [ H1 _ ]; rewrite eq_sym in H1; move/eqP in H1.
+          + by apply: enum_uniq.
+        by rewrite H''' mulr0.
+    by rewrite H'' addr0.
+    
+    by apply: perm_to_rem; rewrite mem_enum.
+Qed.
+
+Lemma Minkowski_Theorem_for_Rminusn :
+  forall x : 'cV_n, (forall i: 'I_n, x i 0 <= 0) -> is_in_conic_hull (minus_canonical_basis) x.
+Proof.
+move => x H.
+ 
+have H' : is_in_conic_hull canonical_basis (-x).
+apply: Minkowski_Theorem_for_Rplusn.
++ move => i.
+  by rewrite mxE oppr_ge0.
+case: H' => lx [Hlx Hx].
+exists (fun v => lx (-v)).
+split.
++ move => v Hv.
+  have H'': -v \in canonical_basis.
+  by rewrite canonical_bases in Hv.
+  by apply: Hlx.
+  rewrite big_map.
+  move/eqP in Hx; rewrite eqr_oppLR in Hx; move/eqP in Hx.
+  rewrite Hx -sumrN.
+  by apply: eq_bigr => v _; rewrite opprK scalerN.
+Qed.
+
+Lemma Minkowski_Theorem_for_Rn :
+  forall x : 'cV[R]_n, is_in_conic_hull (canonical_basis ++ minus_canonical_basis) x.
+Proof.
+  move => x.
+  have H : x = map_mx (Num.max^~ 0) x + map_mx (Num.min^~ 0) x.
+  apply/colP => i.
+  by rewrite !mxE addr_max_min addr0.
+  
+  have H1: is_in_conic_hull canonical_basis (map_mx (Num.max^~ 0) x).
+  + apply: Minkowski_Theorem_for_Rplusn => i.
+    rewrite !mxE.
+    case: (lerP (x i 0) 0) => [H' | H'].
+    + by rewrite maxr_r.
+    + by move/ltrW in H'; rewrite maxr_l.
+  
+  have H2: is_in_conic_hull minus_canonical_basis (map_mx (Num.min^~ 0) x).
+  + apply: Minkowski_Theorem_for_Rminusn => i.
+    rewrite !mxE.
+    case: (lerP (x i 0) 0) => [H' | H'].
+    + by rewrite minr_l.
+    + by move/ltrW in H'; rewrite minr_r.
+  
+  have H1': is_in_conic_hull (canonical_basis ++ minus_canonical_basis) (map_mx (Num.max^~ 0) x).
+  + apply: (@conic_hull_monotone _ _ canonical_basis); last by done.
+    + by apply: canonical_bases_uniq.
+    + by apply: mem_subseq; apply: prefix_subseq.
+  
+  have H2': is_in_conic_hull (canonical_basis ++ minus_canonical_basis) (map_mx (Num.min^~ 0) x).
+  + apply: (@conic_hull_monotone _ _ minus_canonical_basis); last by done.
+    + by apply: canonical_bases_uniq.
+    + by apply: mem_subseq; apply: suffix_subseq.
+  
+  rewrite H.
+  by apply: conic_hull_is_closed_by_sum.
+Qed.
+
+Theorem Minkowski_Theorem_for_Polyhedral_Cones (C : seq 'cV[R]_n) :
+exists S : seq 'cV_n,
+  (uniq S) /\
+  forall x : 'cV_n, all (fun c => '[c, x] >= 0) C <-> (is_in_conic_hull S x).
+Proof.
+elim C => [ | c C' [S'  [IH IH']]].
+ 
+(* base case *)
++ exists (canonical_basis ++ minus_canonical_basis).
+  split.
+  + by apply: canonical_bases_uniq.
+  + move => x.
+    split.
+    + move => _.
+      apply: Minkowski_Theorem_for_Rn.
+      by rewrite all_nil.
+ 
++ exists (DDM_elementary_step S' c).
+  split.
+  + by apply: undup_uniq.
+  + move => x.
+    split.
+    + case/andP => Hc HC'.
+      apply: DDM_elementary_step_proof_part2; by [done | apply/IH' | done].
+    + move => H.
+      apply/andP.
+      move/DDM_elementary_step_proof_part1: H => H.
+      case: (H IH) => Hx Hx'.
+      split; by [done | apply/IH'].
+Qed.
+
+Theorem Minkowski_Theorem_for_Polyhedral_Cones' :
+exists S : seq 'cV_n,
+  (uniq S) /\
+  forall x : 'cV_n, x \in (cone A) <-> is_in_conic_hull S x.
+Proof.
+move: (Minkowski_Theorem_for_Polyhedral_Cones [seq (row i A)^T, i]) => [S [Huniq H]].
+exists S.
+split; first by done.
++ move => x; rewrite inE.
+  have H' := (cone_ineq_seq A x).
+  rewrite /= in H'.
+  by rewrite H'.
+Qed.
+
+End Minkowski_Theorem_for_cones.
+
 
 Theorem Minkowski_Theorem_for_Polyhedra :
   exists S1 S2 : seq 'cV_n,
@@ -390,7 +606,7 @@ have HS_coord0: forall v, (v \in S) -> v 0 0 >= 0.
   by move/(_ 0); rewrite matrixH_coord0 mxE.
 have HS1_coord0: forall v, (v \in S') && (v 0 0 != 0) -> v 0 0 = 1.
 - move => v; rewrite mem_undup; move => /andP [/mapP [w Hw]] ->.
-  move: (HS_coord0 w Hw); rewrite normalize_coord0 sgr_cp0; move => [Hw' Hw''].
+  move: (HS_coord0 w Hw); rewrite normalize_coord0 sgr_cp0; move => Hw' Hw''.
   by apply/eqP; rewrite sgr_cp0; move/pair_andP/andP: (Hw'', Hw'); rewrite ltr_def.
   
 exists S1; exists S2; split. (*do ?[split].*)
@@ -404,7 +620,7 @@ split.
 - rewrite map_inj_in_uniq //; last first.
   + move => v w; rewrite !mem_filter; move => /andP [/eqP Hv Hv'] /andP [/eqP Hw Hw'] H.
     apply/eqP; rewrite (@eq_row' _ _ _ 0); apply/andP; split; apply/eqP; last by done.
-    * by rewrite Hv Hw.    
+    * by rewrite Hv Hw.
   + by apply:filter_uniq; apply: undup_uniq.
 - move => x. move: (polyhedronH x); rewrite !inE => ->.
   rewrite Hequiv; rewrite conic_hull_normalize //.
