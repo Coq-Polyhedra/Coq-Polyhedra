@@ -8,7 +8,7 @@
 (*************************************************************************)
 
 Require Import Recdef.
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp perm matrix mxalgebra vector.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx polyhedron.
 
 Set Implicit Arguments.
@@ -1098,11 +1098,67 @@ Qed.
 Definition pos_idx := [ set i: 'I_m | b i 0 > 0 ].
 Definition neg_idx := [ set i: 'I_m | b i 0 <= 0 ].
 
+Lemma pos_neg_idxU : pos_idx :|: neg_idx == setT.
+Proof.
+rewrite eqEsubset; apply/andP; split.
+- by rewrite -(setTU neg_idx); apply: setSU; apply: subsetT.
+- by apply/subsetP => i _; rewrite in_setU !inE; case: ler0P. 
+Qed.
+
+Lemma pos_neg_idxI : [disjoint pos_idx & neg_idx]. 
+Proof.
+rewrite disjoints_subset.
+by apply/subsetP => i; rewrite !inE ltrNge.
+Qed.
+
+Lemma pos_neg_card : (#|pos_idx| + #|neg_idx| = m)%N.
+Proof.
+move/leqifP: (leq_card_setU pos_idx neg_idx).
+rewrite ifT; last by apply:pos_neg_idxI.
+by move/eqP: pos_neg_idxU ->; rewrite cardsT card_ord => /eqP <-. 
+Qed.
+
+Definition perm_idx_fun :=
+  let: f := fun i =>   
+              match split i with 
+              | inl j => enum_val j
+              | inr j => enum_val j
+              end
+  in (f \o (cast_ord (esym pos_neg_card))).
+
+Lemma perm_idx_inj: injective perm_idx_fun.
+Proof.
+apply: inj_comp; last by apply: cast_ord_inj.
+move => i i'.
+case: splitP => [j H | j H]; case: splitP => [j' H' | j' H'] Hjj';
+  try by [ move/enum_val_inj: Hjj' => Hjj'; rewrite Hjj' -H' in H; apply: ord_inj
+         | move/andP: (conj (enum_valP j) (enum_valP j')); rewrite -Hjj';
+           rewrite -in_setI; move/disjoint_setI0: pos_neg_idxI ->; rewrite in_set0
+         | move/andP: (conj (enum_valP j) (enum_valP j')); rewrite -Hjj';
+           rewrite -in_setI setIC; move/disjoint_setI0: pos_neg_idxI ->; rewrite in_set0].
+Qed.
+
+Definition perm_idx := perm perm_idx_inj.
+
 Definition Apos := (row_submx A pos_idx).
 Definition Aneg := (row_submx A neg_idx).
 
 Definition bpos := (row_submx b pos_idx).
 Definition bneg := (row_submx b neg_idx).
+
+Lemma Aperm : row_perm perm_idx A = castmx (pos_neg_card, erefl n) (col_mx Apos Aneg).
+Proof.
+apply/matrixP => i j.
+rewrite castmxE /= cast_ord_id !mxE permE /perm_idx_fun /=.
+by case: splitP => [ k _ | k _]; rewrite row_submx_mxE.
+Qed.
+
+Lemma bperm : row_perm perm_idx b = castmx (pos_neg_card, erefl 1%N) (col_mx bpos bneg).
+Proof.
+apply/matrixP => i j.
+rewrite castmxE /= cast_ord_id !mxE permE /perm_idx_fun /=.
+by case: splitP => [ k _ | k _]; rewrite row_submx_mxE.
+Qed.
 
 Definition Aposext := row_mx (-Apos) (1%:M).
 Definition Anegext := row_mx Aneg (0:'M_(#|neg_idx|, #|pos_idx|)).
@@ -1153,10 +1209,8 @@ Lemma pos_neg_lev_decomp x :
       (b <=m (A *m x)) = ((bpos <=m (Apos *m x)) && (bneg <=m (Aneg *m x))).
 Proof.
 suff H: neg_idx = ~: pos_idx by move: (lev_decomp b (A *m x) pos_idx); rewrite -H !row_submx_mul.
-apply:eqP; rewrite eqEsubset.
-apply/andP; split.
-  - by apply/subsetP => i; rewrite !inE ltrNge negbK.
-  - by apply/subsetP => i; move/setCP; rewrite !inE lerNgt; move/negP.
+- rewrite -setTD; move/eqP: pos_neg_idxU <-; rewrite setDUl setDv set0U.
+  by move: pos_neg_idxI; rewrite -setI_eq0 setIC setI_eq0 => /setDidPl ->. 
 Qed.
 
 Lemma cext_min_values_aux x :
@@ -1263,27 +1317,81 @@ Qed.
 Variable c : 'cV[R]_n.
 
 Inductive pos_final_result :=
-| Pos_res_infeasible
+| Pos_res_infeasible of 'cV[R]_(m+n)
 | Pos_res_unbounded of (feasible_basis A' b') * 'I_n
 | Pos_res_optimal_basis of (feasible_basis A' b').
 
+Lemma part_pos_neg_idx i : ~ (i \in pos_idx) -> i \in neg_idx.
+Proof.
+by rewrite !inE lerNgt; move/negP. 
+Qed.
+
+Definition infeasibility_certificate (bas0: basis Aext) :=
+  let: u := usubmx (ext_reduced_cost_of_basis cext bas0) in
+  let: u' := dsubmx (ext_reduced_cost_of_basis cext bas0) in
+  let: upos := usubmx u in
+  let: uneg := dsubmx u in                     
+  col_mx (row_perm (perm_idx^-1)%g
+                   (castmx (pos_neg_card, erefl 1%N) (col_mx (const_mx 1 - upos) uneg)))
+         (usubmx u').
+
 Definition pos_simplex :=
   match phase2 initial_feasible_basis cext with
-  | Phase2_res_unbounded _ => Pos_res_infeasible (* this case should not happen *)
-  | Phase2_res_optimal_basis _ =>
+  | Phase2_res_unbounded _ => Pos_res_infeasible 0 (* this case should not happen *)
+  | Phase2_res_optimal_basis bas0 =>
     if [pick bas: feasible_basis A' b'] is Some bas then
       match phase2 bas c with
       | Phase2_res_unbounded (bas', i) => Pos_res_unbounded (bas', i)
       | Phase2_res_optimal_basis bas' => Pos_res_optimal_basis bas'
       end
     else
-      Pos_res_infeasible
+      Pos_res_infeasible (infeasibility_certificate bas0) 
   end.
 
+Lemma mulmx_const_mx1 (p q: nat) (M : 'M[R]_(p, q)) :
+  M *m (const_mx 1) = \sum_i col i M.
+Proof.
+by apply/colP=> j; rewrite mxE summxE; apply: eq_bigr => i _; rewrite !mxE mulr1.
+Qed.
+
+Lemma row_perm_gev0 (p: nat) (s: {perm 'I_p}) (v: 'cV[R]_p) :
+  (v >=m 0) = ((row_perm s v) >=m 0).
+Proof.
+apply/idP/idP => /forallP H; apply/forallP => i.
+- by move/(_ (s i)): H; rewrite !mxE.
+- by move/(_ ((s^-1)%g i)): H; rewrite !mxE permKV.
+Qed.
+
 CoInductive pos_simplex_spec : pos_final_result -> Type :=
-| Pos_infeasible of ~ (feasible A' b') : pos_simplex_spec Pos_res_infeasible
+| Pos_infeasible (w: 'cV[R]_(m+n)) of [/\ w >=m 0, (A'^T *m w) = 0 & '[b', w] > 0] : pos_simplex_spec (Pos_res_infeasible w)
 | Pos_unbounded (p: feasible_basis A' b' * 'I_n) of (reduced_cost_of_basis c p.1) p.2 0 < 0 /\ feasible_direction A' (direction p.1 p.2) : pos_simplex_spec (Pos_res_unbounded p)
 | Pos_optimal_point (bas: feasible_basis A' b') of (reduced_cost_of_basis c bas) >=m 0 : pos_simplex_spec (Pos_res_optimal_basis bas).
+
+Lemma sum_col_mx (p q r s: nat) (M: 'I_p -> 'M[R]_(q,s)) (N: 'I_p -> 'M[R]_(r,s)) :
+  \sum_i (col_mx (M i) (N i)) = col_mx (\sum_i M i) (\sum_i N i).
+Proof.
+apply/row_matrixP => i; rewrite -[i]splitK; set i' := unsplit _.
+have ->: row i' (\sum_i0 col_mx (M i0) (N i0)) = \sum_i0 row i' (col_mx (M i0) (N i0))
+  by apply: big_morph; by [apply: raddfD | apply: row0].
+rewrite /i' /unsplit; case: splitP => [j _ | j _]. 
+- rewrite rowKu.
+  have ->: \sum_i0 row (lshift r j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (M i0)).
+    by apply: eq_bigr => k _; rewrite rowKu.
+  by symmetry; apply: big_morph; by [apply: raddfD | apply: row0].
+- rewrite rowKd.
+  have ->: \sum_i0 row (rshift q j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (N i0)).
+    by apply: eq_bigr => k _; rewrite rowKd.
+  by symmetry; apply: big_morph; by [apply: raddfD | apply: row0].
+Qed.
+
+Lemma vdot_castmx (p q: nat) (epq : p = q) (u:'cV[R]_p) v : '[castmx (epq, erefl 1%N) u, castmx (epq, erefl 1%N) v] = '[u,v].
+Proof.
+suff: (castmx (epq, erefl 1%N) v)^T *m (castmx (epq, erefl 1%N) u) = v^T *m u.
+- by rewrite -2!vdot_def; move/matrixP/(_ 0 0); rewrite !mxE /=.
+- rewrite trmx_cast /= -{2}(esymK epq).
+  have {1}->: erefl 1%N = esym (erefl 1%N) by done.
+  by rewrite mulmx_cast esymK -{2}(esymK epq) castmx_id castmxKV.
+Qed.
 
 Lemma pos_simplexP : pos_simplex_spec pos_simplex.
 Proof.
@@ -1294,8 +1402,71 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
   + by apply: bounded_is_not_unbounded; exists cextopt; apply: cext_min_value.
 - case: pickP => [bas0 _ | H]. 
   + case: phase2P => [[bas' d] /=|]; by constructor.
-  + constructor; move => [x Hx].
-    set z := point_of_basis bext bas.
+  + move: (Hbas); rewrite -non_neg_reduced_cost_equiv => Hrc.
+    move: (ext_reduced_cost_of_basis_def cext bas) => Hrc'.
+    pose u := usubmx (ext_reduced_cost_of_basis cext bas).
+    pose upos := usubmx u.
+    pose uneg := dsubmx u.
+    pose u' := dsubmx (ext_reduced_cost_of_basis cext bas).
+    have Huu': ext_reduced_cost_of_basis cext bas = col_mx u u' by rewrite vsubmxK.
+    have Huposneg: u = col_mx upos uneg by rewrite vsubmxK.
+    rewrite {}Huu' {}Huposneg in Hrc Hrc'.
+    do 2![rewrite -col_mx0 col_mx_lev in Hrc].
+    move: Hrc => /andP [/andP [Hupos Huneg] Hu'].
+    move: Hrc'.
+    rewrite /Aext tr_col_mx mul_row_col tr_col_mx mul_row_col trmx1 mul1mx.
+    rewrite /Aposext /Anegext 2!tr_row_mx 2!mul_col_mx trmx1 mul1mx trmx0 mul0mx -[u']vsubmxK !add_col_mx addr0.
+    have ->: cext = col_mx (\sum_i (col i (-Apos)^T)) (\sum_i (col i 1%:M)).
+    * rewrite /cext /Aposext -sum_col_mx. 
+      by apply: eq_bigr => i _; rewrite row_row_mx tr_row_mx 2!tr_row trmx1.
+    move/eq_col_mx.
+    have ->: \sum_i col i 1%:M = (const_mx 1:'cV[R]_#|pos_idx|).
+    * apply/colP => j; rewrite mxE summxE.
+      have ->: \sum_k (col k 1%:M) j 0 = \sum_k ((k == j)%:R:R).
+        by apply: eq_bigr => i _; rewrite !mxE eq_sym.
+      rewrite (big_rem_idx (fun k => (k == j))) /=; last by move => l _ /negbTE ->.
+      by rewrite big_pred1_eq eq_refl.
+    rewrite -mulmx_const_mx1 raddfN /= mulNmx -mulmxN mulNmx.
+    move => [ /(congr1 (fun X => (Apos^T *m const_mx 1) + X)) Hdual
+              /(congr1 (fun X => (-upos) + X)) Hdual'].
+    rewrite addrN !addrA -mulmxDr in Hdual. 
+    rewrite addrA addNr add0r addrC in Hdual'.
+    rewrite -[u']vsubmxK -col_mx0 col_mx_lev in Hu'.
+    move: Hu' => /andP [Hu']; rewrite {}Hdual' => Hupos'.
+    set upos' := const_mx 1 - upos in Hdual Hupos'.
+    constructor; rewrite /infeasibility_certificate -/u -/u' -/upos -/uneg -/upos'.
+    split.
+    * rewrite -col_mx0 col_mx_lev Hu' andbT -row_perm_gev0.
+      rewrite -[0](castmxKV pos_neg_card (erefl 1%N)) /=.
+      rewrite lev_castmx. 
+      have ->: (castmx (esym pos_neg_card, erefl 1%N) 0 = 0). (* UGLY *)
+        by move => ?; apply/colP => i; rewrite castmxE !mxE.
+      by rewrite -col_mx0 col_mx_lev Hupos' Huneg.
+    * rewrite /A' tr_col_mx mul_row_col -mul_col_perm -tr_row_perm Aperm trmx_cast /=.
+      rewrite tr_col_mx trmx1 mul1mx mulmx_cast castmx_id.
+      have {1}->: erefl n = esym (erefl n) by done.
+      by rewrite castmxK mul_row_col.
+    * rewrite /b' vdot_col_mx vdot0l addr0 row_permE vdot_mulmx tr_perm_mx invgK -row_permE bperm.
+      rewrite vdot_castmx vdot_col_mx /upos' vdotDr vdotNr -vdotNl -addrA addrC.
+      rewrite -[X in _ + X ]opprK subr_gt0.
+      rewrite -vdotNl {1}/vdot (eq_bigr (fun i => (-bpos) i 0)); last by move => i _; rewrite !mxE mulr1.
+      rewrite -/cextopt.
+      rewrite -vdot_col_mx vsubmxK -[X in _ < X]addr0 -(vdot0l u') -vdot_col_mx vsubmxK -/bext.
+      (*move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
+      set x := point_of_basis bext bas => Hx.
+
+      Search _ ext_reduced_cost_of_basis.
+      move: (weak_duality Aext bext cext (point_of_basis_initial_basis bas).
+      Search _ duality_gap.
+      
+      
+      Search _ (0 < _ -_).
+      
+
+      Search _ row_perm mulmx.
+
+    reduced_cost_of_basis 
+    set z := point_of_basis bext bas.*)
     move: (feasible_basis_is_feasible bas) => Hfeas.
     move: (optimal_basis Hbas) => Hopt.
     move/feasible_cext_eq_min_value: Hx; set z' := (col_mx _ _); move => [Hz'1 Hz'2].

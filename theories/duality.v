@@ -7,7 +7,6 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import polyhedron simplex.
