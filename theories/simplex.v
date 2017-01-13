@@ -136,12 +136,6 @@ Proof.
 by apply: (valP bas).
 Qed.
 
-Lemma feasible_basis_feasibility (bas : feasible_basis): feasible A b.
-Proof.
-move: (feasible_basis_is_feasible bas).
-by exists (point_of_basis bas).
-Qed.
-
 Definition feasible_basis_enum : seq feasible_basis := pmap insub [seq bas <- basis_enum | is_feasible bas].
 
 Lemma feasible_basis_enum_uniq : uniq feasible_basis_enum.
@@ -185,12 +179,10 @@ suff ->: row (enum_val i) A = row (enum_rank_in Hbas_i (enum_val i)) (active_ine
 by rewrite row_submx_row enum_rankK_in //.
 Qed.
 
-Lemma feasible_point_of_basis_is_extreme (bas : basis) :
-    is_feasible bas -> is_extreme (point_of_basis bas) (polyhedron A b: _ -> bool).
+Lemma feasible_point_of_basis_is_extreme (bas : feasible_basis) :
+    is_extreme (point_of_basis bas) (polyhedron A b: _ -> bool).
 Proof.
-rewrite /is_feasible.
-move => Hfeas.
-apply/extremality_active_ineq/andP; split; first by done.
+apply/extremality_active_ineq/andP; split; first by apply: feasible_basis_is_feasible.
 - apply/eqP; move: (mxrank_unit (matrix_of_basis_in_unitmx bas)).
   apply: contra_eq => HrkAI.
   have H: (\rank (active_ineq_mx A b (point_of_basis bas)) < n)%N.
@@ -200,17 +192,34 @@ apply/extremality_active_ineq/andP; split; first by done.
   by move: (leq_ltn_trans H' H); rewrite ltn_neqAle; move/andP => [? _].
 Qed.
 
-Lemma basis_extraction (I : {set 'I_m}) :
-    \rank (row_submx A I) = n -> exists bas: basis, (bas \subset I).
+Lemma extract_prebasis_card (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :
+  #| build_row_base A (active_ineq A b x) n| == n.
 Proof.
-move => Hrk.
-move: (leqnn n); rewrite -{2}Hrk; move/row_base_correctness.
-set bas := (build_row_base _ _ _); move => [? /eqP Hcard Hrk'].
-pose pb := Prebasis Hcard.
-have Hbas : is_basis pb.
-- by rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx Hrk' leqnn.
-by exists (Basis Hbas).
+move: (leqnn n).
+move/extremality_active_ineq: Hextr => /andP [_ /eqP {2} <-].
+move/row_base_correctness => [_ {2} -> _].
+apply: eq_refl.
 Qed.
+
+Definition extract_prebasis (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :=
+  Prebasis (extract_prebasis_card Hextr).
+
+Lemma extract_prebasis_is_basis (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :
+  is_basis (extract_prebasis Hextr).
+Proof.
+rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx.
+move: (leqnn n).
+move/extremality_active_ineq: (Hextr) => /andP [_ /eqP {2} <-].
+move/row_base_correctness => [_ _ ->].
+apply: leqnn.  
+Qed.  
+
+Definition extract_basis (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :=
+  Basis (extract_prebasis_is_basis Hextr).
 
 Lemma basis_subset_active_ineq_eq (bas : basis) (x : 'cV[R]_n) :
   bas \subset (active_ineq A b x) -> x = point_of_basis bas.
@@ -225,12 +234,33 @@ suff: (matrix_of_prebasis A bas) *m x = matrix_of_prebasis b bas.
   by apply: active_ineq_eq.
 Qed.
 
-Lemma extreme_point_is_feasible_point_of_basis (x : 'cV[R]_n) :
-    is_extreme x (polyhedron A b: _ -> bool) -> exists bas: feasible_basis, x = point_of_basis bas.
+Lemma extract_basis_point_of_basis (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :
+  x = point_of_basis (extract_basis Hextr).
 Proof.
-move/extremality_active_ineq/andP => [H /eqP/basis_extraction [bas /basis_subset_active_ineq_eq H']].
-move: (H); rewrite {}H' => Hbas.
-by exists (FeasibleBasis Hbas).
+apply: basis_subset_active_ineq_eq.
+move: (leqnn n).
+move/extremality_active_ineq: (Hextr) => /andP [_ /eqP {2} <-].
+by move/row_base_correctness => [H _ _].
+Qed.
+
+Lemma extract_basis_is_feasible (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :
+  is_feasible (extract_basis Hextr).
+Proof.
+rewrite /is_feasible -(extract_basis_point_of_basis Hextr).
+by move/extremality_active_ineq: Hextr => /andP [H _].
+Qed.
+
+Definition extract_feasible_basis (x: 'cV[R]_n)
+           (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :=
+  FeasibleBasis (extract_basis_is_feasible Hextr).
+
+Lemma extract_feasible_basis_point_of_basis (x: 'cV[R]_n)
+      (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :
+  x = point_of_basis (extract_feasible_basis Hextr).
+Proof.
+by apply: extract_basis_point_of_basis.
 Qed.
 
 End FeasibleBasis.
@@ -335,9 +365,11 @@ case: (boolP (i \in bas)) => [Hi | Hi].
 - by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
 Qed.
 
+
 Lemma optimal_basis c (bas : feasible_basis) :
   let: x := point_of_basis bas in
-  (reduced_cost_of_basis c bas) >=m 0 -> optimal_solution A b c x.
+  (reduced_cost_of_basis c bas) >=m 0 ->
+  forall y, y \in polyhedron A b -> '[c,x] <= '[c,y].
 Proof.
 set x := point_of_basis bas.
 set u := ext_reduced_cost_of_basis c bas.
@@ -371,14 +403,15 @@ Proof.
 by rewrite vdot_mulmx trmx_inv vdot_delta_mx.
 Qed.
 
-Lemma unbounded_certificate_on_basis c (bas : feasible_basis) i:
+Lemma unbounded_certificate_on_basis c (bas : feasible_basis) i K:
   let: u := reduced_cost_of_basis c bas in
   let: d := direction bas i in
-  feasible_direction A d -> u i 0 < 0 -> unbounded A b c.
+  feasible_direction A d -> u i 0 < 0 ->
+  exists x, (x \in polyhedron A b) /\ ('[c,x] < K).
 Proof.
 set d := direction _ _.
-move => Hd Hui. 
-apply: (unbounded_certificate (d:=d)); try by [ apply: (feasible_basis_feasibility bas) | done].
+move => Hd Hui.
+apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=d)); try by [ apply: (feasible_basis_is_feasible bas) | done].
 by rewrite /d vdot_mulmx trmx_inv vdot_delta_mx.
 Qed. 
 
@@ -1076,6 +1109,89 @@ End Phase2.
 
 End Simplex.
 
+Section Feasibility.
+
+Variable R: realFieldType.
+Variable m n : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Definition dual_set0 := [set (rshift (n+n) i) | i :'I_m].
+
+Lemma dual_set0_card : (#| dual_set0 | == m)%N.
+Proof.
+by apply/eqP; apply: rshift_card.
+Qed.  
+
+Definition dual_pb0 := Prebasis dual_set0_card.
+
+Lemma dual_pb0_basis : (is_basis (dualA A) dual_pb0).
+Proof.
+rewrite /is_basis -row_free_unit -row_leq_rank /matrix_of_prebasis.
+rewrite /dualA row_submx_col_mx 2!rank_castmx.
+by rewrite row_leq_rank row_free_unit unitmx1.
+Qed.
+
+Definition dual_bas0 := Basis dual_pb0_basis.
+
+Lemma dual_bas0_is_feasible : (is_feasible (dualb _ 0) dual_bas0).
+Proof.
+rewrite /is_feasible -dual_polyhedronE inE.
+suff ->: point_of_basis (dualb m 0) dual_bas0 = 0
+  by rewrite mulmx0 eq_refl lev_refl.
+rewrite /point_of_basis {2}/matrix_of_prebasis /dualb row_submx_col_mx.
+by rewrite 2!castmx_const mulmx0. 
+Qed.
+
+Definition dual_feasible_bas0 := FeasibleBasis dual_bas0_is_feasible.
+
+Definition feasible :=
+  if phase2 dual_feasible_bas0 (-b) is Phase2_res_optimal_basis _ then true else false.
+
+Lemma feasibleP :
+  reflect (exists x, x \in polyhedron A b) feasible.
+Proof.
+rewrite /feasible; case: phase2P => [[bas d] /= [Hd Hd']| bas Hbas]; constructor.
+- move => [x Hx].
+  move: (unbounded_certificate_on_basis 0 Hd' Hd) => [u].
+  rewrite -dual_polyhedronE inE vdotNl oppr_lt0.
+  move => [/andP [/eqP Hu Hu'] Hu''].
+  move/(vdot_lev Hu'): Hx; rewrite vdot_mulmx Hu vdot0l vdotC.
+  by move/(ltr_le_trans Hu''); rewrite ltrr.
+- pose v := ext_reduced_cost_of_basis (- b) bas.
+  move: Hbas; rewrite ext_reduced_cost_dual_feasible -/v inE => /andP [/eqP Hv Hv'].
+  pose x := (dsubmx (usubmx v) - usubmx (usubmx v)).
+  pose s := dsubmx v.
+  move: Hv Hv'; rewrite /dualA 2!tr_col_mx linearN /= !trmxK trmx1.
+  rewrite -[v]vsubmxK mul_row_col. 
+  rewrite -[usubmx v]vsubmxK mul_row_col.
+  rewrite mulNmx -mulmxN mul1mx -mulmxDr -/s.
+  rewrite -[X in X + _]opprK -mulmxN opprB -/x.
+  move/(congr1 (fun z => (A *m x) + z)). (* TODO: how to write it concisely? *)
+  rewrite addrA addrN add0r => ->.
+  rewrite -[0]vsubmxK col_mx_lev => /andP [_].
+  rewrite linear0 subv_ge0.
+  by exists x.
+Qed.
+
+Lemma infeasibleP :
+  reflect (exists d, feasible_direction (dualA A) d /\ '[b,d] > 0) (~~ feasible). 
+Proof.
+rewrite /feasible.
+case: phase2P => [[bas d] /= [/direction_improvement Hd Hd']| bas Hbas]; constructor.
+- exists (direction bas d); split; first by done.
+  by rewrite vdotNl oppr_lt0 in Hd.
+- move => [d [Hd Hd']].
+  rewrite -oppr_lt0 -vdotNl in Hd'.
+  pose x := point_of_basis (dualb m 0) bas.
+  move: (unbounded_certificate '[- b,x] (feasible_basis_is_feasible bas) Hd Hd') => [y [Hy Hy']].
+  move/(_ _ Hy)/(ltr_le_trans Hy'): (optimal_basis Hbas).
+  by rewrite ltrr.
+Qed.
+
+End Feasibility.
+
 Section Pos_simplex. (* a simplex method which applies to LP of the form min '[c,x] s.t. A *m x >=m b, x >=m 0 *)
 
 Variable R: realFieldType.
@@ -1088,7 +1204,8 @@ Variable b : 'cV[R]_m.
 Definition A' := col_mx A (1%:M).
 Definition b' := col_mx b (0:'cV_n).
 
-Lemma mem_polyhedron_pos_constraint x : (x \in polyhedron A' b') = (x \in polyhedron A b) && (x >=m 0).
+Lemma mem_polyhedron_pos_constraint x :
+  (x \in polyhedron A' b') = (x \in polyhedron A b) && (x >=m 0).
 Proof.
 by rewrite inE /A' /b' mul_col_mx mul1mx col_mx_lev.
 Qed.
@@ -1317,7 +1434,7 @@ Qed.
 Variable c : 'cV[R]_n.
 
 Inductive pos_final_result :=
-| Pos_res_infeasible of 'cV[R]_(m+n)
+| Pos_res_infeasible 
 | Pos_res_unbounded of (feasible_basis A' b') * 'I_n
 | Pos_res_optimal_basis of (feasible_basis A' b').
 
@@ -1337,15 +1454,17 @@ Definition infeasibility_certificate (bas0: basis Aext) :=
 
 Definition pos_simplex :=
   match phase2 initial_feasible_basis cext with
-  | Phase2_res_unbounded _ => Pos_res_infeasible 0 (* this case should not happen *)
-  | Phase2_res_optimal_basis bas0 =>
-    if [pick bas: feasible_basis A' b'] is Some bas then
+  | Phase2_res_unbounded _ => Pos_res_infeasible (* this case should not happen *)
+  | Phase2_res_optimal_basis bas =>
+    let: x := point_of_basis bext bas in
+    if ('[cext, x] =P cextopt) is ReflectT Hopt then
+      let: bas := extract_feasible_basis (extremality_ext (feasible_point_of_basis_is_extreme bas) Hopt) in
       match phase2 bas c with
       | Phase2_res_unbounded (bas', i) => Pos_res_unbounded (bas', i)
       | Phase2_res_optimal_basis bas' => Pos_res_optimal_basis bas'
       end
     else
-      Pos_res_infeasible (infeasibility_certificate bas0) 
+      Pos_res_infeasible
   end.
 
 Lemma mulmx_const_mx1 (p q: nat) (M : 'M[R]_(p, q)) :
@@ -1363,7 +1482,7 @@ apply/idP/idP => /forallP H; apply/forallP => i.
 Qed.
 
 CoInductive pos_simplex_spec : pos_final_result -> Type :=
-| Pos_infeasible (w: 'cV[R]_(m+n)) of [/\ w >=m 0, (A'^T *m w) = 0 & '[b', w] > 0] : pos_simplex_spec (Pos_res_infeasible w)
+| Pos_infeasible of ~~ (feasible A' b') : pos_simplex_spec Pos_res_infeasible
 | Pos_unbounded (p: feasible_basis A' b' * 'I_n) of (reduced_cost_of_basis c p.1) p.2 0 < 0 /\ feasible_direction A' (direction p.1 p.2) : pos_simplex_spec (Pos_res_unbounded p)
 | Pos_optimal_point (bas: feasible_basis A' b') of (reduced_cost_of_basis c bas) >=m 0 : pos_simplex_spec (Pos_res_optimal_basis bas).
 
@@ -1397,12 +1516,15 @@ Lemma pos_simplexP : pos_simplex_spec pos_simplex.
 Proof.
 rewrite /pos_simplex.
 case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
-- move: (unbounded_certificate_on_basis Hd' Hd) => Hunbounded.
-  suff: (~ (unbounded Aext bext cext)) by done.
-  + by apply: bounded_is_not_unbounded; exists cextopt; apply: cext_min_value.
-- case: pickP => [bas0 _ | H]. 
+- constructor.
+  move: (unbounded_certificate_on_basis cextopt Hd' Hd) => [x [Hx]].
+  by move/(conj (cext_min_value Hx))/andP; rewrite ler_lt_asym.
+- pose x := point_of_basis bext bas.
+  case: ('[cext, x] =P cextopt) => [Hopt | Hopt].
   + case: phase2P => [[bas' d] /=|]; by constructor.
-  + move: (Hbas); rewrite -non_neg_reduced_cost_equiv => Hrc.
+  + constructor.
+    apply/infeasibleP.
+    move: (Hbas); rewrite -non_neg_reduced_cost_equiv => Hrc.
     move: (ext_reduced_cost_of_basis_def cext bas) => Hrc'.
     pose u := usubmx (ext_reduced_cost_of_basis cext bas).
     pose upos := usubmx u.
@@ -1434,49 +1556,36 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
     rewrite -[u']vsubmxK -col_mx0 col_mx_lev in Hu'.
     move: Hu' => /andP [Hu']; rewrite {}Hdual' => Hupos'.
     set upos' := const_mx 1 - upos in Hdual Hupos'.
-    constructor; rewrite /infeasibility_certificate -/u -/u' -/upos -/uneg -/upos'.
-    split.
-    * rewrite -col_mx0 col_mx_lev Hu' andbT -row_perm_gev0.
-      rewrite -[0](castmxKV pos_neg_card (erefl 1%N)) /=.
-      rewrite lev_castmx. 
-      have ->: (castmx (esym pos_neg_card, erefl 1%N) 0 = 0). (* UGLY *)
-        by move => ?; apply/colP => i; rewrite castmxE !mxE.
-      by rewrite -col_mx0 col_mx_lev Hupos' Huneg.
-    * rewrite /A' tr_col_mx mul_row_col -mul_col_perm -tr_row_perm Aperm trmx_cast /=.
-      rewrite tr_col_mx trmx1 mul1mx mulmx_cast castmx_id.
-      have {1}->: erefl n = esym (erefl n) by done.
-      by rewrite castmxK mul_row_col.
-    * rewrite /b' vdot_col_mx vdot0l addr0 row_permE vdot_mulmx tr_perm_mx invgK -row_permE bperm.
-      rewrite vdot_castmx vdot_col_mx /upos' vdotDr vdotNr -vdotNl -addrA addrC.
-      rewrite -[X in _ + X ]opprK subr_gt0.
-      rewrite -vdotNl {1}/vdot (eq_bigr (fun i => (-bpos) i 0)); last by move => i _; rewrite !mxE mulr1.
-      rewrite -/cextopt.
-      rewrite -vdot_col_mx vsubmxK -[X in _ < X]addr0 -(vdot0l u') -vdot_col_mx vsubmxK -/bext.
-      (*move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
-      set x := point_of_basis bext bas => Hx.
-
-      Search _ ext_reduced_cost_of_basis.
-      move: (weak_duality Aext bext cext (point_of_basis_initial_basis bas).
-      Search _ duality_gap.
-      
-      
-      Search _ (0 < _ -_).
-      
-
-      Search _ row_perm mulmx.
-
-    reduced_cost_of_basis 
-    set z := point_of_basis bext bas.*)
-    move: (feasible_basis_is_feasible bas) => Hfeas.
-    move: (optimal_basis Hbas) => Hopt.
-    move/feasible_cext_eq_min_value: Hx; set z' := (col_mx _ _); move => [Hz'1 Hz'2].
-    move/(_ z' Hz'1 ): (proj2 Hopt); rewrite {}Hz'2 => Hcextopt.
-    move/cext_min_value: Hfeas => Hcextopt'.
-    move/andP: (conj Hcextopt Hcextopt'); rewrite lter_anti {Hcextopt Hcextopt'}; move/eqP => Hcextopt.
-    move/feasible_point_of_basis_is_extreme: (feasible_basis_is_feasible bas) => Hextr.
-    move/extreme_point_is_feasible_point_of_basis: (extremality_ext Hextr Hcextopt) => [bas' _].
-    by move/(_ bas'): H.
+    exists (infeasibility_certificate bas); split.
+    * rewrite /feasible_direction /dualA 2!mul_col_mx mul1mx.
+      rewrite -[0]vsubmxK -[usubmx _]vsubmxK 2!col_mx_lev. 
+      rewrite !linear0 mulNmx oppv_ge0.
+      apply/andP; split.
+      - suff ->: A'^T *m infeasibility_certificate bas = 0 by rewrite lev_refl.
+        rewrite /A' tr_col_mx mul_row_col -mul_col_perm -tr_row_perm Aperm trmx_cast /=.
+        rewrite tr_col_mx trmx1 mul1mx mulmx_cast castmx_id.
+        have {1}->: erefl n = esym (erefl n) by done.
+        by rewrite castmxK mul_row_col.   
+      - rewrite -col_mx0 col_mx_lev Hu' andbT -row_perm_gev0.
+        rewrite -[0](castmxKV pos_neg_card (erefl 1%N)) /=.
+        rewrite lev_castmx. 
+        have ->: (castmx (esym pos_neg_card, erefl 1%N) 0 = 0). (* UGLY *)
+          by move => ?; apply/colP => i; rewrite castmxE !mxE.
+        by rewrite -col_mx0 col_mx_lev Hupos' Huneg.
+      - rewrite /b' vdot_col_mx vdot0l addr0 row_permE vdot_mulmx tr_perm_mx invgK -row_permE bperm.
+        rewrite vdot_castmx vdot_col_mx /upos' vdotDr vdotNr -vdotNl -addrA addrC.
+        rewrite -[X in _ + X ]opprK subr_gt0.
+        rewrite -vdotNl {1}/vdot (eq_bigr (fun i => (-bpos) i 0)); last by move => i _; rewrite !mxE mulr1.
+        rewrite -/cextopt.
+        rewrite -vdot_col_mx vsubmxK -[X in _ < X]addr0 -(vdot0l u') -vdot_col_mx vsubmxK -/bext.
+        move: (compl_slack_cond_on_basis bext cext bas).
+        move/(compl_slack_cond_duality_gap_eq0  (ext_reduced_cost_of_basis_def cext bas))/eqP.
+        rewrite duality_gap_eq0_def; move/eqP <-.
+        rewrite ltr_def; apply/andP; split; first by apply/eqP.
+        + apply: cext_min_value; apply: (feasible_basis_is_feasible bas).
 Qed.
+
+
 
 End Pos_simplex.
 
@@ -1544,15 +1653,6 @@ rewrite inE mul_col_mx col_mx_lev => /andP [? _].
 by rewrite inE -mulmxAv2gen.
 Qed.
 
-Lemma feasibility_equiv : feasible A b <-> feasible Aaux' baux'.
-Proof.
-split.
-- move => [x] /feasibility_general_to_pos.
-  by set z := col_mx _ _; exists z.
-- move => [x] /feasibility_pos_to_general.
-  by rewrite /v2gen; set z := _ - _; exists z.
-Qed.
-
 Inductive simplex_final_result :=
 | Simplex_infeasible
 | Simplex_unbounded of 'cV[R]_n * 'cV[R]_n
@@ -1583,14 +1683,16 @@ split.
 Qed.
 
 CoInductive simplex_spec : simplex_final_result -> Type :=
-| Infeasible of ~ (feasible A b) : simplex_spec Simplex_infeasible
+| Infeasible of ~ (exists x, x \in polyhedron A b) : simplex_spec Simplex_infeasible
 | Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_direction A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
 | Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & (compl_slack_cond A b p.1 p.2)] : simplex_spec (Simplex_optimal_basis p).
 
 Lemma simplexP: simplex_spec simplex.
 Proof.
 rewrite /simplex.
-case: pos_simplexP => [/feasibility_equiv | [bas i] /= [H H']| bas Hu]; constructor; try by done.
+case: pos_simplexP => [H | [bas i] /= [H H']| bas Hu]; constructor; try by done.
+- move => [x /feasibility_general_to_pos Hx].
+  by apply: H; exists (col_mx (pos_part x) (neg_part x)).  
 - split.
   + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
     by move/feasibility_pos_to_general.
@@ -1608,6 +1710,54 @@ case: pos_simplexP => [/feasibility_equiv | [bas i] /= [H H']| bas Hu]; construc
       (compl_slack_cond Aaux' baux' (point_of_basis baux' bas) (ext_reduced_cost_of_basis caux' bas)).
     * by rewrite /Aaux' /A' /baux' /b' mul_col_mx 2!col_mxEu mulmxAv2gen.
     * by apply: compl_slack_cond_on_basis.
+Qed.
+
+Definition feasible :=
+  if simplex is Simplex_infeasible then false else true.
+
+Lemma feasibleP: (reflect (exists x, x \in polyhedron A b)) feasible.
+Proof.
+rewrite /feasible; case: simplexP => [| [x _] /= [? _ _] | [x _ ] /= [? _ _]];
+                                      try by [constructor; do ?[exists x]]. 
+Qed.
+
+Definition unbounded :=
+  if simplex is (Simplex_unbounded _) then true else false.
+
+Lemma unboundedP : reflect (forall K, exists x, x \in polyhedron A b /\ '[c,x] < K) unbounded.
+Proof.
+rewrite /unbounded; case: simplexP => [H | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
+- by move/(_ 0) => [x [Hx _]]; apply: H; exists x.
+- by move => K ; apply: (unbounded_certificate K Hx Hd).
+- move/(_ '[c,x]) => [y [Hy Hy']].
+  rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) in Hcsc; move/eqP in Hcsc.
+  move/(_ _ Hy)/(conj Hy')/andP: (duality_gap_eq0_optimality Hx Hu Hcsc).
+  by rewrite ltr_le_asym.
+Qed.
+
+Definition bounded :=
+  if simplex is (Simplex_optimal_basis _) then true else false.
+
+Lemma boundedP :
+  reflect (exists x, x \in polyhedron A b /\ (forall y, y \in polyhedron A b -> '[c,x] <= '[c,y]))
+          bounded.
+Proof.
+rewrite /bounded; case: simplexP => [H | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
+- by move => [x [Hx _]]; apply: H; exists x.
+- move => [x0 [Hx0 H]].
+  move: (unbounded_certificate '[c,x0] Hx Hd Hd') => [y [Hy Hy']].
+  move/(conj Hy')/andP: (H _ Hy). 
+  by rewrite ltr_le_asym.
+- exists x; split; first by done.
+  apply: (duality_gap_eq0_optimality Hx Hu).
+  by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu).
+Qed.
+
+Lemma bounded_is_feasible_not_unbounded :
+  bounded = (feasible && ~~ (unbounded)).
+Proof.
+rewrite /bounded /feasible /unbounded.
+by case: simplexP.
 Qed.
 
 End General_simplex.
