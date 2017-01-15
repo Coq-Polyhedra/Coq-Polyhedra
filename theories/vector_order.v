@@ -94,6 +94,13 @@ apply/forallP => i; move/(_ i): Hy; move/(_ i): Hx.
 by apply: ler_trans.
 Qed.
 
+Lemma eqv_le x y : (x == y) = (x <=m y) && (y <=m x).
+Proof.
+apply/idP/idP.
+- by move/eqP ->; rewrite lev_refl.
+- by move/lev_antisym/eqP.
+Qed.
+  
 Lemma vdot_lev x y z : x >=m 0 -> y <=m z -> '[x,y] <= '[x,z].
 Proof.
 move => /forallP Hx /forallP Hyz.

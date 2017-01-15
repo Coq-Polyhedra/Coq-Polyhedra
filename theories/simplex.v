@@ -1176,21 +1176,85 @@ rewrite /feasible; case: phase2P => [[bas d] /= [Hd Hd']| bas Hbas]; constructor
 Qed.
   
 Lemma infeasibleP :
-  reflect (exists d, feasible_direction (dualA A) d /\ '[b,d] > 0) (~~ feasible). 
+  reflect (exists d, dual_feasible_direction A d /\ '[b,d] > 0) (~~ feasible). 
 Proof.
 rewrite /feasible.
 case: phase2P => [[bas d] /= [/direction_improvement Hd Hd']| bas Hbas]; constructor.
-- exists (direction bas d); split; first by done.
+- rewrite -dual_feasible_directionE in Hd'.
+  exists (direction bas d); split; first by done.
   by rewrite vdotNl oppr_lt0 in Hd.
 - move => [d [Hd Hd']].
   rewrite -oppr_lt0 -vdotNl in Hd'.
   pose x := point_of_basis (dualb m 0) bas.
+  rewrite dual_feasible_directionE in Hd.
   move: (unbounded_certificate '[- b,x] (feasible_basis_is_feasible bas) Hd Hd') => [y [Hy Hy']].
   move/(_ _ Hy)/(ltr_le_trans Hy'): (optimal_basis Hbas).
   by rewrite ltrr.
 Qed.
 
 End Feasibility.
+
+Section DualFeasibility.
+
+Variable R: realFieldType.
+Variable m n : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable c : 'cV[R]_n.
+
+Definition dual_feasible := feasible (dualA A) (dualb _ c).
+
+Lemma dual_feasibleP :
+  reflect (exists u, u \in dual_polyhedron A c) dual_feasible.
+Proof.
+by apply: (iffP (feasibleP _ _)) => [[u]| [u]];
+   do [ rewrite dual_polyhedronE | rewrite -dual_polyhedronE] => H; exists u.
+Qed.
+
+(* TODO: this proof should be rewritten by splitting into lemmas
+ * on block matrices                                             *)
+Lemma dual_infeasibleP :
+  reflect (exists d, feasible_direction A d /\ '[c,d] < 0) (~~ dual_feasible).
+Proof.
+apply: (iffP (infeasibleP _ _)) => [[d]| [d] [Hd Hd']].
+- rewrite dual_feasible_directionE !/dualA /dualb /feasible_direction.
+  rewrite -linearN /= -tr_row_mx -trmx1 -tr_row_mx trmxK 2!mul_col_mx.
+  rewrite -[0]vsubmxK -[usubmx 0]vsubmxK.
+  rewrite 2!col_mx_lev !linear0 mul1mx mulNmx.
+  rewrite -[d]vsubmxK -[usubmx d]vsubmxK.
+  rewrite !mul_row_col mulNmx mul1mx.
+  rewrite oppv_ge0 -eqv_le eq_sym.
+  rewrite -mulmxN -mulmxDr.
+  rewrite -[X in X <=m _]vsubmxK -[usubmx 0]vsubmxK 2!col_mx_lev !linear0.
+  rewrite 2!vdot_col_mx vdot0l addr0 vdotNl -vdotNr -vdotDr.
+  move => [/and3P [Hd /andP [Hdpos Hdpos'] Hdpos''] Hcd].
+  set d' := -(usubmx (usubmx d) - dsubmx (usubmx d)).
+  exists d'; split.
+  + move/eqP/(congr1 (fun z => A *m d' + z)): Hd.
+    by rewrite addr0 addrA -mulmxDr addNr mulmx0 add0r => <-.
+  + by rewrite vdotNr oppr_lt0.
+- pose d' := col_mx (col_mx (neg_part d) (pos_part d)) (A *m d).
+  exists d'.
+  rewrite dual_feasible_directionE  !/dualA /dualb /feasible_direction.
+  rewrite -linearN /= -tr_row_mx -trmx1 -tr_row_mx trmxK 2!mul_col_mx.
+  rewrite -[0]vsubmxK -[usubmx 0]vsubmxK.
+  rewrite 2!col_mx_lev !linear0 mul1mx mulNmx.
+  rewrite !mul_row_col mulNmx mul1mx.
+  rewrite oppv_ge0 -eqv_le eq_sym.
+  rewrite -mulmxN -mulmxDr.
+  rewrite -[X in X <=m _]vsubmxK -[usubmx 0]vsubmxK 2!col_mx_lev !linear0.
+  rewrite 2!vdot_col_mx vdot0l addr0 vdotNl -vdotNr -vdotDr.
+  have ->: neg_part d - pos_part d = -d
+    by rewrite -[d in RHS]add_pos_neg_part opprB.
+  rewrite mulmxN addNr eq_refl /= vdotNr oppr_gt0. 
+  split; last by done.
+  + apply/andP; split; try by done.
+    * apply/andP; split; by [apply: neg_part_gev0 | apply: pos_part_gev0]. 
+ Qed.
+  
+  
+End DualFeasibility.
+
 
 Section Pos_simplex. (* a simplex method which applies to LP of the form min '[c,x] s.t. A *m x >=m b, x >=m 0 *)
 
@@ -1557,7 +1621,7 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
     move: Hu' => /andP [Hu']; rewrite {}Hdual' => Hupos'.
     set upos' := const_mx 1 - upos in Hdual Hupos'.
     exists (infeasibility_certificate bas); split.
-    * rewrite /feasible_direction /dualA 2!mul_col_mx mul1mx.
+    * rewrite dual_feasible_directionE /feasible_direction /dualA 2!mul_col_mx mul1mx.
       rewrite -[0]vsubmxK -[usubmx _]vsubmxK 2!col_mx_lev. 
       rewrite !linear0 mulNmx oppv_ge0.
       apply/andP; split.

@@ -75,6 +75,18 @@ apply: (congr1 (andb^~ _)); apply/idP/idP.
 - by move/lev_antisym ->; apply: eq_refl.
 Qed.
 
+Definition dual_feasible_direction d := (A^T *m d == 0) && (d >=m 0).
+
+Lemma dual_feasible_directionE d :
+  (dual_feasible_direction d) = (feasible_direction dualA d).
+Proof.
+rewrite /feasible_direction 2!mul_col_mx mul1mx.
+rewrite -[0]vsubmxK -[usubmx _]vsubmxK.
+rewrite 2!col_mx_lev !linear0. 
+apply: (congr1 (andb^~ _)).
+by rewrite mulNmx oppv_ge0 -eqv_le eq_sym.
+Qed.
+
 Definition duality_gap x u := '[c,x] - '[b,u].
 
 Lemma duality_gap_def x u :
