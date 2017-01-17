@@ -8,7 +8,7 @@
 (**************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
-Require Import extra_misc inner_product vector_order.
+Require Import extra_misc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -199,6 +199,30 @@ apply/idP/idP.
       + move => k Hk.
         by move/matrixP: H2.
 Qed.
+
+Lemma sum_col_mx (R : realFieldType) (m1 m2 n p: nat) (M: 'I_p -> 'M[R]_(m1,n)) (N: 'I_p -> 'M[R]_(m2,n)) :
+  \sum_i (col_mx (M i) (N i)) = col_mx (\sum_i M i) (\sum_i N i).
+Proof.
+apply/row_matrixP => i; rewrite -[i]splitK; set i' := unsplit _.
+have ->: row i' (\sum_i0 col_mx (M i0) (N i0)) = \sum_i0 row i' (col_mx (M i0) (N i0))
+  by apply: big_morph; by [apply: raddfD | apply: row0].
+rewrite /i' /unsplit; case: splitP => [j _ | j _]. 
+- rewrite rowKu.
+  have ->: \sum_i0 row (lshift m2 j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (M i0)).
+    by apply: eq_bigr => k _; rewrite rowKu.
+  by symmetry; apply: big_morph; by [apply: raddfD | apply: row0].
+- rewrite rowKd.
+  have ->: \sum_i0 row (rshift m1 j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (N i0)).
+    by apply: eq_bigr => k _; rewrite rowKd.
+  by symmetry; apply: big_morph; by [apply: raddfD | apply: row0].
+Qed.
+
+Lemma mulmx_const_mx1 (R : realFieldType) (m n: nat) (M : 'M[R]_(m, n)) :
+  M *m (const_mx 1) = \sum_i col i M.
+Proof.
+by apply/colP=> j; rewrite mxE summxE; apply: eq_bigr => i _; rewrite !mxE mulr1.
+Qed.
+
 
 End ExtraMx.
 

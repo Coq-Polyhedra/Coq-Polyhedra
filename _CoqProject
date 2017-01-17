@@ -1,9 +1,9 @@
 -R theories Polyhedra
 theories/extra_misc.v
 theories/small_enough.v
-theories/inner_product.v
 theories/vector_order.v
 theories/extra_matrix.v
+theories/inner_product.v
 theories/row_submx.v
 theories/polyhedron.v
 theories/polyhedral_cone.v

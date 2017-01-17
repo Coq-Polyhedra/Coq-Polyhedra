@@ -200,6 +200,27 @@ exists x; split.
   by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10. 
 Qed.
 
+Lemma mul_tr_dualA (v: 'cV_(n+n+m)) :
+  let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
+  let: z := dsubmx v in
+  (dualA)^T *m v = z - A *m y.
+Proof.
+rewrite /dualA 2!tr_col_mx linearN /= !trmxK trmx1.
+rewrite -{1}[v]vsubmxK mul_row_col mul1mx. 
+rewrite -{1}[usubmx v]vsubmxK mul_row_col.
+rewrite addrC; apply/(congr1 (fun z => _ + z)).
+by rewrite mulmxDr mulNmx mulmxN opprB.
+Qed.
+
+Lemma vdot_dualb (v: 'cV_(n+n+m)) :
+  let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
+  '[dualb, v] = -'[c,y].
+Proof.
+rewrite /dualb -{1}[v]vsubmxK -{1}[usubmx v]vsubmxK.
+rewrite 2!vdot_col_mx vdot0l addr0 vdotNl.
+by rewrite -[in RHS]vdotNr opprB vdotDr vdotNr.
+Qed.
+
 End WeakDuality.
 
 End BasicNotion.

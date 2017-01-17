@@ -32,11 +32,10 @@ Lemma strong_duality :
   feasible A b -> dual_feasible A c ->
   exists x, exists u, [/\ x \in polyhedron A b, u \in dual_polyhedron A c & duality_gap b c x u = 0].
 Proof.
-case: (simplexP A b c) => [/negP | |] ; try by done.
-  => [| [x d] /= [_ Hd Hd'] /unbounded_certificate/(_ Hd Hd') Hunbounded [u Hu]
-      | [x u] /= [Hx Hu Hcsc] _ _]; try by done.
-- suff: (dual_feasible A c) by move/dual_feasible_bounded/(_ Hunbounded). 
-  + by exists u.
+case: (simplexP A b c) => [/negP | [_ d] /= [_ Hd Hd'] 
+                          | [x u] /= [Hx Hu Hcsc] _ _]; try by done.
+- suff /negP: ~~ dual_feasible A c by done.
+  by apply/dual_infeasibleP; exists d; split. 
 - exists x; exists u; split; try by done.
   by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu) //.
 Qed.
