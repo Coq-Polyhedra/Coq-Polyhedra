@@ -1468,7 +1468,7 @@ Qed.
 Variable c : 'cV[R]_n.
 
 Inductive pos_final_result :=
-| Pos_res_infeasible 
+| Pos_res_infeasible of 'cV[R]_(m+n)
 | Pos_res_unbounded of (feasible_basis A' b') * 'I_n
 | Pos_res_optimal_basis of (feasible_basis A' b').
 
@@ -1488,7 +1488,7 @@ Definition infeasibility_certificate (bas0: basis Aext) :=
 
 Definition pos_simplex :=
   match phase2 initial_feasible_basis cext with
-  | Phase2_res_unbounded _ => Pos_res_infeasible (* this case should not happen *)
+  | Phase2_res_unbounded _ => Pos_res_infeasible 0 (* this case should not happen *)
   | Phase2_res_optimal_basis bas =>
     let: x := point_of_basis bext bas in
     if ('[cext, x] =P cextopt) is ReflectT Hopt then
@@ -1498,15 +1498,13 @@ Definition pos_simplex :=
       | Phase2_res_optimal_basis bas' => Pos_res_optimal_basis bas'
       end
     else
-      Pos_res_infeasible
+      Pos_res_infeasible (infeasibility_certificate bas)
   end.
 
 CoInductive pos_simplex_spec : pos_final_result -> Type :=
-| Pos_infeasible of ~~ (feasible A' b') : pos_simplex_spec Pos_res_infeasible
+| Pos_infeasible (d: 'cV[R]_(m+n)) of dual_feasible_direction A' d /\ '[b',d] > 0 : pos_simplex_spec (Pos_res_infeasible d)
 | Pos_unbounded (p: feasible_basis A' b' * 'I_n) of (reduced_cost_of_basis c p.1) p.2 0 < 0 /\ feasible_direction A' (direction p.1 p.2) : pos_simplex_spec (Pos_res_unbounded p)
 | Pos_optimal_point (bas: feasible_basis A' b') of (reduced_cost_of_basis c bas) >=m 0 : pos_simplex_spec (Pos_res_optimal_basis bas).
-
-
 
 Lemma pos_simplexP : pos_simplex_spec pos_simplex.
 Proof.
@@ -1519,7 +1517,6 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
   case: ('[cext, x] =P cextopt) => [Hopt | Hopt].
   + case: phase2P => [[bas' d] /=|]; by constructor.
   + constructor.
-    apply/infeasibleP; exists (infeasibility_certificate bas).
     rewrite dual_feasible_directionE /feasible_direction.
     rewrite 2!mul_col_mx mul1mx 2!col_mx_gev0.
     rewrite mulNmx oppv_ge0 -eqv_le.
@@ -1640,14 +1637,37 @@ rewrite inE mul_col_mx col_mx_lev => /andP [? _].
 by rewrite inE -mulmxAv2gen.
 Qed.
 
+Lemma infeasibility_pos_to_general d :
+  (dual_feasible_direction Aaux' d /\ '[baux',d] > 0) ->
+  dual_feasible_direction A (usubmx d) /\ '[b, usubmx d] > 0.
+Proof.
+set d_gen := usubmx d.
+set d1 := usubmx (dsubmx d).
+set d2 := dsubmx (dsubmx d).
+have -> : d = col_mx d_gen (col_mx d1 d2) by rewrite !vsubmxK.
+rewrite /dual_feasible_direction tr_col_mx tr_row_mx trmx1.
+rewrite mul_row_col mul1mx mul_col_mx add_col_mx col_mx_eq0.
+rewrite 2!col_mx_gev0.
+move => [/andP [/andP [/eqP Hd1 /eqP Hd2] /and3P [Hd_gen_pos Hd1_pos Hs2_pos]]].
+move: (Hd1).
+have [-> ->]: (d1 = 0) /\ (d2 = 0).
+- move: Hd2 Hd1; rewrite linearN /= addrC mulNmx.
+  move/(canRL (subrK _)); rewrite add0r => <-.
+  move/eqP; rewrite paddv_eq0 // andbC.
+  by move/andP => [/eqP -> /eqP ->].
+rewrite addr0 => ->.
+rewrite eq_refl Hd_gen_pos /=.
+by rewrite vdot_col_mx vdot0l addr0.
+Qed.
+
 Inductive simplex_final_result :=
-| Simplex_infeasible
+| Simplex_infeasible of 'cV[R]_m
 | Simplex_unbounded of 'cV[R]_n * 'cV[R]_n
 | Simplex_optimal_basis of 'cV[R]_n * 'cV[R]_m.
 
 Definition simplex :=
   match pos_simplex (row_mx A (-A)) b caux' with 
-  | Pos_res_infeasible => Simplex_infeasible
+  | Pos_res_infeasible d => Simplex_infeasible (usubmx d)
   | Pos_res_unbounded (bas, i) =>
     let d := direction bas i in
     Simplex_unbounded (v2gen (point_of_basis baux' bas), v2gen d)
@@ -1655,31 +1675,15 @@ Definition simplex :=
     Simplex_optimal_basis (v2gen (point_of_basis baux' bas), ext_reduced_cost2gen bas)
   end.
 
-Lemma value_equiv (K : R) :
-  (exists x, (x \in polyhedron A b) /\ ('[c,x] = K)) <-> (exists y, (y \in polyhedron Aaux' baux') /\ ('[caux',y] = K)).
-Proof.
-split.
-- move => [x [Hx HxK]].
-  exists (col_mx (pos_part x) (neg_part x)).
-  split; first by apply: (feasibility_general_to_pos Hx).
-    + by rewrite vdot_col_mx vdotNl -vdotNr -vdotDr add_pos_neg_part.
-- move => [y [Hy HyK]].
-  exists (usubmx y - dsubmx y).
-  split; first by apply: (feasibility_pos_to_general Hy).
-    + by rewrite vdotDr vdotNr -vdotNl -vdot_col_mx vsubmxK.
-Qed.
-
 CoInductive simplex_spec : simplex_final_result -> Type :=
-| Infeasible of ~~ (feasible A b) : simplex_spec Simplex_infeasible
+| Infeasible d of dual_feasible_direction A d /\ '[b, d] > 0: simplex_spec (Simplex_infeasible d)
 | Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_direction A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
 | Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & (compl_slack_cond A b p.1 p.2)] : simplex_spec (Simplex_optimal_basis p).
 
 Lemma simplexP: simplex_spec simplex.
 Proof.
 rewrite /simplex.
-case: pos_simplexP => [/(elimN (feasibleP _ _)) H | [bas i] /= [H H']| bas Hu]; constructor; try by done.
-- apply/(introN (feasibleP _ _)). move => [x /feasibility_general_to_pos Hx].
-  by apply: H; exists (col_mx (pos_part x) (neg_part x)).  
+case: pos_simplexP => [ d /infeasibility_pos_to_general | [bas i] /= [H H']| bas Hu]; constructor; try by done.
 - split.
   + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
     by move/feasibility_pos_to_general.
@@ -1704,9 +1708,11 @@ Definition unbounded :=
 
 Lemma unboundedP : reflect (forall K, exists x, x \in polyhedron A b /\ '[c,x] < K) unbounded.
 Proof.
-rewrite /unbounded; case: simplexP => [ /(elimN (feasibleP _ _)) H | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
+rewrite /unbounded; case: simplexP => [ d Hd | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
 - move/(_ 0) => [x [Hx _]].
-  by apply: H; exists x.
+  have: (feasible A b) by apply/feasibleP; exists x.
+  have /negP: (~~(feasible A b)) by apply/infeasibleP; exists d.
+  done.
 - by move => K ; apply: (unbounded_certificate K Hx Hd).
 - move/(_ '[c,x]) => [y [Hy Hy']].
   rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) in Hcsc; move/eqP in Hcsc.
@@ -1721,9 +1727,11 @@ Lemma boundedP :
   reflect (exists x, x \in polyhedron A b /\ (forall y, y \in polyhedron A b -> '[c,x] <= '[c,y]))
           bounded.
 Proof.
-rewrite /bounded; case: simplexP => [ /(elimN (feasibleP _ _)) H | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
+rewrite /bounded; case: simplexP => [ d Hd | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
 - move => [x [Hx _]].
-  by apply: H; exists x.
+  have: (feasible A b) by apply/feasibleP; exists x.
+  have /negP: (~~(feasible A b)) by apply/infeasibleP; exists d.
+  done.
 - move => [x0 [Hx0 H]].
   move: (unbounded_certificate '[c,x0] Hx Hd Hd') => [y [Hy Hy']].
   move/(conj Hy')/andP: (H _ Hy). 
@@ -1737,7 +1745,8 @@ Lemma bounded_is_feasible_not_unbounded :
   bounded = (feasible A b && ~~ (unbounded)).
 Proof.
 rewrite /bounded  /unbounded.
-case: simplexP => [/negbTE -> | /= | [x _] /= [Hbas _ _]]; try by done.
+case: simplexP => [ d Hd | /= | [x _] /= [Hbas _ _]]; try by done.
+- by have /negbTE -> : (~~(feasible A b)) by apply/infeasibleP; exists d.
 - by rewrite andbF.
 - rewrite andbT; symmetry; apply/feasibleP.
   by exists x. 

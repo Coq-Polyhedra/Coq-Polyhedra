@@ -200,6 +200,13 @@ apply/idP/idP.
         by move/matrixP: H2.
 Qed.
 
+
+Lemma col_mx_eq0 (R : realFieldType) (m1 m2 p : nat) (B1 : 'M[R]_(m1 ,p) ) (B2 : 'M[R]_(m2 ,p)) :
+(col_mx B1 B2 == 0) = (( B1 == 0 ) && ( B2 == 0 )).
+Proof.
+by rewrite -{1}[0]vsubmxK 2!linear0; apply: col_mx_eq.
+Qed.
+
 Lemma sum_col_mx (R : realFieldType) (m1 m2 n p: nat) (M: 'I_p -> 'M[R]_(m1,n)) (N: 'I_p -> 'M[R]_(m2,n)) :
   \sum_i (col_mx (M i) (N i)) = col_mx (\sum_i M i) (\sum_i N i).
 Proof.
