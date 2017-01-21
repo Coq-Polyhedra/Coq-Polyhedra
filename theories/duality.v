@@ -80,26 +80,29 @@ Qed.
 (* - by exists u. *)
 (* Qed. *)
 
-(* Lemma farkas_lemma z : *)
-(*   (feasible A b) ->  *)
-(*   (forall x, x \in polyhedron A b -> '[c,x] >= z) <-> *)
-(*   (exists u, [/\ u >=m 0, A^T *m u = c & '[b,u] >= z]). *)
-(* Proof. *)
-(* move => Hfeas; split; last first. *)
-(* - move => [u [Hu <- Hu']] x Hx'. *)
-(*   rewrite -vdot_mulmx. *)
-(*   suff: '[u, A *m x] >= '[u,b]. *)
-(*   + by rewrite vdotC; apply: ler_trans. *)
-(*   + apply: vdot_lev; try by [done | rewrite inE in Hx']. *)
-(* - move => Hbounded. *)
-(*   case: (simplexP A b c) => [| [x d] /= [_ Hd Hd']| [x u] /= [Hx Hu  Hcsc]]; first by done. *)
-(*   + suff: ~ (unbounded A b c) by move: (unbounded_certificate Hfeas Hd Hd').  *)
-(*     * by apply: bounded_is_not_unbounded; exists z. *)
-(*   + move: (Hu); rewrite inE => /andP [/eqP Hu' Hu'']. *)
-(*     exists u; split; try by done. *)
-(*     rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) // duality_gap_eq0_def in Hcsc. *)
-(*     move/eqP: Hcsc <-. *)
-(*     by apply: Hbounded. *)
-(* Qed. *)
+Lemma farkas_lemma z :
+  (feasible A b) ->
+  (forall x, x \in polyhedron A b -> '[c,x] >= z) <->
+  (exists u, [/\ u >=m 0, A^T *m u = c & '[b,u] >= z]).
+Proof.
+move => Hfeas; split; last first.
+- move => [u [Hu <- Hu']] x Hx.
+  rewrite -vdot_mulmx.
+  suff: '[u, A *m x] >= '[u,b].
+  + by rewrite vdotC; apply: ler_trans.
+  + apply: vdot_lev; try by [done | rewrite inE in Hx'].
+- move => Hbounded.
+  case: (simplexP A b c) => [ d Hd | [x d] /= [_ Hd Hd']| [x u] /= [Hx Hu  Hcsc]].
+  + by have /negP: ~~(feasible A b) by apply/infeasibleP; exists d.
+  + move/feasibleP: Hfeas => [y Hy].
+    move: (unbounded_certificate z Hy Hd Hd') => [x0 [Hx0 Hx0']].
+    move/(_ x0 Hx0): Hbounded.
+    by move/(ltr_le_trans Hx0'); rewrite ltrr. 
+  + move: (Hu); rewrite inE => /andP [/eqP Hu' Hu''].
+    exists u; split; try by done.
+    rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) // duality_gap_eq0_def in Hcsc.
+    move/eqP: Hcsc <-.
+    by apply: Hbounded.
+Qed.
 
 End Duality.
