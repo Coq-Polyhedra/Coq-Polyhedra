@@ -15,6 +15,12 @@ Unset Printing Implicit Defensive.
 
 Section Basic.
 
+Lemma intro_existsT (T: Type) (P: T -> Prop) (b: bool) (H: reflect (exists x, P x) b) (x: T):
+  P x -> b.
+Proof.
+by move => Hx; apply/H; exists x.
+Qed.  
+
 Lemma subseq_head (T : eqType) (x : T) (s1 s2 : seq T) :
   subseq (x :: s1) s2 -> x \in s2.
 Proof.

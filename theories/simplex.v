@@ -1675,15 +1675,21 @@ Definition simplex :=
     Simplex_optimal_basis (v2gen (point_of_basis baux' bas), ext_reduced_cost2gen bas)
   end.
 
+Definition unbounded :=
+  if simplex is (Simplex_unbounded _) then true else false.
+
+Definition bounded :=
+  if simplex is (Simplex_optimal_basis _) then true else false.
+
 CoInductive simplex_spec : simplex_final_result -> Type :=
-| Infeasible d of dual_feasible_direction A d /\ '[b, d] > 0: simplex_spec (Simplex_infeasible d)
+| Infeasible d of (dual_feasible_direction A d /\ '[b, d] > 0): simplex_spec (Simplex_infeasible d)
 | Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_direction A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
 | Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & (compl_slack_cond A b p.1 p.2)] : simplex_spec (Simplex_optimal_basis p).
 
 Lemma simplexP: simplex_spec simplex.
 Proof.
 rewrite /simplex.
-case: pos_simplexP => [ d /infeasibility_pos_to_general | [bas i] /= [H H']| bas Hu]; constructor; try by done.
+case: pos_simplexP => [ d /infeasibility_pos_to_general [Hd Hd'] | [bas i] /= [H H']| bas Hu]; constructor; try by done.
 - split.
   + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
     by move/feasibility_pos_to_general.
@@ -1703,16 +1709,39 @@ case: pos_simplexP => [ d /infeasibility_pos_to_general | [bas i] /= [H H']| bas
     * by apply: compl_slack_cond_on_basis.
 Qed.
 
-Definition unbounded :=
-  if simplex is (Simplex_unbounded _) then true else false.
+Lemma unboundedP_cert :
+  reflect (exists p, [/\ p.1 \in polyhedron A b, (feasible_direction A p.2) & '[c,p.2] < 0]) unbounded.
+Proof.
+rewrite /unbounded.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
+                 | [x d] /= [Hx Hd Hd']
+                 | [_ u] /= [_ /(intro_existsT (dual_feasibleP _ _)) Hu _]]; constructor.
+- by move => [[x ?] /= [/(intro_existsT (feasibleP _ _))]].
+- by exists (x, d); split.
+- move => [[_ d] /= [_ Hd Hd']].
+  by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
+Qed.
+
+Lemma boundedP_cert :
+  reflect (exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & (compl_slack_cond A b p.1 p.2)]) bounded.
+Proof.
+rewrite /bounded.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
+                 | [_ d] /= [_ Hd Hd']
+                 | [x u] /= [Hx Hu Hcsc]]; constructor.
+- by move => [[x ?] /= [/(intro_existsT (feasibleP _ _))]].
+- move => [[_ d'] /= [_ /(intro_existsT (dual_feasibleP _ _)) H _]].
+  by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
+- by exists (x,u); split.
+Qed.
 
 Lemma unboundedP : reflect (forall K, exists x, x \in polyhedron A b /\ '[c,x] < K) unbounded.
 Proof.
-rewrite /unbounded; case: simplexP => [ d Hd | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
-- move/(_ 0) => [x [Hx _]].
-  have: (feasible A b) by apply/feasibleP; exists x.
-  have /negP: (~~(feasible A b)) by apply/infeasibleP; exists d.
-  done.
+rewrite /unbounded.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
+                 | [x d] /= [Hx Hd Hd']
+                 | [x u] /= [Hx Hu Hcsc]]; constructor.
+- by move/(_ 0) => [x [/(intro_existsT (feasibleP _ _))]].
 - by move => K ; apply: (unbounded_certificate K Hx Hd).
 - move/(_ '[c,x]) => [y [Hy Hy']].
   rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) in Hcsc; move/eqP in Hcsc.
@@ -1720,18 +1749,15 @@ rewrite /unbounded; case: simplexP => [ d Hd | [x d] /= [Hx Hd Hd'] | [x u] /= [
   by rewrite ltr_le_asym.
 Qed.
 
-Definition bounded :=
-  if simplex is (Simplex_optimal_basis _) then true else false.
-
 Lemma boundedP :
   reflect (exists x, x \in polyhedron A b /\ (forall y, y \in polyhedron A b -> '[c,x] <= '[c,y]))
           bounded.
 Proof.
-rewrite /bounded; case: simplexP => [ d Hd | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx Hu Hcsc]]; constructor.
-- move => [x [Hx _]].
-  have: (feasible A b) by apply/feasibleP; exists x.
-  have /negP: (~~(feasible A b)) by apply/infeasibleP; exists d.
-  done.
+rewrite /bounded.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
+                 | [x d] /= [Hx Hd Hd']
+                 | [x u] /= [Hx Hu Hcsc]]; constructor.
+- by move => [x [/(intro_existsT (feasibleP _ _))]].
 - move => [x0 [Hx0 H]].
   move: (unbounded_certificate '[c,x0] Hx Hd Hd') => [y [Hy Hy']].
   move/(conj Hy')/andP: (H _ Hy). 
@@ -1741,16 +1767,23 @@ rewrite /bounded; case: simplexP => [ d Hd | [x d] /= [Hx Hd Hd'] | [x u] /= [Hx
   by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu).
 Qed.
 
-Lemma bounded_is_feasible_not_unbounded :
-  bounded = (feasible A b && ~~ (unbounded)).
+Lemma bounded_is_not_unbounded :
+  feasible A b -> bounded = ~~ unbounded.
 Proof.
-rewrite /bounded  /unbounded.
-case: simplexP => [ d Hd | /= | [x _] /= [Hbas _ _]]; try by done.
-- by have /negbTE -> : (~~(feasible A b)) by apply/infeasibleP; exists d.
-- by rewrite andbF.
-- rewrite andbT; symmetry; apply/feasibleP.
-  by exists x. 
+rewrite /bounded /unbounded.
+by case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | |].
 Qed.
 
+Lemma bounded_is_dual_feasible :
+  feasible A b -> bounded = (dual_feasible A c).
+Proof.
+rewrite /bounded.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
+                 | [_ d] /= [_ Hd Hd'] _
+                 | [_ u] /= [_ /(intro_existsT (dual_feasibleP _ _)) -> _ ] ];
+                   try by done.
+- by move/(intro_existsT (dual_infeasibleP _ _))/negbTE: (conj Hd Hd').
+Qed.
+  
 End General_simplex.
 
