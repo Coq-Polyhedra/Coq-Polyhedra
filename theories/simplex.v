@@ -1675,12 +1675,6 @@ Definition simplex :=
     Simplex_optimal_basis (v2gen (point_of_basis baux' bas), ext_reduced_cost2gen bas)
   end.
 
-Definition unbounded :=
-  if simplex is (Simplex_unbounded _) then true else false.
-
-Definition bounded :=
-  if simplex is (Simplex_optimal_basis _) then true else false.
-
 CoInductive simplex_spec : simplex_final_result -> Type :=
 | Infeasible d of (dual_feasible_direction A d /\ '[b, d] > 0): simplex_spec (Simplex_infeasible d)
 | Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_direction A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
@@ -1709,6 +1703,9 @@ case: pos_simplexP => [ d /infeasibility_pos_to_general [Hd Hd'] | [bas i] /= [H
     * by apply: compl_slack_cond_on_basis.
 Qed.
 
+Definition unbounded :=
+  if simplex is (Simplex_unbounded _) then true else false.
+
 Lemma unboundedP_cert :
   reflect (exists p, [/\ p.1 \in polyhedron A b, (feasible_direction A p.2) & '[c,p.2] < 0]) unbounded.
 Proof.
@@ -1720,19 +1717,6 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 - by exists (x, d); split.
 - move => [[_ d] /= [_ Hd Hd']].
   by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
-Qed.
-
-Lemma boundedP_cert :
-  reflect (exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & (compl_slack_cond A b p.1 p.2)]) bounded.
-Proof.
-rewrite /bounded.
-case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
-                 | [_ d] /= [_ Hd Hd']
-                 | [x u] /= [Hx Hu Hcsc]]; constructor.
-- by move => [[x ?] /= [/(intro_existsT (feasibleP _ _))]].
-- move => [[_ d'] /= [_ /(intro_existsT (dual_feasibleP _ _)) H _]].
-  by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
-- by exists (x,u); split.
 Qed.
 
 Lemma unboundedP : reflect (forall K, exists x, x \in polyhedron A b /\ '[c,x] < K) unbounded.
@@ -1749,22 +1733,43 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
   by rewrite ltr_le_asym.
 Qed.
 
-Lemma boundedP :
-  reflect (exists x, x \in polyhedron A b /\ (forall y, y \in polyhedron A b -> '[c,x] <= '[c,y]))
-          bounded.
+Definition bounded :=
+  if simplex is (Simplex_optimal_basis _) then true else false.
+
+Definition opt_value :=
+  if simplex is (Simplex_optimal_basis (x,_)) then
+    '[c,x]
+  else 0 (* not used *).
+
+Lemma boundedP_cert :
+  reflect (exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & (compl_slack_cond A b p.1 p.2)]) bounded.
 Proof.
 rewrite /bounded.
 case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
+                 | [_ d] /= [_ Hd Hd']
+                 | [x u] /= [Hx Hu Hcsc]]; constructor.
+- by move => [[x ?] /= [/(intro_existsT (feasibleP _ _))]].
+- move => [[_ d'] /= [_ /(intro_existsT (dual_feasibleP _ _)) H _]].
+  by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
+- by exists (x,u); split.
+Qed.
+
+Lemma boundedP :
+  reflect ((exists x, x \in polyhedron A b /\ '[c,x] = opt_value) /\ (forall y, y \in polyhedron A b -> opt_value <= '[c,y])) bounded.
+Proof.
+rewrite /bounded /opt_value.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
                  | [x d] /= [Hx Hd Hd']
                  | [x u] /= [Hx Hu Hcsc]]; constructor.
-- by move => [x [/(intro_existsT (feasibleP _ _))]].
-- move => [x0 [Hx0 H]].
-  move: (unbounded_certificate '[c,x0] Hx Hd Hd') => [y [Hy Hy']].
+- by move => [[x [/(intro_existsT (feasibleP _ _))]]].
+- move => [_ H].
+  move: (unbounded_certificate 0 Hx Hd Hd') => [y [Hy Hy']].
   move/(conj Hy')/andP: (H _ Hy). 
   by rewrite ltr_le_asym.
-- exists x; split; first by done.
-  apply: (duality_gap_eq0_optimality Hx Hu).
-  by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu).
+- split.
+  + by exists x; split. 
+  + apply: (duality_gap_eq0_optimality Hx Hu).
+    by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu).
 Qed.
 
 Lemma bounded_is_not_unbounded :
