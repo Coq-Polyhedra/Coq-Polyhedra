@@ -33,10 +33,9 @@ Lemma strong_duality :
   exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & duality_gap b c p.1 p.2 = 0].
 Proof.
 move => Hfeas.
-rewrite -(bounded_is_dual_feasible _ Hfeas) => /boundedP_cert [[x u] /= [Hx Hu Hcsc]].
+rewrite -(bounded_is_dual_feasible _ Hfeas) => /boundedP_cert [[x u] /= [Hx Hu Hcx Hbu]].
 exists (x,u); split; try by done.
-rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) in Hcsc.
-by apply/eqP.
+by rewrite /duality_gap Hcx Hbu addrN. 
 Qed.
 
 Lemma farkas_lemma z :
@@ -52,12 +51,10 @@ move => Hfeas; split; last first.
   + apply: vdot_lev; try by [done | rewrite inE in Hx'].
 - move => H.
   case: (boolP (bounded A b c)).
-  + move/boundedP_cert => [[x u] /= [Hx Hu  Hcsc]].
+  + move/boundedP_cert => [[x u] /= [Hx Hu Hcx Hbu]].
     move: (Hu); rewrite inE => /andP [/eqP Hu' Hu''].
     exists u; split; try by done.
-    rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) // duality_gap_eq0_def in Hcsc.
-    move/eqP: Hcsc <-.
-    by apply: H.
+    by move: (H _ Hx); rewrite Hcx Hbu.
   + move/feasibleP: (Hfeas) => [x Hx].
     rewrite bounded_is_not_unbounded // negbK.
     move/unboundedP/(_ z) => [y [Hy Hy']].

@@ -1742,21 +1742,23 @@ Definition opt_value :=
   else 0 (* not used *).
 
 Lemma boundedP_cert :
-  reflect (exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & (compl_slack_cond A b p.1 p.2)]) bounded.
+  reflect (exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c, '[c, p.1] = opt_value & '[b, p.2] = opt_value]) bounded.
 Proof.
-rewrite /bounded.
+rewrite /bounded /opt_value.
 case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
                  | [_ d] /= [_ Hd Hd']
                  | [x u] /= [Hx Hu Hcsc]]; constructor.
 - by move => [[x ?] /= [/(intro_existsT (feasibleP _ _))]].
 - move => [[_ d'] /= [_ /(intro_existsT (dual_feasibleP _ _)) H _]].
   by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
-- by exists (x,u); split.
+- exists (x,u); split; try by done.
+  apply/eqP; rewrite eq_sym -duality_gap_eq0_def /=.
+  by rewrite (compl_slack_cond_duality_gap_equiv Hx Hu). 
 Qed.
 
 Lemma boundedP :
   reflect ((exists x, x \in polyhedron A b /\ '[c,x] = opt_value) /\ (forall y, y \in polyhedron A b -> opt_value <= '[c,y])) bounded.
-Proof.
+Proof. 
 rewrite /bounded /opt_value.
 case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
                  | [x d] /= [Hx Hd Hd']
