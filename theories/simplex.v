@@ -925,13 +925,13 @@ rewrite properEneq; apply/andP; split; last first.
   by move/negbTE: H1 ->; rewrite H2.
 Qed.
 
-CoInductive lex_phase2_spec bas0 : lex_final_result -> Type :=
-| Lex_unbounded (p: (lex_feasible_basis s) * 'I_n) of (reduced_cost_of_basis c p.1) p.2 0 < 0 /\ feasible_direction A (direction p.1 p.2) : lex_phase2_spec bas0 (Lex_res_unbounded p)
-| Lex_optimal_basis (bas: lex_feasible_basis s) of (reduced_cost_of_basis c bas) >=m 0 : lex_phase2_spec bas0 (Lex_res_optimal_basis bas).
+CoInductive lex_phase2_spec : lex_final_result -> Type :=
+| Lex_unbounded (p: (lex_feasible_basis s) * 'I_n) of (reduced_cost_of_basis c p.1) p.2 0 < 0 /\ feasible_direction A (direction p.1 p.2) : lex_phase2_spec (Lex_res_unbounded p)
+| Lex_optimal_basis (bas: lex_feasible_basis s) of (reduced_cost_of_basis c bas) >=m 0 : lex_phase2_spec (Lex_res_optimal_basis bas).
 
-Lemma lex_phase2P bas0 : lex_phase2_spec bas0 (lex_phase2 bas0).
+Lemma lex_phase2P bas0 : lex_phase2_spec (lex_phase2 bas0).
 Proof.
-pose P bas' res := (lex_phase2_spec bas0 res).
+pose P bas' res := (lex_phase2_spec res).
 suff /(_ bas0): (forall bas, P bas (lex_phase2 bas)) by done.
 apply: lex_phase2_rect; last by done.
 - move => bas1 res; rewrite /iterate.
