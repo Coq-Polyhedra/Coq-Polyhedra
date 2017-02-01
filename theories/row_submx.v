@@ -137,18 +137,21 @@ move => i; rewrite mem_iota inE; apply/idP/idP.
   by apply: ord_inj; rewrite /= subnKC //.
 Qed.
 
+Lemma lrshift_distinct (m n : nat) (i:'I_m) (j: 'I_n): lshift n i != rshift m j. 
+Proof.
+apply/eqP; move/(congr1 (@nat_of_ord (m+n)%N)).
+rewrite /= => Hij.
+move: (leq_addr (nat_of_ord j) m); rewrite -Hij.
+by move/(leq_trans (ltn_ord i)); rewrite ltnn.
+Qed.
+
 Lemma rshift_compl (m n : nat): ~: [set rshift m i | i : 'I_n] = [set lshift n i | i : 'I_m].
 Proof.
 have H: [set lshift n i | i : 'I_m] \subset ~: [set rshift m i | i : 'I_n].
-- apply/subsetP => i /imsetP [j _ Hj].
+- apply/subsetP => i /imsetP [j _ ->].
   apply/setCP/negP; apply: contraT; rewrite negbK.
-  move/imsetP => [j' _ Hj'].
-  move/(congr1 (@nat_of_ord (m+n)%N)): Hj.
-  move/(congr1 (@nat_of_ord (m+n)%N)): Hj' ->.
-  rewrite /= => Hjj'.
-  move: (leq_addr (nat_of_ord j') m); rewrite Hjj'.
-  move/(leq_trans (ltn_ord j)).
-  by rewrite ltnn.
+  move/imsetP => [j' _].
+  by move/eqP: (lrshift_distinct j j').
 apply/eqP; rewrite eq_sym.
 rewrite eqEcard; apply/andP; split; first by done.
 move: (cardsC  [set rshift m i | i : 'I_n]).

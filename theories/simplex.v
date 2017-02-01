@@ -1226,7 +1226,7 @@ Qed.
 End DualFeasibility.
 
 
-Section Pos_simplex. (* a simplex method which applies to LP of the form min '[c,x] s.t. A *m x >=m b, x >=m 0 *)
+Section Pointed_simplex. (* a simplex method which applies to LP of the form min '[c,x] s.t. A *m x >=m b, x >=m 0 *)
 
 Variable R: realFieldType.
 Variable m n : nat.
@@ -1234,29 +1234,24 @@ Variable m n : nat.
 Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
-(*To restate the initial problem as an equivalent one with positivity constraints*)
-Definition A' := col_mx A (1%:M).
-Definition b' := col_mx b (0:'cV_n).
 
-Lemma mem_polyhedron_pos_constraint x :
-  (x \in polyhedron A' b') = (x \in polyhedron A b) && (x >=m 0).
-Proof.
-by rewrite inE /A' /b' mul_col_mx mul1mx col_mx_lev.
-Qed.
+Variable bas0 : basis A. (* will be build under the assumption that rk A = n *)
+
+Definition x0 := point_of_basis b bas0.
 
 (*To implement phase 1 of schrijver book*)
 
-Definition pos_idx := [ set i: 'I_m | b i 0 > 0 ].
-Definition neg_idx := [ set i: 'I_m | b i 0 <= 0 ].
+Definition pos_idx := [ set i: 'I_m | (A *m x0) i 0 < b i 0 ].
+Definition neg_idx := [ set i: 'I_m | (A *m x0) i 0 >= b i 0 ].
 
 Lemma pos_neg_idxU : pos_idx :|: neg_idx == setT.
 Proof.
 rewrite eqEsubset; apply/andP; split.
 - by rewrite -(setTU neg_idx); apply: setSU; apply: subsetT.
-- by apply/subsetP => i _; rewrite in_setU !inE; case: ler0P. 
+- by apply/subsetP => i _; rewrite in_setU !inE; case: lerP.
 Qed.
 
-Lemma pos_neg_idxI : [disjoint pos_idx & neg_idx]. 
+Lemma pos_neg_idxI : [disjoint pos_idx & neg_idx].
 Proof.
 rewrite disjoints_subset.
 by apply/subsetP => i; rewrite !inE ltrNge.
@@ -1266,9 +1261,9 @@ Lemma pos_neg_card : (#|pos_idx| + #|neg_idx| = m)%N.
 Proof.
 move/leqifP: (leq_card_setU pos_idx neg_idx).
 rewrite ifT; last by apply:pos_neg_idxI.
-by move/eqP: pos_neg_idxU ->; rewrite cardsT card_ord => /eqP <-. 
+by move/eqP: pos_neg_idxU ->; rewrite cardsT card_ord => /eqP <-.
 Qed.
-
+  
 Definition perm_idx_fun :=
   let: f := fun i =>   
               match split i with 
@@ -1314,48 +1309,132 @@ Qed.
 Definition Aposext := row_mx (-Apos) (1%:M).
 Definition Anegext := row_mx Aneg (0:'M_(#|neg_idx|, #|pos_idx|)).
 
-Definition Aext := col_mx (col_mx Aposext Anegext) (1%:M).
-Definition bext := col_mx (col_mx (-bpos) bneg) (0:'cV_(n + #|pos_idx|)).
+Definition Aext := col_mx (col_mx Aposext Anegext) (row_mx 0 (1%:M)).
+Definition bext := col_mx (col_mx bpos bneg) (0:'cV_(#|pos_idx|)).
 
-Definition initial_set := [set (rshift (#|pos_idx| + #|neg_idx|) i) | i :'I_(n+(#|pos_idx|))].
+Definition bas0ext1 :=
+  [set (lshift #|pos_idx| (cast_ord (esym pos_neg_card) i)) | i in bas0].
+Definition bas0ext2 :=
+  [set (rshift (#|pos_idx|+#|neg_idx|)%N i) | i : 'I_#|pos_idx|]. 
+  
+Definition bas0ext :=
+  bas0ext1 :|: bas0ext2.
 
-Lemma initial_set_card : (#|initial_set| == n+(#|pos_idx|))%N.
-Proof.
-by apply/eqP; apply: rshift_card.
-Qed.
+(* Lemma initial_set12_disjoint : *)
+(*   [disjoint initial_set1 & initial_set2]. *)
+(* rewrite /initial_set1 /initial_set2 disjoint_subset. *)
+(* apply/subsetP => i; rewrite !inE. *)
+(* move/imsetP => [j _ -> /=]. *)
+(* apply/negP; move/imsetP => [k _]. *)
+(* set j' := (cast_ord _ _). *)
+(* by move/eqP: (lrshift_distinct j' k). *)
+(* Qed. *)
+  
+Lemma bas0ext_card : (#|bas0ext| == n+#|pos_idx|)%N.
+Admitted.
+(* Proof. *)
+(* rewrite cardsU. *)
+(* have ->: #|initial_set1| = n. *)
+(* - rewrite card_imset; first by apply: prebasis_card. *)
+(* - apply: inj_comp; first by apply: lshift_inj. *)
+(*   apply: inj_comp; by [apply: cast_ord_inj | apply: perm_inj]. *)
+(* have ->: #|initial_set2| = #|pos_idx| by apply: rshift_card. *)
+(* move/disjoint_setI0: initial_set12_disjoint ->. *)
+(* by rewrite cards0 subn0 eq_refl. *)
+(* Qed. *)
 
-Definition initial_pb := Prebasis (initial_set_card).
+Definition bas0ext_pb := Prebasis bas0ext_card.
 
-Lemma initial_pb_is_basis : (is_basis Aext initial_pb).
-Proof.
-rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx row_submx_col_mx.
-by rewrite rank_castmx mxrank1 leqnn.
-Qed.
+(* Lemma Ainitial_pb : *)
+(*   matrix_of_prebasis Aext initial_pb = *)
+(*   block_mx (matrix_of_prebasis A bas0) (0:'M_(n,#|pos_idx|)) (0:'M_(#|pos_idx|,n)) (1%:M). *)
+(* Proof. *)
+(* rewrite /matrix_of_prebasis. *)
+(* apply/row_matrixP => i. *)
+(* rewrite row_castmx castmx_id row_submx_row. *)
+(* set j := enum_val _. *)
+(* rewrite /Aext. *)
+(* case: (boolP (j \in initial_set1)). *)
+(* - move/imsetP => [j' Hj' /= Hjj']. *)
+(*   rewrite Hjj' rowKu. *)
+(*   rewrite /Aposext /=. *) 
+(* rewrite -[X in block_mx _ X _ _](castmxKV (prebasis_card bas0) (erefl #|pos_idx|)) /= castmx_const. *)
+(* rewrite -[X in block_mx _ _ X _](castmxK (erefl #|pos_idx|) (erefl n)) [in X in block_mx _ _ X _]castmx_id. *)
+(* rewrite -[X in block_mx _ _ _ X](castmxK (erefl #|pos_idx|) (erefl #|pos_idx|)) [in X in block_mx _ _ _ X]castmx_id. *)
+(* rewrite -(castmx_block _ _ _ _ (congr1 (addn^~ #|pos_idx|) (prebasis_card bas0))). *)
+(* apply/row_matrixP => i. *)
+(* rewrite row_castmx castmx_id row_submx_row. *)
+(* set j := enum_val _. *)
+(* rewrite row_castmx castmx_id. *)
+(* Check (esym (congr1 (addn^~ #|pos_idx|) (prebasis_card bas0))). *)
+(* case: (boolP (j \in initial_set1)). *)
+(* - move/imsetP => [j' Hj' ->]. *)
+(*   rewrite rowKu. *)
+(*   Search _ block_mx castmx. *)
 
-Definition initial_basis := Basis initial_pb_is_basis.
+  
+(*   Search _ row lshift. *)
+  
+(* Search _ disjoint. *)
 
-Lemma point_of_basis_initial_basis : (point_of_basis bext initial_basis) = 0.
-Proof.
-by rewrite /point_of_basis [matrix_of_prebasis bext initial_basis]/matrix_of_prebasis row_submx_col_mx !castmx_const mulmx0.
-Qed.
+(* Search _ row row_submx. *)
 
-Lemma initial_basis_is_feasible : (is_feasible bext initial_basis).
-Proof.
-rewrite /is_feasible point_of_basis_initial_basis.
-apply/forallP => i.
-rewrite mulmx0 mxE.
-case: splitP => [ j _ | j _ ]; last by rewrite !mxE; apply: lerr.
-  - rewrite mxE.
-    case: splitP => [ k _ | k _ ].
-      + by rewrite /bpos !mxE oppr_le0; move:(enum_valP k); rewrite inE; apply: ltrW.
-      + by rewrite /bneg !mxE; move:(enum_valP k); rewrite inE.
-Qed.
+(* Search _ castmx in matrix. *)
+(* Search _ row castmx. *)
 
-Definition initial_feasible_basis := FeasibleBasis initial_basis_is_feasible.
+Lemma bas0ext_is_basis : is_basis Aext bas0ext_pb.
+Admitted.
+(* Proof. *)
+(* rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx. *)
+
+(*   row_submx_col_mx. *)
+(* by rewrite rank_castmx mxrank1 leqnn. *)
+(* Qed. *)
+
+Definition bas0ext_basis := Basis bas0ext_is_basis.
+
+Lemma bas0ext_is_feasible : is_feasible bext bas0ext_basis.
+Admitted.
+
+Definition bas0ext_fb := FeasibleBasis bas0ext_is_feasible.
+  
+(* Lemma point_of_basis_initial_basis : (point_of_basis bext initial_basis) = 0. *)
+(* Proof. *)
+(* by rewrite /point_of_basis [matrix_of_prebasis bext initial_basis]/matrix_of_prebasis row_submx_col_mx !castmx_const mulmx0. *)
+(* Qed. *)
+
+(* Lemma initial_basis_is_feasible : (is_feasible bext initial_basis). *)
+(* Proof. *)
+(* rewrite /is_feasible point_of_basis_initial_basis. *)
+(* apply/forallP => i. *)
+(* rewrite mulmx0 mxE. *)
+(* case: splitP => [ j _ | j _ ]; last by rewrite !mxE; apply: lerr. *)
+(*   - rewrite mxE. *)
+(*     case: splitP => [ k _ | k _ ]. *)
+(*       + by rewrite /bpos !mxE oppr_le0; move:(enum_valP k); rewrite inE; apply: ltrW. *)
+(*       + by rewrite /bneg !mxE; move:(enum_valP k); rewrite inE. *)
+(* Qed. *)
+
+(* Definition initial_feasible_basis := FeasibleBasis initial_basis_is_feasible. *)
 
 Definition cext := \sum_i (row i Aposext)^T.
 Definition cextopt := \sum_i (-bpos) i 0.
 
+Lemma polyhedronext_inE x :
+  let: y := usubmx x in
+  let: z := dsubmx x in
+  (x \in polyhedron Aext bext) = (((Aneg *m y) >=m bneg) && ((Apos *m y) <=m (bpos + z))).
+Admitted.
+
+Lemma dual_polyhedronext_inE u :
+  let: upos := usubmx (usubmx u) in
+  let: uneg := dsubmx (usubmx u) in
+  let: u' := dsubmx u in
+  let: e := (const_mx 1):'cV_#|pos_idx| in
+  (u \in dual_polyhedron Aext cext) =
+  [&& -(Apos^T *m upos) + Aneg^T *m uneg == Apos^T *m e,
+       upos + u' == e, upos >=m 0, uneg >=m 0 & u' >=m 0].
+  
 Lemma pos_neg_lev_decomp x :
       (b <=m (A *m x)) = ((bpos <=m (Apos *m x)) && (bneg <=m (Aneg *m x))).
 Proof.
@@ -1364,8 +1443,8 @@ suff H: neg_idx = ~: pos_idx by move: (lev_decomp b (A *m x) pos_idx); rewrite -
   by move: pos_neg_idxI; rewrite -setI_eq0 setIC setI_eq0 => /setDidPl ->. 
 Qed.
 
-Lemma cext_min_values_aux x :
-      '[cext, x] = \sum_i (Aposext *m x) i 0 .
+Lemma cext_def x :
+      '[cext, x] = \sum_i ((Apos *m (usubmx x)) i 0 - (dsubmx x) i 0).
 Proof.
 rewrite vdotC /cext.
 rewrite (((big_morph (fun w => '[x,w])) 0%R) +%R).
@@ -1378,12 +1457,15 @@ Qed.
 Lemma cext_min_value x :
   (x \in polyhedron Aext bext) -> '[cext, x] >= cextopt.
 Proof.
-rewrite inE -[x]vsubmxK mul_col_mx col_mx_lev mul1mx; move/andP/proj1.
-rewrite mul_col_mx col_mx_lev /Aposext mul_row_col mul1mx; move/andP/proj1.
-rewrite /cextopt cext_min_values_aux mul_row_col mul1mx => Hx.
-apply: ler_sum => i _.
-by move/forallP: Hx.
+rewrite polyhedronext_inE => /andP [_ Hx].
+suff /forallP H: (-bpos) <=m (Aposext *m x).
+- rewrite /cextopt cext_min_values_aux.  
+  apply: ler_sum => i _; apply: (H i).
+rewrite -[x]vsubmxK mul_row_col mul1mx mulNmx.
+rewrite -(lev_add2l (-bpos)) addrA addNr add0r in Hx.
+by rewrite -(lev_add2r (-(Apos *m usubmx x))) -addrA addrN addr0 addrC in Hx.
 Qed.
+
 
 Lemma cext_min_value_attained_prop  x :
   (x \in polyhedron Aext bext) -> '[cext, x] = cextopt -> -bpos = (Aposext *m x).
