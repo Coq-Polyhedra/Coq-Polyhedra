@@ -1109,6 +1109,65 @@ End Phase2.
 
 End Simplex.
 
+Section PermBases.
+
+Variable R: realFieldType.
+Variable m n : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Variable bas0: feasible_basis A b.
+Variable perm_idx: {perm 'I_m}. 
+
+Definition A' := row_perm perm_idx A.
+Definition b' := row_perm perm_idx b.
+
+Definition perm_set := perm_idx @: bas0.
+
+Lemma perm_bas_fun_proof (i: 'I_#|bas0|) :
+  perm_idx (enum_val i) \in perm_set.
+Proof.
+apply: mem_imset; exact: enum_valP.
+Qed.
+
+Lemma perm_pb_card : #|perm_set| == n.
+Proof.
+rewrite card_imset; last by apply: perm_inj.
+apply/eqP; exact: prebasis_card.
+Qed.
+
+Definition perm_pb := Prebasis perm_pb_card.
+
+Definition perm_bas_fun i :=
+  let: i' := cast_ord (esym (prebasis_card bas0)) i in
+  cast_ord (prebasis_card perm_pb)
+           (enum_rank_in (perm_bas_fun_proof i') (perm_idx (enum_val i'))).
+
+Lemma perm_bas_fun_inj : injective perm_bas_fun.
+Proof.
+move => i j.
+move/cast_ord_inj/(congr1 (enum_val)).
+do 2![rewrite enum_rankK_in; last by exact: perm_bas_fun_proof].
+by move/perm_inj/enum_val_inj/cast_ord_inj.
+Qed.
+
+Definition perm_bas := perm perm_bas_fun_inj.
+
+Lemma AA' : matrix_of_prebasis A' perm_pb = row_perm perm_bas (matrix_of_prebasis A bas0).
+Proof.
+apply/matrixP => i j.
+rewrite mxE castmxE /= cast_ord_id row_submx_mxE.
+rewrite castmxE /= cast_ord_id row_submx_mxE /A' mxE.
+rewrite permE /perm_bas_fun /=.
+rewrite cast_ordK enum_rankK_in; last by exact: perm_bas_fun_proof.
+Qed.
+
+Lemma perm_is_basis : is_basis A' perm_pb. 
+Proof.
+rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx.
+
+
 Section Feasibility.
 
 Variable R: realFieldType.
