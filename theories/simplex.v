@@ -1220,7 +1220,9 @@ Qed.
 End DualFeasibility.
 
 
-Section Pointed_simplex. (* a simplex method which applies to LP of the form min '[c,x] s.t. A *m x >=m b, x >=m 0 *)
+Section Pointed_simplex.
+(* a complete simplex method (phase 1 + 2) which applies to LP 
+ * such that the feasible set is pointed *)
 
 Variable R: realFieldType.
 Variable m n : nat.
@@ -1721,12 +1723,13 @@ Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 Variable c : 'cV[R]_n.
 
-Definition Aaux' := A' (row_mx A (-A)).
-Definition baux' := b' (n+n) b.
-Definition caux' := col_mx c (-c).
+Definition Apointed := col_mx (row_mx A (-A)) (1%:M).
+Definition bpointed := col_mx b 0: 'cV[R]_(m+(n+n)).
+Definition cpointed := col_mx c (-c).
 
 Lemma feasibility_general_to_pos x :
-  x \in polyhedron A b -> col_mx (pos_part x) (neg_part x) \in polyhedron Aaux' baux'.
+  x \in polyhedron A b ->
+        col_mx (pos_part x) (neg_part x) \in polyhedron Apointed bpointed.
 Proof.
 rewrite !inE mul_col_mx mul1mx.
 rewrite mul_row_col mulNmx -mulmxN -mulmxDr add_pos_neg_part.
@@ -1742,42 +1745,42 @@ by rewrite -{1}[x]vsubmxK mul_row_col mulNmx -mulmxN -mulmxDr.
 Qed.
 
 Definition cost2gen (x : 'cV[R]_(n+n)):
-  '[caux', x] = '[c,v2gen x].
+  '[cpointed, x] = '[c,v2gen x].
 Proof.
 by rewrite -{1}[x]vsubmxK vdot_col_mx vdotNl vdotBr.
 Qed.
 
-Definition ext_reduced_cost2gen (bas : basis Aaux') :=
-  usubmx (ext_reduced_cost_of_basis caux' bas).
+Definition ext_reduced_cost2gen (bas : basis Apointed) :=
+  usubmx (ext_reduced_cost_of_basis cpointed bas).
 
-Lemma ext_reduced_cost2gen_dual_feasible (bas : basis Aaux') :
-  (reduced_cost_of_basis caux' bas) >=m 0 -> (ext_reduced_cost2gen bas \in dual_polyhedron A c).
+Lemma ext_reduced_cost2gen_dual_feasible (bas : basis Apointed) :
+  (reduced_cost_of_basis cpointed bas) >=m 0 -> (ext_reduced_cost2gen bas \in dual_polyhedron A c).
 Proof.
 rewrite /ext_reduced_cost2gen -non_neg_reduced_cost_equiv.
 set u := ext_reduced_cost_of_basis _ _.
 rewrite -{1}[u](vsubmxK) -[0](col_mx0) col_mx_lev => /andP [Hu Hu'].
 rewrite inE; apply/andP; split; last by done.
 - apply/eqP.
-  move: (ext_reduced_cost_of_basis_def caux' bas); rewrite -/u.
-  rewrite /Aaux' /A' -{1}[u](vsubmxK) tr_col_mx mul_row_col tr_row_mx mul_col_mx linearN /= mulNmx.
+  move: (ext_reduced_cost_of_basis_def cpointed bas); rewrite -/u.
+  rewrite /Apointed /A' -{1}[u](vsubmxK) tr_col_mx mul_row_col tr_row_mx mul_col_mx linearN /= mulNmx.
   rewrite trmx1 mul1mx.
   set t := col_mx _ _.
   move/(congr1 (fun z => -t + z)); rewrite addrA addNr add0r => Ht. (* DIRTY *)
   rewrite Ht addrC subv_ge0 in Hu'.
-  move: Hu'; rewrite /t /caux' col_mx_lev => /andP [H H'].
+  move: Hu'; rewrite /t /cpointed col_mx_lev => /andP [H H'].
   rewrite lev_opp2 in H'.
   by apply: lev_antisym; apply/andP.
 Qed.
 
 Lemma feasibility_pos_to_general x :
-  x \in polyhedron Aaux' baux' -> v2gen x \in polyhedron A b.
+  x \in polyhedron Apointed bpointed -> v2gen x \in polyhedron A b.
 Proof.
 rewrite inE mul_col_mx col_mx_lev => /andP [? _].
 by rewrite inE -mulmxAv2gen.
 Qed.
 
 Lemma infeasibility_pos_to_general d :
-  (dual_feasible_direction Aaux' d /\ '[baux',d] > 0) ->
+  (dual_feasible_direction Apointed d /\ '[bpointed,d] > 0) ->
   dual_feasible_direction A (usubmx d) /\ '[b, usubmx d] > 0.
 Proof.
 set d_gen := usubmx d.
@@ -1799,19 +1802,39 @@ rewrite eq_refl Hd_gen_pos /=.
 by rewrite vdot_col_mx vdot0l addr0.
 Qed.
 
+Definition bas0_set := (@rshift m (n+n)%N) @: setT.
+
+Lemma bas0_card : (#|bas0_set| == (n+n))%N.
+Proof.
+rewrite card_imset; last exact: rshift_inj.
+by rewrite cardsT card_ord eq_refl.  
+Qed.
+
+Definition bas0_prebasis := Prebasis bas0_card.
+
+Lemma bas0_is_basis : is_basis Apointed bas0_prebasis.
+Proof.
+rewrite /is_basis -row_free_unit row_free_castmx.
+rewrite row_submx_col_mx_rshift row_free_castmx.
+rewrite row_submxT row_free_castmx row_free_unit.
+exact: unitmx1.
+Qed.
+
+Definition bas0 := Basis bas0_is_basis.
+
 Inductive simplex_final_result :=
 | Simplex_infeasible of 'cV[R]_m
 | Simplex_unbounded of 'cV[R]_n * 'cV[R]_n
 | Simplex_optimal_basis of 'cV[R]_n * 'cV[R]_m.
 
 Definition simplex :=
-  match pos_simplex (row_mx A (-A)) b caux' with 
-  | Pos_res_infeasible d => Simplex_infeasible (usubmx d)
-  | Pos_res_unbounded (bas, i) =>
+  match pointed_simplex bpointed bas0 cpointed with 
+  | Pointed_res_infeasible d => Simplex_infeasible (usubmx d)
+  | Pointed_res_unbounded (bas, i) =>
     let d := direction bas i in
-    Simplex_unbounded (v2gen (point_of_basis baux' bas), v2gen d)
-  | Pos_res_optimal_basis bas =>
-    Simplex_optimal_basis (v2gen (point_of_basis baux' bas), ext_reduced_cost2gen bas)
+    Simplex_unbounded (v2gen (point_of_basis bpointed bas), v2gen d)
+  | Pointed_res_optimal_basis bas =>
+    Simplex_optimal_basis (v2gen (point_of_basis bpointed bas), ext_reduced_cost2gen bas)
   end.
 
 CoInductive simplex_spec : simplex_final_result -> Type :=
@@ -1822,7 +1845,7 @@ CoInductive simplex_spec : simplex_final_result -> Type :=
 Lemma simplexP: simplex_spec simplex.
 Proof.
 rewrite /simplex.
-case: pos_simplexP => [ d /infeasibility_pos_to_general [Hd Hd'] | [bas i] /= [H H']| bas Hu]; constructor; try by done.
+case: pointed_simplexP => [ d /infeasibility_pos_to_general [Hd Hd'] | [bas i] /= [H H']| bas Hu]; constructor; try by done.
 - split.
   + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
     by move/feasibility_pos_to_general.
@@ -1837,8 +1860,8 @@ case: pos_simplexP => [ d /infeasibility_pos_to_general [Hd Hd'] | [bas i] /= [H
   + apply/compl_slack_condP => i.
     rewrite /ext_reduced_cost_of_basis [in X in X = 0]mxE.
     suff /compl_slack_condP/(_ (lshift (n+n) i)) :
-      (compl_slack_cond Aaux' baux' (point_of_basis baux' bas) (ext_reduced_cost_of_basis caux' bas)).
-    * by rewrite /Aaux' /A' /baux' /b' mul_col_mx 2!col_mxEu mulmxAv2gen.
+      (compl_slack_cond Apointed bpointed (point_of_basis bpointed bas) (ext_reduced_cost_of_basis cpointed bas)).
+    * by rewrite /Apointed /A' /bpointed /b' mul_col_mx 2!col_mxEu mulmxAv2gen.
     * by apply: compl_slack_cond_on_basis.
 Qed.
 
