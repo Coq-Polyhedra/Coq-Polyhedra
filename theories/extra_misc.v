@@ -14,7 +14,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Section Basic.
-
+      
 Lemma intro_existsT (T: Type) (P: T -> Prop) (b: bool) (H: reflect (exists x, P x) b) (x: T):
   P x -> b.
 Proof.
