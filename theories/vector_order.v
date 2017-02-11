@@ -183,13 +183,18 @@ Proof.
 by rewrite opprK addrC add_lev_min_max addr0.
 Qed.
 
-
-Lemma row_perm_gev0 (s: {perm 'I_n}) x :
-  (x >=m 0) = ((row_perm s x) >=m 0).
+Lemma row_perm_lev (s: {perm 'I_n}) x y :
+  (x <=m y) = ((row_perm s x) <=m (row_perm s y)).
 Proof.
 apply/idP/idP => /forallP H; apply/forallP => i.
 - by move/(_ (s i)): H; rewrite !mxE.
 - by move/(_ ((s^-1)%g i)): H; rewrite !mxE permKV.
+Qed.
+
+Lemma row_perm_gev0 (s: {perm 'I_n}) x :
+  (x >=m 0) = ((row_perm s x) >=m 0).
+Proof.
+by rewrite (row_perm_lev s) row_perm_const.
 Qed.
 
 End Core.

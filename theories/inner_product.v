@@ -16,7 +16,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix vector.
+From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix vector fingroup perm.
 Require Import extra_matrix.
 
 Set Implicit Arguments.
@@ -118,6 +118,14 @@ Proof. exact: raddfMn. Qed.
 Lemma vdotZr a u v : '[u, a *: v] = a * '[u, v].
 Proof. by rewrite !(vdotC u) vdotZl. Qed.
 
+Lemma vdot_perm (s: 'S_n) u v :
+  '[row_perm s u, row_perm s v] = '[u,v].
+Proof.
+suff: '[row_perm s u, row_perm s v]%:M = '[u,v]%:M :> 'M_1.
+- by move/matrixP/(_ 0 0); rewrite !mxE.
+- rewrite 2!vdot_def; exact: mulmx_tr_row_perm.
+Qed.
+  
 (* Order properties *)
 Lemma vnorm_ge0 x : 0 <= '[x].
 Proof. by rewrite sumr_ge0 // => i _; exact: sqr_ge0. Qed.

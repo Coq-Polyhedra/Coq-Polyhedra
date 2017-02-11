@@ -50,6 +50,19 @@ Proof.
 by rewrite !mxE.
 Qed.
 
+Lemma row_submxT (m p : nat) (M : 'M[R]_(m,p)) :
+  row_submx M setT = castmx (esym (etrans (cardsT (ordinal_finType m)) (card_ord m)), erefl p) M.
+Proof.
+apply/row_matrixP => i.
+rewrite row_castmx esymK castmx_id.
+rewrite row_submx_row.
+apply: (congr1 ((@row _ _ _)^~ M)).
+rewrite (enum_val_nth (enum_default i)) enum_setT -enumT.
+apply: ord_inj; rewrite /=.
+rewrite nth_enum_ord //.
+by move: (ltn_ord i); rewrite {2}cardsT card_ord.
+Qed.
+
 Lemma row_submx_lev (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) : 
       (x <=m y) -> ((row_submx x I) <=m (row_submx y I)).
 Proof.
@@ -413,11 +426,14 @@ Qed.
 Lemma row_submx_col_mx :
   let: I' := (@lshift m n) @: I in
   let: J' := (@rshift m n) @: J in
-  castmx (lrshift_image_card, erefl p) (row_submx (col_mx M N) (I' :|: J')) =
-  col_mx (row_submx M I) (row_submx N J).
+  row_submx (col_mx M N) (I' :|: J') =
+  castmx (esym lrshift_image_card, erefl p)
+         (col_mx (row_submx M I) (row_submx N J)).
 Proof.
 set I' := (@lshift m n) @: I.
 set J' := (@rshift m n) @: J.
+have ->: (erefl p = esym (erefl p)) by done.
+apply: (canRL (castmxK _ _)).
 apply/matrixP => i l.
 rewrite castmxE /= cast_ord_id row_submx_mxE.
 set i' := enum_val (_ _ i).

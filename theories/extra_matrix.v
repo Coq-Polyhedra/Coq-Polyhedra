@@ -7,7 +7,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
 Require Import extra_misc.
 
 Set Implicit Arguments.
@@ -123,6 +123,14 @@ Proof.
 by case: n / en in M *; case: p / ep in N *.
 Qed.
 
+Lemma mulmx_tr_row_perm (R: ringType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
+  (row_perm s A)^T *m (row_perm s B) = A^T *m B.
+Proof.
+rewrite tr_row_perm col_permE row_permE.
+rewrite mulmxA -[X in X *m _]mulmxA -perm_mxM.
+by rewrite gsimp perm_mx1 mulmx1.
+Qed.
+
 Lemma castmx_row (R : Type) (m m' n1 n2 n1' n2' : nat)
   (eq_n1 : n1 = n1') (eq_n2 : n2 = n2') (eq_n12 : (n1 + n2 = n1' + n2')%N)
   (eq_m : m = m') (A1 : 'M[R]_(m, n1)) (A2 : 'M_(m, n2)) :
@@ -173,6 +181,12 @@ Lemma rank_castmx (F : fieldType) (m m' n : nat) (eq_m : m = m') (A : 'M[F]_(m,n
   \rank (castmx (eq_m, erefl n) A) = \rank A.
 Proof.
 by apply: eqmx_rank; move/eqmxP : (eqmx_cast A (eq_m, erefl n)).
+Qed.
+
+Lemma row_free_castmx (F : fieldType) (m m' n : nat) (eq_m : m = m') (A : 'M[F]_(m,n)) :
+  row_free (castmx (eq_m, erefl n) A) = row_free A.
+Proof.
+by rewrite -2!row_leq_rank rank_castmx {2}eq_m.
 Qed.
 
 Lemma submx_castmx (F : fieldType) (m1 m1' m2 n : nat) (eq_m1 : m1 = m1') (A : 'M[F]_(m1,n)) (B : 'M[F]_(m2,n)) :
@@ -230,6 +244,19 @@ Proof.
 by apply/colP=> j; rewrite mxE summxE; apply: eq_bigr => i _; rewrite !mxE mulr1.
 Qed.
 
+Lemma cast_mulmx (R: realFieldType) (m m' n p: nat) (em: m = m') (M: 'M[R]_(m,n)) (N: 'M[R]_(n,p)) :
+  castmx (em, erefl n) M *m N = castmx (em, erefl p) (M *m N).
+Proof.
+by rewrite castmx_mul castmx_id.
+Qed.
+
+Lemma castmx_inj (R: realFieldType) (m m' n n': nat) (em: m = m') (en: n = n') :
+  injective (@castmx R _ _ _ _ (em, en)).
+Proof.
+move => M N.
+move/(congr1 (castmx (esym em, esym en))).
+by rewrite 2!castmxK.
+Qed.
 
 End ExtraMx.
 
