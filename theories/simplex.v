@@ -1820,7 +1820,7 @@ rewrite row_submxT row_free_castmx row_free_unit.
 exact: unitmx1.
 Qed.
 
-Definition bas0 := Basis bas0_is_basis.
+Definition bas0_pointed := Basis bas0_is_basis.
 
 Inductive simplex_final_result :=
 | Simplex_infeasible of 'cV[R]_m
@@ -1828,7 +1828,7 @@ Inductive simplex_final_result :=
 | Simplex_optimal_basis of 'cV[R]_n * 'cV[R]_m.
 
 Definition simplex :=
-  match pointed_simplex bpointed bas0 cpointed with 
+  match pointed_simplex bpointed bas0_pointed cpointed with 
   | Pointed_res_infeasible d => Simplex_infeasible (usubmx d)
   | Pointed_res_unbounded (bas, i) =>
     let d := direction bas i in
@@ -1943,6 +1943,25 @@ rewrite /bounded /unbounded.
 by case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | |].
 Qed.
 
+Lemma opt_value_is_optimal x :
+  (x \in polyhedron A b) ->
+  (forall y, y \in polyhedron A b -> '[c,x] <= '[c,y]) -> '[c,x] = opt_value.
+Proof.
+move => Hx Hopt; rewrite /opt_value.
+case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
+                 | [_ d] /= [_ Hd Hd']
+                 | [y u] /= [Hy Hu Hcsc]].
+- by move/(intro_existsT (feasibleP _ _)): Hx.
+- move: (unbounded_certificate '[c,x] Hx Hd Hd') => [y [Hy Hy']].
+  move/(_ _ Hy): Hopt.
+  by move/(ltr_le_trans Hy'); rewrite ltrr.
+- rewrite -(compl_slack_cond_duality_gap_equiv Hy Hu) in Hcsc.
+  move/eqP/(duality_gap_eq0_optimality Hy Hu)/(_ _ Hx): Hcsc => Hyx.
+  move/(_ _  Hy): Hopt => Hxy.
+  move/andP: (conj Hxy Hyx).
+  exact: ler_anti.
+Qed.
+
 Lemma bounded_is_dual_feasible :
   feasible A b -> bounded = (dual_feasible A c).
 Proof.
@@ -1952,6 +1971,63 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
                  | [_ u] /= [_ /(intro_existsT (dual_feasibleP _ _)) -> _ ] ];
                    try by done.
 - by move/(intro_existsT (dual_infeasibleP _ _))/negbTE: (conj Hd Hd').
+Qed.
+
+Hypothesis bas0: basis A.
+
+Definition bounded_pointed :=
+  match pointed_simplex b bas0 c with
+  | Pointed_res_optimal_basis _ => true
+  | _ => false 
+  end.
+
+Lemma bounded_pointed_equiv :
+  bounded_pointed = bounded.
+Proof.
+rewrite /bounded_pointed.
+case: pointed_simplexP =>
+  [ d /(intro_existsT (infeasibleP _ _))/negP Hinfeas
+  | [bas i] /= [Hd Hd']
+  | bas Hu].
+- symmetry; apply/(introF idP).
+  move/boundedP.
+  by move => [[x [/(intro_existsT (feasibleP _ _))]]].
+- move/(intro_existsT (feasibleP _ _)): (feasible_basis_is_feasible bas) => Hfeas.
+  suff: unbounded.
+  + by move: (bounded_is_not_unbounded Hfeas) ->; move ->.
+  + apply/unboundedP => K.
+    exact: (unbounded_certificate_on_basis K Hd' Hd).
+- symmetry; apply/boundedP.
+  move: (optimal_basis Hu) => Hopt.
+  suff <-: '[c, point_of_basis b bas] = opt_value.
+  + split; last by done.
+    * exists (point_of_basis b bas); split; last by done. 
+      exact: feasible_basis_is_feasible.
+  + apply: opt_value_is_optimal; last by done.
+    * exact: feasible_basis_is_feasible.
+Qed.    
+
+Lemma bounded_pointedP :
+  reflect
+    ((exists bas: feasible_basis A b, '[c, point_of_basis b bas] = opt_value)
+     /\ (forall y, y \in polyhedron A b -> opt_value <= '[c,y]))
+    bounded.
+Proof.
+rewrite -bounded_pointed_equiv /bounded_pointed.
+case: pointed_simplexP =>
+  [ d /(intro_existsT (infeasibleP _ _))/negP Hinfeas
+  | [bas i] /= [Hd Hd']
+  | ]; constructor.
+- move => [[bas _] _].
+  by move/(intro_existsT (feasibleP _ _)): (feasible_basis_is_feasible bas).
+- move => [_ Hopt].
+  move: (unbounded_certificate_on_basis opt_value Hd' Hd) => [x [Hx Hx']].
+  by move/(ltr_le_trans Hx'): (Hopt _ Hx); rewrite ltrr.
+- have Hval: '[ c, point_of_basis b bas] = opt_value.
+  + apply: opt_value_is_optimal;
+      [ exact: feasible_basis_is_feasible | exact: optimal_basis].
+  split; first by exists bas.
+  + rewrite -Hval; exact: optimal_basis.
 Qed.
   
 End General_simplex.
