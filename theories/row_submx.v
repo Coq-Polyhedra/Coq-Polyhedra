@@ -8,6 +8,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra.
+From mathcomp Require Import fingroup perm.
 Require Import extra_misc inner_product vector_order extra_matrix.
 
 Set Implicit Arguments.
@@ -19,41 +20,56 @@ Import GRing.Theory Num.Theory.
 
 Section RowSubmx.
 
-Definition row_submx (R : realFieldType) (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :=
+Variable R : realFieldType.
+  
+Definition row_submx (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :=
   \matrix_(i < #|I|, j < p) M (enum_val i) j.
 
-Lemma row_submx_mul (R : realFieldType) (m p q : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(p,q)) (I : {set 'I_m}) :
+Lemma row_submx_mul (m p q : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(p,q)) (I : {set 'I_m}) :
   row_submx (M *m N) I = (row_submx M I) *m N.
 Proof.
 apply/matrixP => ? ?; rewrite !mxE; apply: eq_bigr => ? _.
 by rewrite !mxE.
 Qed.
 
-Lemma row_submx_row (R : realFieldType) (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (k : 'I_#|I|) :
+Lemma row_submx_row (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (k : 'I_#|I|) :
   row k (row_submx M I) = row (enum_val k) M.
 Proof.
 by apply/matrixP => ? ?; rewrite !mxE.
 Qed.
 
-Lemma row_submx_row_mx (R : realFieldType) (m p q : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(m,q)) (I : {set 'I_m}) :
+Lemma row_submx_row_mx (m p q : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(m,q)) (I : {set 'I_m}) :
   row_submx (row_mx M N) I = row_mx (row_submx M I) (row_submx N I).
 Proof.
 by apply/row_matrixP => ?; rewrite row_submx_row !row_row_mx !row_submx_row.
 Qed.
 
-Lemma row_submx_mxE (R : realFieldType) (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (k : 'I_#|I|) (l : 'I_p) :
+Lemma row_submx_mxE (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (k : 'I_#|I|) (l : 'I_p) :
   (row_submx M I) k l = M (enum_val k) l.
 Proof.
 by rewrite !mxE.
 Qed.
 
-Lemma row_submx_lev (R : realFieldType) (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) : 
+Lemma row_submxT (m p : nat) (M : 'M[R]_(m,p)) :
+  row_submx M setT = castmx (esym (etrans (cardsT (ordinal_finType m)) (card_ord m)), erefl p) M.
+Proof.
+apply/row_matrixP => i.
+rewrite row_castmx esymK castmx_id.
+rewrite row_submx_row.
+apply: (congr1 ((@row _ _ _)^~ M)).
+rewrite (enum_val_nth (enum_default i)) enum_setT -enumT.
+apply: ord_inj; rewrite /=.
+rewrite nth_enum_ord //.
+by move: (ltn_ord i); rewrite {2}cardsT card_ord.
+Qed.
+
+Lemma row_submx_lev (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) : 
       (x <=m y) -> ((row_submx x I) <=m (row_submx y I)).
 Proof.
 by move/forallP => ?; apply/forallP => ?; rewrite !mxE.
 Qed.
 
-Lemma lev_decomp (R : realFieldType) (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
+Lemma lev_decomp (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
     (x <=m y) = (((row_submx x I) <=m (row_submx y I)) && ((row_submx x (~:I)) <=m (row_submx y (~:I)))).
 Proof.
 apply/idP/idP.
@@ -66,7 +82,7 @@ apply/idP/idP.
   + by rewrite -in_setC in Hi; move: (HcI (enum_rank_in Hi i)); rewrite !row_submx_mxE enum_rankK_in.
 Qed.
 
-Lemma row_submx_span (R : realFieldType) (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :
+Lemma row_submx_span (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :
   (row_submx M I :=: \sum_(i in I) <<row i M>>)%MS.
 Proof.
 apply/eqmxP/andP; split.
@@ -80,7 +96,7 @@ apply/eqmxP/andP; split.
     apply: row_sub.
 Qed.
 
-Lemma row_submx_spanU1 (R : realFieldType) (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (i : 'I_m) :
+Lemma row_submx_spanU1 (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (i : 'I_m) :
   (i \notin I) -> (row_submx M  (i |: I) :=: row i M + (row_submx M I)) %MS.
 Proof.
 move => Hi; apply/eqmx_sym.
@@ -91,7 +107,7 @@ apply: eqmx_trans.
 by rewrite big_setU1 //=.
 Qed.
 
-Lemma row_submx_spanD1 (R : realFieldType) (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (i : 'I_m) :
+Lemma row_submx_spanD1 (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (i : 'I_m) :
   (i \in I) -> (row_submx M I :=: row i M + (row_submx M (I :\ i))) %MS.
 Proof.
 move => Hi; apply/eqmx_sym.
@@ -102,82 +118,345 @@ apply: eqmx_trans.
 by rewrite (big_setD1 i) //=.
 Qed.
 
-Lemma lshift_inj (m n : nat): injective (@lshift m n).
+End RowSubmx.
+
+Section ExtraFinType.
+
+Variable T T': finType.
+
+Variable A: {set T}.
+
+Variable f: T -> T'.
+Hypothesis injf: injective f.
+
+Definition liftf (i: 'I_#|A|) :=
+  (enum_rank_in (mem_imset f (enum_valP i)) (f (enum_val i))): 'I_#|f @: A|.
+
+Lemma liftf_inj : injective liftf.
+Proof.
+move => i i'.
+move/(congr1 enum_val).
+do 2![rewrite enum_rankK_in; last exact: (mem_imset _ (enum_valP _))].
+move/injf; exact: enum_val_inj.
+Qed.
+
+Definition liftf_perm_fun := (cast_ord (card_imset (mem A) injf)) \o liftf.
+
+Lemma liftf_perm_inj : injective liftf_perm_fun.
+Proof.
+apply: inj_comp; [exact: cast_ord_inj | exact liftf_inj].
+Qed.
+
+Definition liftf_perm := perm liftf_perm_inj: 'S_#|A|.
+
+End ExtraFinType.
+
+Section RowSubmxPerm.
+
+Variable R: realFieldType.
+  
+Variable m n: nat.
+Variable M: 'M[R]_(m,n). 
+Variable I: {set 'I_m}.
+
+Variable perm_idx : 'S_m.
+
+Lemma row_submx_perm :
+  let: perm_idx_inj := @perm_inj _ perm_idx in
+  row_submx (row_perm perm_idx M) I =
+  row_perm (liftf_perm I perm_idx_inj)
+           (castmx (card_imset (mem I) perm_idx_inj, erefl n)
+                   (row_submx M (perm_idx @: I))).
+Proof.
+apply/matrixP => i j.
+rewrite row_submx_mxE mxE.
+rewrite mxE castmxE /= cast_ord_id row_submx_mxE.
+by rewrite permE cast_ordK enum_rankK_in; last exact: (mem_imset _ (enum_valP _)).
+Qed.
+
+End RowSubmxPerm.
+
+Section SplitExtra.
+
+Variable m n: nat.
+
+Lemma lshift_inj: injective (@lshift m n).
 Proof.
 move => i j /(congr1 (@nat_of_ord (m+n)%N))/eqP.
 rewrite /=; by move/eqP/ord_inj.
 Qed.
 
-Lemma lshift_card (m n : nat): #|[set lshift n i | i : 'I_m]| = m.
-Proof.
-move/(card_imset predT): (@lshift_inj m n) ->.
-by rewrite cardT size_enum_ord.
-Qed.
-
-Lemma rshift_inj (m n : nat): injective (@rshift m n).
+Lemma rshift_inj: injective (@rshift m n).
 Proof.
 move => i j /(congr1 (@nat_of_ord (m+n)%N))/eqP.
 by rewrite eqn_add2l; move/eqP/ord_inj.
 Qed.
 
-Lemma rshift_card (m n : nat): #|[set rshift m i | i : 'I_n]| = n.
+Lemma enum_lrshift :
+  (enum 'I_(m+n)) = 
+  [seq (lshift n i) | i <- enum 'I_m]
+    ++ [seq (rshift m i) | i <- enum 'I_n].
 Proof.
-move/(card_imset predT): (@rshift_inj m n) ->.
-by rewrite cardT size_enum_ord.
+apply: (inj_map (@ord_inj (m+n)%N)).
+rewrite val_enum_ord.
+rewrite map_cat -!map_comp -2!enumT.
+set s1 := (X in X ++ _).
+set s2 := (X in _ ++ X).
+have ->: (s1 = [seq (nat_of_ord i) | i <- enum 'I_m])
+  by exact: eq_map.
+have ->: (s2 = map (addn m) [seq (nat_of_ord i)%N | i <- enum 'I_n])
+  by rewrite -map_comp; exact: eq_map.
+by rewrite 2!val_enum_ord -iota_addl [in RHS]addnC -iota_add.
+Qed.   
+
+CoInductive split_spec' (i : 'I_(m + n)) : 'I_m + 'I_n -> bool -> Type :=
+  | SplitLo' (j : 'I_m) of i = lshift n j : split_spec' i (inl _ j) true
+  | SplitHi' (k : 'I_n) of i = rshift m k : split_spec' i (inr _ k) false.
+
+Lemma splitP' (i : 'I_(m + n)) : split_spec' i (split i) (i < m)%N.
+Proof.
+case: (splitP i) => [j | k].
+- have <-: (nat_of_ord (lshift n j) = j)%N by done.
+  by move/ord_inj ->; constructor.
+- have <-: (nat_of_ord (rshift m k) = (m+k))%N by done.
+  by move/ord_inj ->; constructor.
 Qed.
 
-Lemma rshift_iota (m n : nat): (mem [set rshift m i | i : 'I_n]) =1 (fun i => (nat_of_ord i \in iota m n)).
+Lemma lrshift_distinct i j: lshift n i != rshift m j. 
 Proof.
-move => i; rewrite mem_iota inE; apply/idP/idP.
-- move/imsetP => [l _ /(congr1 (@nat_of_ord (m+n)%N)) ->].
-  rewrite /=; apply/andP; split; last by apply: rshift_subproof.
-  + by rewrite -{1}[m]addn0 leq_add2l; apply: leq0n.
-- move/andP => [Hi Hi'].
-  apply/imsetP; exists (Ordinal (split_subproof Hi)); first by done.
-  by apply: ord_inj; rewrite /= subnKC //.
+apply/eqP; move/(congr1 (@nat_of_ord (m+n)%N)).
+rewrite /= => Hij.
+move: (leq_addr (nat_of_ord j) m); rewrite -Hij.
+by move/(leq_trans (ltn_ord i)); rewrite ltnn.
 Qed.
 
-Lemma rshift_compl (m n : nat): ~: [set rshift m i | i : 'I_n] = [set lshift n i | i : 'I_m].
+Lemma lrshift_disjoint (I: {set 'I_m}) (J: {set 'I_n}):
+  [disjoint ((@lshift m n) @: I) & ((@rshift m n) @: J)].
 Proof.
-have H: [set lshift n i | i : 'I_m] \subset ~: [set rshift m i | i : 'I_n].
-- apply/subsetP => i /imsetP [j _ Hj].
-  apply/setCP/negP; apply: contraT; rewrite negbK.
-  move/imsetP => [j' _ Hj'].
-  move/(congr1 (@nat_of_ord (m+n)%N)): Hj.
-  move/(congr1 (@nat_of_ord (m+n)%N)): Hj' ->.
-  rewrite /= => Hjj'.
-  move: (leq_addr (nat_of_ord j') m); rewrite Hjj'.
-  move/(leq_trans (ltn_ord j)).
-  by rewrite ltnn.
-apply/eqP; rewrite eq_sym.
-rewrite eqEcard; apply/andP; split; first by done.
-move: (cardsC  [set rshift m i | i : 'I_n]).
-rewrite [RHS]cardE size_enum_ord rshift_card lshift_card addnC.
-move/addIn ->; by apply:leqnn.
+rewrite disjoint_subset.
+apply/subsetP => i; rewrite inE.
+move/imsetP => [i' _ ->].
+apply/negP; move/imsetP => [j _].
+move/eqP; apply/negP.
+exact: lrshift_distinct.
 Qed.
 
-Lemma row_submx_col_mx (R : realFieldType) (m n p : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(n,p)) :
-  let I := [set rshift m i | i : 'I_n] in
-  row_submx (col_mx M N) I = castmx (esym (rshift_card m n), erefl p) N.
+
+End SplitExtra.
+
+Section RowSubmxSplit.
+
+Variable R: realFieldType.
+
+Variable m n: nat.
+Variable p: nat.
+Variable M: 'M[R]_(m,p).
+Variable N: 'M[R]_(n,p).
+
+Variable I: {set 'I_m}.
+Variable J: {set 'I_n}.
+
+Lemma lshift_enum_val (i: 'I_#|I|):
+  lshift n (enum_val i) =
+  enum_val (cast_ord (esym (card_imset (mem I) (@lshift_inj m n))) i).
 Proof.
-move => I.
-apply/row_matrixP => i.
-rewrite row_submx_row row_castmx esymK castmx_id.
-move/imsetP: (enum_valP i) => [j _ Hj].
-rewrite Hj rowKd.
-suff ->: (j = cast_ord (rshift_card m n) i) by done.
-apply: ord_inj; move/(congr1 (@nat_of_ord (m+n)%N)): Hj.
-rewrite /=.
-suff ->: nat_of_ord (enum_val i) = (m+i)%N.
-  by move/eqP; rewrite eqn_add2l; move/eqP ->.
-- rewrite /enum_val /enum_mem -(@nth_map _ _ _ 0%N); last by rewrite -cardE.
-  move/eq_filter: (@rshift_iota m n) ->.
-  rewrite -filter_map -enumT val_enum_ord.
-  have /(subseq_uniqP (iota_uniq 0 (m+n)%N)) <-: subseq (iota m n) (iota 0 (m+n)%N).
-  + move: (iota_add 0 m n) ->; rewrite add0n.
-    by apply:suffix_subseq.
-  by rewrite nth_iota; last by move: (ltn_ord i); rewrite {2}(rshift_card m n).
+rewrite (enum_val_nth (enum_default ((cast_ord (esym (card_imset (mem I) (@lshift_inj m n))) i)))).
+rewrite /enum_mem -enumT.
+rewrite enum_lrshift filter_cat.
+set s1 := (X in X ++ _).
+set s2 := (X in _ ++ X).
+have ->: s1 = [seq (lshift n i) | i <- enum I].
+- rewrite /s1 filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE; apply/idP/idP.
+  + by move/imsetP => [j' Hj' /lshift_inj ->].
+  + exact: mem_imset.
+rewrite {s1}; set s1 := (X in X ++ _).
+rewrite nth_cat size_map /= -cardE ltn_ord.
+rewrite (nth_map (enum_default i)) //=.
+  by rewrite -cardE ltn_ord.
 Qed.
+
+Lemma row_submx_col_mx_lshift :
+  let: I' := (@lshift m n) @: I in
+  row_submx (col_mx M N) I' =
+  castmx (esym (card_imset (mem I) (@lshift_inj m n)), erefl p)
+          (row_submx M I).
+Proof.
+set I' := (@lshift m n) @: I.
+apply/matrixP => i j.
+rewrite row_submx_mxE.
+move/imsetP: (enum_valP i) => [i' Hi' Hi].
+rewrite Hi col_mxEu.
+rewrite castmxE esymK cast_ord_id row_submx_mxE.
+suff: (enum_val i = lshift n (enum_val (cast_ord (card_imset (mem I) (@lshift_inj m n)) i))).
+  by rewrite Hi; move/lshift_inj => ->.
+by rewrite lshift_enum_val cast_ordK.
+Qed.
+
+Lemma rshift_enum_val (i: 'I_#|J|):
+  rshift m (enum_val i) =
+  enum_val (cast_ord (esym (card_imset (mem J) (@rshift_inj m n))) i).
+Proof.
+rewrite (enum_val_nth (enum_default ((cast_ord (esym (card_imset (mem J) (@rshift_inj m n))) i)))).
+rewrite /enum_mem -enumT.
+rewrite enum_lrshift filter_cat.
+set s1 := (X in X ++ _).
+set s2 := (X in _ ++ X).
+have ->: s1 = [::]. 
+- rewrite /s1 filter_map.
+  rewrite (@eq_filter _ _ pred0).
+  + by rewrite filter_pred0 /=.
+  + move => j; rewrite !inE.
+    apply: (introF imsetP); move => [j' _].
+    apply: (elimN eqP); exact: lrshift_distinct.
+rewrite cat0s.
+have ->: s2 = [seq (rshift m i) | i <- enum J].
+- rewrite /s2 filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE; apply/idP/idP.
+  + by move/imsetP => [j' Hj' /rshift_inj ->].
+  + exact: mem_imset.
+rewrite (nth_map (enum_default i)) //=.
+  by rewrite -cardE ltn_ord.
+Qed.
+
+Lemma row_submx_col_mx_rshift :
+  let: J' := (@rshift m n) @: J in
+  row_submx (col_mx M N) J' =
+  castmx (esym (card_imset (mem J) (@rshift_inj m n)), erefl p)
+          (row_submx N J).
+Proof.
+set J' := (@rshift m n) @: J.
+apply/matrixP => i j.
+rewrite row_submx_mxE.
+move/imsetP: (enum_valP i) => [i' Hi' Hi].
+rewrite Hi col_mxEd.
+rewrite castmxE esymK cast_ord_id row_submx_mxE.
+suff: (enum_val i = rshift m (enum_val (cast_ord (card_imset (mem J) (@rshift_inj m n)) i))).
+  by rewrite Hi; move/rshift_inj => ->.
+by rewrite rshift_enum_val cast_ordK.
+Qed.
+
+Lemma lrshift_image_card :
+  (#| ((@lshift m n) @: I) :|: ((@rshift m n) @: J) | = #|I| + #|J|)%N.
+Proof.
+set I' := (@lshift m n) @: I.
+set J' := (@rshift m n) @: J.
+move/leqifP: (leq_card_setU I' J').
+rewrite lrshift_disjoint => /eqP ->.
+rewrite card_imset; last exact (@lshift_inj m n).
+by rewrite card_imset; last exact (@rshift_inj m n).
+Qed.
+
+Lemma lshift_enum_valC (i: 'I_#|I|):
+  lshift n (enum_val i) =
+  enum_val (cast_ord (esym lrshift_image_card) (lshift #|J| i)).
+Proof.
+rewrite (enum_val_nth (enum_default (cast_ord (esym lrshift_image_card) (lshift #|J| i)))).
+rewrite /enum_mem -enumT.
+rewrite enum_lrshift filter_cat.
+set s1 := (X in X ++ _).
+set s2 := (X in _ ++ X).
+have ->: s1 = [seq x <- [seq lshift n i | i <- enum 'I_m] | (mem [set lshift n x | x in I]) x].
+- apply: eq_in_filter => j /mapP [j' Hj' ->].
+  rewrite !inE.
+  have /negbTE ->: ((lshift n j') \notin [set rshift m x | x in J]).
+  + apply: (introN idP) => /imsetP [k _].
+    apply: (elimN eqP); exact: lrshift_distinct.
+  by rewrite orbF.  
+rewrite {s1}; set s1 := (X in X ++ _).
+have ->: s1 = [seq (lshift n i) | i <- enum I].
+- rewrite /s1 filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE; apply/idP/idP.
+  + by move/imsetP => [j' Hj' /lshift_inj ->].
+  + exact: mem_imset.
+rewrite {s1}; set s1 := (X in X ++ _).
+rewrite nth_cat size_map /= -cardE ltn_ord.
+rewrite (nth_map (enum_default i)) //.
+by rewrite -cardE ltn_ord.
+Qed.
+
+Lemma rshift_enum_valC (i: 'I_#|J|):
+  rshift m (enum_val i) =
+  enum_val (cast_ord (esym lrshift_image_card) (rshift #|I| i)).
+Proof.
+rewrite (enum_val_nth (enum_default (cast_ord (esym lrshift_image_card) (rshift #|I| i)))).
+rewrite /enum_mem -enumT.
+rewrite enum_lrshift filter_cat.
+set s1 := (X in X ++ _).
+set s2 := (X in _ ++ X).
+have ->: s1 = [seq x <- [seq lshift n i | i <- enum 'I_m] | (mem [set lshift n x | x in I]) x].
+- apply: eq_in_filter => j /mapP [j' Hj' ->].
+  rewrite !inE.
+  have /negbTE ->: ((lshift n j') \notin [set rshift m x | x in J]).
+  + apply: (introN idP) => /imsetP [k _].
+    apply: (elimN eqP); exact: lrshift_distinct.
+  by rewrite orbF.  
+rewrite {s1}; set s1 := (X in X ++ _).
+have ->: s1 = [seq (lshift n i) | i <- enum I].
+- rewrite /s1 filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE; apply/idP/idP.
+  + by move/imsetP => [j' Hj' /lshift_inj ->].
+  + exact: mem_imset.
+rewrite {s1}; set s1 := (X in X ++ _).
+have ->: s2 = [seq x <- [seq rshift m i | i <- enum 'I_n] | (mem [set rshift m x | x in J]) x].
+- apply: eq_in_filter => j /mapP [j' Hj' ->].
+  rewrite !inE.
+  have /negbTE ->: ((rshift m j') \notin [set lshift n x | x in I]).
+  + apply: (introN idP) => /imsetP [k _] /esym.
+    apply: (elimN eqP); exact: lrshift_distinct.
+  done.
+rewrite {s2}; set s2 := (X in _ ++ X).
+have ->: s2 = [seq (rshift m i) | i <- enum J].
+- rewrite /s2 filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE; apply/idP/idP.
+  + by move/imsetP => [j' Hj' /rshift_inj ->].
+  + exact: mem_imset.
+rewrite {s2}; set s2 := (X in _ ++ X).
+rewrite nth_cat size_map /= -cardE.
+rewrite -[X in (_ < X)%N]addn0 ltn_add2l ltn0.
+rewrite (nth_map (enum_default i)); rewrite addKn //.
+by rewrite -cardE ltn_ord.
+Qed.
+
+Lemma row_submx_col_mx :
+  let: I' := (@lshift m n) @: I in
+  let: J' := (@rshift m n) @: J in
+  row_submx (col_mx M N) (I' :|: J') =
+  castmx (esym lrshift_image_card, erefl p)
+         (col_mx (row_submx M I) (row_submx N J)).
+Proof.
+set I' := (@lshift m n) @: I.
+set J' := (@rshift m n) @: J.
+have ->: (erefl p = esym (erefl p)) by done.
+apply: (canRL (castmxK _ _)).
+apply/matrixP => i l.
+rewrite castmxE /= cast_ord_id row_submx_mxE.
+set i' := enum_val (_ _ i).
+case: (splitP' i') => [j Hij | j Hij].
+- rewrite Hij col_mxEu.
+  case: (splitP' i) => [k Hik | k Hik];
+    move: Hij; rewrite /i' Hik => /esym.
+  + rewrite -lshift_enum_valC => /lshift_inj ->.
+    by rewrite col_mxEu row_submx_mxE.
+  + rewrite -rshift_enum_valC.
+    by move/eqP: (lrshift_distinct j (enum_val k)).
+- rewrite Hij col_mxEd.
+  case: (splitP' i) => [k Hik | k Hik];
+    move: Hij; rewrite /i' Hik.
+  + rewrite -lshift_enum_valC. 
+    by move/eqP: (lrshift_distinct (enum_val k) j).
+  + rewrite -rshift_enum_valC => /rshift_inj <-.
+    by rewrite col_mxEd row_submx_mxE.
+Qed.
+
+End RowSubmxSplit.
+
+Section RowSubmxRowBase.
 
 Variable R: realFieldType.
 Variable p q: nat.
@@ -246,4 +525,4 @@ move/eq_row_mx => [? _].
 by apply/row_freeP; exists (lsubmx B).
 Qed.
 
-End RowSubmx.
+End RowSubmxRowBase.
