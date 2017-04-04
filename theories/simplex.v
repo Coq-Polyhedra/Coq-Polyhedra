@@ -581,7 +581,7 @@ move/andP => [Hj /eqP <-].
 by rewrite eq_refl Hj /=.
 Qed.
 
-Definition lex_rule :=
+Definition lex_rule_set :=
   let: j := lex_ent_var in
   j |: (bas :\ (enum_val (cast_ord (esym (prebasis_card bas)) i))).
 
@@ -609,7 +609,7 @@ move/andP: (conj H H').
 by rewrite ler_lt_asym.
 Qed.
 
-Lemma lex_rule_card : #|lex_rule| == n.
+Lemma lex_rule_card : #|lex_rule_set| == n.
 Proof.
 rewrite cardsU1 in_setD1 negb_and lex_ent_var_not_in_basis orbT /=.
 rewrite cardsD.
@@ -620,14 +620,14 @@ move/setIidPr: Hibas ->; rewrite cards1 => Hbas.
 by rewrite subn1 addnC addn1 prednK // (prebasis_card bas).
 Qed.
 
-Definition lex_rule_prebasis := Prebasis lex_rule_card.
+Definition lex_rule_pbasis := Prebasis lex_rule_card.
 
-Lemma lex_rule_is_basis : is_basis lex_rule_prebasis.
+Lemma lex_rule_is_basis : is_basis lex_rule_pbasis.
 Proof.
 move: (matrix_of_basis_in_unitmx bas) => Hbas.
 set d := direction bas i.
 set j := lex_ent_var.
-set J := lex_rule.
+set J := lex_rule_set.
  
 move/andP: lex_ent_var_properties => [Hj /eqP Hj'].
 move: Hj; rewrite mem_filter; move/andP => [Hj _].
@@ -791,10 +791,10 @@ have Hu: [forall j, ((row j A) *m u) >=lex (row j b_pert)].
 by rewrite -Hvu in Hu.
 Qed.
 
-Definition lex_rule_lex_feasible_basis := LexFeasibleBasis lex_rule_lex_feasibility.
+Definition lex_rule_lex_fbasis := LexFeasibleBasis lex_rule_lex_feasibility.
 
 Lemma lex_rule_inc :
-  let: next_bas := lex_rule_lex_feasible_basis in
+  let: next_bas := lex_rule_lex_fbasis in
   let: u := reduced_cost_of_basis c bas in
   u i 0 < 0 -> (c^T *m point_of_basis_pert next_bas) <lex (c^T *m point_of_basis_pert bas).
 Proof.
@@ -863,7 +863,7 @@ Definition basic_step bas :=
   if [pick i | u i 0 < 0] is Some i then
     let d := direction bas i in
     if (@idPn (feasible_dir A d)) is ReflectT infeas_dir then
-      Lex_next_basis (lex_rule_lex_feasible_basis infeas_dir)
+      Lex_next_basis (lex_rule_lex_fbasis infeas_dir)
     else Lex_final (Lex_res_unbounded (bas, i))
   else
     Lex_final (Lex_res_optimal_basis bas).
@@ -1528,16 +1528,16 @@ apply/andP; split.
   by apply/andP; split.
 Qed.
 
-Definition init_bas_ext :=
+Definition init_bas_ext_set :=
   ((lshift #|pos_idx|) @: init_bas) :|: ((@rshift m #|pos_idx|) @: [set: 'I_#|pos_idx|]).
 
-Lemma init_bas_ext_card : (#|init_bas_ext| == n+#|pos_idx|)%N.
+Lemma init_bas_ext_card : (#|init_bas_ext_set| == n+#|pos_idx|)%N.
 Proof.
 rewrite lrshift_image_card.
 by rewrite prebasis_card cardsT card_ord.
 Qed.
 
-Definition init_bas_ext_pb := Prebasis init_bas_ext_card.
+Definition init_bas_ext_pbasis := Prebasis init_bas_ext_card.
 
 Lemma A'_init_bas : row_submx A' init_bas = row_mx (row_submx A init_bas) 0.
 Proof.
@@ -1561,7 +1561,7 @@ move/disjoint_setI0: pos_neg_idxI ->.
 by rewrite in_set0.
 Qed.
 
-Lemma init_bas_ext_is_basis : is_basis Aext init_bas_ext_pb.
+Lemma init_bas_ext_is_basis : is_basis Aext init_bas_ext_pbasis.
 Proof.
 rewrite /is_basis -row_free_unit row_free_castmx.
 rewrite row_submx_col_mx row_free_castmx.
@@ -1614,7 +1614,7 @@ apply/andP; split; apply/forallP => i;
 - by exact: ltrW.
 Qed.
 
-Definition init_bas_ext_fb := FeasibleBasis init_bas_ext_is_feasible.
+Definition init_bas_ext_fbasis := FeasibleBasis init_bas_ext_is_feasible.
 
 Variable c : 'cV[R]_n.
 
@@ -1624,7 +1624,7 @@ Inductive pointed_final_result :=
 | Pointed_res_optimal_basis of (feasible_basis A b).
 
 Definition pointed_simplex :=
-  match phase2 init_bas_ext_fb cext with
+  match phase2 init_bas_ext_fbasis cext with
   | Phase2_res_unbounded _ => Pointed_res_infeasible 0 (* this case should not happen *)
   | Phase2_res_optimal_basis bas =>
     let: x := point_of_basis bext bas in
@@ -1767,24 +1767,24 @@ rewrite eq_refl Hd_gen_pos /=.
 by rewrite vdot_col_mx vdot0l addr0.
 Qed.
 
-Definition init_bas_set := (@rshift m (n+n)%N) @: setT.
+Definition init_bas_pointed_set := (@rshift m (n+n)%N) @: setT.
 
-Lemma init_bas_card : (#|init_bas_set| == (n+n))%N.
+Lemma init_bas_pointed_card : (#|init_bas_pointed_set| == (n+n))%N.
 Proof.
 rewrite card_imset; last exact: rshift_inj.
 by rewrite cardsT card_ord eq_refl.
 Qed.
 
-Definition init_bas_pb := Prebasis init_bas_card.
+Definition init_bas_pointed_pbasis := Prebasis init_bas_pointed_card.
 
-Lemma init_bas_is_basis : is_basis Apointed init_bas_pb.
+Lemma init_bas_pointed_is_basis : is_basis Apointed init_bas_pointed_pbasis.
 Proof.
 rewrite /is_basis -row_free_unit row_free_castmx.
 rewrite row_submx_col_mx_rshift row_free_castmx.
 by rewrite row_submxT row_free_castmx row_free_unit; exact: unitmx1.
 Qed.
 
-Definition init_bas_pointed := Basis init_bas_is_basis.
+Definition init_bas_pointed_basis := Basis init_bas_pointed_is_basis.
 
 Inductive simplex_final_result :=
 | Simplex_infeasible of 'cV[R]_m
@@ -1792,7 +1792,7 @@ Inductive simplex_final_result :=
 | Simplex_optimal_basis of 'cV[R]_n * 'cV[R]_m.
 
 Definition simplex :=
-  match pointed_simplex bpointed init_bas_pointed cpointed with 
+  match pointed_simplex bpointed init_bas_pointed_basis cpointed with 
   | Pointed_res_infeasible d => Simplex_infeasible (usubmx d)
   | Pointed_res_unbounded (bas, i) =>
     let d := direction bas i in
