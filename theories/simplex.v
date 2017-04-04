@@ -1320,19 +1320,15 @@ Definition Aneg := (row_submx A neg_idx).
 Definition bpos := (row_submx b pos_idx).
 Definition bneg := (row_submx b neg_idx).
 
-Lemma Aperm : row_perm perm_idx A = castmx (pos_neg_card, erefl n) (col_mx Apos Aneg).
+Lemma row_perm_pos_neg (p: nat) (M: 'M[R]_(m,p)) :
+  let: Mpos := row_submx M pos_idx in
+  let: Mneg := row_submx M neg_idx in
+  row_perm perm_idx M = castmx (pos_neg_card, erefl p) (col_mx Mpos Mneg).
 Proof.
 apply/matrixP => i j.
 rewrite castmxE /= cast_ord_id !mxE permE /perm_idx_fun /=.
 by case: splitP => [ k _ | k _]; rewrite row_submx_mxE.
-Qed.
-
-Lemma bperm : row_perm perm_idx b = castmx (pos_neg_card, erefl 1%N) (col_mx bpos bneg).
-Proof.
-apply/matrixP => i j.
-rewrite castmxE /= cast_ord_id !mxE permE /perm_idx_fun /=.
-by case: splitP => [ k _ | k _]; rewrite row_submx_mxE.
-Qed.
+Qed. 
  
 Definition Aposext := row_submx A' pos_idx.
 Definition Anegext := row_submx A' neg_idx.
@@ -1350,34 +1346,26 @@ Lemma A'perm :
   row_perm perm_idx A' =
   castmx (pos_neg_card, erefl (n+#|pos_idx|)%N) (block_mx (-Apos) (1%:M) Aneg 0).
 Proof.
-apply/matrixP => i j. 
-rewrite castmxE /= cast_ord_id !mxE.
-rewrite permE /perm_idx_fun /=.
-case: splitP' => [k Hk | k Hk]; case: {-} _/ idP => [H | H];
-  set M := (row_mx _ _ in RHS);
-  have ->: (M k j = (row k M) 0 j) by rewrite !mxE.
-- rewrite enum_valK_in.
+rewrite row_perm_pos_neg; apply: (congr1 (castmx _)).
+rewrite block_mxEv; apply: (congr2 col_mx); 
+apply/row_matrixP => i; rewrite row_submx_row rowK.
+- case: {-} _/ idP => [H |]; last by move: (enum_valP i) ->.
+  rewrite enum_valK_in.
   by rewrite row_row_mx linearN /= row_submx_row row1.
-- by move: (enum_valP k). 
-- move: (H) => H'; rewrite -neg_idxC inE in H.
-  by move: (enum_valP k); move/negbTE: H ->.
-- by rewrite row_row_mx row_submx_row row0.
+- case: {-} _/ idP => [H| H].
+  + move: (enum_valP i); rewrite -{2}pos_idxC in_setC.
+    by rewrite H.
+  + by rewrite row_row_mx row_submx_row row0.
 Qed.   
 
 Lemma b'perm : row_perm perm_idx b' =
                castmx (pos_neg_card, erefl 1%N)
                       (col_mx (-bpos) bneg).
-Proof.               
-apply/colP => i.
-rewrite castmxE /= cast_ord_id !mxE.
-rewrite permE /perm_idx_fun /=.
-case: splitP' => [k Hk | k Hk].
-- move: (enum_valP k) ->.
-  by rewrite !mxE.
-- rewrite ifF.
-  + by rewrite !mxE.
-  + apply/negbTE.
-    by move: (enum_valP k); rewrite -{2}pos_idxC inE.
+Proof.
+rewrite row_perm_pos_neg; apply: (congr1 (castmx _)).
+apply: (congr2 col_mx); apply/colP => i; rewrite !mxE.
+- by move: (enum_valP i) ->.
+- by rewrite ifF; last by apply/negbTE; rewrite -in_setC pos_idxC; exact: enum_valP.
 Qed.   
 
 Definition Aext := col_mx A' (row_mx 0 (1%:M)).
@@ -1498,19 +1486,24 @@ by move/(congr1 (fun z => z - bpos)); rewrite addrAC addrN add0r => ->.
 Qed.
 
 Definition dual_from_ext (u:'cV[R]_(m+#|pos_idx|)) :=
-  let: u' := castmx (esym pos_neg_card, erefl 1%N) (row_perm perm_idx (usubmx u)) in
-  let: upos := usubmx u' in
-  let: uneg := dsubmx u' in
-  row_perm (perm_idx^-1)%g (castmx (pos_neg_card, erefl 1%N) (col_mx (const_mx 1 - upos) uneg)).
+  let u' := usubmx u in
+  \col_i (if i \in pos_idx then 
+           1 - u' i 0
+         else
+           u' i 0).
 
 Lemma dual_from_ext_perm u :
-  let: u' := castmx (esym pos_neg_card, erefl 1%N) (row_perm perm_idx (usubmx u)) in
-  let: upos := usubmx u' in
-  let: uneg := dsubmx u' in
+  let: u' := usubmx u in
+  let: upos := row_submx u' pos_idx in
+  let: uneg := row_submx u' neg_idx in
   row_perm perm_idx (dual_from_ext u) =
   (castmx (pos_neg_card, erefl 1%N) (col_mx (const_mx 1 - upos) uneg)).
 Proof.
-by rewrite -row_permM gsimp row_perm1.
+apply/colP => i.
+rewrite castmxE /= cast_ord_id !mxE permE /perm_idx_fun /=.
+case: splitP => [ k _ | k _]; rewrite !mxE.
+- by rewrite ifT; last exact: enum_valP.
+- by rewrite ifF; last by apply:negbTE; rewrite -in_setC pos_idxC; exact: enum_valP.
 Qed.
   
 Lemma dual_polyhedron_from_ext u :
@@ -1526,11 +1519,11 @@ rewrite A'perm trmx_cast /= tr_block_mx trmx1 trmx0.
 rewrite -[pos_neg_card]esymK -[row_perm _ _](castmx_id (erefl _, erefl _))
         -mulmx_cast.
 
-set u' := castmx (esym pos_neg_card, erefl 1%N)
-                (row_perm perm_idx (usubmx u)).
-rewrite -[u']vsubmxK.
-set upos := usubmx u'.
-set uneg := dsubmx u'.
+rewrite row_perm_pos_neg.
+have {1}->: erefl 1%N = esym (erefl 1%N) by done.
+rewrite castmxK.
+set upos := row_submx (usubmx u) pos_idx.
+set uneg := row_submx (usubmx u) neg_idx.
 
 rewrite mul_block_col mul1mx mul0mx addr0.
 rewrite add_col_mx addr0 col_mx_eq -andbA.
@@ -1546,19 +1539,18 @@ move/and3P => [Heq Heq' Hineq].
 - move: Hineq. 
   rewrite col_mx_gev0 -{}Heq' => /andP [Hneg Hpos].
   move: Hneg; rewrite (row_perm_gev0 perm_idx).
-  rewrite -(castmx_gev0 (esym pos_neg_card)) -/u'.
-  rewrite -[u']vsubmxK col_mx_gev0 -/uneg => /andP [_ Hneg].
+  rewrite row_perm_pos_neg castmx_gev0 col_mx_gev0 -/uneg => /andP [_ Hneg].
   
 set v := dual_from_ext u.
 apply/andP; split.
 - rewrite -(mulmx_tr_row_perm perm_idx).
   rewrite dual_from_ext_perm -/upos -/uneg.
-  rewrite Aperm trmx_cast /= tr_col_mx mulmx_cast.
+  rewrite row_perm_pos_neg trmx_cast /= tr_col_mx mulmx_cast.
   have ->: erefl n = esym (erefl n) by done.
   by rewrite castmxK castmx_id mul_row_col.
 
-- rewrite /v /dual_from_ext.
-  rewrite -row_perm_gev0 castmx_gev0 col_mx_gev0.
+- rewrite /v (row_perm_gev0 perm_idx).
+  rewrite dual_from_ext_perm castmx_gev0 col_mx_gev0.
   by apply/andP; split.
 Qed.  
 
@@ -1700,15 +1692,14 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
       rewrite duality_gap_eq0_def; move/eqP ->.
       rewrite -{1}[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
       rewrite -(vdot_perm perm_idx) b'perm.
-      rewrite -[row_perm _ _](castmxKV pos_neg_card (erefl 1%N)) /=.
-      rewrite vdot_castmx.
-      set u := castmx _ _; set upos := usubmx u; set uneg := dsubmx u.
-      rewrite -[u]vsubmxK vdot_col_mx.
+      rewrite row_perm_pos_neg vdot_castmx.
+      set u' := usubmx _; set upos := row_submx u' pos_idx; set uneg := row_submx u' neg_idx.
+      rewrite vdot_col_mx.
       rewrite -subr_gt0 addrAC vdotNl -vdotNr.
       rewrite [X in _ - X + _]vdotC [X in _ - X + _]vdotNl opprK.
       rewrite [X in X + _]addrC -vdotDr => H.
 
-      rewrite -(vdot_perm perm_idx) bperm.
+      rewrite -(vdot_perm perm_idx) row_perm_pos_neg.
       by rewrite dual_from_ext_perm vdot_castmx vdot_col_mx.
 Qed.
 
