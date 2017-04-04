@@ -22,13 +22,13 @@ Section BasicNotion.
 
 Section Defs.
 
-Variable R: realFieldType.
+Variable R : realFieldType.
 Variable m n : nat.
 
-Variable A: 'M[R]_(m,n).
-Variable b: 'cV[R]_m.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
 
-Implicit Types x: 'cV[R]_n.
+Implicit Types x : 'cV[R]_n.
 
 Definition polyhedron := [pred x: 'cV_n | (A *m x) >=m b].
 
@@ -42,21 +42,20 @@ Qed.
 Definition active_ineq x :=
   [set i : 'I_m | (A *m x) i 0 == b i 0].
 
-Definition feasible_direction (d: 'cV[R]_n) := (A *m d) >=m 0.
+Definition feasible_dir (d : 'cV[R]_n) := (A *m d) >=m 0.
 
 End Defs.
 
 Section WeakDuality.
 
-Variable R: realFieldType.
+Variable R : realFieldType.
 Variable m n : nat.
 
-Variable A: 'M[R]_(m,n).
-Variable b: 'cV[R]_m.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+Variable c : 'cV[R]_n.
 
-Implicit Types x: 'cV[R]_n.
-  
-Variable c: 'cV[R]_n.
+Implicit Types x : 'cV[R]_n.
 Implicit Types u : 'cV[R]_m.
 
 Definition dualA := col_mx (col_mx A^T (-A^T)) (1%:M).
@@ -71,18 +70,18 @@ Lemma dual_polyhedronE u :
 Proof.
 rewrite 2!inE /dualA /dualb 2!mul_col_mx 2!col_mx_lev mul1mx mulNmx lev_opp2.
 apply: (congr1 (andb^~ _)); apply/idP/idP.
-- by move/eqP ->; rewrite lev_refl. 
+- by move/eqP ->; rewrite lev_refl.
 - by move/lev_antisym ->; apply: eq_refl.
 Qed.
 
-Definition dual_feasible_direction d := (A^T *m d == 0) && (d >=m 0).
+Definition dual_feasible_dir d := (A^T *m d == 0) && (d >=m 0).
 
 Lemma dual_feasible_directionE d :
-  (dual_feasible_direction d) = (feasible_direction dualA d).
+  (dual_feasible_dir d) = (feasible_dir dualA d).
 Proof.
-rewrite /feasible_direction 2!mul_col_mx mul1mx.
+rewrite /feasible_dir 2!mul_col_mx mul1mx.
 rewrite -[0]vsubmxK -[usubmx _]vsubmxK.
-rewrite 2!col_mx_lev !linear0. 
+rewrite 2!col_mx_lev !linear0.
 apply: (congr1 (andb^~ _)).
 by rewrite mulNmx oppv_ge0 -eqv_le eq_sym.
 Qed.
@@ -112,7 +111,6 @@ move => Hx; rewrite inE => /andP [/eqP/(duality_gap_def x) -> Hu'].
 rewrite vdotBr subr_ge0.
 by apply: vdot_lev; last by rewrite inE in Hx.
 Qed.
-
 
 Lemma dual_feasible_bounded u :
   u \in dual_polyhedron -> forall x, x \in polyhedron A b -> '[c,x] >= '[b,u]. 
@@ -180,7 +178,7 @@ by apply: weak_duality.
 Qed.
 
 Lemma unbounded_certificate x0 d K:
-  x0 \in polyhedron A b -> feasible_direction A d -> '[c,d] < 0 ->
+  x0 \in polyhedron A b -> feasible_dir A d -> '[c,d] < 0 ->
          exists x, x \in polyhedron A b /\ '[c,x] < K.
 Proof.
 move => /forallP Hx0 /forallP Hd Hcd.
@@ -200,19 +198,19 @@ exists x; split.
   by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10. 
 Qed.
 
-Lemma mul_tr_dualA (v: 'cV_(n+n+m)) :
+Lemma mul_tr_dualA (v : 'cV_(n+n+m)) :
   let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
   let: z := dsubmx v in
   (dualA)^T *m v = z - A *m y.
 Proof.
 rewrite /dualA 2!tr_col_mx linearN /= !trmxK trmx1.
-rewrite -{1}[v]vsubmxK mul_row_col mul1mx. 
+rewrite -{1}[v]vsubmxK mul_row_col mul1mx.
 rewrite -{1}[usubmx v]vsubmxK mul_row_col.
 rewrite addrC; apply/(congr1 (fun z => _ + z)).
 by rewrite mulmxDr mulNmx mulmxN opprB.
 Qed.
 
-Lemma vdot_dualb (v: 'cV_(n+n+m)) :
+Lemma vdot_dualb (v : 'cV_(n+n+m)) :
   let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
   '[dualb, v] = -'[c,y].
 Proof.
@@ -227,12 +225,12 @@ End BasicNotion.
 
 Section Extremality.
 
-Variable R: realFieldType.
-Variable m n: nat.
+Variable R : realFieldType.
+Variable m n : nat.
 
-Variable A: 'M[R]_(m,n).
-Variable b: 'cV[R]_m.
-  
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
 Implicit Types x : 'cV[R]_n.
 
 Definition is_extreme x (P: 'cV[R]_n -> Prop)  :=
@@ -277,7 +275,7 @@ move => /forallP Hx s.
 apply/forallP => i; by rewrite -row_submx_mul 2!row_submx_mxE.
 Qed.
 
-Definition gap_in_direc_seq x (v: 'cV_n) :=
+Definition gap_in_direc_seq x (v : 'cV_n) :=
   [seq (if (A *m v) i 0 == 0 then 1 else ( ((A *m x) i 0 - b i 0 )) * ( `|(A *m v) i 0 |)^-1 ) |
    i <- enum 'I_m & i \notin (active_ineq A b x)].
 
@@ -293,11 +291,11 @@ set AI := active_ineq_mx x.
 have: (kermx AI^T != 0).
 - rewrite kermx_eq0 -row_leq_rank -ltnNge ltn_neqAle.
   apply/andP; split; by [rewrite mxrank_tr | apply:rank_leq_row].
-
+ 
 move/rowV0Pn => [v /sub_kermxP/(congr1 trmx) Hv Hv'].
 rewrite trmx0 trmx_mul trmxK in Hv.
 rewrite {Hrk}.
-
+ 
 pose gap_seq := gap_in_direc_seq x v^T.
 pose epsilon := if nilp gap_seq then 1 else min_seq gap_seq.
  
@@ -319,7 +317,9 @@ have Hintermediate:
   case Hvi: ((A *m v^T) i 0 == 0); first by move/eqP: Hvi => ->; rewrite normr0 mulr0 subr0; move/forallP/(_ i): Hpoly. 
   + rewrite ler_subr_addr addrC -ler_subr_addr.
     rewrite -ler_pdivl_mulr; last by rewrite normr_gt0 //; apply: negbT.
-    rewrite /epsilon ifF; last by apply: negbTE. apply: min_seq_ler. rewrite /gap_seq /gap_in_direc_seq.
+    rewrite /epsilon ifF; last by apply: negbTE.
+    apply: min_seq_ler.
+    rewrite /gap_seq /gap_in_direc_seq.
     apply/mapP; exists i.
     * rewrite mem_filter; apply/andP; split; by [done | rewrite mem_enum].
       by rewrite Hvi.
@@ -397,7 +397,7 @@ rewrite 2!subr_eq0 2!/bI -active_ineq_mx_col_eq -/AI.
 move/andP; case.
 - move/eqP/(row_full_inj Hrank) => ->.
 - move/eqP/(row_full_inj Hrank) => ->.
-done.
+by done.
 Qed.
 
 Theorem extremality_active_ineq x :
