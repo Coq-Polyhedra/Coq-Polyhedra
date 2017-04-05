@@ -354,7 +354,7 @@ move/eqP: (ext_reduced_cost_of_basis_def c bas) ->; rewrite /=.
 by symmetry; apply: non_neg_reduced_cost_equiv.
 Qed.
 
-Lemma compl_slack_cond_on_basis c bas :
+(*Lemma compl_slack_cond_on_basis c bas :
   let: x := point_of_basis bas in
   let: u := ext_reduced_cost_of_basis c bas in
   compl_slack_cond A b x u.
@@ -365,8 +365,23 @@ apply/compl_slack_condP => i.
 case: (boolP (i \in bas)) => [Hi | Hi].
 - by move/subsetP/(_ i Hi): (basis_subset_of_active_ineq bas); rewrite inE => /eqP ->; right.
 - by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
-Qed.
+Qed.*)
 
+Lemma compl_slack_cond_on_basis c bas :
+  let: x := point_of_basis bas in
+  let: u := ext_reduced_cost_of_basis c bas in
+  '[c, x] = '[b, u].
+Proof.
+set x := point_of_basis bas.
+set u := ext_reduced_cost_of_basis c bas.
+apply/eqP; rewrite -duality_gap_eq0_def; apply/eqP.
+apply: (compl_slack_cond_duality_gap_eq0 (ext_reduced_cost_of_basis_def c bas)).
+apply/compl_slack_condP => i.
+case: (boolP (i \in bas)) => [Hi | Hi].
+- by move/subsetP/(_ i Hi): (basis_subset_of_active_ineq bas); rewrite inE => /eqP ->; right.
+- by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
+Qed.
+  
 Lemma optimal_cert_on_basis c (bas : feasible_basis) :
   let: x := point_of_basis bas in
   (reduced_cost_of_basis c bas) >=m 0 ->
@@ -376,9 +391,8 @@ set x := point_of_basis bas.
 set u := ext_reduced_cost_of_basis c bas.
 rewrite ext_reduced_cost_dual_feasible => Hu.
 apply: (duality_gap_eq0_optimality (feasible_basis_is_feasible bas) Hu).
-move: Hu; rewrite inE; move/andP => [/eqP Hu _].
-rewrite (compl_slack_cond_duality_gap_eq0 Hu) //.
-by apply: compl_slack_cond_on_basis.
+apply/eqP; rewrite duality_gap_eq0_def; apply/eqP.
+exact: compl_slack_cond_on_basis.
 Qed.
 
 Definition direction bas i :=
@@ -1652,9 +1666,7 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
     * have: '[cext, x] > cextopt.
       - rewrite ltr_def; apply/andP; split; first by apply/eqP.
         + by apply: (cext_min_value (feasible_basis_is_feasible bas)).
-      move: (compl_slack_cond_on_basis bext cext bas).
-      move/(compl_slack_cond_duality_gap_eq0 (ext_reduced_cost_of_basis_def cext bas))/eqP.
-      rewrite duality_gap_eq0_def; move/eqP ->.
+      move: (compl_slack_cond_on_basis bext cext bas) ->.
       rewrite -{1}[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
       rewrite -(vdot_perm s_idx) rel_b'_bposneg.
       rewrite row_perm_pos_neg vdot_castmx.
@@ -1795,7 +1807,7 @@ Definition simplex :=
 CoInductive simplex_spec : simplex_final_result -> Type :=
 | Infeasible d of (dual_feasible_dir A d /\ '[b, d] > 0): simplex_spec (Simplex_infeasible d)
 | Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_dir A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
-| Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & (compl_slack_cond A b p.1 p.2)] : simplex_spec (Simplex_optimal_basis p).
+| Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & '[c,p.1] = '[b, p.2]] : simplex_spec (Simplex_optimal_basis p).
 
 Lemma simplexP: simplex_spec simplex.
 Proof.
@@ -1812,12 +1824,9 @@ case: pointed_simplexP => [ d /infeasibility_pos_to_general [Hd Hd'] | [bas i] /
   + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
     by move/feasibility_pos_to_general.
   + by apply:ext_reduced_cost2gen_dual_feasible.
-  + apply/compl_slack_condP => i.
-    rewrite /ext_reduced_cost_of_basis [in X in X = 0]mxE.
-    suff /compl_slack_condP/(_ (lshift (n+n) i)) :
-      (compl_slack_cond Apointed bpointed (point_of_basis bpointed bas) (ext_reduced_cost_of_basis cpointed bas)).
-    * by rewrite /Apointed /A' /bpointed /b' mul_col_mx 2!col_mxEu mulmxAv2gen.
-    * by apply: compl_slack_cond_on_basis.
+  + move: (compl_slack_cond_on_basis bpointed cpointed bas).
+    rewrite cost2gen => -> /=.
+    by rewrite -[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
 Qed.
 
 Definition unbounded :=
@@ -1845,7 +1854,7 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 - by move/(_ 0) => [x [/(intro_existsT (feasibleP _ _))]].
 - by move => K ; apply: (unbounded_certificate K Hx Hd).
 - move/(_ '[c,x]) => [y [Hy Hy']].
-  rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) in Hcsc; move/eqP in Hcsc.
+  move/eqP: Hcsc; rewrite -duality_gap_eq0_def; move/eqP => Hcsc.
   move/(_ _ Hy)/(conj Hy')/andP: (duality_gap_eq0_optimality Hx Hu Hcsc).
   by rewrite ltr_le_asym.
 Qed.
@@ -1869,8 +1878,6 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 - move => [[_ d'] /= [_ /(intro_existsT (dual_feasibleP _ _)) H _]].
   by move/(intro_existsT (dual_infeasibleP A c))/negP: (conj Hd Hd').
 - exists (x,u); split; try by done.
-  apply/eqP; rewrite eq_sym -duality_gap_eq0_def /=.
-  by rewrite (compl_slack_cond_duality_gap_equiv Hx Hu).
 Qed.
 
 Lemma boundedP :
@@ -1888,7 +1895,7 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 - split.
   + by exists x; split.
   + apply: (duality_gap_eq0_optimality Hx Hu).
-    by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu).
+    by apply/eqP; rewrite duality_gap_eq0_def; apply/eqP.
 Qed.
 
 Lemma bounded_is_not_unbounded :
@@ -1910,8 +1917,8 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
 - move: (unbounded_certificate '[c,x] Hx Hd Hd') => [y [Hy Hy']].
   move/(_ _ Hy): Hopt.
   by move/(ltr_le_trans Hy'); rewrite ltrr.
-- rewrite -(compl_slack_cond_duality_gap_equiv Hy Hu) in Hcsc.
-  move/eqP/(duality_gap_eq0_optimality Hy Hu)/(_ _ Hx): Hcsc => Hyx.
+- move/eqP: Hcsc; rewrite -duality_gap_eq0_def.
+  move/eqP/(duality_gap_eq0_optimality Hy Hu)/(_ _ Hx) => Hyx.
   move/(_ _  Hy): Hopt => Hxy.
   move/andP: (conj Hxy Hyx).
   by exact: ler_anti.
