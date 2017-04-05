@@ -1206,6 +1206,8 @@ Definition init_v := point_of_basis b init_bas.
 Definition pos_idx := [ set i : 'I_m | (A *m init_v) i 0 < b i 0 ].
 Definition neg_idx := [ set i : 'I_m | (A *m init_v) i 0 >= b i 0 ].
 
+Notation p := #|pos_idx|.
+
 Lemma init_bas_subset_neg_idx : (init_bas \subset neg_idx).
 Proof.
 apply/subsetP => i Hi.
@@ -1286,10 +1288,10 @@ Definition Aneg := (row_submx A neg_idx).
 Definition bpos := (row_submx b pos_idx).
 Definition bneg := (row_submx b neg_idx).
 
-Lemma row_perm_pos_neg (p: nat) (M: 'M[R]_(m,p)) :
+Lemma row_perm_pos_neg (q: nat) (M: 'M[R]_(m,q)) :
   let: Mpos := row_submx M pos_idx in
   let: Mneg := row_submx M neg_idx in
-  row_perm s_idx M = castmx (pos_neg_card, erefl p) (col_mx Mpos Mneg).
+  row_perm s_idx M = castmx (pos_neg_card, erefl q) (col_mx Mpos Mneg).
 Proof.
 apply/matrixP => i j.
 rewrite castmxE /= cast_ord_id !mxE permE /s_idx_fun /=.
@@ -1310,7 +1312,7 @@ Qed.
 
 Lemma rel_A'_Aposneg :
   row_perm s_idx A' =
-  castmx (pos_neg_card, erefl (n+#|pos_idx|)%N) (block_mx (-Apos) (1%:M) Aneg 0).
+  castmx (pos_neg_card, erefl (n+p)%N) (block_mx (-Apos) (1%:M) Aneg 0).
 Proof.
 rewrite row_perm_pos_neg; apply: (congr1 (castmx _)).
 rewrite block_mxEv; apply: (congr2 col_mx); 
@@ -1334,11 +1336,10 @@ apply: (congr2 col_mx); apply/colP => i; rewrite !mxE.
 Qed.   
 
 Definition Aext := col_mx A' (row_mx 0 (1%:M)).
-Definition bext := (col_mx b' 0):'cV_(m+#|pos_idx|).
+Definition bext := (col_mx b' 0):'cV_(m+p).
 
 Lemma polyhedronext_inE x :
-  let: y := usubmx x in
-  let: z := dsubmx x in
+  let: (y,z) := (usubmx x, dsubmx x) in
   (x \in polyhedron Aext bext) = [&& (Aneg *m y) >=m bneg, (Apos *m y) <=m (bpos + z) & z >=m 0].
 Proof.
 rewrite inE -{1}[x]vsubmxK.
@@ -1356,7 +1357,7 @@ rewrite mulNmx -(lev_add2l (Apos *m usubmx x)) addrA addrN add0r.
 by rewrite -(lev_add2r bpos) -addrA addNr addr0 addrC.
 Qed.
 
-Definition cext := (Aposext^T *m const_mx 1):'cV_(n+#|pos_idx|).
+Definition cext := (Aposext^T *m const_mx 1):'cV_(n+p).
 Definition cextopt := '[const_mx 1, -bpos].
 
 Lemma pos_neg_lev_decomp :
@@ -1450,7 +1451,7 @@ move: (cext_min_value_attained Hx Hcext).
 by move/(congr1 (fun z => z - bpos)); rewrite addrAC addrN add0r => ->.
 Qed.
 
-Definition dual_from_ext (u:'cV[R]_(m+#|pos_idx|)) :=
+Definition dual_from_ext (u:'cV[R]_(m+p)) :=
   let u' := usubmx u in
   \col_i (if i \in pos_idx then 
            1 - u' i 0
@@ -1520,9 +1521,9 @@ apply/andP; split.
 Qed.
 
 Definition init_bas_ext_set :=
-  ((lshift #|pos_idx|) @: init_bas) :|: ((@rshift m #|pos_idx|) @: [set: 'I_#|pos_idx|]).
+  ((lshift p) @: init_bas) :|: ((@rshift m _) @: [set: 'I_p]).
 
-Lemma init_bas_ext_card : (#|init_bas_ext_set| == n+#|pos_idx|)%N.
+Lemma init_bas_ext_card : (#|init_bas_ext_set| == n+p)%N.
 Proof.
 rewrite lrshift_image_card.
 by rewrite prebasis_card cardsT card_ord.
