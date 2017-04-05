@@ -1666,7 +1666,7 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
       rewrite -(vdot_perm s_idx) row_perm_pos_neg.
       by rewrite dual_from_ext_perm vdot_castmx vdot_col_mx.
 Qed.
-
+  
 End Pointed_simplex.
 
 Section General_simplex.
