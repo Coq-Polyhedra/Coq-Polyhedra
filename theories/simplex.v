@@ -1534,6 +1534,21 @@ apply/andP; split.
   by apply/andP; split.
 Qed.
 
+Lemma dual_from_ext_obj u :
+  '[bext, u] > cextopt -> '[b, dual_from_ext u] > 0.
+Proof.
+rewrite -{1}[u]vsubmxK vdot_col_mx vdot0l addr0.
+rewrite -(vdot_perm s_idx) rel_b'_bposneg.
+rewrite row_perm_pos_neg vdot_castmx.
+set u' := usubmx _; set upos := row_submx u' pos_idx; set uneg := row_submx u' neg_idx.
+rewrite vdot_col_mx.
+rewrite -subr_gt0 addrAC vdotNl -vdotNr.
+rewrite [X in _ - X + _]vdotC [X in _ - X + _]vdotNl opprK.
+rewrite [X in X + _]addrC -vdotDr => H.
+rewrite -(vdot_perm s_idx) row_perm_pos_neg.
+by rewrite dual_from_ext_perm vdot_castmx vdot_col_mx.
+Qed.
+  
 Definition init_bas_ext_set :=
   ((lshift p) @: init_bas) :|: ((@rshift m _) @: [set: 'I_p]).
 
