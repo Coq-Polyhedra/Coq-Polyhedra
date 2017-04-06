@@ -1674,25 +1674,13 @@ case: phase2P => [[bas i] /= [Hd Hd']| bas Hbas].
 - pose x := point_of_basis bext bas.
   case: ('[cext, x] =P cextopt) => [Hopt | Hopt].
   + case: phase2P => [[bas' d] /=|]; by constructor.
-  + constructor.
-    split.
+  + constructor; split.
     * apply: dual_polyhedron_from_ext.
       by rewrite -ext_reduced_cost_dual_feasible.
-    * have: '[cext, x] > cextopt.
-      - rewrite ltr_def; apply/andP; split; first by apply/eqP.
-        + by apply: (cext_min_value (feasible_basis_is_feasible bas)).
-      move: (compl_slack_cond_on_basis bext cext bas) ->.
-      rewrite -{1}[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
-      rewrite -(vdot_perm s_idx) rel_b'_bposneg.
-      rewrite row_perm_pos_neg vdot_castmx.
-      set u' := usubmx _; set upos := row_submx u' pos_idx; set uneg := row_submx u' neg_idx.
-      rewrite vdot_col_mx.
-      rewrite -subr_gt0 addrAC vdotNl -vdotNr.
-      rewrite [X in _ - X + _]vdotC [X in _ - X + _]vdotNl opprK.
-      rewrite [X in X + _]addrC -vdotDr => H.
-
-      rewrite -(vdot_perm s_idx) row_perm_pos_neg.
-      by rewrite dual_from_ext_perm vdot_castmx vdot_col_mx.
+    * apply: dual_from_ext_obj.
+      move: (compl_slack_cond_on_basis bext cext bas) <-.
+      rewrite ltr_def; apply/andP; split; first by apply/eqP.
+      + by apply: (cext_min_value (feasible_basis_is_feasible bas)).
 Qed.
   
 End Pointed_simplex.
