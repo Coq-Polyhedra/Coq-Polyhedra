@@ -55,6 +55,13 @@ Proof.
 by move => Ha x y; apply: eq_forallb => i; rewrite !mxE ler_pmul2l.
 Qed.
 
+Lemma lev_wpscalar a x y : 0 <= a -> x <=m y -> (a *: x) <=m (a *: y).
+Proof.
+move => Ha /forallP Hxy.
+apply/forallP => i; rewrite !mxE.
+by apply: ler_wpmul2l.
+Qed.
+
 Lemma paddv_eq0 x y :
   (0 <=m x) -> (0 <=m y) -> (x + y == 0) = (x == 0) && (y == 0).
 Proof.
@@ -259,6 +266,16 @@ Proof.
 by rewrite -{1}[x]vsubmxK col_mx_lev0.
 Qed.
 
+Lemma lev_sum I (r : seq I) (P : pred I) (F G : I -> 'cV[R]_n) :
+    (forall i, P i -> (F i) <=m (G i)) ->
+    (\sum_(i <- r | P i) F i) <=m (\sum_(i <- r | P i) G i).
+Proof.
+move => H.
+apply/forallP => i.
+- rewrite !summxE.
+  apply: ler_sum => j Hj.
+  + by move/(_ _ Hj)/forallP/(_ i): H.
+Qed.
 
 End ExtraOrder.
 

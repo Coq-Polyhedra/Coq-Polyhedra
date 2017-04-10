@@ -19,16 +19,15 @@ Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
 Variable R : realFieldType.
-Variable n p : nat.
 
 Section Def.
 
+Variable n p : nat.
+  
 Variable V : 'M[R]_(n,p).
 
 Definition e := (const_mx 1):'cV[R]_p.
 
-Definition is_in_convex_hull (x : 'cV_n) :=
-  exists l : 'cV[R]_p, [/\ (l >=m 0), '[e, l] = 1 & x = V *m l].
 
 Definition A :=
   (col_mx (col_mx (col_mx V (-V)) (col_mx e^T (-e^T))) 1%:M).
@@ -36,8 +35,10 @@ Definition A :=
 Definition b (x: 'cV[R]_n) :=
   col_mx (col_mx (col_mx x (-x)) (col_mx 1 (-1))) (0:'cV_p).
 
+Definition is_in_convex_hull x := feasible A (b x).
+
 Lemma is_in_convex_hullP (x: 'cV_n) :
-  reflect (is_in_convex_hull x) (feasible A (b x)).
+  reflect (exists l : 'cV[R]_p, [/\ (l >=m 0), '[e, l] = 1 & x = V *m l]) (feasible A (b x)).
 Proof.
 apply: (iffP (feasibleP _ _)) => [[l] |[l [Hlpos Hlsum Hl]]].
 - rewrite inE !mul_col_mx !col_mx_lev.
@@ -56,11 +57,11 @@ apply: (iffP (feasibleP _ _)) => [[l] |[l [Hlpos Hlsum Hl]]].
   by rewrite mulNmx -vdot_def vdotC Hlsum !lev_refl.
 Qed.  
 
-Lemma separation (x: 'cV_n) :
-  (~ (is_in_convex_hull x)) -> exists c, [forall i, '[c, col i V] > '[c, x]].
+Lemma separation (x: 'cV_n) : 
+  ~~ (is_in_convex_hull x) -> exists c, [forall i, '[c, col i V] > '[c, x]].
 Proof.
-- move/(introN (is_in_convex_hullP _))/infeasibleP => [d [/andP [HdA Hdpos] Hdb]].
-  set d1 := usubmx (usubmx d).
+move/infeasibleP => [d [/andP [HdA Hdpos] Hdb]].
+- set d1 := usubmx (usubmx d).
   set d2 := dsubmx (usubmx d).
   set d3 := dsubmx d.
   set c := (usubmx d1) - (dsubmx d1).
@@ -99,4 +100,54 @@ Proof.
     move/forallP/(_ 0); rewrite !mxE /= mulr1n => Hineq1'.
     move: (ler_lt_trans Hineq1' Hineq2).
     by rewrite ltr_add2r.
+Qed.
+
+End Def.
+
+Section Minkowski.
+
+Variable m n: nat.
+
+Variable A: 'M[R]_(m,n).
+Variable b: 'cV[R]_m.
+
+Definition bases := [set: feasible_basis A b].
+Notation p := #|bases|.
+
+Definition matrix_of_vertices :=
+  \matrix_(i < n, j < p) (point_of_basis b (enum_val j)) i 0.
+
+Lemma col_matrix_of_vertices j :
+  col j matrix_of_vertices = point_of_basis b (enum_val j).
+Proof.
+by apply/colP => i; rewrite !mxE.
+Qed.
+
+Hypothesis init_bas : basis A.
+Hypothesis Hbounded: forall c, bounded A b c.
+
+Lemma minkowski x :
+  (x \in polyhedron A b) = is_in_convex_hull matrix_of_vertices x.
+Proof.
+apply/idP/idP.
+- move => Hx; apply: contraT.
+  move/separation => [c Hc].
+  move/(bounded_pointedP _ _ init_bas): (Hbounded c) => [[bas]].
+  set z := point_of_basis _ _; move <-.
+  move/(_ _ Hx) => Hzx.
+  pose i := enum_rank_in (in_setT bas) bas. 
+  move/forallP/(_ i): Hc; rewrite col_matrix_of_vertices enum_rankK_in; last exact: in_setT.
+  by move/(ler_lt_trans Hzx); rewrite ltrr.
+- move/is_in_convex_hullP => [l [Hl Hel ->]].
+  rewrite inE mulmxA mulmx_sum_col. 
+  have {1}->: b = \sum_i (l i 0 *: b).
+  + rewrite -scaler_suml.
+    suff ->: \sum_i l i 0 = 1 by rewrite scale1r.
+    * move: Hel; rewrite /vdot => <-.
+      apply: eq_bigr.
+      by move => i _; rewrite mxE mul1r.
+  apply: lev_sum => i _.
+  + apply: lev_wpscalar; first by move/forallP/(_ i): Hl; rewrite mxE.
+    * rewrite col_mul col_matrix_of_vertices.
+      by exact: feasible_basis_is_feasible.
 Qed.

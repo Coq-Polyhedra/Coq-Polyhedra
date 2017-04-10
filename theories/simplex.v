@@ -1795,7 +1795,7 @@ Definition init_bas_pointed_basis := Basis init_bas_pointed_is_basis.
 Inductive simplex_final_result :=
 | Simplex_infeasible of 'cV[R]_m
 | Simplex_unbounded of 'cV[R]_n * 'cV[R]_n
-| Simplex_optimal_basis of 'cV[R]_n * 'cV[R]_m.
+| Simplex_optimal_point of 'cV[R]_n * 'cV[R]_m.
 
 Definition simplex :=
   match pointed_simplex bpointed init_bas_pointed_basis cpointed with 
@@ -1804,13 +1804,13 @@ Definition simplex :=
     let d := direction bas i in
     Simplex_unbounded (v2gen (point_of_basis bpointed bas), v2gen d)
   | Pointed_res_optimal_basis bas =>
-    Simplex_optimal_basis (v2gen (point_of_basis bpointed bas), ext_reduced_cost2gen bas)
+    Simplex_optimal_point (v2gen (point_of_basis bpointed bas), ext_reduced_cost2gen bas)
   end.
 
 CoInductive simplex_spec : simplex_final_result -> Type :=
 | Infeasible d of (dual_feasible_dir A d /\ '[b, d] > 0): simplex_spec (Simplex_infeasible d)
 | Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_dir A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
-| Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & '[c,p.1] = '[b, p.2]] : simplex_spec (Simplex_optimal_basis p).
+| Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & '[c,p.1] = '[b, p.2]] : simplex_spec (Simplex_optimal_point p).
 
 Lemma simplexP: simplex_spec simplex.
 Proof.
@@ -1863,10 +1863,10 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 Qed.
 
 Definition bounded :=
-  if simplex is (Simplex_optimal_basis _) then true else false.
+  if simplex is (Simplex_optimal_point _) then true else false.
 
 Definition opt_value :=
-  if simplex is (Simplex_optimal_basis (x,_)) then
+  if simplex is (Simplex_optimal_point (x,_)) then
     '[c,x]
   else 0 (* not used *).
 
@@ -1996,3 +1996,55 @@ Qed.
 
 End General_simplex.
 
+(*Section BoundedPolyhedron.
+
+Variable R : realFieldType.
+Variable m n : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Hypothesis Hfeas : feasible A b.
+
+Definition Afeasdir := col_mx A (const_mx 1): 'M_(m+1,n).
+Definition bfeasdir := col_mx 0 (@const_mx _ 1%N _ 1): 'cV[R]_(m+1).
+
+Definition all_bounded := (* name should be changed *)
+  ~~ (feasible Afeasdir bfeasdir).
+
+Lemma all_boundedPn : reflect (exists c, unbounded A b c) (~~ all_bounded).
+Proof.
+rewrite negbK.
+apply: (iffP (feasibleP _ _)) => [[d] | [c /unboundedP_cert [[_ d] /= [_ Hfeasdir Hd]]]].
+- rewrite inE mul_col_mx col_mx_lev => /andP [Hfeasdir Hnon_null].
+  have Hnon_null': d != 0.
+  + move: Hnon_null; apply: contraTneq.
+    move ->; rewrite mulmx0.
+    apply/negP; move/forallP/(_ 0); rewrite !mxE.
+    by rewrite ler10.
+  exists (-d); apply/unboundedP_cert.
+  move/feasibleP: Hfeas => [x Hx].
+  exists (x,d); split; try by done.
+  + by rewrite vdotNl oppr_lt0 /= vnorm_gt0.
+- have Hnon_null: '[d] != 0.
+  + move: Hd; apply: contraTneq.
+    move/eqP; rewrite vnorm_eq0; move/eqP => ->.
+    by rewrite vdot0r ltrr. 
+  set d' := (2%:R / '[d]) *: d.
+  exists d'; rewrite inE mul_col_mx col_mx_lev.
+  apply/andP; split.
+  + rewrite -scalemxAr.
+    apply/forallP => i; rewrite 2!mxE.
+    apply: mulr_ge0.
+    * apply: divr_ge0; [exact: ler0n | exact: vnorm_ge0].
+    * by move/forallP/(_ i): Hfeasdir; rewrite mxE.
+  + apply/forallP => i; rewrite mxE.
+    
+    
+      Search _ ('[_] >= 0).
+      Search _ (_%:R >= 0).
+    
+    Search _ (_ / _ >= 0).
+
+    
+  Search _ ('[_] > 0).*)
