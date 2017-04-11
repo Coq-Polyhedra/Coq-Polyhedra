@@ -18,10 +18,9 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Variable R : realFieldType.
-
 Section Def.
 
+Variable R : realFieldType.
 Variable n p : nat.
   
 Variable V : 'M[R]_(n,p).
@@ -106,6 +105,7 @@ End Def.
 
 Section Minkowski.
 
+Variable R : realFieldType.
 Variable m n: nat.
 
 Variable A: 'M[R]_(m,n).
@@ -155,8 +155,8 @@ case: (boolP (feasible A b)) => [Hfeas x| Hinfeas x].
     by apply/(feasibleP A b); exists x.
   symmetry; apply: negbTE; apply/negP.
   move/is_in_convex_hullP => [l [_ Hl _]].
-  suff Hl': '[e #|bases|, l] = 0.
-  + by move: (@ltr01 R); rewrite -Hl -Hl' ltrr /=.
+  suff Hl': '[e R #|bases|, l] = 0.
+  + by rewrite Hl' in Hl; move: (@ltr01 R); rewrite Hl ltrr /=.
   + rewrite /vdot big_seq.
     apply: big_pred0 => i; apply/negbTE.
     rewrite /index_enum -enumT.

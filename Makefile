@@ -102,7 +102,6 @@ endif
 ######################
 
 VFILES:=theories/extra_misc.v\
-  theories/small_enough.v\
   theories/vector_order.v\
   theories/extra_matrix.v\
   theories/inner_product.v\
