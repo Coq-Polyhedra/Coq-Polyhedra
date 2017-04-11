@@ -1232,7 +1232,7 @@ rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx.
 move/row_base_correctness: rank_row_submxT => [_ _ ->].
 exact: leqnn.
 Qed.
-  
+
 Definition bas0 := Basis bas0_pbas_is_basis.
 
 Definition x0 := point_of_basis b bas0.
@@ -1557,13 +1557,6 @@ apply/andP; split.
   rewrite dual_from_ext_perm castmx_gev0 col_mx_gev0.
   by apply/andP; split.
 Qed.
-
-(*<<<<<<< HEAD
-Definition ext_set0 :=
-  ((lshift #|pos_idx|) @: bas0) :|: ((@rshift m #|pos_idx|) @: [set: 'I_#|pos_idx|]).
-
-Lemma ext_init_set_card : (#|ext_init_set| == n+#|pos_idx|)%N.
-=======*)
 
 Lemma dual_from_ext_obj u :
   '[bext, u] > Mext -> '[b, dual_from_ext u] > 0.
