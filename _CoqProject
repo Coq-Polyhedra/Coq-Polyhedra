@@ -8,5 +8,5 @@ theories/row_submx.v
 theories/polyhedron.v
 theories/simplex.v
 theories/duality.v
-theories/minkowski-simplex.v
+theories/minkowski.v
 theories/face.v

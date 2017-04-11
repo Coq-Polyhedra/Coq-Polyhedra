@@ -110,7 +110,7 @@ VFILES:=theories/extra_misc.v\
   theories/polyhedron.v\
   theories/simplex.v\
   theories/duality.v\
-  theories/minkowski-simplex.v\
+  theories/minkowski.v\
   theories/face.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)

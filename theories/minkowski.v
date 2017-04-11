@@ -167,3 +167,5 @@ case: (boolP (feasible A b)) => [Hfeas x| Hinfeas x].
       rewrite exists_feasible_basis.
       by move/negbTE : Hinfeas ->.      
 Qed.
+
+End Minkowski.
