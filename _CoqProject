@@ -1,3 +1,4 @@
+-arg "-w '-notation-overridden,-deprecated'"
 -R theories Polyhedra
 theories/extra_misc.v
 theories/vector_order.v
