@@ -108,12 +108,10 @@ VFILES:=theories/extra_misc.v\
   theories/inner_product.v\
   theories/row_submx.v\
   theories/polyhedron.v\
-  theories/polyhedral_cone.v\
-  theories/double_description_method.v\
-  theories/minkowski.v\
-  theories/adjacency.v\
   theories/simplex.v\
-  theories/duality.v
+  theories/duality.v\
+  theories/minkowski-simplex.v\
+  theories/face.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))

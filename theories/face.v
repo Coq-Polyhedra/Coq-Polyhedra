@@ -55,7 +55,7 @@ apply/idP/idP; first by move/eqP => ->; apply: lev_refl.
 Qed.
 
 Definition active_ineq_of_face :=
-  if simplex A b c is Simplex_optimal_basis (_, u) then
+  if simplex A b c is Simplex_optimal_point (_, u) then
     [ set i | u i 0 > 0]
   else
     set0. (* not used *)
@@ -74,9 +74,8 @@ case: (simplexP A b c) => [ d /(intro_existsT (infeasibleP _ _))/negP
 - move: (Hbounded); rewrite bounded_is_not_unbounded //.
   by move/negP.
 - have ->: ('[ c, x] == '[ c, x0]) = (compl_slack_cond A b x u).
-  + rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) duality_gap_eq0_def. 
-    rewrite -(compl_slack_cond_duality_gap_equiv Hx0 Hu) duality_gap_eq0_def in Hcsc0.
-    by move/eqP: Hcsc0 => <-.
+  + rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) duality_gap_eq0_def.
+    by rewrite Hcsc0.
   rewrite -row_submx_mul.
   move: Hu; rewrite inE => /andP [_ Hu].
   apply: (sameP (compl_slack_condP _ _ _ _)); apply: (iffP idP) => [/eqP H i | H].
