@@ -123,31 +123,47 @@ Proof.
 by apply/colP => i; rewrite !mxE.
 Qed.
 
-Hypothesis init_bas : basis A.
-Hypothesis Hbounded: forall c, bounded A b c.
-
-Lemma minkowski x :
-  (x \in polyhedron A b) = is_in_convex_hull matrix_of_vertices x.
+Lemma minkowski :
+  bounded_polyhedron A b -> forall x, (x \in polyhedron A b) = is_in_convex_hull matrix_of_vertices x.
 Proof.
-apply/idP/idP.
-- move => Hx; apply: contraT.
-  move/separation => [c Hc].
-  move/(bounded_pointedP _ _ init_bas): (Hbounded c) => [[bas]].
-  set z := point_of_basis _ _; move <-.
-  move/(_ _ Hx) => Hzx.
-  pose i := enum_rank_in (in_setT bas) bas. 
-  move/forallP/(_ i): Hc; rewrite col_matrix_of_vertices enum_rankK_in; last exact: in_setT.
-  by move/(ler_lt_trans Hzx); rewrite ltrr.
-- move/is_in_convex_hullP => [l [Hl Hel ->]].
-  rewrite inE mulmxA mulmx_sum_col. 
-  have {1}->: b = \sum_i (l i 0 *: b).
-  + rewrite -scaler_suml.
-    suff ->: \sum_i l i 0 = 1 by rewrite scale1r.
-    * move: Hel; rewrite /vdot => <-.
-      apply: eq_bigr.
-      by move => i _; rewrite mxE mul1r.
-  apply: lev_sum => i _.
-  + apply: lev_wpscalar; first by move/forallP/(_ i): Hl; rewrite mxE.
-    * rewrite col_mul col_matrix_of_vertices.
-      by exact: feasible_basis_is_feasible.
+move => Hbounded.
+case: (boolP (feasible A b)) => [Hfeas x| Hinfeas x].
+- apply/idP/idP.
+  + move => Hx; apply: contraT.
+    move/separation => [c Hc].
+    have Hpointed: pointed A by exact: (feasible_bounded_polyhedron_is_pointed Hfeas Hbounded).
+    move/(bounded_polyhedronP_feasible Hfeas)/(_ c)/(bounded_pointedP _ _ Hpointed): Hbounded => [[bas]].
+    set z := point_of_basis _ _; move <-.
+    move/(_ _ Hx) => Hzx.
+    pose i := enum_rank_in (in_setT bas) bas. 
+    move/forallP/(_ i): Hc; rewrite col_matrix_of_vertices enum_rankK_in; last exact: in_setT.
+    by move/(ler_lt_trans Hzx); rewrite ltrr.
+  + move/is_in_convex_hullP => [l [Hl Hel ->]].
+    rewrite inE mulmxA mulmx_sum_col. 
+    have {1}->: b = \sum_i (l i 0 *: b).
+    * rewrite -scaler_suml.
+      suff ->: \sum_i l i 0 = 1 by rewrite scale1r.
+      - move: Hel; rewrite /vdot => <-.
+        apply: eq_bigr.
+        by move => i _; rewrite mxE mul1r.
+    apply: lev_sum => i _.
+    * apply: lev_wpscalar; first by move/forallP/(_ i): Hl; rewrite mxE.
+      - rewrite col_mul col_matrix_of_vertices.
+        exact: feasible_basis_is_feasible.
+- have /negbTE ->: ~~ (x \in polyhedron A b).
+  + move: Hinfeas; apply: contra => Hx.
+    by apply/(feasibleP A b); exists x.
+  symmetry; apply: negbTE; apply/negP.
+  move/is_in_convex_hullP => [l [_ Hl _]].
+  suff Hl': '[e #|bases|, l] = 0.
+  + by move: (@ltr01 R); rewrite -Hl -Hl' ltrr /=.
+  + rewrite /vdot big_seq.
+    apply: big_pred0 => i; apply/negbTE.
+    rewrite /index_enum -enumT.
+    suff: bases == set0.
+    * rewrite -cards_eq0.
+      by rewrite -{1}[#|bases|]card_ord cardT; move/eqP/size0nil ->. 
+    * apply: contraT.
+      rewrite exists_feasible_basis.
+      by move/negbTE : Hinfeas ->.      
 Qed.

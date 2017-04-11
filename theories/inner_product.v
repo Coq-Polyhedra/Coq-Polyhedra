@@ -125,7 +125,15 @@ suff: '[row_perm s u, row_perm s v]%:M = '[u,v]%:M :> 'M_1.
 - by move/matrixP/(_ 0 0); rewrite !mxE.
 - rewrite 2!vdot_def; exact: mulmx_tr_row_perm.
 Qed.
-  
+
+
+Lemma vdot_sumDl (I: eqType) r (P: pred I) F x : '[\sum_(i <- r | P i) F i, x] = \sum_(i <- r | P i) '[F i, x].
+Proof.
+apply: (big_morph (fun y => '[y,x])).
+- move => y y'; exact: vdotDl.
+- exact: vdot0l.
+Qed.
+
 (* Order properties *)
 Lemma vnorm_ge0 x : 0 <= '[x].
 Proof. by rewrite sumr_ge0 // => i _; exact: sqr_ge0. Qed.

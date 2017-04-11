@@ -42,8 +42,24 @@ Qed.
 Definition active_ineq x :=
   [set i : 'I_m | (A *m x) i 0 == b i 0].
 
-Definition feasible_dir (d : 'cV[R]_n) := (A *m d) >=m 0.
+Definition feasible_dir := [pred d | (A *m d) >=m 0].
 
+Definition pointed := (mxrank A >= n)%N.
+
+Lemma pointedPn : reflect (exists d, [/\ d != 0, feasible_dir d & feasible_dir (-d)]) (~~pointed).
+Proof.
+have ->: ~~pointed = (kermx A^T != 0)%MS.
+by rewrite /pointed -mxrank_tr row_leq_rank -kermx_eq0.
+apply/(iffP rowV0Pn) => [[v] /sub_kermxP Hv Hv'| [d [Hd Hd' Hd'']]].
+- move/(congr1 trmx): Hv; rewrite trmx0 trmx_mul trmxK => Hv.
+  exists v^T; split; try by rewrite inE ?mulmxN Hv ?oppr0 lev_refl. 
+  + by rewrite -trmx0 inj_eq; last exact: trmx_inj.
+- exists d^T; last by rewrite -trmx0 inj_eq; last exact: trmx_inj.
+  + apply/sub_kermxP; rewrite -trmx_mul -trmx0.
+    apply: congr1; apply: lev_antisym; apply/andP.
+    by rewrite !inE mulmxN oppv_ge0 in Hd' Hd''.
+Qed.    
+    
 End Defs.
 
 Section WeakDuality.
@@ -74,13 +90,13 @@ apply: (congr1 (andb^~ _)); apply/idP/idP.
 - by move/lev_antisym ->; apply: eq_refl.
 Qed.
 
-Definition dual_feasible_dir d := (A^T *m d == 0) && (d >=m 0).
+Definition dual_feasible_dir := [pred d | (A^T *m d == 0) && (d >=m 0)].
 
 Lemma dual_feasible_directionE d :
   (dual_feasible_dir d) = (feasible_dir dualA d).
 Proof.
-rewrite /feasible_dir 2!mul_col_mx mul1mx.
-rewrite -[0]vsubmxK -[usubmx _]vsubmxK.
+rewrite 2!inE 2!mul_col_mx mul1mx.
+rewrite -[0 in RHS]vsubmxK -[usubmx _]vsubmxK.
 rewrite 2!col_mx_lev !linear0.
 apply: (congr1 (andb^~ _)).
 by rewrite mulNmx oppv_ge0 -eqv_le eq_sym.

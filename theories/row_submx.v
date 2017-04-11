@@ -38,6 +38,13 @@ Proof.
 by apply/matrixP => ? ?; rewrite !mxE.
 Qed.
 
+Lemma row_submx_submx (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :
+  (row_submx M I <= M)%MS.
+Proof.
+apply/row_subP => i; rewrite row_submx_row.
+exact: row_sub.
+Qed.
+  
 Lemma row_submx_row_mx (m p q : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(m,q)) (I : {set 'I_m}) :
   row_submx (row_mx M N) I = row_mx (row_submx M I) (row_submx N I).
 Proof.
