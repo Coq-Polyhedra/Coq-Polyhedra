@@ -69,6 +69,7 @@ COQDOCLIBS?=\
 
 
 OPT?=
+OTHERFLAGS=-w '-notation-overridden,-deprecated'
 COQDEP?="$(COQBIN)coqdep" -c
 COQFLAGS?=-q $(OPT) $(COQLIBS) $(OTHERFLAGS) $(COQ_XML)
 COQCHKFLAGS?=-silent -o
@@ -102,18 +103,15 @@ endif
 ######################
 
 VFILES:=theories/extra_misc.v\
-  theories/small_enough.v\
   theories/vector_order.v\
   theories/extra_matrix.v\
   theories/inner_product.v\
   theories/row_submx.v\
   theories/polyhedron.v\
-  theories/polyhedral_cone.v\
-  theories/double_description_method.v\
-  theories/minkowski.v\
-  theories/adjacency.v\
   theories/simplex.v\
-  theories/duality.v
+  theories/duality.v\
+  theories/minkowski.v\
+  theories/face.v
 
 ifneq ($(filter-out archclean clean cleanall printenv,$(MAKECMDGOALS)),)
 -include $(addsuffix .d,$(VFILES))

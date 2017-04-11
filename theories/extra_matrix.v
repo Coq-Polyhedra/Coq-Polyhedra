@@ -258,5 +258,12 @@ move/(congr1 (castmx (esym em, esym en))).
 by rewrite 2!castmxK.
 Qed.
 
+Lemma mulmx_sum_col (R : realFieldType) (m n : nat) (A : 'M[R]_(m, n)) (u : 'cV_n):  A *m u = \sum_i u i 0 *: col i A.
+Proof.
+apply/colP => j.
+rewrite mxE summxE.
+by apply/eq_bigr => i; rewrite !mxE mulrC.
+Qed.
+
 End ExtraMx.
 
