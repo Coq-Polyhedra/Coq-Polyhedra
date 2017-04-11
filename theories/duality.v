@@ -28,16 +28,35 @@ Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 Variable c : 'cV[R]_n.
 
-Lemma strong_duality :
+Lemma strong_duality_primal_dual_feasible :
   feasible A b -> dual_feasible A c ->
-  exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & duality_gap b c p.1 p.2 = 0].
+  exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & '[c,p.1] = '[b, p.2]].
 Proof.
 move => Hfeas.
 rewrite -(bounded_is_dual_feasible _ Hfeas) => /boundedP_cert [[x u] /= [Hx Hu Hcx Hbu]].
 exists (x,u); split; try by done.
-by rewrite /duality_gap Hcx Hbu addrN. 
+by rewrite /= Hcx Hbu. 
 Qed.
 
+Lemma strong_duality_primal_feasible_dual_infeasible :
+  feasible A b -> ~~ (dual_feasible A c) -> (unbounded A b c).
+Proof.
+move/feasibleP => [x Hx].
+move/dual_infeasibleP => [d [Hd Hd']].
+by apply/unboundedP_cert; exists (x, d); split.
+Qed.
+
+Lemma strong_duality_primal_infeasible_dual_feasible :
+  ~~ (feasible A b) -> dual_feasible A c -> unbounded (dualA A) (dualb _ c) (-b).
+Proof.
+move/infeasibleP => [d [Hd Hd']].
+move/dual_feasibleP => [u Hu].  
+apply/unboundedP_cert; exists (u,d); split.
+- by rewrite -dual_polyhedronE.
+- by rewrite -dual_feasible_directionE.
+- by rewrite vdotNl oppr_lt0.
+Qed.  
+  
 Lemma farkas_lemma z :
   (feasible A b) ->
   (forall x, x \in polyhedron A b -> '[c,x] >= z) <->
