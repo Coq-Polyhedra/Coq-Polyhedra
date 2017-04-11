@@ -57,7 +57,7 @@ apply/unboundedP_cert; exists (u,d); split.
 - by rewrite vdotNl oppr_lt0.
 Qed.  
   
-Lemma farkas_lemma z :
+Lemma farkas_lemma_on_inequalities z :
   (feasible A b) ->
   (forall x, x \in polyhedron A b -> '[c,x] >= z) <->
   (exists u, [/\ u >=m 0, A^T *m u = c & '[b,u] >= z]).
