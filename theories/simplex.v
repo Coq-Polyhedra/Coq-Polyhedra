@@ -1477,15 +1477,17 @@ set x1 := (col_mx y1 (Apos *m y1 - bpos)) in Hx1. (*.*)
 move: (feasible_cext_eq_min_value Hy2) => [Hx2 _].
 set x2 := (col_mx y2 (Apos *m y2 - bpos)) in Hx2. (*.*)
 suff: x = x1 /\ x = x2.
-  by do 2![move => [/(congr1 usubmx)]; rewrite col_mxKu => <-].
-apply: (Hext _ _ lambda Hx1 Hx2 Hlambda).
-rewrite 2!scale_col_mx add_col_mx -Hy.
-rewrite 2!scalerDr addrACA 2!scalemxAr -mulmxDr -Hy.
-rewrite -scalerDl addrCA addrN addr0 scale1r.
-rewrite -[x]vsubmxK.
-suff ->: dsubmx x = Apos *m y - bpos by done.
-move: (cext_min_value_attained Hx Hcext).
-by move/(congr1 (fun z => z - bpos)); rewrite addrAC addrN add0r => ->.
+- move => [/(congr1 usubmx) Hxx1 /(congr1 usubmx) Hxx2].
+  rewrite 2!col_mxKu in Hxx1 Hxx2.
+  by rewrite -Hxx1 -Hxx2.
+- apply: (Hext _ _ lambda Hx1 Hx2 Hlambda).
+  rewrite 2!scale_col_mx add_col_mx -Hy.
+  rewrite 2!scalerDr addrACA 2!scalemxAr -mulmxDr -Hy.
+  rewrite -scalerDl addrCA addrN addr0 scale1r.
+  rewrite -[x]vsubmxK.
+  suff ->: dsubmx x = Apos *m y - bpos by done.
+  move: (cext_min_value_attained Hx Hcext).
+  by move/(congr1 (fun z => z - bpos)); rewrite addrAC addrN add0r => ->.
 Qed.
 
 Definition dual_from_ext (u:'cV[R]_(m+p)) :=
