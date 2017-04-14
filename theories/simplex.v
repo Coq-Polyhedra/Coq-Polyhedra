@@ -806,7 +806,7 @@ Qed.
 
 Definition lex_rule_lex_bas := LexFeasibleBasis lex_rule_lex_feasibility.
 
-Lemma lex_rule_inc :
+Lemma lex_rule_dec :
   let: next_bas := lex_rule_lex_bas in
   let: u := reduced_cost_of_basis c bas in
   u i 0 < 0 -> (c^T *m point_of_basis_pert next_bas) <lex (c^T *m point_of_basis_pert bas).
@@ -900,7 +900,7 @@ case: pickP => [i |]; last by done.
 rewrite -/u; move => Hui.
 case: {-}_ /idPn => [infeas_dir [] Hnext_bas|]; last by done.
  
-move: (lex_rule_inc infeas_dir Hui) => Hc; rewrite Hnext_bas in Hc.
+move: (lex_rule_dec infeas_dir Hui) => Hc; rewrite Hnext_bas in Hc.
 apply: proper_card.
 set Snext_bas := [set _ | _]; set Sbas := [set _ | _].
 rewrite properEneq; apply/andP; split; last first.
@@ -1670,14 +1670,16 @@ Inductive pointed_final_result :=
 
 Definition pointed_simplex :=
   match phase2 feasible_bas0_ext cext with
-  | Phase2_res_unbounded _ => Pointed_res_infeasible 0 (* this case should not happen *)
+  | Phase2_res_unbounded _ =>
+    Pointed_res_infeasible 0 (* impossible, see Lemma cext_min_value *)
   | Phase2_res_optimal_basis bas =>
     let: x := point_of_basis bext bas in
     if ('[cext, x] =P Mext) is ReflectT Hext then
-      let: bas := extract_feasible_basis (extremality_ext (feasible_point_of_basis_is_extreme bas) Hext) in
-      match phase2 bas c with
-      | Phase2_res_unbounded (next_bas, i) => Pointed_res_unbounded (next_bas, i)
-      | Phase2_res_optimal_basis next_bas => Pointed_res_optimal_basis next_bas
+      (* LP(A,b,c) is feasible, we build a feasible basis *)
+      let: bas' := extract_feasible_basis (extremality_ext (feasible_point_of_basis_is_extreme bas) Hext) in
+      match phase2 bas' c with
+      | Phase2_res_unbounded (bas'', i) => Pointed_res_unbounded (bas'', i)
+      | Phase2_res_optimal_basis bas'' => Pointed_res_optimal_basis bas''
       end
     else
       Pointed_res_infeasible (dual_from_ext (ext_reduced_cost_of_basis cext bas))

@@ -37,7 +37,7 @@ Definition b (x: 'cV[R]_n) :=
 Definition is_in_convex_hull x := feasible A (b x).
 
 Lemma is_in_convex_hullP (x: 'cV_n) :
-  reflect (exists l : 'cV[R]_p, [/\ (l >=m 0), '[e, l] = 1 & x = V *m l]) (feasible A (b x)).
+  reflect (exists l : 'cV[R]_p, [/\ (l >=m 0), '[e, l] = 1 & x = V *m l]) (is_in_convex_hull x).
 Proof.
 apply: (iffP (feasibleP _ _)) => [[l] |[l [Hlpos Hlsum Hl]]].
 - rewrite inE !mul_col_mx !col_mx_lev.
@@ -124,21 +124,28 @@ by apply/colP => i; rewrite !mxE.
 Qed.
 
 Lemma minkowski :
-  bounded_polyhedron A b -> forall x, (x \in polyhedron A b) = is_in_convex_hull matrix_of_vertices x.
+  bounded_polyhedron A b -> (polyhedron A b) =i (is_in_convex_hull matrix_of_vertices).
 Proof.
 move => Hbounded.
 case: (boolP (feasible A b)) => [Hfeas x| Hinfeas x].
-- apply/idP/idP.
-  + move => Hx; apply: contraT.
+
+(* the case where polyhedron A b is feasible *)
+- apply/idP/idP. 
+  (* the difficult part of the statement: 
+   * if x \in polyhedron A b, then x is in the convex hull of the vertices *)
+  + move => Hx; apply: contraT.   
     move/separation => [c Hc].
-    have Hpointed: pointed A by exact: (feasible_bounded_polyhedron_is_pointed Hfeas Hbounded).
+    have Hpointed: pointed A
+      by exact: (feasible_bounded_polyhedron_is_pointed Hfeas Hbounded).
     move/(bounded_polyhedronP_feasible Hfeas)/(_ c)/(bounded_pointedP _ _ Hpointed): Hbounded => [[bas]].
     set z := point_of_basis _ _; move <-.
     move/(_ _ Hx) => Hzx.
     pose i := enum_rank_in (in_setT bas) bas. 
-    move/forallP/(_ i): Hc; rewrite col_matrix_of_vertices enum_rankK_in; last exact: in_setT.
+    move/forallP/(_ i): Hc.
+    rewrite col_matrix_of_vertices enum_rankK_in; last exact: in_setT.
     by move/(ler_lt_trans Hzx); rewrite ltrr.
-  + move/is_in_convex_hullP => [l [Hl Hel ->]].
+  (* the converse part, in which we show that polyhedra are convex (!) *)  
+  + move/is_in_convex_hullP => [l [Hl Hel ->]]. 
     rewrite inE mulmxA mulmx_sum_col. 
     have {1}->: b = \sum_i (l i 0 *: b).
     * rewrite -scaler_suml.
@@ -150,7 +157,9 @@ case: (boolP (feasible A b)) => [Hfeas x| Hinfeas x].
     * apply: lev_wpscalar; first by move/forallP/(_ i): Hl; rewrite mxE.
       - rewrite col_mul col_matrix_of_vertices.
         exact: feasible_basis_is_feasible.
-- have /negbTE ->: ~~ (x \in polyhedron A b).
+
+(* the case where polyhedron A b is not feasible *)
+- have /negbTE ->: ~~ (x \in polyhedron A b). 
   + move: Hinfeas; apply: contra => Hx.
     by apply/(feasibleP A b); exists x.
   symmetry; apply: negbTE; apply/negP.
