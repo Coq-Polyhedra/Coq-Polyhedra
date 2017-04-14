@@ -807,21 +807,21 @@ Qed.
 Definition lex_rule_lex_bas := LexFeasibleBasis lex_rule_lex_feasibility.
 
 Lemma lex_rule_dec :
-  let: next_bas := lex_rule_lex_bas in
+  let: bas' := lex_rule_lex_bas in
   let: u := reduced_cost_of_basis c bas in
-  u i 0 < 0 -> (c^T *m point_of_basis_pert next_bas) <lex (c^T *m point_of_basis_pert bas).
+  u i 0 < 0 -> (c^T *m point_of_basis_pert bas') <lex (c^T *m point_of_basis_pert bas).
 Proof.
 set d := direction bas i.
 set j := lex_ent_var.
-set next_bas := lex_rule_lex_bas.
+set bas' := lex_rule_lex_bas.
 set v := point_of_basis_pert bas.
-set next_v := point_of_basis_pert next_bas.
+set v' := point_of_basis_pert bas'.
 set lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0].
 set u := v + d *m lex_min_gap.
  
 move => Hui.
 move: lex_rule_rel_succ_points => Hv'u.
-rewrite -/u -/next_v in Hv'u.
+rewrite -/u -/v' in Hv'u.
 rewrite Hv'u /u mulmxDr lex_ltrNge -subv_gelex0 addrC addrA addNr add0r -lex_ltrNge mulmxA.
 rewrite -vdot_def vdotC mul_scalar_mx.
 rewrite lex_ltrNge -[X in X *: _]opprK scaleNr -scalerN -[0](scaler0 _ (-'[c,d])).
@@ -881,16 +881,16 @@ Definition basic_step bas :=
   else
     Lex_final (Lex_res_optimal_basis bas).
 
-Definition basis_height cur_bas :=
-  #|[ set bas: (lex_feasible_basis s) | (c^T *m (point_of_basis_pert s bas)) <lex (c^T *m (point_of_basis_pert s cur_bas)) ]|.
+Definition basis_height bas :=
+  #|[ set bas' : (lex_feasible_basis s) | (c^T *m (point_of_basis_pert s bas')) <lex (c^T *m (point_of_basis_pert s bas)) ]|.
 
 Function lex_phase2 bas {measure basis_height bas} :=
   match basic_step bas with
   | Lex_final final_res => final_res
-  | Lex_next_basis next_bas => lex_phase2 next_bas
+  | Lex_next_basis bas' => lex_phase2 bas'
   end.
 Proof.
-move => bas next_bas.
+move => bas bas'.
 move => Hbas.
 apply/leP.
 pose u := reduced_cost_of_basis c bas.
@@ -898,21 +898,21 @@ pose u := reduced_cost_of_basis c bas.
 move: Hbas; rewrite /basic_step.
 case: pickP => [i |]; last by done.
 rewrite -/u; move => Hui.
-case: {-}_ /idPn => [infeas_dir [] Hnext_bas|]; last by done.
+case: {-}_ /idPn => [infeas_dir [] Hbas'|]; last by done.
  
-move: (lex_rule_dec infeas_dir Hui) => Hc; rewrite Hnext_bas in Hc.
+move: (lex_rule_dec infeas_dir Hui) => Hc; rewrite Hbas' in Hc.
 apply: proper_card.
-set Snext_bas := [set _ | _]; set Sbas := [set _ | _].
+set Sbas' := [set _ | _]; set Sbas := [set _ | _].
 rewrite properEneq; apply/andP; split; last first.
-- apply/subsetP; move => bas'.
-  rewrite !inE; move/andP => [_ Hbas'].
-  by apply:(lex_le_ltr_trans Hbas' Hc).
+- apply/subsetP; move => bas''.
+  rewrite !inE; move/andP => [_ Hbas''].
+  by apply:(lex_le_ltr_trans Hbas'' Hc).
 - apply: contraT; rewrite negbK; move/eqP => Hcontra.
-  have H1: next_bas \notin (Snext_bas).
+  have H1: bas' \notin (Sbas').
   + rewrite inE negb_and; apply/orP; left.
     by rewrite negbK eq_refl.
-  have H2: next_bas \in (Sbas) by rewrite inE.
-  move/setP/(_ next_bas): Hcontra.
+  have H2: bas' \in (Sbas) by rewrite inE.
+  move/setP/(_ bas'): Hcontra.
   by move/negbTE: H1 ->; rewrite H2.
 Qed.
 
@@ -1066,8 +1066,8 @@ Definition lex_to_phase2_final_result res :=
   end.
 
 Definition phase2 :=
-  let: bas0 := LexFeasibleBasis (feasible_to_lex_feasible) in 
-    lex_to_phase2_final_result ((@lex_phase2 s0) c bas0).
+  let: lex_bas0 := LexFeasibleBasis (feasible_to_lex_feasible) in 
+    lex_to_phase2_final_result ((@lex_phase2 s0) c lex_bas0).
 
 (*Implicit Types bas : feasible_basis.*)
 
@@ -1193,9 +1193,9 @@ apply: (iffP (infeasibleP _ _)) => [[d]| [d] [Hd Hd']];
 - move => [/and3P [/eqP <- _ Hd]].
   by set d' := dsubmx _ - usubmx _; exists d'.
 - rewrite !col_mxKu !col_mxKd.
-  rewrite add_pos_neg_part eq_refl /=. 
+  rewrite add_pos_neg_part eq_refl /=.
   split; last by done.
-  + by rewrite !col_mx_gev0 neg_part_gev0 pos_part_gev0 /=. 
+  + by rewrite !col_mx_gev0 neg_part_gev0 pos_part_gev0 /=.
 Qed.
 
 End DualFeasibility.
@@ -1244,7 +1244,7 @@ Definition neg_idx := [ set i : 'I_m | (A *m x0) i 0 >= b i 0 ].
 
 Notation p := #|pos_idx|.
 
-Lemma init_bas_subset_neg_idx : (bas0 \subset neg_idx).
+Lemma bas0_subset_neg_idx : (bas0 \subset neg_idx).
 Proof.
 apply/subsetP => i Hi.
 move/subsetP/(_ _ Hi): (basis_subset_of_active_ineq b bas0).
@@ -1360,7 +1360,7 @@ apply/row_matrixP => i; rewrite row_submx_row rowK.
   + move: (enum_valP i); rewrite -{2}pos_idxC in_setC.
     by rewrite H.
   + by rewrite row_row_mx row_submx_row row0.
-Qed.   
+Qed.
 
 Lemma rel_b'_bposneg :
   row_perm s_idx b' = castmx (pos_neg_card, erefl 1%N) (col_mx (-bpos) bneg).
@@ -1369,7 +1369,7 @@ rewrite row_perm_pos_neg; apply: (congr1 (castmx _)).
 apply: (congr2 col_mx); apply/colP => i; rewrite !mxE.
 - by move: (enum_valP i) ->.
 - by rewrite ifF; last by apply/negbTE; rewrite -in_setC pos_idxC; exact: enum_valP.
-Qed.   
+Qed.
 
 Definition Aext := col_mx A' (row_mx 0 (1%:M)).
 Definition bext := (col_mx b' 0):'cV_(m+p).
@@ -1589,7 +1589,7 @@ Proof.
 apply/row_matrixP => i.
 rewrite row_row_mx 2!row_submx_row row0.
 rewrite rowK; case: {-}_/idP => [Hpos | _]; last by done.
-move/subsetP/(_ _ (enum_valP i)): init_bas_subset_neg_idx => Hneg.
+move/subsetP/(_ _ (enum_valP i)): bas0_subset_neg_idx => Hneg.
 move/setIP: (conj Hpos Hneg).
 move/disjoint_setI0: pos_neg_idxI ->.
 by rewrite in_set0.
@@ -1600,7 +1600,7 @@ Proof.
 apply/colP => i.
 rewrite 2!row_submx_mxE mxE ifF; first by done.
 apply/(introF idP) => Hpos.
-move/subsetP/(_ _ (enum_valP i)): init_bas_subset_neg_idx => Hneg.
+move/subsetP/(_ _ (enum_valP i)): bas0_subset_neg_idx => Hneg.
 move/setIP: (conj Hpos Hneg).
 move/disjoint_setI0: pos_neg_idxI ->.
 by rewrite in_set0.
@@ -1647,7 +1647,7 @@ rewrite mul1mx /z in Hz.
 have: y = point_of_basis b bas0.
 - move/(congr1 (castmx (prebasis_card bas0, erefl 1%N))): Hy.
   rewrite castmx_mul castmx_id.
-  move/(congr1 (mulmx (invmx (matrix_of_prebasis A bas0)))). 
+  move/(congr1 (mulmx (invmx (matrix_of_prebasis A bas0)))).
   rewrite mulmxA mulVmx; last exact: matrix_of_basis_in_unitmx.
   by rewrite mul1mx b'_bas0.
 rewrite polyhedronext_inE.
