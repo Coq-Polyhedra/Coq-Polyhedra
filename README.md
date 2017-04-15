@@ -8,7 +8,7 @@ Formalizing convex polyhedra in Coq
 
 ### Compilation
 ```bash
-./configure && make
+./configure.sh && make
 ```
 
 ## Authors
