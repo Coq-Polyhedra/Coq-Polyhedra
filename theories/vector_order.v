@@ -1,13 +1,13 @@
 (**************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect           *)
 (*                                                                        *)
-(* (c) Copyright 2016, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
+(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)   *)
 (* All rights reserved.                                                   *)
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix.
+From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix fingroup perm.
 Require Import inner_product.
 
 Set Implicit Arguments.
@@ -55,6 +55,13 @@ Proof.
 by move => Ha x y; apply: eq_forallb => i; rewrite !mxE ler_pmul2l.
 Qed.
 
+Lemma lev_wpscalar a x y : 0 <= a -> x <=m y -> (a *: x) <=m (a *: y).
+Proof.
+move => Ha /forallP Hxy.
+apply/forallP => i; rewrite !mxE.
+by apply: ler_wpmul2l.
+Qed.
+
 Lemma paddv_eq0 x y :
   (0 <=m x) -> (0 <=m y) -> (x + y == 0) = (x == 0) && (y == 0).
 Proof.
@@ -69,6 +76,11 @@ Qed.
 Lemma subv_ge0 x y : (0 <=m (y - x)) = (x <=m y).
 Proof.
 by apply: eq_forallb => i; rewrite !mxE subr_ge0.
+Qed.
+
+Lemma subv_le0 x y : (0 >=m (y - x)) = (x >=m y).
+Proof.
+by apply: eq_forallb => i; rewrite !mxE subr_le0.
 Qed.
 
 Lemma lev_refl x : (x <=m x).
@@ -94,6 +106,13 @@ apply/forallP => i; move/(_ i): Hy; move/(_ i): Hx.
 by apply: ler_trans.
 Qed.
 
+Lemma eqv_le x y : (x == y) = (x <=m y) && (y <=m x).
+Proof.
+apply/idP/idP.
+- by move/eqP ->; rewrite lev_refl.
+- by move/lev_antisym/eqP.
+Qed.
+  
 Lemma vdot_lev x y z : x >=m 0 -> y <=m z -> '[x,y] <= '[x,z].
 Proof.
 move => /forallP Hx /forallP Hyz.
@@ -171,6 +190,20 @@ Proof.
 by rewrite opprK addrC add_lev_min_max addr0.
 Qed.
 
+Lemma row_perm_lev (s: {perm 'I_n}) x y :
+  (x <=m y) = ((row_perm s x) <=m (row_perm s y)).
+Proof.
+apply/idP/idP => /forallP H; apply/forallP => i.
+- by move/(_ (s i)): H; rewrite !mxE.
+- by move/(_ ((s^-1)%g i)): H; rewrite !mxE permKV.
+Qed.
+
+Lemma row_perm_gev0 (s: {perm 'I_n}) x :
+  (x >=m 0) = ((row_perm s x) >=m 0).
+Proof.
+by rewrite (row_perm_lev s) row_perm_const.
+Qed.
+
 End Core.
 
 Notation "<=m" := lev: ring_scope.
@@ -182,7 +215,8 @@ Notation "x >=m y" := (y <=m x) (only parsing, at level 0) : ring_scope.
 Section ExtraOrder.
 
 Variable n p: nat.
-  
+
+ 
 Lemma lev_castmx (eq_np : n = p) : {mono (@castmx R n 1 p 1 (eq_np, erefl _)) : x y / x <=m y }.
 Proof.
 move => x y.
@@ -193,6 +227,12 @@ apply/idP/idP.
   by rewrite !castmxE /= cast_ord_id; apply: H.
 Qed.
 
+Lemma castmx_gev0 (eq_np : n = p) x  : ((castmx (eq_np, erefl _) x) >=m 0) = (x >=m 0).
+Proof.  
+have {1}<-: (castmx (eq_np, erefl 1%N) 0 = (0:'cV[R]_p)) by rewrite castmx_const.
+apply: lev_castmx.
+Qed.   
+  
 Lemma col_mx_lev (x y : 'cV[R]_n) (v w : 'cV[R]_p):  ((col_mx x v) <=m (col_mx y w)) = ((x <=m y) && (v <=m w)).
 Proof.
 apply/idP/idP.
@@ -206,6 +246,36 @@ apply/idP/idP.
     by case: splitP => [ k _ | k _ ]; [move: (H1 k) | move: (H2 k)].
 Qed.
 
+Lemma col_mx_lev0 (x : 'cV[R]_n) (v : 'cV[R]_p):  ((col_mx x v) <=m 0) = ((x <=m 0) && (v <=m 0)).
+Proof.
+by rewrite -{1}[0]vsubmxK col_mx_lev !linear0.
+Qed.
+
+Lemma col_mx_gev0 (y : 'cV[R]_n) (w : 'cV[R]_p):  (0 <=m (col_mx y w)) = ((0 <=m y) && (0 <=m w)).
+Proof.
+by rewrite -{1}[0]vsubmxK col_mx_lev !linear0.
+Qed.
+
+Lemma gev0_vsubmx (x: 'cV[R]_(n+p)) : (0 <=m x) = (0 <=m (usubmx x)) && (0 <=m (dsubmx x)).
+Proof.
+by rewrite -{1}[x]vsubmxK col_mx_gev0.
+Qed.
+
+Lemma lev0_vsubmx (x: 'cV[R]_(n+p)) : (0 >=m x) = (0 >=m (usubmx x)) && (0 >=m (dsubmx x)).
+Proof.
+by rewrite -{1}[x]vsubmxK col_mx_lev0.
+Qed.
+
+Lemma lev_sum I (r : seq I) (P : pred I) (F G : I -> 'cV[R]_n) :
+    (forall i, P i -> (F i) <=m (G i)) ->
+    (\sum_(i <- r | P i) F i) <=m (\sum_(i <- r | P i) G i).
+Proof.
+move => H.
+apply/forallP => i.
+- rewrite !summxE.
+  apply: ler_sum => j Hj.
+  + by move/(_ _ Hj)/forallP/(_ i): H.
+Qed.
 
 End ExtraOrder.
 

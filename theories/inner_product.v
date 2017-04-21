@@ -10,13 +10,14 @@
 (* All rights reserved.                                                   *)
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (*                                                                        *)
-(* (c) Copyright 2016, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
+(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)   *)
 (* All rights reserved.                                                   *)
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix vector.
+From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix vector fingroup perm.
+Require Import extra_matrix.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -94,7 +95,14 @@ rewrite /vdot (bigD1 i _) //= mxE eq_refl mulr1.
 suff ->: \sum_(j < n | j != i) u j 0 * ((delta_mx i 0):'cV_n) j 0 = 0 by apply:addr0.
 by apply: big1 => j; rewrite mxE; move/negbTE ->; rewrite mulr0.
 Qed.
-  
+
+Lemma vdot_const_mx1 u : '[u, const_mx 1] = \sum_i u i 0.
+Proof.
+rewrite /vdot.
+apply: eq_bigr => i _.
+- by rewrite mxE mulr1.
+Qed.
+
 Lemma vdotBr u v w : '[u, v - w] = '[u, v] - '[u, w].
 Proof. by rewrite !(vdotC u) vdotBl. Qed.
 Canonical vdot_additive u := Additive (vdotBr u).
@@ -109,6 +117,22 @@ Lemma vdotMnr u v m : '[u, v *+ m] = '[u, v] *+ m.
 Proof. exact: raddfMn. Qed.
 Lemma vdotZr a u v : '[u, a *: v] = a * '[u, v].
 Proof. by rewrite !(vdotC u) vdotZl. Qed.
+
+Lemma vdot_perm (s: 'S_n) u v :
+  '[row_perm s u, row_perm s v] = '[u,v].
+Proof.
+suff: '[row_perm s u, row_perm s v]%:M = '[u,v]%:M :> 'M_1.
+- by move/matrixP/(_ 0 0); rewrite !mxE.
+- rewrite 2!vdot_def; exact: mulmx_tr_row_perm.
+Qed.
+
+
+Lemma vdot_sumDl (I: eqType) r (P: pred I) F x : '[\sum_(i <- r | P i) F i, x] = \sum_(i <- r | P i) '[F i, x].
+Proof.
+apply: (big_morph (fun y => '[y,x])).
+- move => y y'; exact: vdotDl.
+- exact: vdot0l.
+Qed.
 
 (* Order properties *)
 Lemma vnorm_ge0 x : 0 <= '[x].
@@ -148,6 +172,15 @@ Lemma vdot_col_mx  (x y : 'cV[R]_n) (v w : 'cV[R]_p) :
 Proof.
 rewrite /vdot big_split_ord /=.
 by apply: congr2; apply: eq_bigr => i _; rewrite 2?col_mxEu 2?col_mxEd.
+Qed.
+
+Lemma vdot_castmx (epn : n = p) (u:'cV[R]_n) v : '[castmx (epn, erefl 1%N) u, castmx (epn, erefl 1%N) v] = '[u,v].
+Proof.
+suff: (castmx (epn, erefl 1%N) v)^T *m (castmx (epn, erefl 1%N) u) = v^T *m u.
+- by rewrite -2!vdot_def; move/matrixP/(_ 0 0); rewrite !mxE /=.
+- rewrite trmx_cast /= -{2}(esymK epn).
+  have {1}->: erefl 1%N = esym (erefl 1%N) by done.
+  by rewrite mulmx_cast esymK -{2}(esymK epn) castmx_id castmxKV.
 Qed.
 
 End Extra.

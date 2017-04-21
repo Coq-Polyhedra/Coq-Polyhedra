@@ -1,14 +1,14 @@
 (**************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect           *)
 (*                                                                        *)
-(* (c) Copyright 2016, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
+(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)   *)
 (* All rights reserved.                                                   *)
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
-Require Import extra_misc inner_product vector_order.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
+Require Import extra_misc.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -123,6 +123,14 @@ Proof.
 by case: n / en in M *; case: p / ep in N *.
 Qed.
 
+Lemma mulmx_tr_row_perm (R: ringType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
+  (row_perm s A)^T *m (row_perm s B) = A^T *m B.
+Proof.
+rewrite tr_row_perm col_permE row_permE.
+rewrite mulmxA -[X in X *m _]mulmxA -perm_mxM.
+by rewrite gsimp perm_mx1 mulmx1.
+Qed.
+
 Lemma castmx_row (R : Type) (m m' n1 n2 n1' n2' : nat)
   (eq_n1 : n1 = n1') (eq_n2 : n2 = n2') (eq_n12 : (n1 + n2 = n1' + n2')%N)
   (eq_m : m = m') (A1 : 'M[R]_(m, n1)) (A2 : 'M_(m, n2)) :
@@ -175,6 +183,12 @@ Proof.
 by apply: eqmx_rank; move/eqmxP : (eqmx_cast A (eq_m, erefl n)).
 Qed.
 
+Lemma row_free_castmx (F : fieldType) (m m' n : nat) (eq_m : m = m') (A : 'M[F]_(m,n)) :
+  row_free (castmx (eq_m, erefl n) A) = row_free A.
+Proof.
+by rewrite -2!row_leq_rank rank_castmx {2}eq_m.
+Qed.
+
 Lemma submx_castmx (F : fieldType) (m1 m1' m2 n : nat) (eq_m1 : m1 = m1') (A : 'M[F]_(m1,n)) (B : 'M[F]_(m2,n)) :
   (castmx (eq_m1, erefl n) A <= B)%MS = (A <= B)%MS.
 Proof.
@@ -198,6 +212,57 @@ apply/idP/idP.
         by move/matrixP: H1.
       + move => k Hk.
         by move/matrixP: H2.
+Qed.
+
+
+Lemma col_mx_eq0 (R : realFieldType) (m1 m2 p : nat) (B1 : 'M[R]_(m1 ,p) ) (B2 : 'M[R]_(m2 ,p)) :
+(col_mx B1 B2 == 0) = (( B1 == 0 ) && ( B2 == 0 )).
+Proof.
+by rewrite -{1}[0]vsubmxK 2!linear0; apply: col_mx_eq.
+Qed.
+
+Lemma sum_col_mx (R : realFieldType) (m1 m2 n p: nat) (M: 'I_p -> 'M[R]_(m1,n)) (N: 'I_p -> 'M[R]_(m2,n)) :
+  \sum_i (col_mx (M i) (N i)) = col_mx (\sum_i M i) (\sum_i N i).
+Proof.
+apply/row_matrixP => i; rewrite -[i]splitK; set i' := unsplit _.
+have ->: row i' (\sum_i0 col_mx (M i0) (N i0)) = \sum_i0 row i' (col_mx (M i0) (N i0))
+  by apply: big_morph; by [apply: raddfD | apply: row0].
+rewrite /i' /unsplit; case: splitP => [j _ | j _]. 
+- rewrite rowKu.
+  have ->: \sum_i0 row (lshift m2 j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (M i0)).
+    by apply: eq_bigr => k _; rewrite rowKu.
+  by symmetry; apply: big_morph; by [apply: raddfD | apply: row0].
+- rewrite rowKd.
+  have ->: \sum_i0 row (rshift m1 j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (N i0)).
+    by apply: eq_bigr => k _; rewrite rowKd.
+  by symmetry; apply: big_morph; by [apply: raddfD | apply: row0].
+Qed.
+
+Lemma mulmx_const_mx1 (R : realFieldType) (m n: nat) (M : 'M[R]_(m, n)) :
+  M *m (const_mx 1) = \sum_i col i M.
+Proof.
+by apply/colP=> j; rewrite mxE summxE; apply: eq_bigr => i _; rewrite !mxE mulr1.
+Qed.
+
+Lemma cast_mulmx (R: realFieldType) (m m' n p: nat) (em: m = m') (M: 'M[R]_(m,n)) (N: 'M[R]_(n,p)) :
+  castmx (em, erefl n) M *m N = castmx (em, erefl p) (M *m N).
+Proof.
+by rewrite castmx_mul castmx_id.
+Qed.
+
+Lemma castmx_inj (R: realFieldType) (m m' n n': nat) (em: m = m') (en: n = n') :
+  injective (@castmx R _ _ _ _ (em, en)).
+Proof.
+move => M N.
+move/(congr1 (castmx (esym em, esym en))).
+by rewrite 2!castmxK.
+Qed.
+
+Lemma mulmx_sum_col (R : realFieldType) (m n : nat) (A : 'M[R]_(m, n)) (u : 'cV_n):  A *m u = \sum_i u i 0 *: col i A.
+Proof.
+apply/colP => j.
+rewrite mxE summxE.
+by apply/eq_bigr => i; rewrite !mxE mulrC.
 Qed.
 
 End ExtraMx.

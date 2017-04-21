@@ -1,13 +1,12 @@
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
-(* (c) Copyright 2016, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
+(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
 (* All rights reserved.                                                  *)
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import polyhedron simplex.
@@ -29,78 +28,57 @@ Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 Variable c : 'cV[R]_n.
 
-Lemma strong_duality :
+Lemma strong_duality_primal_dual_feasible :
   feasible A b -> dual_feasible A c ->
-  exists x, exists u, [/\ x \in polyhedron A b, u \in dual_polyhedron A c & duality_gap b c x u = 0].
-Proof.
-case: (simplexP A b c)
-  => [| [x d] /= [_ Hd Hd'] /unbounded_certificate/(_ Hd Hd') Hunbounded [u Hu]
-      | [x u] /= [Hx Hu Hcsc] _ _]; try by done.
-- suff: (dual_feasible A c) by move/dual_feasible_bounded/(_ Hunbounded). 
-  + by exists u.
-- exists x; exists u; split; try by done.
-  by apply/eqP; rewrite (compl_slack_cond_duality_gap_equiv Hx Hu) //.
-Qed.
-
-Lemma unbounded_feasible_direction_equiv :
-  feasible A b ->
-  (unbounded A b c <-> exists d, (feasible_direction A d) /\ '[c,d] < 0).
+  exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & '[c,p.1] = '[b, p.2]].
 Proof.
 move => Hfeas.
-split; last by move => [d [Hd Hd']]; apply: (unbounded_certificate Hfeas Hd Hd').
-- case: (simplexP A b c) => [|[x d] /= [Hx Hd Hd'] _
-                             |[x u] /= [Hx Hu Hcsc] Hunbounded];
-    try by [done | exists d].
-  + have: (dual_feasible A c) by exists u.
-    by move/dual_feasible_bounded/(_ Hunbounded).
+rewrite -(bounded_is_dual_feasible _ Hfeas) => /boundedP_cert [[x u] /= [Hx Hu Hcx Hbu]].
+exists (x,u); split; try by done.
+by rewrite /= Hcx Hbu. 
 Qed.
 
-Lemma not_unbounded_is_bounded :
-  ~ (unbounded A b c) -> (exists K, forall x, x \in polyhedron A b -> '[c,x] >= K).
+Lemma strong_duality_primal_feasible_dual_infeasible :
+  feasible A b -> ~~ (dual_feasible A c) -> (unbounded A b c).
 Proof.
-move => H.
-case: (simplexP A b c) => [ Hinfeas
-                          | [x d] /= [Hx Hd Hd'] 
-                          | [x u] /= [Hx Hu Hcsc]]. 
-- exists 0; move => x Hx.
-  by have: (feasible A b) by exists x.
-- suff: (unbounded A b c) by done.
-  apply: (unbounded_certificate (d:= d)); try by done.
-  by exists x.
-- exists '[c,x]; rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) // in Hcsc.
-  suff: (optimal_solution A b c x) by apply: proj2.
-  by apply: (duality_gap_eq0_optimality Hx Hu (eqP Hcsc)).
+move/feasibleP => [x Hx].
+move/dual_infeasibleP => [d [Hd Hd']].
+by apply/unboundedP_cert; exists (x, d); split.
 Qed.
 
-Lemma bounded_dual_feasible :
-  feasible A b -> ~ (unbounded A b c) -> dual_feasible A c.
+Lemma strong_duality_primal_infeasible_dual_feasible :
+  ~~ (feasible A b) -> dual_feasible A c -> unbounded (dualA A) (dualb _ c) (-b).
 Proof.
-move => Hfeas Hbounded.
-case: (simplexP A b c) => [| [? d] /= [_ Hd Hd'] | [? u] /= [_ Hu _]]; first by done.
-- by move: (unbounded_certificate Hfeas Hd Hd').
-- by exists u.
-Qed.
-
-Lemma farkas_lemma z :
-  (feasible A b) -> 
+move/infeasibleP => [d [Hd Hd']].
+move/dual_feasibleP => [u Hu].  
+apply/unboundedP_cert; exists (u,d); split.
+- by rewrite -dual_polyhedronE.
+- by rewrite -dual_feasible_directionE.
+- by rewrite vdotNl oppr_lt0.
+Qed.  
+  
+Lemma farkas_lemma_on_inequalities z :
+  (feasible A b) ->
   (forall x, x \in polyhedron A b -> '[c,x] >= z) <->
   (exists u, [/\ u >=m 0, A^T *m u = c & '[b,u] >= z]).
 Proof.
 move => Hfeas; split; last first.
-- move => [u [Hu <- Hu']] x Hx'.
+- move => [u [Hu <- Hu']] x Hx.
   rewrite -vdot_mulmx.
   suff: '[u, A *m x] >= '[u,b].
   + by rewrite vdotC; apply: ler_trans.
   + apply: vdot_lev; try by [done | rewrite inE in Hx'].
-- move => Hbounded.
-  case: (simplexP A b c) => [| [x d] /= [_ Hd Hd']| [x u] /= [Hx Hu  Hcsc]]; first by done.
-  + suff: ~ (unbounded A b c) by move: (unbounded_certificate Hfeas Hd Hd'). 
-    * by apply: bounded_is_not_unbounded; exists z.
-  + move: (Hu); rewrite inE => /andP [/eqP Hu' Hu''].
+- move => H.
+  case: (boolP (bounded A b c)).
+  + move/boundedP_cert => [[x u] /= [Hx Hu Hcx Hbu]].
+    move: (Hu); rewrite inE => /andP [/eqP Hu' Hu''].
     exists u; split; try by done.
-    rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) // duality_gap_eq0_def in Hcsc.
-    move/eqP: Hcsc <-.
-    by apply: Hbounded.
+    by move: (H _ Hx); rewrite Hcx Hbu.
+  + move/feasibleP: (Hfeas) => [x Hx].
+    rewrite bounded_is_not_unbounded // negbK.
+    move/unboundedP/(_ z) => [y [Hy Hy']].
+    move/(_ y Hy): H.
+    by move/(ltr_le_trans Hy'); rewrite ltrr. 
 Qed.
 
 End Duality.
