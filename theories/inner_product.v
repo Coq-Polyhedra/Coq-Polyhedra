@@ -89,20 +89,25 @@ Proof.
   by apply: eq_bigr => i _; rewrite mulrC.
 Qed.
 
-Lemma vdot_delta_mx u i : '[u, (delta_mx i 0):'cV_n] = u i 0.  
+Lemma vdotr_delta_mx u i : '[u, delta_mx i 0] = u i 0.  
 Proof.
 rewrite /vdot (bigD1 i _) //= mxE eq_refl mulr1.
 suff ->: \sum_(j < n | j != i) u j 0 * ((delta_mx i 0):'cV_n) j 0 = 0 by apply:addr0.
 by apply: big1 => j; rewrite mxE; move/negbTE ->; rewrite mulr0.
 Qed.
 
-Lemma vdot_const_mx1 u : '[u, const_mx 1] = \sum_i u i 0.
+Lemma vdotl_delta_mx u i : '[delta_mx i 0, u] = u i 0.  
+Proof.
+by rewrite vdotC vdotr_delta_mx.
+Qed.
+
+Lemma vdotr_const_mx1 u : '[u, const_mx 1] = \sum_i u i 0.
 Proof.
 rewrite /vdot.
 apply: eq_bigr => i _.
 - by rewrite mxE mulr1.
 Qed.
-
+  
 Lemma vdotBr u v w : '[u, v - w] = '[u, v] - '[u, w].
 Proof. by rewrite !(vdotC u) vdotBl. Qed.
 Canonical vdot_additive u := Additive (vdotBr u).

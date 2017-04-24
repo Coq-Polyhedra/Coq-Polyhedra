@@ -414,7 +414,7 @@ Lemma direction_improvement c bas i:
   let: d := direction bas i in
   u i 0 < 0 -> '[c, direction bas i] < 0.
 Proof.
-by rewrite vdot_mulmx trmx_inv vdot_delta_mx.
+by rewrite vdot_mulmx trmx_inv vdotr_delta_mx.
 Qed.
 
 Lemma unbounded_cert_on_basis c (bas : feasible_basis) i M:
@@ -426,7 +426,7 @@ Proof.
 set d := direction _ _.
 move => Hd Hui.
 apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=d)); try by [ apply: (feasible_basis_is_feasible bas) | done].
-by rewrite /d vdot_mulmx trmx_inv vdot_delta_mx.
+by rewrite /d vdot_mulmx trmx_inv vdotr_delta_mx.
 Qed. 
 
 Lemma direction_prop (bas : basis) (i : 'I_n) (j : 'I_m) :
@@ -1853,7 +1853,7 @@ case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | [bas 
   + rewrite inE -mulmxAv2gen.
     rewrite /A' -[0]col_mx0 mul_col_mx col_mx_lev in H'.
     by move/andP: H' => [? _].
-  + by rewrite -cost2gen /direction vdot_mulmx vdot_delta_mx trmx_inv.
+  + by rewrite -cost2gen /direction vdot_mulmx vdotr_delta_mx trmx_inv.
 - split.
   + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
     by move/feasibility_pointed_to_general.
@@ -1931,7 +1931,8 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
   + apply: (duality_gap_eq0_optimality Hx Hu).
     by apply/eqP; rewrite duality_gap_eq0_def; apply/eqP.
 Qed.
-
+    
+  
 Lemma bounded_is_not_unbounded :
   feasible A b -> bounded = ~~ unbounded.
 Proof.
@@ -1939,6 +1940,20 @@ rewrite /bounded /unbounded.
 by case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | |].
 Qed.
 
+
+Lemma infeasible_or_boundedP :
+  reflect (exists K, (forall x, x \in polyhedron A b -> '[c,x] >= K)) (~~ feasible A b || bounded).
+Proof.
+case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas]; last first.
+- constructor; exists 0; move => x.
+  by move/(intro_existsT (feasibleP _ _)).
+- apply: (iffP idP) => [/boundedP [ _ H ]| [K H]].
+  + by exists opt_value.
+  + rewrite bounded_is_not_unbounded //.
+    apply/negP; move/unboundedP/(_ K) => [x [Hx Hlt]].
+    by move/(_ _ Hx): H; move/(ltr_le_trans Hlt); rewrite ltrr.
+Qed.   
+    
 Lemma opt_value_is_optimal x :
   (x \in polyhedron A b) ->
   (forall y, y \in polyhedron A b -> '[c,x] <= '[c,y]) -> '[c,x] = opt_value.
@@ -2068,43 +2083,71 @@ Variable b : 'cV[R]_m.
 
 Definition bounded_polyhedron := (~~ feasible A b) || ([forall i, bounded A b (delta_mx i 0)] && [forall i, bounded A b (-(delta_mx i 0))]).
 
-Lemma bounded_polyhedronP_feasible : feasible A b -> reflect (forall c, bounded A b c) (bounded_polyhedron).
+Lemma bounded_polyhedronP_Linfty : reflect (exists K, forall x, x \in polyhedron A b -> forall i, `|x i 0| <= K) bounded_polyhedron.
 Proof.
-move => Hfeas.
-rewrite /bounded_polyhedron Hfeas /=.
-apply: (iffP andP) => [[/forallP Hpos /forallP Hneg]| H]; last first.
-- split; apply/forallP => i; exact: H.
-- move => c.
-  pose cpos := pos_part c.
-  pose cneg := neg_part c.
-  have Hc: c = \sum_i (cpos i 0) *: (delta_mx i 0) + \sum_i (cneg i 0) *: (-delta_mx i 0).
-  + rewrite -[c]add_pos_neg_part.
-    apply: congr2;
-      rewrite -[LHS]mul1mx mulmx_sum_col;
-      apply: eq_bigr => i _; do 1?[rewrite mxE scaleNr -scalerN];
-      do 2?[apply: congr1]; apply: trmx_inj;
-      by rewrite tr_col trmx1 trmx_delta row1.
-  pose M := \sum_i (cpos i 0) * (opt_value A b (delta_mx i 0)) + \sum_i (cneg i 0) * (opt_value A b (-delta_mx i 0)).
-  have Hbounded: forall x, x \in polyhedron A b -> '[c,x] >= M. 
-  + move => x Hx.
-    rewrite Hc vdotDl 2!vdot_sumDl.
-    apply: ler_add; apply: ler_sum => i _; rewrite vdotZl; apply: ler_wpmul2l.
-    * by move/forallP/(_ i): (pos_part_gev0 c); rewrite mxE.
-    * move/(_ i)/boundedP: Hpos => [_ Hposi].
-      exact: Hposi.
-    * by move/forallP/(_ i): (neg_part_gev0 c); rewrite mxE.
-    * move/(_ i)/boundedP: Hneg => [_ Hnegi].
-      exact: Hnegi.
-  rewrite bounded_is_not_unbounded //; apply/negP.
-  move/unboundedP/(_ M) => [x [Hx Hx']].
-  move/(_ _ Hx): Hbounded.
-  by move/(ltr_le_trans Hx'); rewrite ltrr.
+rewrite /bounded_polyhedron.
+case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas]; last first.
+- constructor; exists 0; move => x.
+  by move/(intro_existsT (feasibleP _ _)).
+- apply: (iffP andP) => [[/forallP Hpos /forallP Hneg]| [K H]]; last first.
+  + split; apply/forallP => i; [pose v := (delta_mx i 0):'cV[R]_n | pose v := -(delta_mx i 0):'cV[R]_n]; 
+      suff Hi: forall x, x \in polyhedron A b -> '[v, x] >= -K;
+      by [ move/(intro_existsT (infeasible_or_boundedP _ _ _)): Hi;
+           rewrite Hfeas
+         | move => x Hx; rewrite ?vdotNl vdotl_delta_mx ?ler_opp2;
+           move/(_ _ Hx i): H; rewrite ler_norml; move/andP => [? ?]].
+  + set K := -(min_seq [seq Num.min (opt_value A b (delta_mx i 0)) (opt_value A b (-(delta_mx i 0))) | i :'I_n]).
+    exists K; move => x Hx i.
+    suff: '[delta_mx i 0, x] >= -K /\ '[-(delta_mx i 0), x] >= -K.
+    * rewrite vdotNl vdotl_delta_mx ler_opp2 => /andP.
+      by rewrite ler_norml.
+    * split; rewrite opprK;
+      [ move/(_ i)/(boundedP _ _ _): Hpos => [_] | move/(_ i)/(boundedP _ _ _): Hneg => [_]];
+      [ pose v := opt_value A b (delta_mx i 0) | pose v := opt_value A b (-(delta_mx i 0))];
+      move/(_ _ Hx); apply: ler_trans;
+      suff: Num.min (opt_value A b (delta_mx i 0)) (opt_value A b (-(delta_mx i 0))) <= v;
+      by [ apply: ler_trans; apply: min_seq_ler; apply: map_f; rewrite mem_enum
+         | rewrite ler_minl lerr ?orbT].
 Qed.
 
-Lemma feasible_bounded_polyhedron_is_pointed : feasible A b -> bounded_polyhedron -> pointed A.
+Hypothesis Hfeas: feasible A b.
+
+Lemma bounded_polyhedronP_obj : reflect (forall c, bounded A b c) bounded_polyhedron.
 Proof.
-move => Hfeas.
-move/(bounded_polyhedronP_feasible Hfeas) => Hbounded.
+apply: (iffP idP) => [/bounded_polyhedronP_Linfty [K H] c | H]; last first.
+- rewrite /bounded_polyhedron Hfeas /=.
+  apply/andP; split; apply/forallP => i; exact: H.
+- suff: forall x, x \in polyhedron A b -> '[c, x] >= - \sum_i `|c i 0| * K
+    by move/(intro_existsT (infeasible_or_boundedP _ _ _)); rewrite Hfeas.
+  + move => x Hx.  
+    have: `|'[c,x]| <= \sum_i `|c i 0| * K.
+    * suff: \sum_i `|c i 0 * x i 0| <= \sum_i `|c i 0| * K.
+      - apply: ler_trans.
+        + rewrite /vdot; exact: ler_norm_sum.
+        + apply: ler_sum => i _; rewrite normrM.
+          apply: ler_wpmul2l; [ exact: normr_ge0 | exact: H ].
+    by rewrite ler_norml => /andP [? _].
+Qed.
+
+Lemma bounded_polyhedronP_feasible_dir : reflect (forall d, feasible_dir A d -> d = 0) bounded_polyhedron.
+Proof.
+apply: (iffP bounded_polyhedronP_obj) => [ Hbounded | H].
+- move => d Hd. 
+  move/feasibleP: (Hfeas) => [x Hx].
+  move/(_ (-d)): Hbounded.
+  rewrite bounded_is_not_unbounded //.
+  apply: contraNeq => [Hd']; apply/unboundedP_cert.
+  exists (x, d); split; try by done.
+  by rewrite vdotNl /= oppr_lt0 vnorm_gt0.
+- move => c; rewrite bounded_is_not_unbounded //.
+  apply/negP; move/unboundedP_cert => [[? d] [_ Hd]].
+  move/(_ _ (Hd)): H; rewrite /= => ->.
+  by rewrite vdot0r ltrr.
+Qed.  
+  
+Lemma feasible_bounded_polyhedron_is_pointed : bounded_polyhedron -> pointed A.
+Proof.
+move/bounded_polyhedronP_obj => Hbounded.
 apply: contraT; move/pointedPn => [d [Hd Hd' _]].
 move/(_ (-d)): Hbounded. 
 apply: contraLR; rewrite (bounded_is_not_unbounded _ Hfeas) negbK.

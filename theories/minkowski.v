@@ -137,7 +137,7 @@ case: (boolP (feasible A b)) => [Hfeas x| Hinfeas x].
     move/separation => [c Hc].
     have Hpointed: pointed A
       by exact: (feasible_bounded_polyhedron_is_pointed Hfeas Hbounded).
-    move/(bounded_polyhedronP_feasible Hfeas)/(_ c)/(bounded_pointedP _ _ Hpointed): Hbounded => [[bas]].
+    move/(bounded_polyhedronP_obj Hfeas)/(_ c)/(bounded_pointedP _ _ Hpointed): Hbounded => [[bas]].
     set z := point_of_basis _ _; move <-.
     move/(_ _ Hx) => Hzx.
     pose i := enum_rank_in (in_setT bas) bas. 
