@@ -339,7 +339,7 @@ Variable M: 'M[R]_(m,n).
 
 Hypothesis Hrow_free : row_free M.
 
-Lemma tr_qmulmx : (qinvmx emn M)^T = (qinvmx (esym emn) M^T).
+Lemma trmx_qinv : (qinvmx emn M)^T = (qinvmx (esym emn) M^T).
 Proof.
 set M' := (qinvmx (esym emn) M^T)^T.
 suff: M' *m M = 1%:M.

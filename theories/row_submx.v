@@ -76,6 +76,47 @@ Proof.
 by move/forallP => ?; apply/forallP => ?; rewrite !mxE.
 Qed.
 
+Lemma row_submx_colP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
+  {in I, x^~ 0 =1 y^~ 0} <-> row_submx x I = row_submx y I.
+Proof.
+split; move => H. 
+- apply/colP => i; rewrite 2!row_submx_mxE.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/colP/(_ (enum_rank_in Hi i)): H.
+  by rewrite 2!row_submx_mxE enum_rankK_in.
+Qed.
+
+Lemma row_submx_levP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
+  reflect (forall i, i \in I -> x i 0 <= y i 0) (row_submx x I) <=m (row_submx y I).
+Proof.
+apply: (iffP forallP) => [H i Hi | H i].
+- move/(_ (enum_rank_in Hi i)): H.
+  by rewrite 2!row_submx_mxE enum_rankK_in.
+- rewrite  2!row_submx_mxE.
+  apply: H; exact: enum_valP. 
+Qed.  
+
+Lemma row_submx_gev0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
+  reflect (forall i, i \in I -> 0 <= x i 0) (0 <=m (row_submx x I)).
+Proof.
+apply: (iffP forallP) => [H i Hi | H i].
+- move/(_ (enum_rank_in Hi i)): H.
+  by rewrite row_submx_mxE mxE enum_rankK_in.
+- rewrite row_submx_mxE mxE.
+  apply: H; exact: enum_valP. 
+Qed.
+
+Lemma row_submx_lev0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
+  reflect (forall i, i \in I -> x i 0 <= 0) ((row_submx x I) <=m 0).
+Proof.
+apply: (iffP forallP) => [H i Hi | H i].
+- move/(_ (enum_rank_in Hi i)): H.
+  by rewrite row_submx_mxE mxE enum_rankK_in.
+- rewrite row_submx_mxE mxE.
+  apply: H; exact: enum_valP. 
+Qed.
+
 Lemma lev_decomp (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
     (x <=m y) = (((row_submx x I) <=m (row_submx y I)) && ((row_submx x (~:I)) <=m (row_submx y (~:I)))).
 Proof.

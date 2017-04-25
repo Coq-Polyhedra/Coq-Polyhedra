@@ -94,6 +94,12 @@ rewrite -[RHS](prebasis_card bas).
 apply/eqP; exact: basis_is_basis.
 Qed.
 
+Lemma basis_trmx_row_free (bas: basis) : row_free (row_submx A bas)^T.
+Proof.
+rewrite /row_free mxrank_tr.
+apply/eqP; exact: mxrank_basis.
+Qed.
+
 Definition point_of_basis (bas : basis) :=
   (qinvmx (prebasis_card bas) (row_submx A bas)) *m (row_submx b bas).
 
@@ -192,18 +198,16 @@ Canonical feasible_basis_subFinType := Eval hnf in [subFinType of feasible_basis
 Lemma basis_subset_of_active_ineq (bas : basis) :
    (bas \subset (active_ineq A b (point_of_basis bas))).
 Proof.
-set x := point_of_basis bas.
 apply/subsetP => i Hi.
 rewrite inE; apply/eqP.
-move/colP/(_ (enum_rank_in Hi i)): (row_submx_point_of_basis bas).
-by rewrite -row_submx_mul 2!row_submx_mxE enum_rankK_in.
+move: (row_submx_point_of_basis bas); rewrite -row_submx_mul.
+by move/row_submx_colP/(_ _ Hi).
 Qed.
 
 Lemma active_ineq_in_point_of_basis (bas : basis) :
   (row_submx A bas <= active_ineq_mx A b (point_of_basis bas))%MS.
 Proof.
 apply/row_subP => i; rewrite row_submx_row.
-
 move/subsetP/(_ _ (enum_valP i)): (basis_subset_of_active_ineq bas) => Hbas_i.
 suff ->: row (enum_val i) A = row (enum_rank_in Hbas_i (enum_val i)) (active_ineq_mx A b (point_of_basis bas)) by apply: row_sub.
 by rewrite row_submx_row enum_rankK_in //.
@@ -249,8 +253,9 @@ Lemma basis_subset_active_ineq_eq (bas : basis) (x : 'cV[R]_n) :
 Proof.
 move => H.
 apply: is_point_of_basis.
-apply/colP => i; rewrite -row_submx_mul 2!row_submx_mxE.
-move/subsetP/(_ _ (enum_valP i)): H.
+rewrite -row_submx_mul.
+apply/row_submx_colP => i Hi.
+move/subsetP/(_ _ Hi): H.
 by rewrite inE; move/eqP.
 Qed.
 
@@ -289,23 +294,23 @@ Implicit Types x : 'cV[R]_n.
 Implicit Types u : 'cV[R]_m.
 
 Definition reduced_cost_of_basis c bas :=
-  (invmx (matrix_of_prebasis A bas)^T) *m c.
+  (qinvmx (prebasis_card bas) (row_submx A bas))^T *m c.
 
 Definition reduced_cost_of_basis_def c bas :
-  (matrix_of_prebasis A bas)^T *m (reduced_cost_of_basis c bas) = c.
+  (row_submx A bas)^T *m (reduced_cost_of_basis c bas) = c.
 Proof.
-rewrite /reduced_cost_of_basis mulmxA mulmxV; last by rewrite unitmx_tr; apply: (matrix_of_basis_in_unitmx bas).
-by rewrite mul1mx.
+rewrite /reduced_cost_of_basis trmx_qinv; last exact: basis_is_basis.
+by rewrite qmulKVmx; last exact: basis_trmx_row_free. 
 Qed.
 
 Definition ext_reduced_cost_of_basis c bas :=
   let: u := reduced_cost_of_basis c bas in
   \col_i (if (@idP (i \in bas)) is ReflectT Hi then
-            u (cast_ord (prebasis_card bas) (enum_rank_in Hi i)) 0
+            u (enum_rank_in Hi i) 0
           else 0).
 
 Lemma ext_reduced_cost_of_basis_in_bas c bas i (Hi : (i \in bas)) :
-  let: j := cast_ord (prebasis_card bas) (enum_rank_in Hi i) in
+  let: j := enum_rank_in Hi i in
   (ext_reduced_cost_of_basis c bas) i 0 = (reduced_cost_of_basis c bas) j 0.
 Proof.
 rewrite /ext_reduced_cost_of_basis mxE.
@@ -324,15 +329,14 @@ Qed.
 Lemma non_neg_reduced_cost_equiv c bas :
   ((ext_reduced_cost_of_basis c bas) >=m 0) = ((reduced_cost_of_basis c bas) >=m 0).
 Proof.
-apply/idP/idP => [/forallP H | /forallP H].
-- apply/forallP => i; rewrite mxE.
-  set j := cast_ord (esym (prebasis_card bas)) i.
-  move: (ext_reduced_cost_of_basis_in_bas c (enum_valP j)).
-  rewrite enum_valK_in /j cast_ordKV => <-.
-  by move/(_ (enum_val j)): H; rewrite mxE.
-- apply/forallP => i; rewrite mxE; case: (boolP (i \in bas)) => [Hi | Hi].
+apply/idP/idP => [/gev0P H | /gev0P H].
+- apply/gev0P => i.
+  move: (ext_reduced_cost_of_basis_in_bas c (enum_valP i)).
+  rewrite enum_valK_in => <-.
+  exact: H.
+- apply/gev0P => i; case: (boolP (i \in bas)) => [Hi | Hi].
   + rewrite (ext_reduced_cost_of_basis_in_bas c Hi).
-    by set j := cast_ord _ _; move/(_ j): H; rewrite mxE.
+    exact: H.
   + by rewrite (ext_reduced_cost_of_basis_notin_bas c Hi).
 Qed.
 
