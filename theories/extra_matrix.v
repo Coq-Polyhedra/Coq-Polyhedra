@@ -19,6 +19,15 @@ Import GRing.Theory Num.Theory.
 
 Section ExtraMx.
 
+Lemma col0P (R: comRingType) (m: nat) (u: 'cV[R]_m) : u^~ 0 =1 (fun _ => 0) <-> u = 0.
+Proof.
+split => H.
+- apply/colP => i; rewrite mxE.
+  exact: H.
+- move => i; move/colP/(_ i): H.
+  by rewrite mxE.
+Qed.
+
 Lemma scalar_mx_eq0 (R : realFieldType) (C : 'M[R]_1) : (C == 0) = (C 0 0 == 0).
 Proof.
 rewrite [C in LHS]mx11_scalar -scalemx1 scalemx_eq0.
@@ -339,7 +348,7 @@ Variable M: 'M[R]_(m,n).
 
 Hypothesis Hrow_free : row_free M.
 
-Lemma tr_qmulmx : (qinvmx emn M)^T = (qinvmx (esym emn) M^T).
+Lemma trmx_qinv : (qinvmx emn M)^T = (qinvmx (esym emn) M^T).
 Proof.
 set M' := (qinvmx (esym emn) M^T)^T.
 suff: M' *m M = 1%:M.

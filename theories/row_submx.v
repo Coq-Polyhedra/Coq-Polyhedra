@@ -38,6 +38,12 @@ Proof.
 by apply/matrixP => ? ?; rewrite !mxE.
 Qed.
 
+Lemma row_submx_col (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (k : 'I_p) :
+  col k (row_submx M I) = row_submx (col k M) I.
+Proof.
+by apply/matrixP => ? ?; rewrite !mxE.
+Qed.
+
 Lemma row_submx_submx (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :
   (row_submx M I <= M)%MS.
 Proof.
@@ -74,6 +80,91 @@ Lemma row_submx_lev (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
       (x <=m y) -> ((row_submx x I) <=m (row_submx y I)).
 Proof.
 by move/forallP => ?; apply/forallP => ?; rewrite !mxE.
+Qed.
+
+Lemma row_submx_matrixP (m n: nat) (x y : 'M[R]_(m,n)) (I : {set 'I_m}) :
+  {in I, x =2 y } <-> row_submx x I = row_submx y I.
+Proof.
+split; move => H. 
+- apply/matrixP => i j; rewrite 2!row_submx_mxE.
+  apply: H; exact: enum_valP. 
+- move => i Hi j.
+  move/matrixP/(_ (enum_rank_in Hi i) j): H.
+  by rewrite 2!row_submx_mxE enum_rankK_in.
+Qed.
+
+Lemma row_submx_row_matrixP (m n: nat) (x y : 'M[R]_(m,n)) (I : {set 'I_m}) :
+  {in I, ((@row _ _ _)^~ x) =1 ((@row _ _ _)^~ y) } <-> row_submx x I = row_submx y I.
+Proof.
+split; move => H. 
+- apply/row_matrixP => i; rewrite 2!row_submx_row.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/row_matrixP/(_ (enum_rank_in Hi i)): H.
+  by rewrite 2!row_submx_row enum_rankK_in.
+Qed.
+
+Lemma row_submx_row_matrix0P (m n: nat) (x : 'M[R]_(m,n)) (I : {set 'I_m}) :
+  {in I, ((@row _ _ _)^~ x) =1 (fun _ => 0) } <-> row_submx x I = 0.
+Proof.
+split; move => H. 
+- apply/row_matrixP => i; rewrite row_submx_row row0.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/row_matrixP/(_ (enum_rank_in Hi i)): H.
+  by rewrite row0 row_submx_row enum_rankK_in.
+Qed.
+
+Lemma row_submx_colP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
+  {in I, x^~ 0 =1 y^~ 0} <-> row_submx x I = row_submx y I.
+Proof.
+split; move => H. 
+- apply/colP => i; rewrite 2!row_submx_mxE.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/colP/(_ (enum_rank_in Hi i)): H.
+  by rewrite 2!row_submx_mxE enum_rankK_in.
+Qed.
+
+Lemma row_submx_col0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
+  {in I, x^~ 0 =1 (fun _ => 0)} <-> row_submx x I = 0.
+Proof.
+split; move => H. 
+- apply/colP => i; rewrite row_submx_mxE mxE.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/colP/(_ (enum_rank_in Hi i)): H.
+  by rewrite row_submx_mxE mxE enum_rankK_in.
+Qed.
+
+Lemma row_submx_levP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
+  reflect (forall i, i \in I -> x i 0 <= y i 0) (row_submx x I) <=m (row_submx y I).
+Proof.
+apply: (iffP forallP) => [H i Hi | H i].
+- move/(_ (enum_rank_in Hi i)): H.
+  by rewrite 2!row_submx_mxE enum_rankK_in.
+- rewrite  2!row_submx_mxE.
+  apply: H; exact: enum_valP. 
+Qed.  
+
+Lemma row_submx_gev0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
+  reflect (forall i, i \in I -> 0 <= x i 0) (0 <=m (row_submx x I)).
+Proof.
+apply: (iffP forallP) => [H i Hi | H i].
+- move/(_ (enum_rank_in Hi i)): H.
+  by rewrite row_submx_mxE mxE enum_rankK_in.
+- rewrite row_submx_mxE mxE.
+  apply: H; exact: enum_valP. 
+Qed.
+
+Lemma row_submx_lev0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
+  reflect (forall i, i \in I -> x i 0 <= 0) ((row_submx x I) <=m 0).
+Proof.
+apply: (iffP forallP) => [H i Hi | H i].
+- move/(_ (enum_rank_in Hi i)): H.
+  by rewrite row_submx_mxE mxE enum_rankK_in.
+- rewrite row_submx_mxE mxE.
+  apply: H; exact: enum_valP. 
 Qed.
 
 Lemma lev_decomp (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
@@ -168,6 +259,11 @@ Variable I: {set 'I_m}.
 
 Variable perm_idx : 'S_m.
 
+Definition perm_card : #|I| = #|perm_idx @: I|.
+Proof.
+by rewrite card_imset; last exact: perm_inj.
+Qed.    
+
 Lemma row_submx_perm :
   let: perm_idx_inj := @perm_inj _ perm_idx in
   row_submx (row_perm perm_idx M) I =
@@ -177,7 +273,7 @@ Lemma row_submx_perm :
 Proof.
 apply/matrixP => i j.
 rewrite row_submx_mxE mxE.
-rewrite mxE castmxE /= cast_ord_id row_submx_mxE.
+rewrite !mxE castmxE /= cast_ord_id row_submx_mxE.
 by rewrite permE cast_ordK enum_rankK_in; last exact: (mem_imset _ (enum_valP _)).
 Qed.
 
@@ -462,6 +558,68 @@ case: (splitP' i') => [j Hij | j Hij].
 Qed.
 
 End RowSubmxSplit.
+
+Section RowSubmxCast.
+
+Variable R: realFieldType.
+
+Variable m m' n: nat.
+Variable M: 'M[R]_(m,n).
+
+Hypothesis em : m = m'.
+
+Section Prelim.
+
+Variable I: {set 'I_m}.
+
+Lemma cast_card : #|I| = #|(cast_ord em @: I)|.
+Proof.
+by rewrite card_imset; last exact: cast_ord_inj.
+Qed.
+
+Lemma cast_ord_enum :
+  map (cast_ord em) (enum 'I_m) = (enum 'I_m').
+Proof.
+apply: (inj_map (@ord_inj m')).
+rewrite val_enum_ord -map_comp.
+have /eq_map/(_ (enum 'I_m)) ->: nat_of_ord (n:=m') \o cast_ord em =1 id
+  by move => ?; rewrite /=.
+by rewrite val_enum_ord em.
+Qed.
+  
+Lemma cast_ord_enum_val i :
+  cast_ord em (enum_val i) = enum_val (cast_ord cast_card i).
+Proof.
+rewrite (enum_val_nth (enum_default (cast_ord cast_card i))) /= /enum_mem -enumT. 
+rewrite -cast_ord_enum.
+set s := (X in nth _ X _).
+have ->: s = [seq (cast_ord em i) | i <- enum I].
+- rewrite /s filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE.
+  by apply/imsetP/idP => [[k Hk /cast_ord_inj ->] | Hj]; try exists j.
+rewrite (nth_map (enum_default i)) //=.
+by rewrite -cardE ltn_ord.
+Qed.
+
+End Prelim.
+
+Section Core. 
+
+Lemma row_submx_castmx (I: {set 'I_m}):
+  row_submx (castmx (em, erefl n) M) (cast_ord em @: I) = castmx (cast_card I, erefl n) (row_submx M I).
+Proof.
+apply/row_matrixP => i.
+rewrite row_submx_row row_castmx castmx_id. 
+rewrite row_castmx castmx_id row_submx_row.
+apply: (congr1 ((@row _ _ _)^~ M)).
+apply: (canLR (cast_ordK em)).
+by rewrite cast_ord_enum_val cast_ordKV.
+Qed.
+
+End Core.
+
+End RowSubmxCast.
 
 Section RowSubmxRowBase.
 

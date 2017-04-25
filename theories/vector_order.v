@@ -62,6 +62,20 @@ apply/forallP => i; rewrite !mxE.
 by apply: ler_wpmul2l.
 Qed.
 
+Lemma gev0P x : reflect (forall i, 0 <= x i 0) (x >=m 0).
+Proof.
+apply: (iffP forallP) => [H i | H i].
+- by move/(_ i): H; rewrite mxE.
+- by rewrite mxE; apply: H.
+Qed.
+
+Lemma lev0P x : reflect (forall i, x i 0 <= 0) (x <=m 0).
+Proof.
+apply: (iffP forallP) => [H i | H i].
+- by move/(_ i): H; rewrite mxE.
+- by rewrite mxE; apply: H.
+Qed.
+
 Lemma paddv_eq0 x y :
   (0 <=m x) -> (0 <=m y) -> (x + y == 0) = (x == 0) && (y == 0).
 Proof.
