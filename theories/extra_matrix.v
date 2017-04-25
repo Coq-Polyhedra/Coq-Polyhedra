@@ -123,6 +123,20 @@ Proof.
 by case: n / en in M *; case: p / ep in N *.
 Qed.
 
+Lemma cast_mulmx (R: realFieldType) (m m' n p: nat) (em: m = m') (M: 'M[R]_(m,n)) (N: 'M[R]_(n,p)) :
+  castmx (em, erefl n) M *m N = castmx (em, erefl p) (M *m N).
+Proof.
+by rewrite castmx_mul castmx_id.
+Qed.
+
+Lemma castmx_inj (R: realFieldType) (m m' n n': nat) (em: m = m') (en: n = n') :
+  injective (@castmx R _ _ _ _ (em, en)).
+Proof.
+move => M N.
+move/(congr1 (castmx (esym em, esym en))).
+by rewrite 2!castmxK.
+Qed.
+
 Lemma mulmx_tr_row_perm (R: ringType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
   (row_perm s A)^T *m (row_perm s B) = A^T *m B.
 Proof.
@@ -244,19 +258,6 @@ Proof.
 by apply/colP=> j; rewrite mxE summxE; apply: eq_bigr => i _; rewrite !mxE mulr1.
 Qed.
 
-Lemma cast_mulmx (R: realFieldType) (m m' n p: nat) (em: m = m') (M: 'M[R]_(m,n)) (N: 'M[R]_(n,p)) :
-  castmx (em, erefl n) M *m N = castmx (em, erefl p) (M *m N).
-Proof.
-by rewrite castmx_mul castmx_id.
-Qed.
-
-Lemma castmx_inj (R: realFieldType) (m m' n n': nat) (em: m = m') (en: n = n') :
-  injective (@castmx R _ _ _ _ (em, en)).
-Proof.
-move => M N.
-move/(congr1 (castmx (esym em, esym en))).
-by rewrite 2!castmxK.
-Qed.
 
 Lemma mulmx_sum_col (R : realFieldType) (m n : nat) (A : 'M[R]_(m, n)) (u : 'cV_n):  A *m u = \sum_i u i 0 *: col i A.
 Proof.
@@ -267,3 +268,89 @@ Qed.
 
 End ExtraMx.
 
+Section QuasiInverse.
+
+Section Core.
+
+Variable R : realFieldType.
+Variable m n: nat.
+
+Hypothesis emn : m = n.
+Variable M: 'M[R]_(m,n).
+
+
+Definition qinvmx := (castmx (erefl n, esym emn) (invmx (castmx (emn, erefl n) M))).
+
+Hypothesis Hrow_free : row_free M.
+
+Lemma qinvmx_unitmx : castmx (emn, erefl n) M \in unitmx.
+Proof.
+rewrite -row_free_unit -row_leq_rank rank_castmx.
+by rewrite -[X in (X <= _)%N]emn row_leq_rank.
+Qed.
+
+Lemma qmulmxV : M *m qinvmx = 1%:M.
+Proof.
+apply: (castmx_inj (em := emn) (en := (erefl m))).
+rewrite castmx_mul castmx_id.
+rewrite -[X in X *m _](castmx_id (erefl _, erefl _)) -castmx_mul.
+rewrite mulmxV; last exact: qinvmx_unitmx.
+apply/matrixP => i j.
+- rewrite 2!castmxE /= 2!cast_ord_id esymK 2!mxE. 
+  do 2![apply: congr1]; apply/eqP/eqP => [-> | <-];
+  by rewrite ?cast_ordK ?cast_ordKV.
+Qed.  
+
+Lemma qmulVmx : qinvmx *m M = 1%:M.
+Proof.
+rewrite -[X in _ *m X](castmx_id (erefl _, erefl _)) -mulmx_cast. 
+by rewrite mulVmx; last exact: qinvmx_unitmx.
+Qed.
+
+Lemma qmulKmx (p: nat) (x: 'M_(n,p)) : qinvmx *m (M *m x) = x.
+Proof.
+by rewrite mulmxA qmulVmx mul1mx.
+Qed.
+
+Lemma qmulKVmx (p: nat) (x: 'M_(m,p)) : M *m (qinvmx *m x) = x.
+Proof.
+by rewrite mulmxA qmulmxV mul1mx.
+Qed.
+
+Lemma qmulmxK (p: nat) (x: 'M_(p,m)): (x *m M) *m qinvmx = x.
+Proof.
+by rewrite -mulmxA qmulmxV mulmx1.
+Qed.  
+
+Lemma qmulmxKV (p: nat) (x: 'M_(p,n)): (x *m qinvmx) *m M = x.
+Proof.
+by rewrite -mulmxA qmulVmx mulmx1.
+Qed.  
+
+End Core.
+
+Section Extra.
+
+Variable R : realFieldType.
+Variable m n: nat.
+
+Hypothesis emn : m = n.
+Variable M: 'M[R]_(m,n).
+
+Hypothesis Hrow_free : row_free M.
+
+Lemma tr_qmulmx : (qinvmx emn M)^T = (qinvmx (esym emn) M^T).
+Proof.
+set M' := (qinvmx (esym emn) M^T)^T.
+suff: M' *m M = 1%:M.
+- rewrite -{1}(qmulVmx emn Hrow_free).
+  move/(row_free_inj Hrow_free) <-.
+  by rewrite trmxK.
+- apply: trmx_inj.
+  rewrite trmx1 trmx_mul trmxK.
+  apply: qmulmxV.
+  by rewrite -row_leq_rank mxrank_tr  -[X in (X <= _)%N]emn row_leq_rank.
+Qed.  
+
+End Extra.
+End QuasiInverse.

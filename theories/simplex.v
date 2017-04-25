@@ -45,8 +45,8 @@ Proof.
 by move/eqP: (valP bas).
 Qed.
 
-Definition matrix_of_prebasis (p : nat) (M : 'M[R]_(m,p)) (bas : prebasis) :=
-  (castmx (prebasis_card bas, erefl p) (row_submx M bas)).
+(*Definition matrix_of_prebasis (p : nat) (M : 'M[R]_(m,p)) (bas : prebasis) :=
+  (castmx (prebasis_card bas, erefl p) (row_submx M bas)).*)
 
 Definition prebasis_enum : seq prebasis := pmap insub (enum [set bas : {set 'I_m} | #|bas| == n]).
 
@@ -70,7 +70,7 @@ End Prebasis.
 
 Section Basis.
 
-Definition is_basis (bas: prebasis) := (matrix_of_prebasis A bas) \in unitmx.
+Definition is_basis (bas: prebasis) := row_free (row_submx A bas).
 
 Inductive basis : predArgType := Basis (bas: prebasis) of is_basis bas.
 Coercion prebasis_of_basis bas := let: Basis s _ := bas in s.
@@ -83,26 +83,41 @@ Definition basis_countMixin := [countMixin of basis by <:].
 Canonical basis_countType := Eval hnf in CountType basis basis_countMixin.
 Canonical basis_subCountType := [subCountType of basis].
 
-Lemma matrix_of_basis_in_unitmx (bas : basis) : (matrix_of_prebasis A bas) \in unitmx.
+Lemma basis_is_basis (bas : basis) : is_basis bas.
 Proof.
 by apply: (valP bas).
 Qed.
 
-Definition point_of_basis (bas : basis) :=
-  (invmx (matrix_of_prebasis A bas)) *m (matrix_of_prebasis b bas).
-
-Definition is_feasible (bas: basis) :=
-  (point_of_basis bas) \in (polyhedron A b).
-
-Lemma row_submx_is_feasible (bas : basis) :
-  (forall x, (row_submx A bas) *m x = (row_submx b bas) -> x \in polyhedron A b) -> is_feasible bas.
+Lemma mxrank_basis (bas: basis) : (mxrank (row_submx A bas) = n).
 Proof.
-set v := point_of_basis bas.
-have: ((matrix_of_prebasis A bas) *m v) = matrix_of_prebasis b bas.
-- rewrite mulmxA mulmxV; last exact: (matrix_of_basis_in_unitmx bas).
-  by rewrite mul1mx.
-rewrite cast_mulmx; move/castmx_inj => H.
-by move/(_ _ H).
+rewrite -[RHS](prebasis_card bas).
+apply/eqP; exact: basis_is_basis.
+Qed.
+
+Definition point_of_basis (bas : basis) :=
+  (qinvmx (prebasis_card bas) (row_submx A bas)) *m (row_submx b bas).
+
+Lemma row_submx_point_of_basis (bas: basis) :
+  (row_submx A bas) *m (point_of_basis bas) = row_submx b bas.
+Proof.
+rewrite mulmxA qmulmxV; last exact: basis_is_basis.
+by rewrite mul1mx.
+Qed.
+
+Lemma is_point_of_basis (bas: basis) x :
+  (row_submx A bas) *m x = row_submx b bas -> x = point_of_basis bas.
+Proof.
+move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
+by rewrite qmulKmx; last exact: basis_is_basis.
+Qed.
+
+Lemma is_point_of_basis_active (bas: basis) x :
+  (forall i, (A *m x) i 0 = b i 0) -> x = point_of_basis bas.
+Proof.
+move => H.
+apply: is_point_of_basis; apply/colP => i.
+rewrite -row_submx_mul 2!row_submx_mxE.
+by apply: H.
 Qed.
 
 Definition basis_enum : seq basis := pmap insub [seq bas <- prebasis_enum | is_basis bas].
@@ -116,7 +131,7 @@ Lemma mem_basis_enum bas : bas \in basis_enum.
 Proof.
 rewrite mem_pmap_sub mem_filter.
 apply/andP; split; last by apply: mem_prebasis_enum.
-by apply: matrix_of_basis_in_unitmx.
+by apply: basis_is_basis.
 Qed.
 
 Definition basis_finMixin :=
@@ -128,6 +143,15 @@ End Basis.
 
 Section FeasibleBasis.
 
+Definition is_feasible (bas: basis) :=
+  (point_of_basis bas) \in (polyhedron A b).
+
+Lemma row_submx_is_feasible (bas : basis) :
+  (forall x, (row_submx A bas) *m x = (row_submx b bas) -> x \in polyhedron A b) -> is_feasible bas.
+Proof.
+apply; by rewrite qmulKVmx; last exact: basis_is_basis bas.
+Qed.
+  
 Inductive feasible_basis : predArgType := FeasibleBasis (bas : basis) of is_feasible bas.
 
 Coercion basis_of_feasible_basis bas := let: FeasibleBasis s _ := bas in s.
@@ -171,19 +195,15 @@ Proof.
 set x := point_of_basis bas.
 apply/subsetP => i Hi.
 rewrite inE; apply/eqP.
-have H: (matrix_of_prebasis A bas) *m x = (matrix_of_prebasis b bas).
-- rewrite mulmxA mulmxV; last by apply: matrix_of_basis_in_unitmx.
-  by rewrite mul1mx.
-move/matrixP/(_ (cast_ord (prebasis_card bas) (enum_rank_in Hi i)) 0): H. 
-rewrite castmxE cast_ordK cast_ord_id row_submx_mxE enum_rankK_in //.
-by rewrite -{1}[x](castmx_id (erefl n, erefl 1%N)) -castmx_mul castmxE /= cast_ordK cast_ord_id -row_submx_mul row_submx_mxE enum_rankK_in //.
+move/colP/(_ (enum_rank_in Hi i)): (row_submx_point_of_basis bas).
+by rewrite -row_submx_mul 2!row_submx_mxE enum_rankK_in.
 Qed.
 
 Lemma active_ineq_in_point_of_basis (bas : basis) :
-  (matrix_of_prebasis A bas <= active_ineq_mx A b (point_of_basis bas))%MS.
+  (row_submx A bas <= active_ineq_mx A b (point_of_basis bas))%MS.
 Proof.
-rewrite eqmx_cast; apply/row_subP => i.
-rewrite row_submx_row.
+apply/row_subP => i; rewrite row_submx_row.
+
 move/subsetP/(_ _ (enum_valP i)): (basis_subset_of_active_ineq bas) => Hbas_i.
 suff ->: row (enum_val i) A = row (enum_rank_in Hbas_i (enum_val i)) (active_ineq_mx A b (point_of_basis bas)) by apply: row_sub.
 by rewrite row_submx_row enum_rankK_in //.
@@ -192,15 +212,12 @@ Qed.
 Lemma feasible_point_of_basis_is_extreme (bas : feasible_basis) :
     is_extreme (point_of_basis bas) (polyhedron A b: _ -> bool).
 Proof.
-apply/extremality_active_ineq/andP; split; first by apply: feasible_basis_is_feasible.
-- apply/eqP; move: (mxrank_unit (matrix_of_basis_in_unitmx bas)).
-  apply: contra_eq => HrkAI.
-  have H: (\rank (active_ineq_mx A b (point_of_basis bas)) < n)%N.
-  + rewrite ltn_neqAle; apply/andP.
-    split; by [done | apply: (rank_leq_col (active_ineq_mx A b (point_of_basis bas)))].
-  move/leq_of_leqif: (mxrank_leqif_eq (active_ineq_in_point_of_basis bas)) => H'.
-  by move: (leq_ltn_trans H' H); rewrite ltn_neqAle; move/andP => [? _].
-Qed.
+apply/extremality_active_ineq/andP; split; first exact: feasible_basis_is_feasible.
+set M := active_ineq_mx _ _ _.
+move/mxrankS: (active_ineq_in_point_of_basis bas).
+move: (mxrank_basis bas) -> => H.
+by move/andP/anti_leq: (conj H (rank_leq_col M)) => <-.
+Qed.  
 
 Lemma extract_prebasis_card (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
   #|build_row_base A (active_ineq A b x) n| == n.
@@ -217,11 +234,11 @@ Definition extract_prebasis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b:
 Lemma extract_prebasis_is_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
   is_basis (extract_prebasis Hextr).
 Proof.
-rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx.
-move: (leqnn n).
+apply/eqP.
+move: (leqnn n);
 move/extremality_active_ineq: (Hextr) => /andP [_ /eqP {2} <-].
 move/row_base_correctness => [_ _ ->].
-apply: leqnn.
+symmetry; exact: prebasis_card.
 Qed.
 
 Definition extract_basis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :=
@@ -231,13 +248,10 @@ Lemma basis_subset_active_ineq_eq (bas : basis) (x : 'cV[R]_n) :
   bas \subset (active_ineq A b x) -> x = point_of_basis bas.
 Proof.
 move => H.
-move: (matrix_of_basis_in_unitmx bas) => Hbas.
-suff: (matrix_of_prebasis A bas) *m x = matrix_of_prebasis b bas.
-- by move/(congr1 (mulmx (invmx (matrix_of_prebasis A bas)))); rewrite mulmxA mulVmx // mul1mx.
-- apply/row_matrixP => i.
-  rewrite row_mul row_castmx /= row_submx_row -row_mul row_castmx /= row_submx_row.
-  set i' := enum_val _; move/subsetP/(_ i' (enum_valP _)): H.
-  by apply: active_ineq_eq.
+apply: is_point_of_basis.
+apply/colP => i; rewrite -row_submx_mul 2!row_submx_mxE.
+move/subsetP/(_ _ (enum_valP i)): H.
+by rewrite inE; move/eqP.
 Qed.
 
 Lemma extract_basis_point_of_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
