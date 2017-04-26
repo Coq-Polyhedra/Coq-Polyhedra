@@ -862,7 +862,7 @@ Section LexPhase2.
 Variable s : 'S_m.
 
 Inductive lex_final_result :=
-| Lex_res_unbounded of (lex_feasible_basis s) * 'I_n
+| Lex_res_unbounded (bas: lex_feasible_basis s) of 'I_#|bas|
 | Lex_res_optimal_basis of (lex_feasible_basis s).
 
 Inductive lex_intermediate_result :=
@@ -875,10 +875,10 @@ Implicit Types bas : (lex_feasible_basis s).
 Definition basic_step bas :=
   let u := reduced_cost_of_basis c bas in
   if [pick i | u i 0 < 0] is Some i then
-    let d := direction bas i in
+    let d := direction i in
     if (@idPn (feasible_dir A d)) is ReflectT infeas_dir then
       Lex_next_basis (lex_rule_lex_bas infeas_dir)
-    else Lex_final (Lex_res_unbounded (bas, i))
+    else Lex_final (Lex_res_unbounded i)
   else
     Lex_final (Lex_res_optimal_basis bas).
 
@@ -918,7 +918,7 @@ rewrite properEneq; apply/andP; split; last first.
 Qed.
 
 CoInductive lex_phase2_spec : lex_final_result -> Type :=
-| Lex_unbounded (p: (lex_feasible_basis s) * 'I_n) of (reduced_cost_of_basis c p.1) p.2 0 < 0 /\ feasible_dir A (direction p.1 p.2) : lex_phase2_spec (Lex_res_unbounded p)
+| Lex_unbounded (bas: (lex_feasible_basis s)) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : lex_phase2_spec (Lex_res_unbounded i)
 | Lex_optimal_basis (bas: lex_feasible_basis s) of (reduced_cost_of_basis c bas) >=m 0 : lex_phase2_spec (Lex_res_optimal_basis bas).
 
 Lemma lex_phase2P bas0 : lex_phase2_spec (lex_phase2 bas0).
