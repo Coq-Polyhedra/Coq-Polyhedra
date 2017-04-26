@@ -341,6 +341,8 @@ apply/idP/idP => [/gev0P H | /gev0P H].
 Qed.
 
 Lemma ext_reduced_cost_of_basis_def c bas :
+  (* should be rewritten using an appropriate lemma to be written in row_submx.v, 
+   * stating that M = row_perm _ (col_mx (row_submx M bas) (row_submx M ~:bas))   *)
   A^T *m (ext_reduced_cost_of_basis c bas) = c.
 Proof.
 apply/colP => i; rewrite !mxE.
@@ -348,18 +350,13 @@ rewrite (bigID (fun j => j \in bas)) /= [X in _ + X]big1;
   last by move => j /ext_reduced_cost_of_basis_notin_bas ->; rewrite mulr0.
 rewrite addr0.
 rewrite (reindex (@enum_val _ (mem bas))) /=;
-        last by apply: (enum_val_bij_in (enum_valP (cast_ord (esym (prebasis_card bas)) i))).
- 
+  last by apply: (enum_val_bij_in (enum_valP (cast_ord (esym (prebasis_card bas)) i))).
 rewrite (eq_bigl predT) /=; last by move => k /=; apply: (enum_valP k).
-rewrite (reindex (cast_ord (esym (prebasis_card bas)))) /=; last first.
-- apply: onW_bij; apply: inj_card_bij;
-  by [apply: cast_ord_inj | rewrite 2!card_ord (prebasis_card bas)].
- 
-rewrite -[in RHS](reduced_cost_of_basis_def c bas) mxE.
-apply: eq_bigr => j _; apply: congr2.
-- by rewrite trmx_cast /= castmxE /= cast_ord_id !mxE.
-- set k := cast_ord _ _; rewrite (ext_reduced_cost_of_basis_in_bas c (enum_valP k)).
-  by rewrite enum_valK_in cast_ordKV.
+
+move/colP/(_ i): (reduced_cost_of_basis_def c bas); rewrite !mxE => <-.
+apply: eq_bigr => j _.
+rewrite (ext_reduced_cost_of_basis_in_bas c (enum_valP j)) enum_valK_in.
+by rewrite 2![_^T _ _]mxE row_submx_mxE.
 Qed.
 
 Lemma ext_reduced_cost_dual_feasible c bas :
@@ -370,19 +367,6 @@ rewrite inE.
 move/eqP: (ext_reduced_cost_of_basis_def c bas) ->; rewrite /=.
 by symmetry; apply: non_neg_reduced_cost_equiv.
 Qed.
-
-(*Lemma compl_slack_cond_on_basis c bas :
-  let: x := point_of_basis bas in
-  let: u := ext_reduced_cost_of_basis c bas in
-  compl_slack_cond A b x u.
-Proof.
-set x := point_of_basis bas.
-set u := ext_reduced_cost_of_basis c bas.
-apply/compl_slack_condP => i.
-case: (boolP (i \in bas)) => [Hi | Hi].
-- by move/subsetP/(_ i Hi): (basis_subset_of_active_ineq bas); rewrite inE => /eqP ->; right.
-- by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
-Qed.*)
 
 Lemma eq_primal_dual_value c bas :
   let: x := point_of_basis bas in
@@ -412,65 +396,61 @@ move: Hu; rewrite inE; move/andP => [/eqP Hu _].
 by apply/eqP; rewrite subr_eq0 eq_primal_dual_value.
 Qed.
 
-Definition direction bas i :=
-  let: ei := (delta_mx i 0):'cV_n in
-  (invmx (matrix_of_prebasis A bas)) *m ei.
+Definition direction bas (i:'I_#|bas|) :=
+  let: ei := (delta_mx i 0):'cV_#|bas| in
+  (qinvmx (prebasis_card bas) (row_submx A bas)) *m ei.
 
-Lemma direction_neq0 bas i: direction bas i != 0.
+Lemma direction_neq0 bas (i:'I_#|bas|) : direction i != 0.
 Proof.
-apply: contraT; rewrite negbK.
-move/eqP/(congr1 (mulmx (matrix_of_prebasis A bas))).
-rewrite mulmxA mulmxV; last by apply: matrix_of_basis_in_unitmx.
-rewrite mul1mx mulmx0.
-move/matrixP/(_ i 0); rewrite !mxE !eq_refl /=.
-move/eqP; rewrite pnatr_eq0.
-by move: (oner_neq0 R).
+apply/eqP.
+move/(congr1 (mulmx (row_submx A bas))).
+rewrite qmulKVmx; last exact: basis_is_basis.
+rewrite mulmx0.
+move/colP/(_ i); rewrite 2!mxE 2!eq_refl /=.
+by move/eqP; rewrite pnatr_eq0.
 Qed.
 
-Lemma direction_improvement c bas i:
+Lemma direction_improvement c bas (i:'I_#|bas|):
   let: u := reduced_cost_of_basis c bas in
-  let: d := direction bas i in
-  u i 0 < 0 -> '[c, direction bas i] < 0.
+  u i 0 < 0 -> '[c, direction i] < 0.
 Proof.
-by rewrite vdot_mulmx trmx_inv vdotr_delta_mx.
+by rewrite vdot_mulmx vdotr_delta_mx. 
 Qed.
 
-Lemma unbounded_cert_on_basis c (bas : feasible_basis) i M:
+Lemma unbounded_cert_on_basis c (bas : feasible_basis) (i:'I_#|bas|) M:
   let: u := reduced_cost_of_basis c bas in
-  let: d := direction bas i in
+  let: d := direction i in
   feasible_dir A d -> u i 0 < 0 ->
   exists x, (x \in polyhedron A b) /\ ('[c,x] < M).
 Proof.
-set d := direction _ _.
 move => Hd Hui.
-apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=d)); try by [ apply: (feasible_basis_is_feasible bas) | done].
-by rewrite /d vdot_mulmx trmx_inv vdotr_delta_mx.
+apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=direction i));
+  try by [exact: feasible_basis_is_feasible | done].
+by rewrite vdot_mulmx vdotr_delta_mx.
 Qed. 
 
-Lemma direction_prop (bas : basis) (i : 'I_n) (j : 'I_m) :
-  let: d := direction bas i in
-  j \in bas -> (A *m d) j 0 = (j == enum_val (cast_ord (esym (prebasis_card bas)) i))%:R.
+Lemma direction_prop (bas : basis) (i : 'I_#|bas|) (j : 'I_m) :
+  let: d := direction i in
+  j \in bas -> (A *m d) j 0 = (j == enum_val i)%:R.
 Proof.
-set d := direction bas i.
+set d := direction i.
 move => Hj.
-move: (matrix_of_basis_in_unitmx bas) => Hbas.
-suff ->: (A *m d) j 0 = ((matrix_of_prebasis A bas) *m d) (cast_ord (prebasis_card bas) (enum_rank_in Hj j)) 0.
-- rewrite /d /direction mulmxA mulmxV // mul1mx mxE /= andbT.
-  rewrite -{1}[i](cast_ordKV (prebasis_card bas)).
-  apply/(congr1 (fun y => (nat_of_bool y)%:R)); apply/idP/idP.
-  + move/eqP/cast_ord_inj <-; by rewrite enum_rankK_in //.
-  + by move/eqP => H; rewrite {}[X in enum_rank_in _ X]H enum_valK_in.
-rewrite /matrix_of_prebasis -{2}[d](castmx_id (erefl n, erefl (1%N))).
-by rewrite -castmx_mul castmxE /= cast_ordK cast_ord_id -row_submx_mul row_submx_mxE enum_rankK_in //.
+suff ->: (A *m d) j 0 = ((row_submx A bas) *m d) (enum_rank_in Hj j) 0.
+- rewrite qmulKVmx; last exact: basis_is_basis.
+  rewrite mxE andbT; do 2![apply: congr1].
+  apply/eqP/eqP.
+  + exact: (canRL_in (enum_rankK_in Hj)).
+  + exact: (canLR (enum_valK_in Hj)).
+- rewrite -row_submx_mul row_submx_mxE enum_rankK_in //.
 Qed.
 
-Lemma mulmx_direction (bas : basis) (i : 'I_n):
-  let: d := direction bas i in
-  (row_submx A (bas :\ enum_val (cast_ord (esym (prebasis_card bas)) i))) *m d = 0.
+Lemma mulmx_direction (bas : basis) (i : 'I_#|bas|):
+  let: d := direction i in
+  (row_submx A (bas :\ enum_val i)) *m d = 0.
 Proof.
 rewrite -row_submx_mul.
-apply/colP => j; rewrite mxE [X in _ = X]mxE.
-move: (enum_valP j); rewrite in_setD1; move/andP => [Hj Hj'].
+apply/row_submx_col0P => j.
+rewrite in_setD1 => /andP [Hj Hj'].
 rewrite direction_prop //.
 by move/negbTE: Hj ->.
 Qed.

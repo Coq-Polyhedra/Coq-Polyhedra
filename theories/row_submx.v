@@ -87,6 +87,17 @@ split; move => H.
   by rewrite 2!row_submx_mxE enum_rankK_in.
 Qed.
 
+Lemma row_submx_col0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
+  {in I, x^~ 0 =1 (fun _ => 0)} <-> row_submx x I = 0.
+Proof.
+split; move => H. 
+- apply/colP => i; rewrite row_submx_mxE mxE.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/colP/(_ (enum_rank_in Hi i)): H.
+  by rewrite row_submx_mxE mxE enum_rankK_in.
+Qed.
+
 Lemma row_submx_levP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
   reflect (forall i, i \in I -> x i 0 <= y i 0) (row_submx x I) <=m (row_submx y I).
 Proof.
