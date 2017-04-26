@@ -38,6 +38,12 @@ Proof.
 by apply/matrixP => ? ?; rewrite !mxE.
 Qed.
 
+Lemma row_submx_col (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) (k : 'I_p) :
+  col k (row_submx M I) = row_submx (col k M) I.
+Proof.
+by apply/matrixP => ? ?; rewrite !mxE.
+Qed.
+
 Lemma row_submx_submx (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :
   (row_submx M I <= M)%MS.
 Proof.
@@ -74,6 +80,39 @@ Lemma row_submx_lev (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
       (x <=m y) -> ((row_submx x I) <=m (row_submx y I)).
 Proof.
 by move/forallP => ?; apply/forallP => ?; rewrite !mxE.
+Qed.
+
+Lemma row_submx_matrixP (m n: nat) (x y : 'M[R]_(m,n)) (I : {set 'I_m}) :
+  {in I, x =2 y } <-> row_submx x I = row_submx y I.
+Proof.
+split; move => H. 
+- apply/matrixP => i j; rewrite 2!row_submx_mxE.
+  apply: H; exact: enum_valP. 
+- move => i Hi j.
+  move/matrixP/(_ (enum_rank_in Hi i) j): H.
+  by rewrite 2!row_submx_mxE enum_rankK_in.
+Qed.
+
+Lemma row_submx_row_matrixP (m n: nat) (x y : 'M[R]_(m,n)) (I : {set 'I_m}) :
+  {in I, ((@row _ _ _)^~ x) =1 ((@row _ _ _)^~ y) } <-> row_submx x I = row_submx y I.
+Proof.
+split; move => H. 
+- apply/row_matrixP => i; rewrite 2!row_submx_row.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/row_matrixP/(_ (enum_rank_in Hi i)): H.
+  by rewrite 2!row_submx_row enum_rankK_in.
+Qed.
+
+Lemma row_submx_row_matrix0P (m n: nat) (x : 'M[R]_(m,n)) (I : {set 'I_m}) :
+  {in I, ((@row _ _ _)^~ x) =1 (fun _ => 0) } <-> row_submx x I = 0.
+Proof.
+split; move => H. 
+- apply/row_matrixP => i; rewrite row_submx_row row0.
+  apply: H; exact: enum_valP. 
+- move => i Hi.
+  move/row_matrixP/(_ (enum_rank_in Hi i)): H.
+  by rewrite row0 row_submx_row enum_rankK_in.
 Qed.
 
 Lemma row_submx_colP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
