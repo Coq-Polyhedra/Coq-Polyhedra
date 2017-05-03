@@ -316,6 +316,10 @@ rewrite -[X in _ *m X](castmx_id (erefl _, erefl _)) -mulmx_cast.
 by rewrite mulVmx; last exact: qinvmx_unitmx.
 Qed.
 
+End Core.
+
+Section Cancel.
+
 Lemma qmulKmx (p: nat) (x: 'M_(n,p)) : qinvmx *m (M *m x) = x.
 Proof.
 by rewrite mulmxA qmulVmx mul1mx.

@@ -21,6 +21,9 @@ Import GRing.Theory Num.Theory.
 Section Simplex.
 
 Variable R : realFieldType.
+
+Section BasicIngredients.
+  
 Variable m n: nat.
 
 Variable A : 'M[R]_(m,n).
@@ -458,6 +461,98 @@ by move/negbTE: Hj ->.
 Qed.
 
 End Cost.
+
+End BasicIngredients.
+
+Section Perm.
+
+Variable m n: nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Variable s : 'S_m.
+
+Lemma perm_card (I: prebasis m n) :
+  #|(s^-1)%g @: I| == n.
+Proof.
+by rewrite card_imset; [exact: (valP I) | exact: perm_inj].
+Qed.  
+
+Lemma image_set (I: {set 'I_m}) : s @: ((s^-1)%g @: I) = I.
+Proof.
+rewrite -imset_comp -[RHS]imset_id.
+apply: eq_imset; exact: permKV.
+Qed.
+
+Definition perm_prebasis I := Prebasis (perm_card I).
+
+Lemma perm_is_basis (bas: basis A) :
+  is_basis (row_perm s A) (perm_prebasis bas).
+Proof.
+apply/is_basisP_rank.
+rewrite row_submx_perm -mxrank_tr.
+rewrite row_permE trmx_mul.
+rewrite mxrankMfree;
+  last by rewrite row_free_unit unitmx_tr; exact: unitmx_perm.
+rewrite mxrank_tr rank_castmx.
+rewrite -[RHS](mxrank_basis bas).
+by rewrite image_set.
+Qed.
+
+Definition perm_basis bas := Basis (perm_is_basis bas).
+
+Lemma perm_point_of_basis bas :
+  point_of_basis (row_perm s b) (perm_basis bas) = point_of_basis b bas.
+Proof.
+symmetry.
+apply: is_point_of_basis.
+rewrite 2!row_submx_perm.
+rewrite [X in X *m _]row_permE [RHS]row_permE -mulmxA.
+apply: (congr1 (mulmx _)).
+rewrite cast_mulmx; apply: congr1.
+rewrite image_set.
+exact: row_submx_point_of_basis.
+Qed.
+
+Lemma perm_is_feasible (bas: feasible_basis A b) :
+  is_feasible (row_perm s b) (perm_basis bas).
+Proof.
+rewrite /is_feasible perm_polyhedron.
+rewrite perm_point_of_basis.  
+exact: feasible_basis_is_feasible.
+Qed.
+
+Definition perm_feasible_basis bas := FeasibleBasis (perm_is_feasible bas).
+
+Check row_submx_perm.
+Check liftf_perm.
+
+Lemma perm_direction (bas: basis A) (i: 'I_#|perm_basis bas|) :
+  direction i  = direction i. 
+Proof.
+Search _ col invmx.
+  
+rewrite /direction.
+rewrite row_submx_perm [X in qinvmx _ X]row_permE.
+
+
+set x := LHS.
+suff: (row_submx A bas) *m x = delta_mx i 0.
+- move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
+  by rewrite qmulKmx; last exact: basis_is_basis.
+- rewrite /x row_submx_perm [X in qinvmx _ X]row_permE.
+  rewrite /= [X in row_submx _ X ]image_set.
+  set e := (X in castmx (X, _)).
+  set y := (X in _ *m X).
+  suff: (castmx (e, erefl 1%N) (row_submx A bas *m y)) = (castmx (e, erefl 1%N) (delta_mx i 0)).
+  
+  apply: (@castmx_inj _ _ _ _ _ (esym e) (erefl 1)%N).
+  
+  
+  Search _ cancel mulmx.
+  
+End Perm.
 
 Section Lexicographic_rule.
 
@@ -986,33 +1081,28 @@ Qed.
 Definition s0 := perm s0_inj.
 
 Lemma ineq_in_basis_satisfied (i : 'I_m) (s : 'S_m) (bas : basis) :
-let: u' := point_of_basis_pert s bas in
+  let: u' := point_of_basis_pert s bas in
   i \in bas -> (row i (b_pert s)) <=lex ((row i A) *m u').
 Proof.
 move => Hi.
-have /row_matrixP/(_ (cast_ord (prebasis_card bas) (enum_rank_in Hi i))): (matrix_of_prebasis A bas) *m point_of_basis_pert s bas = matrix_of_prebasis (b_pert s) bas.
-  rewrite mulmxA mulmxV; last by apply: matrix_of_basis_in_unitmx.
-  by rewrite mul1mx.
-rewrite -[point_of_basis_pert _ _](castmx_id (erefl _, erefl _)) -castmx_mul;
-do 2![rewrite row_castmx castmx_id cast_ordK].
-rewrite -row_submx_mul 2!row_submx_row enum_rankK_in //.
-by move <-; rewrite -row_mul; apply: lex_refl.
+move: (row_submx_point_of_basis_pert s bas); rewrite -row_submx_mul.
+move/row_submx_row_matrixP/(_ _ Hi) => <-.
+rewrite row_mul; exact: lex_refl.
 Qed.
 
 Lemma feasible_to_lex_feasible :
   is_lex_feasible s0 bas0.
 Proof.
 pose b' := b_pert s0.
-have Hb: forall j, col (rshift 1 (cast_ord n_leq_m (lshift n j))) (matrix_of_prebasis b' bas0) = 0.
+have Hb: forall j, col (rshift 1 (cast_ord n_leq_m (lshift n j))) (row_submx b' bas0) = 0.
 - move => j.
-  rewrite /matrix_of_prebasis.
-  rewrite row_submx_row_mx castmx_row colKr.
-  apply/colP => k; rewrite !mxE castmxE /= cast_ord_id row_submx_mxE !mxE.
-  set l := cast_ord _ _; rewrite permE.
-  suff /negbTE ->: (s0_fun (enum_val l) != cast_ord n_leq_m (lshift n j))
+  rewrite row_submx_row_mx colKr.
+  apply/colP => k; rewrite mxE row_submx_mxE [RHS]mxE.
+  set l := cast_ord _ _. rewrite !mxE permE.
+  suff /negbTE ->: (s0_fun (enum_val k) != l)
     by rewrite mulr0n oppr0.
   + rewrite /s0_fun (inj_eq (@cast_ord_inj _ _ n_leq_m)).
-    move: (enum_valP l) => Hl; case: {-}_ /idP => [Hl' |]; last by done.
+    move: (enum_valP k) => Hk; case: {-}_ /idP => [Hk' |]; last by done.
     rewrite eq_sym; exact: lrshift_distinct.
 apply/forallP => i.
 - set rowi := (_ *m _).

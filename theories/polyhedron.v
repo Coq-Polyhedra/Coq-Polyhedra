@@ -7,7 +7,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 
 Set Implicit Arguments.
@@ -235,6 +235,61 @@ by rewrite -[in RHS]vdotNr opprB vdotDr vdotNr.
 Qed.
 
 End WeakDuality.
+
+
+Section Perm.
+  
+Variable R : realFieldType.
+Variable m n : nat.
+
+Variable s: 'S_m.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Lemma perm_polyhedron :
+  polyhedron (row_perm s A) (row_perm s b) =i polyhedron A b.
+Proof.
+move => x; rewrite !inE.
+rewrite [X in X *m _]row_permE -mulmxA -row_permE. 
+by rewrite -row_perm_lev.
+Qed.
+
+Lemma perm_feasible_dir :
+  feasible_dir (row_perm s A) =i feasible_dir A.
+Proof.
+move => x; rewrite !inE.
+rewrite row_permE -mulmxA -row_permE. 
+by rewrite -row_perm_gev0.
+Qed.
+
+End Perm.
+
+Section Cast.
+  
+Variable R : realFieldType.
+Variable m m' n : nat.
+
+Hypothesis em: m = m'.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Lemma cast_polyhedron :
+  polyhedron (castmx (em, erefl n) A) (castmx (em, erefl 1%N) b) =i polyhedron A b.
+Proof.
+move => x; rewrite !inE.
+by rewrite  cast_mulmx lev_castmx.
+Qed.
+
+Lemma cast_feasible_dir :
+  feasible_dir (castmx (em, erefl n) A) =i feasible_dir A.
+Proof.
+move => x; rewrite !inE.
+by rewrite  cast_mulmx castmx_gev0.
+Qed.
+
+End Cast.
 
 End BasicNotion.
 

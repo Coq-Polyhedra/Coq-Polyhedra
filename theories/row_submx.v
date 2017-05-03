@@ -259,6 +259,11 @@ Variable I: {set 'I_m}.
 
 Variable perm_idx : 'S_m.
 
+Definition perm_card : #|I| = #|perm_idx @: I|.
+Proof.
+by rewrite card_imset; last exact: perm_inj.
+Qed.    
+
 Lemma row_submx_perm :
   let: perm_idx_inj := @perm_inj _ perm_idx in
   row_submx (row_perm perm_idx M) I =
@@ -268,7 +273,7 @@ Lemma row_submx_perm :
 Proof.
 apply/matrixP => i j.
 rewrite row_submx_mxE mxE.
-rewrite mxE castmxE /= cast_ord_id row_submx_mxE.
+rewrite !mxE castmxE /= cast_ord_id row_submx_mxE.
 by rewrite permE cast_ordK enum_rankK_in; last exact: (mem_imset _ (enum_valP _)).
 Qed.
 
@@ -553,6 +558,68 @@ case: (splitP' i') => [j Hij | j Hij].
 Qed.
 
 End RowSubmxSplit.
+
+Section RowSubmxCast.
+
+Variable R: realFieldType.
+
+Variable m m' n: nat.
+Variable M: 'M[R]_(m,n).
+
+Hypothesis em : m = m'.
+
+Section Prelim.
+
+Variable I: {set 'I_m}.
+
+Lemma cast_card : #|I| = #|(cast_ord em @: I)|.
+Proof.
+by rewrite card_imset; last exact: cast_ord_inj.
+Qed.
+
+Lemma cast_ord_enum :
+  map (cast_ord em) (enum 'I_m) = (enum 'I_m').
+Proof.
+apply: (inj_map (@ord_inj m')).
+rewrite val_enum_ord -map_comp.
+have /eq_map/(_ (enum 'I_m)) ->: nat_of_ord (n:=m') \o cast_ord em =1 id
+  by move => ?; rewrite /=.
+by rewrite val_enum_ord em.
+Qed.
+  
+Lemma cast_ord_enum_val i :
+  cast_ord em (enum_val i) = enum_val (cast_ord cast_card i).
+Proof.
+rewrite (enum_val_nth (enum_default (cast_ord cast_card i))) /= /enum_mem -enumT. 
+rewrite -cast_ord_enum.
+set s := (X in nth _ X _).
+have ->: s = [seq (cast_ord em i) | i <- enum I].
+- rewrite /s filter_map {2}/enum_mem -enumT.
+  apply/(congr1 (map _)); apply: eq_filter => j.
+  rewrite !inE.
+  by apply/imsetP/idP => [[k Hk /cast_ord_inj ->] | Hj]; try exists j.
+rewrite (nth_map (enum_default i)) //=.
+by rewrite -cardE ltn_ord.
+Qed.
+
+End Prelim.
+
+Section Core. 
+
+Lemma row_submx_castmx (I: {set 'I_m}):
+  row_submx (castmx (em, erefl n) M) (cast_ord em @: I) = castmx (cast_card I, erefl n) (row_submx M I).
+Proof.
+apply/row_matrixP => i.
+rewrite row_submx_row row_castmx castmx_id. 
+rewrite row_castmx castmx_id row_submx_row.
+apply: (congr1 ((@row _ _ _)^~ M)).
+apply: (canLR (cast_ordK em)).
+by rewrite cast_ord_enum_val cast_ordKV.
+Qed.
+
+End Core.
+
+End RowSubmxCast.
 
 Section RowSubmxRowBase.
 
