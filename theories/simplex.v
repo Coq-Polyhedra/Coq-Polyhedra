@@ -48,9 +48,6 @@ Proof.
 by move/eqP: (valP bas).
 Qed.
 
-(*Definition matrix_of_prebasis (p : nat) (M : 'M[R]_(m,p)) (bas : prebasis) :=
-  (castmx (prebasis_card bas, erefl p) (row_submx M bas)).*)
-
 Definition prebasis_enum : seq prebasis := pmap insub (enum [set bas : {set 'I_m} | #|bas| == n]).
 
 Lemma prebasis_enum_uniq : uniq prebasis_enum.
@@ -277,7 +274,7 @@ Lemma extract_basis_is_feasible (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron
   is_feasible (extract_basis Hextr).
 Proof.
 rewrite /is_feasible -(extract_basis_point_of_basis Hextr).
-by move/extremality_active_ineq: Hextr => /andP [H _].
+by move/extremality_active_ineq/andP: (Hextr) => [? _].
 Qed.
 
 Definition extract_feasible_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :=
@@ -1945,9 +1942,9 @@ case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | bas i
     by move/andP: H' => [? _].
   + by rewrite -cost2gen /direction vdot_mulmx vdotr_delta_mx. 
 - split.
-  + move: (feasible_basis_is_feasible bas); rewrite /is_feasible.
-    by move/feasibility_pointed_to_general.
-  + by apply:ext_reduced_cost2gen_dual_feasible.
+  + apply: feasibility_pointed_to_general.
+    exact: feasible_basis_is_feasible.
+  + by apply: ext_reduced_cost2gen_dual_feasible.
   + move: (eq_primal_dual_value bpointed cpointed bas).
     rewrite cost2gen => -> /=.
     by rewrite -[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
