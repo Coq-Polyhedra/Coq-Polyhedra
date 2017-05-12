@@ -1159,8 +1159,6 @@ Definition phase2 :=
   let: lex_bas0 := LexFeasibleBasis (feasible_to_lex_feasible) in 
     lex_to_phase2_final_result ((@lex_phase2 s0) c lex_bas0).
 
-(*Implicit Types bas : feasible_basis.*)
-
 CoInductive phase2_spec : phase2_final_result -> Type :=
 | Phase2_unbounded (bas: feasible_basis) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : phase2_spec (Phase2_res_unbounded i)
 | Phase2_optimal_basis (bas: feasible_basis) of (reduced_cost_of_basis c bas) >=m 0 : phase2_spec (Phase2_res_optimal_basis bas).
