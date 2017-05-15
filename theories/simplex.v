@@ -21,8 +21,6 @@ Import GRing.Theory Num.Theory.
 Section Simplex.
 
 Variable R : realFieldType.
-
-(*Section BasicIngredients.*)
   
 Variable m n: nat.
 
@@ -458,98 +456,6 @@ by move/negbTE: Hj ->.
 Qed.
 
 End Cost.
-
-(*End BasicIngredients.
-
-Section Perm.
-
-Variable m n: nat.
-
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-
-Variable s : 'S_m.
-
-Lemma perm_card (I: prebasis m n) :
-  #|(s^-1)%g @: I| == n.
-Proof.
-by rewrite card_imset; [exact: (valP I) | exact: perm_inj].
-Qed.  
-
-Lemma image_set (I: {set 'I_m}) : s @: ((s^-1)%g @: I) = I.
-Proof.
-rewrite -imset_comp -[RHS]imset_id.
-apply: eq_imset; exact: permKV.
-Qed.
-
-Definition perm_prebasis I := Prebasis (perm_card I).
-
-Lemma perm_is_basis (bas: basis A) :
-  is_basis (row_perm s A) (perm_prebasis bas).
-Proof.
-apply/is_basisP_rank.
-rewrite row_submx_perm -mxrank_tr.
-rewrite row_permE trmx_mul.
-rewrite mxrankMfree;
-  last by rewrite row_free_unit unitmx_tr; exact: unitmx_perm.
-rewrite mxrank_tr rank_castmx.
-rewrite -[RHS](mxrank_basis bas).
-by rewrite image_set.
-Qed.
-
-Definition perm_basis bas := Basis (perm_is_basis bas).
-
-Lemma perm_point_of_basis bas :
-  point_of_basis (row_perm s b) (perm_basis bas) = point_of_basis b bas.
-Proof.
-symmetry.
-apply: is_point_of_basis.
-rewrite 2!row_submx_perm.
-rewrite [X in X *m _]row_permE [RHS]row_permE -mulmxA.
-apply: (congr1 (mulmx _)).
-rewrite cast_mulmx; apply: congr1.
-rewrite image_set.
-exact: row_submx_point_of_basis.
-Qed.
-
-Lemma perm_is_feasible (bas: feasible_basis A b) :
-  is_feasible (row_perm s b) (perm_basis bas).
-Proof.
-rewrite /is_feasible perm_polyhedron.
-rewrite perm_point_of_basis.  
-exact: feasible_basis_is_feasible.
-Qed.
-
-Definition perm_feasible_basis bas := FeasibleBasis (perm_is_feasible bas).
-
-Check row_submx_perm.
-Check liftf_perm.
-
-Lemma perm_direction (bas: basis A) (i: 'I_#|perm_basis bas|) :
-  direction i  = direction i. 
-Proof.
-Search _ col invmx.
-  
-rewrite /direction.
-rewrite row_submx_perm [X in qinvmx _ X]row_permE.
-
-
-set x := LHS.
-suff: (row_submx A bas) *m x = delta_mx i 0.
-- move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
-  by rewrite qmulKmx; last exact: basis_is_basis.
-- rewrite /x row_submx_perm [X in qinvmx _ X]row_permE.
-  rewrite /= [X in row_submx _ X ]image_set.
-  set e := (X in castmx (X, _)).
-  set y := (X in _ *m X).
-  suff: (castmx (e, erefl 1%N) (row_submx A bas *m y)) = (castmx (e, erefl 1%N) (delta_mx i 0)).
-  
-  apply: (@castmx_inj _ _ _ _ _ (esym e) (erefl 1)%N).
-  
-  
-  Search _ cancel mulmx.
-  
-End Perm.*)
 
 Section Lexicographic_rule.
 
@@ -1883,22 +1789,6 @@ rewrite addr0 => ->.
 rewrite eq_refl Hd_gen_pos /=.
 by rewrite vdot_col_mx vdot0l addr0.
 Qed.
-
-(*Definition set0_pointed := (@rshift m (n+n)%N) @: setT.
-
-Lemma set0_pointed_card : (#|set0_pointed| == (n+n))%N.
-Proof.
-rewrite card_imset; last exact: rshift_inj.
-by rewrite cardsT card_ord eq_refl.
-Qed.
-
-Definition pbas0_pointed := Prebasis set0_pointed_card.
-
-Lemma pbas0_pointed_is_basis : is_basis Apointed pbas0_pointed.
-Proof.
-Admitted.
-
-Definition bas0_pointed := Basis pbas0_pointed_is_basis.*)
 
 Lemma Apointed_is_pointed: pointed Apointed.
 Proof.
