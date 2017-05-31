@@ -3,6 +3,7 @@
 (*                                                                       *)
 (* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
+(*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
 (* All rights reserved.                                                  *)
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
