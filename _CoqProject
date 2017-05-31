@@ -8,5 +8,6 @@ theories/polyhedron.v
 theories/simplex.v
 theories/duality.v
 theories/minkowski.v
+theories/affine_hull.v
 theories/face.v
 -arg "-w '-notation-overridden,-deprecated'"
