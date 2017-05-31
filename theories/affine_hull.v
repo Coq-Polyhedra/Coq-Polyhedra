@@ -363,4 +363,175 @@ Qed.
 
 End RelintGen.
 
+Section LinearSpan.
+
+Let Aeq := (row_submx A eq_indices).
+Let beq := (row_submx b eq_indices).
+Let Veq := kermx Aeq^T.
+Let x0 := relint_point.
+
+Lemma Aeq_mul_eqb : forall x, x \in polyhedron A b -> Aeq *m x = beq.
+Proof.
+  move => x Hx.
+  apply/colP => ?. rewrite -row_submx_mul !row_submx_mxE -vdot_row_col.
+  apply/eq_indicesP; last by done.
+  apply/enum_valP.
+Qed.
+
+(* The "small enough" lambda required for a proper decrement of the
+   product l * (A v) in A (x0 + l v), for an index i. *)
+Definition l_dec i (v: 'cV[R]_n) :=
+  let dec := (b i 0) - ((A *m x0) i 0) in
+  ((A *m v) i 0)^-1 * dec.
+
+(* Auxiliary Lemma for ldec *)
+Lemma ldec_positive_case i (v: 'cV[R]_n) : (A *m v) i 0 < 0 ->
+  i \notin eq_indices ->  l_dec i v > 0.
+Proof.
+  move => Av_geq0 Hin. rewrite /l_dec nmulr_rgt0.
+  - have: (A *m x0) i 0 > b i 0 by rewrite relint_point_in_relint //.
+    by rewrite -subr_lt0.
+  - by rewrite invr_lt0.
+Qed.
+
+(* The minimum among all l_dec *)
+Definition ldec_tot (v: 'cV[R]_n) :=
+  let J := [ seq j <- (enum 'I_m) | j \notin eq_indices & (A *m v) j 0 < 0 ] in
+  min_seq (rcons [seq l_dec j v | j <- J] 1). (* TODO: modify min_seq to add an extra argument corresponding to the default value *)
+
+Lemma ldec_tot_positive (v: 'cV[R]_n) : ldec_tot v > 0.
+Proof.
+  set S := [seq l_dec j v | j <- enum 'I_m &
+    ((j \notin eq_indices) && ((A *m v) j 0 < 0))].
+  rewrite /ldec_tot min_seq_positive.
+  case: (S =P [::]) => [HSe | HSNe].
+  - by rewrite -/S HSe /= ltr01.
+  - rewrite all_rcons inE ltr01 //=.
+    apply/allP => elm. move/mapP => [j]; rewrite mem_filter.
+    move/andP => [/andP [Hj Hneg] _].
+    rewrite inE => ->. by apply: ldec_positive_case.
+  - rewrite -/S. case: S => //.
+Qed.
+
+Lemma Hrow_simpl i (v: 'cV[R]_n) : row i (A *m v) 0 0 = (A *m v) i 0.
+Proof. by rewrite mxE. Qed.
+
+(* Auxiliary lemma, required for Veq_as_polypoint *)
+Lemma ldec_tot_suffices (v: 'cV[R]_n) (i: 'I_m) :
+  (i \notin eq_indices) ->
+  b_[ i] - (A *m x0) i 0 <= ldec_tot v * (A *m v) i 0.
+Proof.
+  set S := [seq l_dec j v | j <- enum 'I_m &
+    ((j \notin eq_indices) && ((A *m v) j 0 < 0))].
+  move => Hneq.
+  case: (boolP ((A *m v) i 0 < 0)) => [AvNeg | AvPos].
+  - rewrite -ler_ndivl_mulr; last by done.
+    rewrite mulrC /ldec_tot.
+    suff : ((A *m v) i 0)^-1 * (b_[ i] - (A *m x0) i 0) \in
+      (rcons [seq l_dec j v | j <- enum 'I_m &
+       (j \notin eq_indices) && ((A *m v) j 0 < 0)] 1).
+    + exact: min_seq_ler.
+    + rewrite mem_rcons in_cons.
+      suff -> : ((A *m v) i 0)^-1 * (b_[ i] - (A *m x0) i 0) \in S.
+        by rewrite orbT.
+      rewrite /S /l_dec. apply/mapP; exists i; last by done.
+      by rewrite mem_filter; rewrite Hneq AvNeg mem_enum.
+  - rewrite -lerNgt in AvPos.
+    have Hpos: ldec_tot v * (A *m v) i 0 >= 0.
+      rewrite pmulr_rge0.
+      + exact: AvPos.
+      + exact: ldec_tot_positive.
+    apply: (@ler_trans _ 0); last by exact: Hpos.
+    rewrite subr_le0.
+    by move/forallP/(_ i): relint_point_in_polyhedron.
+Qed.
+
+Lemma Veq_as_polypoint j :
+  (x0 + ldec_tot (row j Veq)^T *: (row j Veq)^T \in polyhedron A b).
+Proof.
+  rewrite polyhedron_rowinE; apply/forallP => i.
+  rewrite mulmxDr mxE addrC -ler_subl_addr -row_mul -scalemxAr.
+  (* Bring it closer to the way defined in l_dec *)
+  have -> : (ldec_tot (row j Veq)^T *: (row i A *m (row j Veq)^T)) 0 0 =
+    ldec_tot (row j Veq)^T * ((A *m (row j Veq)^T) i 0)
+    by rewrite mxE -Hrow_simpl row_mul.
+  rewrite Hrow_simpl.
+  case: (boolP (i \in eq_indices)) => [Hin | Hnotin].
+  - move/eq_indicesP : (Hin) => HinP.
+    suff -> : (A *m (row j Veq)^T) i 0 = 0.
+    + suff -> : b_[i] - (A *m x0) i 0 = 0 by rewrite mulr0.
+      apply/eqP. rewrite subr_eq0 -vdot_row_col; apply/eqP; symmetry.
+      by rewrite HinP // relint_point_in_polyhedron //.
+    + rewrite -Hrow_simpl.
+      have [q Hq]: exists (j: 'I_#|eq_indices|), (row i A) = row j Aeq.
+        by exists (enum_rank_in Hin i); rewrite row_submx_row enum_rankK_in.
+      rewrite row_mul Hq -row_mul trmx_rmul -tr_col.
+      (* Prove that Veq_j *m Aeq^T = 0, as Veq is the kermx *)
+      suff -> : row j Veq *m Aeq^T = 0 by rewrite col0 trmx0 !mxE.
+      by apply/sub_kermxP; rewrite -/Veq row_sub.
+  - exact: ldec_tot_suffices.
+Qed.
+
+
+Variables (p : nat) (Vm : 'M[R]_(p, n)).
+
+(* A Lemma relating the column span of Veq and any matrix Vm which
+   is a generator for (x - x0), where x0 is the point in the relative
+   interior of the polyhedron *)
+Lemma kermx_interior_spanP : reflect
+    (forall x, x \in polyhedron A b -> ((x - x0)^T <= Vm)%MS)
+    ((Veq <= Vm)%MS).
+Proof.
+  apply: (iffP idP).
+  (* Direction <- *)
+  - move => HVx x Hx.
+    (* Rely on transitivity *)
+    suff Hxveq: ((x - x0)^T <= Veq)%MS.
+    + apply: (submx_trans Hxveq HVx).
+    + apply/sub_kermxP.
+      suff -> : (x - x0)^T *m (Aeq^T) = (Aeq *m (x - x0))^T.
+      * rewrite mulmxBr; rewrite !Aeq_mul_eqb.
+        - by rewrite addrN trmx0.
+        - exact: relint_point_in_polyhedron.
+        - exact: Hx.
+      * by rewrite trmx_mul.
+  (* Direction -> *)
+  - move => Hx. apply/row_subP => i.
+    set v0 := (row i Veq)^T.
+    set v := ldec_tot v0 *: v0.
+    set x := x0 + v.
+    have Hin : x \in polyhedron A b by exact: Veq_as_polypoint.
+    have Heq : (x - x0) = v by rewrite /x addrC addrA addNr add0r.
+    have: (v^T <= Vm)%MS by rewrite -Heq; exact: Hx.
+    + (* Use the fact that if (l *: v <= V)%MS, (v <= V)%MS for l <> 0 *)
+      rewrite trmx_mul_scalar eqmx_scale.
+      * by rewrite trmxK.
+      * by apply: lt0r_neq0; rewrite ldec_tot_positive.
+Qed.
+
+Lemma kermx_spanP : reflect
+  (forall x y, x \in polyhedron A b ->
+   y \in polyhedron A b -> ((x - y)^T <= Vm)%MS)
+  ((Veq <= Vm)%MS).
+Proof.
+  apply: (iffP idP).
+  (* Direction <- *)
+  - move => HVx x y Hx Hy.
+    have H1 : (x - y) = (x - x0) + (x0 - y).
+    + rewrite [_ + (x0 - y)]addrA. rewrite [_ -_ + _]addrC [(x - x0)]addrC addrA.
+      by rewrite addrN add0r.
+    rewrite H1 trmx_add addmx_sub //; first by apply/kermx_interior_spanP.
+    have H2 : (x0 - y)^T = (-1) *: (y - x0)^T.
+    + apply/matrixP => i j; by rewrite !mxE mulN1r opprB.
+      rewrite H2. apply: scalemx_sub; apply/kermx_interior_spanP.
+      * exact: HVx.
+      * exact: Hy.
+  (* Direction -> *)
+  - move => Hyx. apply/kermx_interior_spanP => ? Hx.
+    move: Hx (relint_point_in_polyhedron); exact: Hyx.
+Qed.
+
+End LinearSpan.
+
+
 End AffineHull.
