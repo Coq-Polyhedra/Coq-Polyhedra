@@ -172,4 +172,195 @@ Qed.
 
 End EqIndices.
 
+Section RelintGen.
+
+(* Candidates for points in the relative interior; see affine_hull.v *)
+Definition relint_candidate c := match simplex A b c with
+  | Simplex_optimal_point (x, _) => x
+  | Simplex_unbounded (x, u) => x + u
+  | _ => 0
+  end.
+
+(* The face of a bounded polyhedron, as computed by simplex,
+   must belong to the polyhedron itself *)
+Lemma face_eq_inpoly i : bounded A b (-A_[i]) ->
+  opt_point A b (-A_[i]) \in polyhedron A b.
+Proof.
+  rewrite /opt_point /bounded.
+  case: simplexP => //.
+  by move => [x d] /= [? _ _].
+Qed.
+
+(* For a bounded polyhedron, if i is not in eq_indices, then the optimal
+   point satisfies the corresponding inequality strictly. *)
+Lemma face_eq_strict_bounded i :
+  (bounded A b (-A_[i])) -> (i \notin eq_indices) ->
+  '[ A_[i], (opt_point A b (-A_[i]))] > b_[i].
+Proof.
+  move => Hbounded /eq_indicesPn_unbounded Hi.
+  case: Hi.
+  - move: Hbounded. rewrite bounded_is_not_unbounded //. by move/negP.
+  - move => [x [Hx1 ?]].
+    set xopt := opt_point A b (-A_[i]).
+    suff: '[A_[i], x] <= '[A_[i], xopt] by exact: ltr_le_trans.
+    rewrite -ler_opp2 -2!vdotNl.
+    by move/boundedP: Hbounded => [_ /(_ _ Hx1)].
+Qed.
+
+Lemma feasible_dir_in_polyhedron x u :
+  (x \in polyhedron A b) -> (feasible_dir A u) -> (x + u) \in polyhedron A b.
+Proof.
+  rewrite !inE mulmxDr => Hx Hu.
+  by move/andP/lev_add: (conj Hx Hu); rewrite addr0. (* TODO: modify lev_add *)
+Qed.
+
+(* A function returning the relint candidate for each inequality
+   of the polyhedron P(A, b) - see relint_point_candidate in simplex.v *)
+Function relint i := relint_candidate (-A_[i]).
+
+Lemma relint_strict_bounded i :
+  (bounded A b (-A_[i])) -> (i \notin eq_indices) ->
+  '[ A_[i], (relint i)] > b_[i].
+Proof.
+  move => Hbounded /eq_indicesPn [x [Hx1 Hx2]].
+    suff : '[(-A_[i]), (relint i)] = opt_value A b (-A_[i]).
+    + move/(congr1 (-%R)). rewrite !vdotNl opprK => ->. rewrite ltr_oppr.
+      move: Hx2. rewrite -ltr_opp2 -vdotNl.
+      move/boundedP: Hbounded => [_ /(_ _ Hx1)].
+      exact: ler_lt_trans.
+    + move: Hbounded.
+      rewrite /bounded /opt_value /opt_point /relint /relint_candidate.
+      case: simplexP => //.
+Qed.
+
+(*RK: in the next lemma, it does not seem to be necessary to asumme (i \notin eq_indices),
+so why should we do it?*)
+Lemma relint_strict_unbounded i :
+  (unbounded A b (-A_[i])) -> (i \notin eq_indices) ->
+  '[ A_[i], (relint i)] > b_[i].
+Proof.
+  move => Hnb _. move: Hnb.
+  rewrite /unbounded. rewrite /relint /relint_candidate.
+  case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | | ] //.
+  move => [x u] /= [Hx Hd].
+  rewrite vdotNl oppr_lt0 => Hxd _.
+  move: Hx. rewrite polyhedron_rowinE => /forallP /(_ i).
+  have -> : (row i A *m x) 0 0 = '[A_[i], x].
+    - by rewrite vdot_row_col -row_mul mxE.
+  move => Hx.
+  by rewrite -[b_[i]]addr0 vdotDr ler_lt_add.
+Qed.
+
+Lemma relintP i : reflect
+  ('[A_[i], (relint i)] > b_[i]) (i \notin eq_indices).
+Proof.
+  apply: (iffP idP); last first.
+  (* Case 1: Have the inequality, need to prove i \notin eq_indices *)
+  - move => Arel_gt_b. apply/eq_indicesPn.
+    exists (relint i); split; last by done.
+    rewrite /relint /relint_candidate.
+    case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP |
+        [x d] /= [Hx Hd] _ | [x u] /= [Hx Hu Hux] ] //.
+    (* unbounded_relint point *)
+    + move : Hx. rewrite !inE mulmxDr => Hx.
+      by rewrite -[b]addr0; apply: lev_add; rewrite Hx Hd.
+  (* Case 2: Have i \notin eq_indices, need to prove the inequality *)
+  - move => Hi.
+    case: (boolP (unbounded A b (-A_[i]))) => [?|].
+    - exact: relint_strict_unbounded.
+    - rewrite -bounded_is_not_unbounded // => Hb.
+      exact: relint_strict_bounded.
+Qed.
+
+(* A simple lemma stating that every candidate returned for
+   the relative interior cannot be outside the polyhedron *)
+Lemma relint_candidate_in_polyhedron i : (relint i) \in polyhedron A b.
+Proof.
+  rewrite /relint /relint_candidate inE.
+  case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP |
+        [x d] /= [Hx Hd] _ | [_ _] /= [_ _ _] ] //.
+  move: Hx. rewrite inE mulmxDr => Hx.
+  by rewrite -[b]addr0; apply: lev_add; rewrite Hx Hd.
+Qed.
+
+(* The matrix of relint candidates *)
+Let V := (\matrix_(j < n, i < m) (relint i) j 0) : 'M[R]_(n, m).
+
+Lemma relint_in_vcol : forall i, col i V = relint i.
+Proof.
+  move => ?. by apply/colP => ?; rewrite !mxE.
+Qed.
+
+Lemma vcol_in_polyhedron : forall i, col i V \in polyhedron A b.
+Proof.
+  move => ?. rewrite relint_in_vcol.
+  exact: relint_candidate_in_polyhedron.
+Qed.
+
+(* A constant vector *)
+Let e := (const_mx 1) : 'cV[R]_m.
+
+(* The scaling matrix E for the computation of the point in
+   the strict convex hull. *)
+Let l := (const_mx (m %:R)^-1) : 'cV[R]_m.
+
+Lemma edotl_sum1 : (m > 0)%N -> '[e, l] = 1.
+Proof.
+  move => Hmpos.
+  suff -> : 1 = \big[+%R/0]_(i < m) l i 0.
+    apply: eq_bigr => i _; by rewrite mxE mul1r.
+  have Hconst: l _ 0 = m%:R^-1 by move => ?; rewrite mxE.
+  have -> : \big[+%R/0]_(i < m) l i 0 = \big[+%R/0]_(i < m) (m%:R^-1).
+    by apply: eq_bigr => ? _; rewrite Hconst.
+  rewrite sumr_const cardT size_enum_ord.
+  rewrite -[RHS]mulr_natr mulVf; first by done.
+  apply: lt0r_neq0; by rewrite ltr0n.
+Qed.
+
+(* The following lemma is obvious, but some manipulation is needed
+   because l involves the inverse of a nat. *)
+Lemma lpositive : l >=m 0.
+Proof.
+  rewrite /l /lev. apply/forallP => ?.
+  by rewrite !mxE invr_ge0 ler0n.
+Qed.
+
+(* A point in the relative interior -- if m = 0, this can be any point,
+   since the affine hull in that case is the whole space *)
+Definition relint_point := if (m == 0)%N then 0 else (V *m l).
+
+Lemma relint_point_in_polyhedron : relint_point \in polyhedron A b.
+Proof.
+rewrite /relint_point.
+case: ifPn => [/eqP Hm | Hm]; last first.
+- rewrite -lt0n in Hm.
+  apply: polyhedron_is_convex; split.
+  + exact: lpositive.
+  + exact: edotl_sum1.
+  + exact: vcol_in_polyhedron.
+- apply/forallP => i.
+  by case: (cast_ord Hm i).
+Qed.
+
+Lemma relint_point_in_relint :
+  forall i, i \notin eq_indices -> (A *m relint_point) i 0 > b i 0.
+Proof.
+  move => i0 Hineq. rewrite /relint_point.
+  case: ifPn => [/eqP Hm | Hm]; last first.
+  - rewrite -lt0n in Hm.
+    have Hli: l i0 0 > 0.
+    + rewrite mxE. by rewrite invr_gt0 ltr0n.
+    have Hrelint : (A *m (col i0 V)) i0 0 > b i0 0.
+    + rewrite relint_in_vcol -vdot_row_col. by move/relintP: Hineq.
+    apply: polyhedron_strictly_convex; split.
+    + exact: lpositive.
+    + exact: edotl_sum1.
+    + exact: Hrelint.
+    + exact: Hli.
+    + exact: vcol_in_polyhedron.
+  - by case: (cast_ord Hm i0).
+Qed.
+
+End RelintGen.
+
 End AffineHull.
