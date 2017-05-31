@@ -33,9 +33,9 @@ Lemma strong_duality_primal_dual_feasible :
   exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & '[c,p.1] = '[b, p.2]].
 Proof.
 move => Hfeas.
-rewrite -(bounded_is_dual_feasible _ Hfeas) => /boundedP_cert [[x u] /= [Hx Hu Hcx Hbu]].
-exists (x,u); split; try by done.
-by rewrite /= Hcx Hbu. 
+rewrite -(bounded_is_dual_feasible _ Hfeas).
+  rewrite -boundedP_cert => /and3P [Hx Hu /eqP Hxu].
+exists ((opt_point A b c), (dual_opt_point A b c)). split; try by done.
 Qed.
 
 Lemma strong_duality_primal_feasible_dual_infeasible :
@@ -70,10 +70,10 @@ move => Hfeas; split; last first.
   + apply: vdot_lev; try by [done | rewrite inE in Hx'].
 - move => H.
   case: (boolP (bounded A b c)).
-  + move/boundedP_cert => [[x u] /= [Hx Hu Hcx Hbu]].
+  + rewrite -boundedP_cert => /and3P [Hx Hu Hxu].
     move: (Hu); rewrite inE => /andP [/eqP Hu' Hu''].
-    exists u; split; try by done.
-    by move: (H _ Hx); rewrite Hcx Hbu.
+    exists (dual_opt_point A b c); split; try by done.
+    move: (H _ Hx). by move/eqP : Hxu ->.
   + move/feasibleP: (Hfeas) => [x Hx].
     rewrite bounded_is_not_unbounded // negbK.
     move/unboundedP/(_ z) => [y [Hy Hy']].
