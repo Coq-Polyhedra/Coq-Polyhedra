@@ -397,7 +397,7 @@ Qed.
 (* The minimum among all l_dec *)
 Definition ldec_tot (v: 'cV[R]_n) :=
   let J := [ seq j <- (enum 'I_m) | j \notin eq_indices & (A *m v) j 0 < 0 ] in
-  min_seq (rcons [seq l_dec j v | j <- J] 1). (* TODO: modify min_seq to add an extra argument corresponding to the default value *)
+  min_seq (rcons [seq l_dec j v | j <- J] 1).
 
 Lemma ldec_tot_positive (v: 'cV[R]_n) : ldec_tot v > 0.
 Proof.
@@ -413,8 +413,6 @@ Proof.
   - rewrite -/S. case: S => //.
 Qed.
 
-Lemma Hrow_simpl i (v: 'cV[R]_n) : row i (A *m v) 0 0 = (A *m v) i 0.
-Proof. by rewrite mxE. Qed.
 
 (* Auxiliary lemma, required for Veq_as_polypoint *)
 Lemma ldec_tot_suffices (v: 'cV[R]_n) (i: 'I_m) :
@@ -449,20 +447,21 @@ Qed.
 Lemma Veq_as_polypoint j :
   (x0 + ldec_tot (row j Veq)^T *: (row j Veq)^T \in polyhedron A b).
 Proof.
+  have Hs i (v: 'cV_n) : row i (A *m v) 0 0 = (A *m v) i 0 by rewrite mxE.
   rewrite polyhedron_rowinE; apply/forallP => i.
   rewrite mulmxDr mxE addrC -ler_subl_addr -row_mul -scalemxAr.
   (* Bring it closer to the way defined in l_dec *)
   have -> : (ldec_tot (row j Veq)^T *: (row i A *m (row j Veq)^T)) 0 0 =
     ldec_tot (row j Veq)^T * ((A *m (row j Veq)^T) i 0)
-    by rewrite mxE -Hrow_simpl row_mul.
-  rewrite Hrow_simpl.
+    by rewrite mxE -Hs row_mul.
+  rewrite Hs.
   case: (boolP (i \in eq_indices)) => [Hin | Hnotin].
   - move/eq_indicesP : (Hin) => HinP.
     suff -> : (A *m (row j Veq)^T) i 0 = 0.
     + suff -> : b_[i] - (A *m x0) i 0 = 0 by rewrite mulr0.
       apply/eqP. rewrite subr_eq0 -vdot_row_col; apply/eqP; symmetry.
       by rewrite HinP // relint_point_in_polyhedron //.
-    + rewrite -Hrow_simpl.
+    + rewrite -Hs.
       have [q Hq]: exists (j: 'I_#|eq_indices|), (row i A) = row j Aeq.
         by exists (enum_rank_in Hin i); rewrite row_submx_row enum_rankK_in.
       rewrite row_mul Hq -row_mul trmx_rmul -tr_col.
@@ -532,6 +531,5 @@ Proof.
 Qed.
 
 End LinearSpan.
-
 
 End AffineHull.

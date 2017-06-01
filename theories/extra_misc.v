@@ -58,7 +58,7 @@ by rewrite iterS IHn.
 Qed.
 
 
-Lemma card_sub_ord (k : nat) (P : 'I_k -> bool) : 
+Lemma card_sub_ord (k : nat) (P : 'I_k -> bool) :
   (#|[set l : 'I_k | P l]| <= k)%N.
 Proof.
   set S := [set l : 'I_k | P l].
@@ -138,12 +138,12 @@ apply: (big_ind (fun v => v <= 0)); first by done.
   by rewrite -!oppr_ge0 opprD; apply: addr_ge0.
 Qed.
 
-Fixpoint min_seq (S : seq R) := (* TODO: add an extra element returned in case the list is empty *)
-                     match S with
-                      | [::] => 0
-                      | [:: x] => x
-                      | x :: S' => Num.min x (min_seq S')
-                     end.
+Fixpoint min_seq (S : seq R) :=
+  match S with
+  | [::] => 0
+  | [:: x] => x
+  | x :: S' => Num.min x (min_seq S')
+  end.
 
 Lemma min_seq_ler (S : seq R): forall i, i \in S -> min_seq S <= i.
 Proof.
@@ -176,7 +176,7 @@ Proof.
 move => H.
 apply/idP/idP.
 - move => H'; apply/allP; rewrite /=.
-  move => x Hx. 
+  move => x Hx.
   apply: (@ltr_le_trans _ (min_seq S) _ _); first by done.
   + by apply: min_seq_ler.
 - move/allP => H' /=. move/hasP: (min_seq_eq H) => [i Hi /eqP -> /=].
@@ -184,53 +184,3 @@ apply/idP/idP.
 Qed.
 
 End ExtraNum.
-
-(*
-Section Induction.
-
-Variable n : nat.
-
-Lemma strong_ind (P : nat -> Prop): 
-  P 0%N -> (forall k, (forall l, (l <= k)%N -> P l) -> P k.+1) -> forall k, P k.
-Proof.
-move => H0 IH k.
-elim: k {-2}k (leqnn k).
-- by move => ?; rewrite leqn0; move/eqP ->.
-- move => p IH'.
-  move => k. rewrite leq_eqVlt; move/orP; case.
-  + by move/eqP -> ; apply: (IH p).
-  + by apply: IH'.
-Qed.
-
-Lemma bounded_strong_ind (p: nat) (P: nat -> Prop):
-  P 0%N -> (forall k, (k < p)%N -> (forall l, (l <= k)%N -> P l) -> P k.+1) -> forall k, (k <= p)%N -> P k.
-Proof.
-move => H0 IH k.
-elim: k {-2}k (leqnn k).
-- by move => ?; rewrite leqn0; move/eqP ->.
-- move => k IH'.
-  move => l. rewrite leq_eqVlt; move/orP; case.
-  + move/eqP -> => Hk; apply: (IH k); first by done.
-    move => i Hi; apply: IH'; first by done.
-    by rewrite leq_eqVlt; move: (leq_ltn_trans Hi Hk) ->; rewrite orbT.
-  + by move => Hl Hl'; apply: IH'.
-Qed.
-
-Lemma decr_strong_ind (P: nat -> Prop) :
-  P n.-1 -> (forall k, (0 < k <= n.-1)%N -> (forall l, (k <= l <= n.-1)%N -> P l) -> P (k.-1)) -> forall k, (k <= n.-1)%N -> P k.
-Proof.
-move => Hn IH.
-suff: forall k: nat, (k <= n.-1)%N -> P ((n.-1)-k)%N.
-- move => H k Hk; move: (H ((n.-1)-k)%N).
-  by rewrite !subKn // leq_subr; move/(_ isT).
-apply: bounded_strong_ind; first by rewrite subn0.
-move => k; rewrite subnS => H H'.
-apply: IH.
-- by rewrite subn_gt0 leq_subr H.
-- move => l /andP [Hl Hl'].
-  rewrite -(subKn Hl').
-  by apply: H'; rewrite leq_subLR addnC -leq_subLR.
-Qed.
-
-End Induction.
-*)
