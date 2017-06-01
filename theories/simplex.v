@@ -2109,7 +2109,9 @@ case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas]; last first.
            rewrite Hfeas
          | move => x Hx; rewrite ?vdotNl vdotl_delta_mx ?ler_opp2;
            move/(_ _ Hx i): H; rewrite ler_norml; move/andP => [? ?]].
-  + set K := -(min_seq [seq Num.min (opt_value A b (delta_mx i 0)) (opt_value A b (-(delta_mx i 0))) | i :'I_n]).
+  + set K := -(min_seq [
+      seq Num.min (opt_value A b (delta_mx i 0))
+      (opt_value A b (-(delta_mx i 0))) | i :'I_n] 0).
     exists K; move => x Hx i.
     suff: '[delta_mx i 0, x] >= -K /\ '[-(delta_mx i 0), x] >= -K.
     * rewrite vdotNl vdotl_delta_mx ler_opp2 => /andP.

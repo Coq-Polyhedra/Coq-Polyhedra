@@ -397,22 +397,17 @@ Qed.
 (* The minimum among all l_dec *)
 Definition ldec_tot (v: 'cV[R]_n) :=
   let J := [ seq j <- (enum 'I_m) | j \notin eq_indices & (A *m v) j 0 < 0 ] in
-  min_seq (rcons [seq l_dec j v | j <- J] 1).
+  (min_seq [seq l_dec j v | j <- J] 1).
 
 Lemma ldec_tot_positive (v: 'cV[R]_n) : ldec_tot v > 0.
 Proof.
   set S := [seq l_dec j v | j <- enum 'I_m &
     ((j \notin eq_indices) && ((A *m v) j 0 < 0))].
-  rewrite /ldec_tot min_seq_positive.
-  case: (S =P [::]) => [HSe | HSNe].
-  - by rewrite -/S HSe /= ltr01.
-  - rewrite all_rcons inE ltr01 //=.
-    apply/allP => elm. move/mapP => [j]; rewrite mem_filter.
-    move/andP => [/andP [Hj Hneg] _].
-    rewrite inE => ->. by apply: ldec_positive_case.
-  - rewrite -/S. case: S => //.
+  rewrite /ldec_tot min_seq_positive; last by right; rewrite ltr01.
+  apply/allP => elm. move/mapP => [j]; rewrite mem_filter.
+  move/andP => [/andP [Hj Hneg] _]. rewrite inE => ->.
+  exact: ldec_positive_case.
 Qed.
-
 
 (* Auxiliary lemma, required for Veq_as_polypoint *)
 Lemma ldec_tot_suffices (v: 'cV[R]_n) (i: 'I_m) :
@@ -426,12 +421,10 @@ Proof.
   - rewrite -ler_ndivl_mulr; last by done.
     rewrite mulrC /ldec_tot.
     suff : ((A *m v) i 0)^-1 * (b_[ i] - (A *m x0) i 0) \in
-      (rcons [seq l_dec j v | j <- enum 'I_m &
-       (j \notin eq_indices) && ((A *m v) j 0 < 0)] 1).
+      [seq l_dec j v | j <- enum 'I_m &
+       (j \notin eq_indices) && ((A *m v) j 0 < 0)].
     + exact: min_seq_ler.
-    + rewrite mem_rcons in_cons.
-      suff -> : ((A *m v) i 0)^-1 * (b_[ i] - (A *m x0) i 0) \in S.
-        by rewrite orbT.
+    + suff -> : ((A *m v) i 0)^-1 * (b_[ i] - (A *m x0) i 0) \in S by done.
       rewrite /S /l_dec. apply/mapP; exists i; last by done.
       by rewrite mem_filter; rewrite Hneq AvNeg mem_enum.
   - rewrite -lerNgt in AvPos.

@@ -138,14 +138,14 @@ apply: (big_ind (fun v => v <= 0)); first by done.
   by rewrite -!oppr_ge0 opprD; apply: addr_ge0.
 Qed.
 
-Fixpoint min_seq (S : seq R) :=
+Fixpoint min_seq (S : seq R) (v : R) :=
   match S with
-  | [::] => 0
+  | [::] => v
   | [:: x] => x
-  | x :: S' => Num.min x (min_seq S')
+  | x :: S' => Num.min x (min_seq S' v)
   end.
 
-Lemma min_seq_ler (S : seq R): forall i, i \in S -> min_seq S <= i.
+Lemma min_seq_ler (S : seq R) v: forall i, i \in S -> min_seq S v <= i.
 Proof.
 elim: S => [ | x S' IH].
 - by move => i; rewrite in_nil.
@@ -158,11 +158,11 @@ elim: S => [ | x S' IH].
     * by rewrite -H'; move => Hi; rewrite ler_minl; apply/orP; right; apply: IH.
 Qed.
 
-Lemma min_seq_eq (S : seq R): S != [::] -> has [pred i | min_seq S == i] S.
+Lemma min_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | min_seq S v == i] S.
 Proof.
 elim: S => [ | x S']; first by done.
 - case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
-  + apply/hasP. case: (minrP x (min_seq S')) => [H'' |].
+  + apply/hasP. case: (minrP x (min_seq S' v)) => [H'' |].
     * exists x; first by rewrite mem_head.
       rewrite /= minr_l //. by case H: S'.
     * move/hasP: IH => [i Hi /= /eqP ->] ?.
@@ -171,16 +171,22 @@ elim: S => [ | x S']; first by done.
       by rewrite minr_r // ltrW.
 Qed.
 
-Lemma min_seq_positive (S : seq R): S != [::] -> (min_seq S > 0) = all [pred i | i > 0] S.
+Lemma min_seq_positive (S : seq R) (v : R) :
+  (S != [::]) \/ (v > 0) -> (min_seq S v > 0) = (all [pred i | i > 0] S).
 Proof.
-move => H.
-apply/idP/idP.
-- move => H'; apply/allP; rewrite /=.
-  move => x Hx.
-  apply: (@ltr_le_trans _ (min_seq S) _ _); first by done.
-  + by apply: min_seq_ler.
-- move/allP => H' /=. move/hasP: (min_seq_eq H) => [i Hi /eqP -> /=].
-  by apply: H'.
+  move => H.
+  apply/idP/idP.
+  - move => H'. apply/allP; rewrite /= => x Hx.
+    apply: (@ltr_le_trans _ (min_seq S v) _ _); first by done.
+    + by apply: min_seq_ler.
+  - case: H => [Hne | He].
+    + move/allP => H' /=. move/hasP: (min_seq_eq v Hne) => [i Hi /eqP -> /=].
+      by apply: H'.
+    + elim: S => [// | x S Hx].
+        rewrite /= => /andP [Hxp H_].
+        have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
+        case Haf: (S); first by apply: Hxp. rewrite -Haf.
+        case: minrP => //.
 Qed.
 
 End ExtraNum.

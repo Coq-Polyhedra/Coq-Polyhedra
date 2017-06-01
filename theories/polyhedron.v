@@ -368,11 +368,11 @@ rewrite trmx0 trmx_mul trmxK in Hv.
 rewrite {Hrk}.
  
 pose gap_seq := gap_in_direc_seq x v^T.
-pose epsilon := if nilp gap_seq then 1 else min_seq gap_seq.
+pose epsilon := if nilp gap_seq then 1 else (min_seq gap_seq 0).
  
 have Hepsilon : epsilon > 0.
 - rewrite /epsilon; case: ifP => [ _ | /nilP H]; first by apply: ltr01.
-  + rewrite min_seq_positive; last by apply/eqP.
+  + rewrite min_seq_positive; last by left; apply/eqP.
     apply/allP => epsilon'.
     rewrite /gap_seq; move/mapP => [i]; rewrite mem_filter; move/andP => [Hi Hi'].
     case: ifP => [_ -> | /negbT H' ->]; first by apply: ltr01. 
