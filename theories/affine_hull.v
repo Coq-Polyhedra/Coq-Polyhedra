@@ -19,7 +19,6 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
-Import Decidable.
 
 Section AffineHull.
 
@@ -36,16 +35,6 @@ Implicit Types (x : 'cV[R]_n) (i: 'I_m) (j: 'I_n).
 
 Notation "A_[ i ]" := (row i A)^T. (* at this stage, we should stick with the form (A *m x) i 0 *)
 Notation "b_[ i ]" := (b i 0).
-Notation "A_[ i , j ]" := (A i j).
-
-(* Lemmas relating the two notations followed in this module *)
-
-Lemma mx_dbrack_eq_rowmx_brack i j : A_[i, j] = A_[i] j 0.
-Proof. by rewrite !mxE. Qed.
-
-Lemma mx_dbrack_eq_colmx_brack i j : A_[i, j] = A_[i]^T 0 j.
-Proof. by rewrite !mxE. Qed.
-
 
 Section EqIndices.
 
@@ -77,9 +66,9 @@ Definition affine_hull :=
    after *)
 Lemma vdot_row_col x i : '[A_[i], x] = ((A *m x) i 0).
 Proof.
-  rewrite !mxE /=.
-  apply: eq_bigr => j _.
-  by rewrite mx_dbrack_eq_rowmx_brack.
+rewrite mxE.
+apply: eq_bigr => j _.
+by rewrite !mxE. 
 Qed.
 
 (* If an inequality is satisfied with equality for all x, its index
@@ -111,7 +100,7 @@ Proof.
     + apply/andP; split; first exact: Hb.
       move/boundedP: Hb => [[x [Ha Hopt]] _].
       rewrite -Hopt vdotNl eqr_opp; apply/eqP.
-      by apply: Hx.
+      exact: Hx.
 Qed.
 
 (* Lemma relating an i not belonging to the set of equalities
@@ -352,11 +341,9 @@ Proof.
     + rewrite mxE. by rewrite invr_gt0 ltr0n.
     have Hrelint : (A *m (col i0 V)) i0 0 > b i0 0.
     + rewrite relint_in_vcol -vdot_row_col. by move/relintP: Hineq.
-    apply: polyhedron_strictly_convex; split.
+    apply: (polyhedron_strictly_convex (j := i0)); split; try by done.
     + exact: lpositive.
     + exact: edotl_sum1.
-    + exact: Hrelint.
-    + exact: Hli.
     + exact: vcol_in_polyhedron.
   - by case: (cast_ord Hm i0).
 Qed.
