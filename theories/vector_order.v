@@ -50,6 +50,14 @@ Proof.
 by move => x y; apply: eq_forallb => i; rewrite !mxE ler_opp2.
 Qed.
 
+(* Addition of vector inequalities retains order *)
+Lemma lev_add x y (l1 l2 : 'cV[R]_n) : (l1 <=m x) && (l2 <=m y) ->
+  ((l1 + l2) <=m (x + y)).
+Proof.
+  move => /andP. rewrite /lev; move => [/forallP Hx /forallP Hy].
+  by apply/forallP => ?; rewrite !mxE ler_add //.
+Qed.
+
 Lemma lev_pscalar (a : R) : 0 < a -> {mono *:%R a : x y / x <=m y }.
 Proof.
 by move => Ha x y; apply: eq_forallb => i; rewrite !mxE ler_pmul2l.

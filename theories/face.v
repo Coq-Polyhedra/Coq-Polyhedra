@@ -67,11 +67,11 @@ Proof.
 move => x; rewrite 2![in RHS]inE 2!inE.
 apply: andb_id2l => Hx.
 move/(intro_existsT (feasibleP _ _)): (Hx) => Hfeas.
-rewrite /opt_value /active_ineq_of_face.
+rewrite /opt_value /active_ineq_of_face /opt_point.
 case: (simplexP A b c) => [ d /(intro_existsT (infeasibleP _ _))/negP
                          | p /(intro_existsT (unboundedP_cert _ _ _)) 
                          | [x0 u] /= [Hx0 Hu Hcsc0] ]; try by done.
-- move: (Hbounded); rewrite bounded_is_not_unbounded //.
+- rewrite unbounded_is_not_bounded; last by exact: Hfeas.
   by move/negP.
 - have ->: ('[ c, x] == '[ c, x0]) = (compl_slack_cond A b x u).
   + rewrite -(compl_slack_cond_duality_gap_equiv Hx Hu) duality_gap_eq0_def.

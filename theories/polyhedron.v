@@ -3,6 +3,7 @@
 (*                                                                       *)
 (* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
+(*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
 (* All rights reserved.                                                  *)
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
@@ -367,11 +368,11 @@ rewrite trmx0 trmx_mul trmxK in Hv.
 rewrite {Hrk}.
  
 pose gap_seq := gap_in_direc_seq x v^T.
-pose epsilon := if nilp gap_seq then 1 else min_seq gap_seq.
+pose epsilon := if nilp gap_seq then 1 else (min_seq gap_seq 0).
  
 have Hepsilon : epsilon > 0.
 - rewrite /epsilon; case: ifP => [ _ | /nilP H]; first by apply: ltr01.
-  + rewrite min_seq_positive; last by apply/eqP.
+  + rewrite min_seq_positive; last by left; apply/eqP.
     apply/allP => epsilon'.
     rewrite /gap_seq; move/mapP => [i]; rewrite mem_filter; move/andP => [Hi Hi'].
     case: ifP => [_ -> | /negbT H' ->]; first by apply: ltr01. 
@@ -480,5 +481,70 @@ split.
 Qed.
 
 End Extremality.
+
+Section Convexity.
+
+Variables (n m q: nat) (R: realFieldType).
+Variables (A: 'M[R]_(m, n)) (b: 'cV[R]_m).
+
+(* Constanct vector of ones *)
+Definition e := (const_mx 1): 'cV[R]_q.
+
+Lemma polyhedron_is_convex : forall M: 'M[R]_(n, q), forall l: 'cV_q,
+  [/\ l >=m 0, '[e, l] = 1 & (forall i , col i M \in polyhedron A b)] ->
+  M *m l \in polyhedron A b.
+Proof.
+  move => M l [lge0 edotl_eq1 pcol].
+  rewrite inE mulmxA mulmx_sum_col.
+  have ->: b = \sum_i l i 0 *: b.
+  - rewrite -scaler_suml.
+    have ->: \sum_i l i 0 = \sum_i (e i 0) * l i 0.
+    + by apply: eq_bigr => ? _; rewrite mxE mul1r.
+    move: (edotl_eq1); rewrite /vdot => He.
+    by rewrite He scale1r.
+  - apply: lev_sum => i _. apply: lev_wpscalar.
+    + by move/forallP/(_ i): lge0; rewrite mxE.
+    + rewrite col_mul. by apply: pcol.
+Qed.
+
+Lemma bigsum_aux (i: 'I_q) (F G : _ -> R) :
+  (forall (i0: 'I_q), F i0 <= G i0) -> (exists (j0: 'I_q), F j0 < G j0) ->
+  \sum_i F i < \sum_i G i.
+Proof.
+  move=> hleq [z hlt].
+  rewrite [\sum__ F _](bigD1 z) ?[\sum__ G _](bigD1 z) //.
+  by rewrite ltr_le_add ?ler_sum.
+Qed.
+
+Lemma polyhedron_strictly_convex i j : forall M: 'M[R]_(n, q), forall l: 'cV_q,
+  [/\ l >=m 0, '[e, l] = 1, (A *m (col j M)) i 0 > b i 0, l j 0 > 0
+  & (forall k , col k M \in polyhedron A b)] ->
+  (A *m (M *m l)) i 0 > b i 0.
+Proof.
+  move => M l [lge0 edotl_eq1 strict_col ljpos pcol].
+  have Hbs: b = \sum_i l i 0 *: b.
+  - rewrite -scaler_suml.
+    have ->: \sum_i l i 0 = \sum_i (e i 0) * l i 0.
+    + by apply: eq_bigr => ? _; rewrite mxE mul1r.
+    move: (edotl_eq1); rewrite /vdot => He.
+    by rewrite He scale1r.
+  - rewrite Hbs mulmxA mulmx_sum_col.
+    rewrite -col_mul in strict_col. rewrite !summxE bigsum_aux //=.
+    + move => c. rewrite mxE mxE ler_wpmul2l //=.
+      (* Need to show that l >= 0 *)
+      * move/forallP: lge0 => lge0. suff <- : (0: 'cV_q) c 0 = 0.
+        - by apply: lge0.
+        - move => ?; by rewrite mxE.
+      (* Need to show that col c (A *m M) = A *m (col c M) *)
+      * rewrite col_mul. move/(_ c): pcol. rewrite polyhedron_rowinE.
+        move => /forallP /(_ i).
+        suff -> k M1 M2: (row k M1 *m M2) 0 0 = (M1 *m M2) k 0.
+        - by done.
+        - move => ? ? ? ?. by rewrite -row_mul mxE.
+    + exists j; rewrite 2?mxE. (* only 1 extra mxE to keep the col ... defn *)
+      rewrite ltr_pmul2l; last by apply: ljpos. apply: strict_col.
+Qed.
+
+End Convexity.
 
 

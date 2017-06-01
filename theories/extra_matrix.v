@@ -3,6 +3,7 @@
 (*                                                                        *)
 (* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)   *)
+(*                     Vasileios Charisopoulos (vharisop at gmail.com)    *)
 (* All rights reserved.                                                   *)
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
@@ -363,3 +364,35 @@ Qed.
 
 End Extra.
 End QuasiInverse.
+
+Section TrmxAux.
+
+Variable R: realFieldType.
+
+(* Auxiliary Lemmas about trmx *)
+Lemma trmx_add (d1 d2 : nat) (M1: 'M[R]_(d1, d2)) (M2: 'M[R]_(d1, d2)) :
+  (M1 + M2)^T = M1^T + M2^T.
+Proof.
+  by apply/matrixP => ? ?; rewrite !mxE.
+Qed.
+
+Lemma trmx_sub (d1 d2: nat) (M1: 'M[R]_(d1, d2)) (M2: 'M[R]_(d1, d2)) :
+  (M1 - M2)^T = M1^T - M2^T.
+Proof.
+  by apply/matrixP => ? ?; rewrite !mxE.
+Qed.
+
+Lemma trmx_rmul (m n : nat) (M: 'M[R]_(m, n)) (v: 'rV[R]_n) :
+  M *m v^T = (v *m M^T)^T.
+Proof.
+  have H : (M^T)^T = M by rewrite trmxK.
+  by rewrite -[M in M *m _]H trmx_mul.
+Qed.
+
+Lemma trmx_lmul (m n : nat) (M: 'M[R]_(_, m)) (v: 'cV[R]_n) :
+  M^T *m v = (v^T *m M)^T.
+Proof.
+  by rewrite trmx_mul trmxK.
+Qed.
+
+End TrmxAux.
