@@ -23,15 +23,15 @@ Import GRing.Theory Num.Theory.
 Section AffineHull.
 
 Variable R : realFieldType.
-Variables m n: nat.
+Variables m n : nat.
 
 (* P(A, b) definition of polyhedra *)
-Variable A: 'M[R]_(m, n).
-Variable b: 'cV[R]_m.
+Variable A : 'M[R]_(m, n).
+Variable b : 'cV[R]_m.
 
-Hypothesis Hfeas: feasible A b.
+Hypothesis Hfeas : feasible A b.
 
-Implicit Types (x : 'cV[R]_n) (i: 'I_m) (j: 'I_n).
+Implicit Types (x : 'cV[R]_n) (i : 'I_m) (j : 'I_n).
 
 Notation "A_[ i ]" := (row i A)^T. (* at this stage, we should stick with the form (A *m x) i 0 *)
 Notation "b_[ i ]" := (b i 0).
@@ -68,7 +68,7 @@ Lemma vdot_row_col x i : '[A_[i], x] = ((A *m x) i 0).
 Proof.
 rewrite mxE.
 apply: eq_bigr => j _.
-by rewrite !mxE. 
+by rewrite !mxE.
 Qed.
 
 (* If an inequality is satisfied with equality for all x, its index
@@ -81,26 +81,26 @@ Proof.
   - rewrite inE => /andP [/boundedP [_ Hb] Hopt].
     move => x Hx.
     (* More verbosely: move: (Hb _ Hx). *)
-    move/(_ _ Hx) : Hb.
+    move/(_ _ Hx): Hb.
     (* => -> : Rewrite immediately in LHS after, does not put it back in the top *)
     (* => <- : Rewrite immediately in RHS after, does not put it back in the top *)
     move/eqP: Hopt => ->.
-    rewrite vdotNl ler_opp2 => Ax_leq_b. move: Hx. rewrite inE.
-    move => b_leq_Ax. apply /eqP. rewrite eqr_le Ax_leq_b {Ax_leq_b} /=.
-    move: b_leq_Ax. rewrite /lev. rewrite vdot_row_col => pp.
-    by move/forallP: pp.
+    rewrite vdotNl ler_opp2 => Ax_leq_b.
+    apply /eqP; rewrite eqr_le Ax_leq_b {Ax_leq_b} /= vdot_row_col.
+    rewrite inE /lev in Hx.
+    by move/forallP: Hx.
   (* Reverse direction *)
   - rewrite inE /andP => Hx.
     (* Name the fact: bounded A b (-A_[i]), as we will need it later. *)
     have Hb : bounded A b (-A_[i]).
-      + apply /boundedP_lower_bound; rewrite //; exists (-b_[ i]).
-        move => x x_in_poly; rewrite vdotNl ler_opp2.
-        move/(_ _ x_in_poly)/eqP: Hx. rewrite eqr_le.
-        move/andP => [Ax_leq_b] _. by apply: Ax_leq_b.
-    + apply/andP; split; first exact: Hb.
-      move/boundedP: Hb => [[x [Ha Hopt]] _].
-      rewrite -Hopt vdotNl eqr_opp; apply/eqP.
-      exact: Hx.
+      apply /boundedP_lower_bound; rewrite //; exists (-b_[ i]).
+      move => x x_in_poly; rewrite vdotNl ler_opp2.
+      move/(_ _ x_in_poly)/eqP: Hx; rewrite eqr_le.
+      by move/andP/proj1.
+    apply/andP; split; first exact: Hb.
+    move/boundedP: Hb => [[x [Ha Hopt]] _].
+    rewrite -Hopt vdotNl eqr_opp; apply/eqP.
+    exact: Hx.
 Qed.
 
 (* Lemma relating an i not belonging to the set of equalities
@@ -110,7 +110,7 @@ Lemma neq_indices_strict_inequality i : (i \notin eq_indices) ->
 Proof.
   move/feasibleP: Hfeas => Px.
   rewrite inE => /nandP [nBound | nOpt].
-  - move: nBound. rewrite -unbounded_is_not_bounded; last by done.
+  - move: nBound; rewrite -unbounded_is_not_bounded; last by done.
     (* move => /negPn /unboundedP /(_ (-b_[i])) can be written as
        move => /negPn /unboundedP => H; specialize (H (-b_[i])) *)
     move => /unboundedP /(_ (-b_[i])) [x [H1 H2]]. exists x.
@@ -118,11 +118,12 @@ Proof.
     by rewrite vdotNl ltr_opp2 in H2.
   - case: (boolP (bounded A b (-A_[i]))).
     + (* Case 1: bounded *)
-      move/boundedP => [[x [Ha Hopt]] _]. exists x; split; first by done.
+      move/boundedP => [[x [Ha Hopt]] _].
+      exists x; split; first by done.
       (* below can also be written as ... => /forallP H; specialize (H i) *)
       move: Ha; rewrite polyhedron_rowinE => /forallP /(_ i).
       rewrite -row_mul mxE -vdot_row_col ltr_def => ->.
-      move: nOpt. rewrite -Hopt vdotNl. rewrite neqr_lt => /orP.
+      move: nOpt; rewrite -Hopt vdotNl neqr_lt => /orP.
       by case; rewrite ltr_opp2 neqr_lt => ->; rewrite ?orbT.
     + (* Case 2: unbounded *)
       rewrite -unbounded_is_not_bounded; last by apply: Hfeas.
@@ -152,11 +153,9 @@ Lemma eq_indicesPn_unbounded i : reflect
   (i \notin eq_indices).
 Proof.
   apply: (iffP idP).
-  - move => /eq_indicesPn Hi. by tauto.
-  - case => [Hnb | Hexist].
-    + rewrite inE. apply/nandP. rewrite bounded_is_not_unbounded.
-      apply/orP. rewrite Hnb //=. by apply: Hfeas.
-    + by apply/eq_indicesPn.
+  - move/eq_indicesPn; apply: or_intror.
+  - case => [Hnb | Hexist]; last by apply/eq_indicesPn.
+    rewrite inE bounded_is_not_unbounded // Hnb //=.
 Qed.
 
 End EqIndices.
