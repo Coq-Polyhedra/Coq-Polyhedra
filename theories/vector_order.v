@@ -19,13 +19,13 @@ Import GRing.Theory Num.Theory.
 
 Section Order.
 
-Variable R: realFieldType.
-  
+Variable R : realFieldType.
+
 Section Core.
-  
+
 Variable n : nat.
 
-Implicit Types x y z: 'cV[R]_n.
+Implicit Types x y z : 'cV[R]_n.
 
 Definition lev x y := [forall i, x i 0 <= y i 0].
 
@@ -51,10 +51,10 @@ by move => x y; apply: eq_forallb => i; rewrite !mxE ler_opp2.
 Qed.
 
 (* Addition of vector inequalities retains order *)
-Lemma lev_add x y (l1 l2 : 'cV[R]_n) : (l1 <=m x) && (l2 <=m y) ->
+Lemma lev_add x y (l1 l2 : 'cV[R]_n) : (l1 <=m x) -> (l2 <=m y) ->
   ((l1 + l2) <=m (x + y)).
 Proof.
-  move => /andP. rewrite /lev; move => [/forallP Hx /forallP Hy].
+  rewrite /lev; move => [/forallP Hx /forallP Hy].
   by apply/forallP => ?; rewrite !mxE ler_add //.
 Qed.
 
@@ -112,7 +112,7 @@ Qed.
 
 Lemma oppv_ge0 x : (0 <=m -x) = (x <=m 0).
 Proof.
-by apply: eq_forallb => i; rewrite !mxE oppr_ge0. 
+by apply: eq_forallb => i; rewrite !mxE oppr_ge0.
 Qed.
 
 Lemma lev_antisym: antisymmetric (<=m).
@@ -212,7 +212,7 @@ Proof.
 by rewrite opprK addrC add_lev_min_max addr0.
 Qed.
 
-Lemma row_perm_lev (s: {perm 'I_n}) x y :
+Lemma row_perm_lev (s : {perm 'I_n}) x y :
   (x <=m y) = ((row_perm s x) <=m (row_perm s y)).
 Proof.
 apply/idP/idP => /forallP H; apply/forallP => i.
@@ -220,7 +220,7 @@ apply/idP/idP => /forallP H; apply/forallP => i.
 - by move/(_ ((s^-1)%g i)): H; rewrite !mxE permKV.
 Qed.
 
-Lemma row_perm_gev0 (s: {perm 'I_n}) x :
+Lemma row_perm_gev0 (s : {perm 'I_n}) x :
   (x >=m 0) = ((row_perm s x) >=m 0).
 Proof.
 by rewrite (row_perm_lev s) row_perm_const.
@@ -236,9 +236,8 @@ Notation "x >=m y" := (y <=m x) (only parsing, at level 0) : ring_scope.
 
 Section ExtraOrder.
 
-Variable n p: nat.
+Variable n p : nat.
 
- 
 Lemma lev_castmx (eq_np : n = p) : {mono (@castmx R n 1 p 1 (eq_np, erefl _)) : x y / x <=m y }.
 Proof.
 move => x y.
@@ -250,11 +249,11 @@ apply/idP/idP.
 Qed.
 
 Lemma castmx_gev0 (eq_np : n = p) x  : ((castmx (eq_np, erefl _) x) >=m 0) = (x >=m 0).
-Proof.  
+Proof.
 have {1}<-: (castmx (eq_np, erefl 1%N) 0 = (0:'cV[R]_p)) by rewrite castmx_const.
 apply: lev_castmx.
-Qed.   
-  
+Qed.
+
 Lemma col_mx_lev (x y : 'cV[R]_n) (v w : 'cV[R]_p):  ((col_mx x v) <=m (col_mx y w)) = ((x <=m y) && (v <=m w)).
 Proof.
 apply/idP/idP.
@@ -278,12 +277,12 @@ Proof.
 by rewrite -{1}[0]vsubmxK col_mx_lev !linear0.
 Qed.
 
-Lemma gev0_vsubmx (x: 'cV[R]_(n+p)) : (0 <=m x) = (0 <=m (usubmx x)) && (0 <=m (dsubmx x)).
+Lemma gev0_vsubmx (x : 'cV[R]_(n+p)) : (0 <=m x) = (0 <=m (usubmx x)) && (0 <=m (dsubmx x)).
 Proof.
 by rewrite -{1}[x]vsubmxK col_mx_gev0.
 Qed.
 
-Lemma lev0_vsubmx (x: 'cV[R]_(n+p)) : (0 >=m x) = (0 >=m (usubmx x)) && (0 >=m (dsubmx x)).
+Lemma lev0_vsubmx (x : 'cV[R]_(n+p)) : (0 >=m x) = (0 >=m (usubmx x)) && (0 >=m (dsubmx x)).
 Proof.
 by rewrite -{1}[x]vsubmxK col_mx_lev0.
 Qed.
@@ -305,12 +304,12 @@ End Order.
 
 Section LexOrder.
 
-Variable R: realFieldType.
-  
+Variable R : realFieldType.
+
 Section Core.
-  
+
 Variable n : nat.
-Implicit Types x y u v: 'rV[R]_n.
+Implicit Types x y u v : 'rV[R]_n.
 
 Fixpoint leqlex_seq x y l :=
   match l with
@@ -393,7 +392,7 @@ Proof.
 by move/(_ x 0): (lex_add2l (-x)); rewrite addNr addr0.
 Qed.
 
-Lemma scalar_neg_mul_lex_pos  a x: 
+Lemma scalar_neg_mul_lex_pos  a x :
   a < 0 -> (0 <=lex x) = ((a *: x) <=lex 0).
 Proof.
 move => Ha.
@@ -401,7 +400,7 @@ rewrite -oppr_gt0 in Ha.
 by rewrite -(lex_pscalar Ha 0 x) scaler0 scaleNr oppv_gelex0.
 Qed.
 
-Lemma lex_antisym: antisymmetric (<=lex).
+Lemma lex_antisym : antisymmetric (<=lex).
 Proof.
 move => x y H.
 suff: forall s, (leqlex_seq x y s && leqlex_seq y x s)
@@ -419,7 +418,7 @@ suff: forall s, (leqlex_seq x y s && leqlex_seq y x s)
     * apply: IH'.
 Qed.
 
-Lemma lex_trans: transitive (<=lex).
+Lemma lex_trans : transitive (<=lex).
 Proof.
 move => y x z Hxy Hyz.
 suff: forall s, leqlex_seq x y s -> leqlex_seq y z s
@@ -436,7 +435,7 @@ case: (ltrgtP (x 0 i) (y 0 i)) (ltrgtP (y 0 i) (z 0 i))
 - by rewrite -H' H eq_refl ltrr; apply: IH.
 Qed.
 
-Lemma lex0_total: forall x, (0 <=lex x) || (x <=lex 0).
+Lemma lex0_total : forall x, (0 <=lex x) || (x <=lex 0).
 Proof.
 move => x.
 suff: forall s, (leqlex_seq 0 x s) || (leqlex_seq x 0 s)
@@ -446,7 +445,7 @@ elim: s => [ | i s' IH /=]; first by done.
 by rewrite mxE; case: (sgrP (x 0 i)).
 Qed.
 
-Lemma lex_total: total (<=lex).
+Lemma lex_total : total (<=lex).
 Proof.
 move => x y.
 suff: (0 <=lex (y - x)) || ((y - x) <=lex 0)
@@ -568,7 +567,7 @@ Fixpoint lex_min_seq S :=
   | x :: S' => lex_min x (lex_min_seq S')
   end.
 
-Lemma lex_min_seq_ler S: forall i, i \in S -> (lex_min_seq S) <=lex i.
+Lemma lex_min_seq_ler S : forall i, i \in S -> (lex_min_seq S) <=lex i.
 Proof.
 elim: S => [ | x S' IH].
 - by move => i; rewrite in_nil.
@@ -581,7 +580,7 @@ elim: S => [ | x S' IH].
     * by rewrite -H'; move => Hi; rewrite lex_ler_minl; apply/orP; right; apply: IH.
 Qed.
 
-Lemma lex_min_seq_eq S: S != [::] -> has [pred i | lex_min_seq S == i] S.
+Lemma lex_min_seq_eq S : S != [::] -> has [pred i | lex_min_seq S == i] S.
 Proof.
 elim: S => [ | x S']; first by done.
 - case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
@@ -613,10 +612,10 @@ Notation "x >lex y" := (x <lex y) (only parsing, at level 0) : ring_scope.
 
 Section ExtraLexOrder.
 
-Variable n: nat.
-Implicit Types u v: 'rV[R]_n.
+Variable n : nat.
+Implicit Types u v : 'rV[R]_n.
 
-Lemma lex_ord0 (u v: 'rV[R]_(1+n)) : (u <=lex v) -> u 0 0 <= v 0 0.
+Lemma lex_ord0 (u v : 'rV[R]_(1+n)) : (u <=lex v) -> u 0 0 <= v 0 0.
 Proof.
 rewrite /leqlex.
 case: {2}(enum _) (erefl (enum 'I_(1+n))) => [| x0 ? Henum];
@@ -630,7 +629,7 @@ rewrite Henum /=; case: ifP => [|_]; first by move/ltrW.
   + by move/eqP ->; rewrite lerr.
 Qed.
 
-Lemma leqlex_seq_cons S1 S2 u v : 
+Lemma leqlex_seq_cons S1 S2 u v :
   (leqlex_seq u v S1) && (leqlex_seq u v S2) -> leqlex_seq u v (S1 ++ S2).
 Proof.
 elim: S1 => [| i S1' IH]; first by rewrite /=.
@@ -673,15 +672,15 @@ apply: (inj_map (@ord_inj _)).
 rewrite !val_enum_ord map_cat map_cons.
 have ->: filter (fun j => (nat_of_ord i0 < nat_of_ord j < n)%N) (enum 'I_n) =
 filter (preim (@nat_of_ord n) (fun j => (nat_of_ord i0 < j < n)%N)) (enum 'I_n)
-  by apply: eq_filter => j; rewrite /=. 
+  by apply: eq_filter => j; rewrite /=.
 have ->: filter (fun j => (nat_of_ord j < nat_of_ord i0)%N) (enum 'I_n) =
 filter (preim (@nat_of_ord n) (fun j => (j < nat_of_ord i0)%N)) (enum 'I_n)
-  by apply: eq_filter => j; rewrite /=. 
+  by apply: eq_filter => j; rewrite /=.
 rewrite -2!filter_map !val_enum_ord.
 have Hi0 : (nat_of_ord i0 < n)%N by apply: ltn_ord.
 have ->: [seq j <- iota 0 n | (j < i0)%N] = iota 0 i0.
 - have /eq_filter -> : (fun j => (j < i0)%N) =1 (fun j => j \in iota 0 i0).
-  + by move => j; rewrite mem_iota leq0n /= add0n. 
+  + by move => j; rewrite mem_iota leq0n /= add0n.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{2}[n](subnKC (ltnW Hi0)).
   by rewrite iota_add add0n; apply: prefix_subseq.
@@ -732,3 +731,4 @@ Notation "x >=lex y" := (y <=lex x) (only parsing, at level 0) : ring_scope.
 
 Notation "x <lex y" := (ltrlex x y) (at level 0): ring_scope.
 Notation "x >lex y" := (x <lex y) (only parsing, at level 0) : ring_scope.
+

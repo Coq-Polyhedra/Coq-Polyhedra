@@ -199,7 +199,7 @@ Lemma feasible_dir_in_polyhedron x u :
   (x \in polyhedron A b) -> (feasible_dir A u) -> (x + u) \in polyhedron A b.
 Proof.
   rewrite !inE mulmxDr => Hx Hu.
-  by move/andP/lev_add: (conj Hx Hu); rewrite addr0. (* TODO: modify lev_add *)
+  by move: (lev_add Hx Hu); rewrite addr0.
 Qed.
 
 (* A function returning the relint candidate for each inequality
@@ -250,8 +250,9 @@ Proof.
     case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP |
         [x d] /= [Hx Hd] _ | [x u] /= [Hx Hu Hux] ] //.
     (* unbounded_relint point *)
-    + move : Hx. rewrite !inE mulmxDr => Hx.
-      by rewrite -[b]addr0; apply: lev_add; rewrite Hx Hd.
+    + rewrite inE in Hx.
+      move: (lev_add Hx Hd).
+      by rewrite addr0 inE mulmxDr.
   (* Case 2: Have i \notin eq_indices, need to prove the inequality *)
   - move => Hi.
     case: (boolP (unbounded A b (-A_[i]))) => [?|].
@@ -267,8 +268,9 @@ Proof.
   rewrite /relint /relint_candidate inE.
   case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP |
         [x d] /= [Hx Hd] _ | [_ _] /= [_ _ _] ] //.
-  move: Hx. rewrite inE mulmxDr => Hx.
-  by rewrite -[b]addr0; apply: lev_add; rewrite Hx Hd.
+  rewrite inE in Hx.
+  move: (lev_add Hx Hd).
+  by rewrite addr0 mulmxDr.
 Qed.
 
 (* The matrix of relint candidates *)
