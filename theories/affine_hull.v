@@ -169,6 +169,8 @@ Definition relint_candidate c := match simplex A b c with
   | _ => 0
   end.
 
+(* RK : I have moved the next lemma (which does not seem to be used here) to simplex.v, 
+under the name "opt_point_is_feasible", and which more generally applies to any vector c
 (* The face of a bounded polyhedron, as computed by simplex,
    must belong to the polyhedron itself *)
 Lemma face_eq_inpoly i : bounded A b (-A_[i]) ->
@@ -178,6 +180,7 @@ Proof.
   case: simplexP => //.
   by move => [x d] /= [? _ _].
 Qed.
+*)
 
 (* For a bounded polyhedron, if i is not in eq_indices, then the optimal
    point satisfies the corresponding inequality strictly. *)

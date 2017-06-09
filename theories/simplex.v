@@ -23,7 +23,7 @@ Section Simplex.
 
 Variable R : realFieldType.
 
-Variable m n: nat.
+Variable m n : nat.
 
 Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
@@ -1890,6 +1890,13 @@ Definition opt_value := '[c, opt_point].
     '[c, x]
   else 0. *)
 
+Lemma opt_point_is_feasible : 
+  bounded -> opt_point \in polyhedron A b.
+Proof.
+  rewrite /opt_point /bounded.
+  case: simplexP => //.
+  by move => [x d] /= [? _ _].
+Qed.
 
 (* A certificate of boundedness in terms of duality *)
 Lemma boundedP_cert :
@@ -1926,7 +1933,6 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
     by apply/eqP; rewrite duality_gap_eq0_def; apply/eqP.
 Qed.
 
-
 Lemma bounded_is_not_unbounded :
   feasible A b -> bounded = ~~ unbounded.
 Proof.
@@ -1934,14 +1940,12 @@ rewrite /bounded /unbounded.
 by case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | |].
 Qed.
 
-
 Lemma unbounded_is_not_bounded :
   feasible A b -> unbounded = ~~ bounded.
 Proof.
   rewrite /bounded /unbounded.
   by case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | |].
 Qed.
-
 
 Lemma infeasible_or_boundedP :
   reflect (exists K, (forall x, x \in polyhedron A b -> '[c,x] >= K)) (~~ feasible A b || bounded).
