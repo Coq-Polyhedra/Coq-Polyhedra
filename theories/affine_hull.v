@@ -170,7 +170,7 @@ Definition relint_candidate c := match simplex A b c with
   end.
 
 (* RK : I have moved the next lemma (which does not seem to be used here) to simplex.v, 
-under the name "opt_point_is_feasible", and which more generally applies to any vector c
+under the name "opt_point_is_feasible", more generally applying it to any vector c
 (* The face of a bounded polyhedron, as computed by simplex,
    must belong to the polyhedron itself *)
 Lemma face_eq_inpoly i : bounded A b (-A_[i]) ->
@@ -224,14 +224,10 @@ Proof.
       case: simplexP => //.
 Qed.
 
-(*RK: in the next lemma, it does not seem to be necessary to asumme (i \notin eq_indices),
-so why should we do it?*)
 Lemma relint_strict_unbounded i :
-  (unbounded A b (-A_[i])) -> (i \notin eq_indices) ->
-  '[ A_[i], (relint i)] > b_[i].
+  (unbounded A b (-A_[i])) -> '[ A_[i], (relint i)] > b_[i].
 Proof.
-  move => Hnb _. move: Hnb.
-  rewrite /unbounded. rewrite /relint /relint_candidate.
+  rewrite /unbounded /relint /relint_candidate.
   case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP | | ] //.
   move => [x u] /= [Hx Hd].
   rewrite vdotNl oppr_lt0 => Hxd _.
@@ -454,7 +450,6 @@ Proof.
       by apply/sub_kermxP; rewrite -/Veq row_sub.
   - exact: ldec_tot_suffices.
 Qed.
-
 
 Variables (p : nat) (Vm : 'M[R]_(p, n)).
 
