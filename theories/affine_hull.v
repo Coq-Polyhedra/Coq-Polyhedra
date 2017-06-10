@@ -190,7 +190,7 @@ Lemma face_eq_strict_bounded i :
 Proof.
   move => Hbounded /eq_indicesPn_unbounded Hi.
   case: Hi.
-  - move: Hbounded. rewrite bounded_is_not_unbounded //. by move/negP.
+  - by move: Hbounded; rewrite bounded_is_not_unbounded //; move/negP.
   - move => [x [Hx1 ?]].
     set xopt := opt_point A b (-A_[i]).
     suff: '[A_[i], x] <= '[A_[i], xopt] by exact: ltr_le_trans.
@@ -232,8 +232,8 @@ Proof.
   move => [x u] /= [Hx Hd].
   rewrite vdotNl oppr_lt0 => Hxd _.
   move: Hx. rewrite polyhedron_rowinE => /forallP /(_ i).
-  have -> : (row i A *m x) 0 0 = '[A_[i], x].
-    - by rewrite vdot_row_col -row_mul mxE.
+  have -> : (row i A *m x) 0 0 = '[A_[i], x]
+     by rewrite vdot_row_col -row_mul mxE.
   move => Hx.
   by rewrite -[b_[i]]addr0 vdotDr ler_lt_add.
 Qed.
@@ -277,12 +277,12 @@ Let V := (\matrix_(j < n, i < m) (relint i) j 0) : 'M[R]_(n, m).
 
 Lemma relint_in_vcol : forall i, col i V = relint i.
 Proof.
-  move => ?. by apply/colP => ?; rewrite !mxE.
+  move => ?; by apply/colP => ?; rewrite !mxE.
 Qed.
 
 Lemma vcol_in_polyhedron : forall i, col i V \in polyhedron A b.
 Proof.
-  move => ?. rewrite relint_in_vcol.
+  move => i. rewrite relint_in_vcol.
   exact: relint_candidate_in_polyhedron.
 Qed.
 
@@ -296,10 +296,10 @@ Let l := (const_mx (m %:R)^-1) : 'cV[R]_m.
 Lemma edotl_sum1 : (m > 0)%N -> '[e, l] = 1.
 Proof.
   move => Hmpos.
-  suff -> : 1 = \big[+%R/0]_(i < m) l i 0.
-    apply: eq_bigr => i _; by rewrite mxE mul1r.
+  suff -> : 1 = \big[+%R/0]_(i < m) l i 0
+    by apply: eq_bigr => i _; rewrite mxE mul1r.
   have Hconst: l _ 0 = m%:R^-1 by move => ?; rewrite mxE.
-  have -> : \big[+%R/0]_(i < m) l i 0 = \big[+%R/0]_(i < m) (m%:R^-1).
+  have -> : \big[+%R/0]_(i < m) l i 0 = \big[+%R/0]_(i < m) (m%:R^-1)
     by apply: eq_bigr => ? _; rewrite Hconst.
   rewrite sumr_const cardT size_enum_ord.
   rewrite -[RHS]mulr_natr mulVf; first by done.
@@ -310,7 +310,7 @@ Qed.
    because l involves the inverse of a nat. *)
 Lemma lpositive : l >=m 0.
 Proof.
-  rewrite /l /lev. apply/forallP => ?.
+  apply/forallP => ?.
   by rewrite !mxE invr_ge0 ler0n.
 Qed.
 
@@ -335,17 +335,15 @@ Lemma relint_point_in_relint :
   forall i, i \notin eq_indices -> (A *m relint_point) i 0 > b i 0.
 Proof.
   move => i0 Hineq. rewrite /relint_point.
-  case: ifPn => [/eqP Hm | Hm]; last first.
+  case: ifPn => [/eqP Hm | Hm]; first by case: (cast_ord Hm i0).
   - rewrite -lt0n in Hm.
-    have Hli: l i0 0 > 0.
-    + rewrite mxE. by rewrite invr_gt0 ltr0n.
-    have Hrelint : (A *m (col i0 V)) i0 0 > b i0 0.
-    + rewrite relint_in_vcol -vdot_row_col. by move/relintP: Hineq.
+    have Hli: l i0 0 > 0 by rewrite mxE invr_gt0 ltr0n.
+    have Hrelint : (A *m (col i0 V)) i0 0 > b i0 0
+      by rewrite relint_in_vcol -vdot_row_col; move/relintP: Hineq.
     apply: (polyhedron_strictly_convex (j := i0)); split; try by done.
     + exact: lpositive.
     + exact: edotl_sum1.
     + exact: vcol_in_polyhedron.
-  - by case: (cast_ord Hm i0).
 Qed.
 
 End RelintGen.
@@ -362,31 +360,31 @@ Proof.
   move => x Hx.
   apply/colP => ?. rewrite -row_submx_mul !row_submx_mxE -vdot_row_col.
   apply/eq_indicesP; last by done.
-  apply/enum_valP.
+  by apply/enum_valP.
 Qed.
 
 (* The "small enough" lambda required for a proper decrement of the
    product l * (A v) in A (x0 + l v), for an index i. *)
-Definition l_dec i (v: 'cV[R]_n) :=
+Definition l_dec i (v : 'cV[R]_n) :=
   let dec := (b i 0) - ((A *m x0) i 0) in
   ((A *m v) i 0)^-1 * dec.
 
 (* Auxiliary Lemma for ldec *)
-Lemma ldec_positive_case i (v: 'cV[R]_n) : (A *m v) i 0 < 0 ->
+Lemma ldec_positive_case i (v : 'cV[R]_n) : (A *m v) i 0 < 0 ->
   i \notin eq_indices ->  l_dec i v > 0.
 Proof.
-  move => Av_geq0 Hin. rewrite /l_dec nmulr_rgt0.
-  - have: (A *m x0) i 0 > b i 0 by rewrite relint_point_in_relint //.
-    by rewrite -subr_lt0.
-  - by rewrite invr_lt0.
+  move => Av_geq0 Hin.
+  rewrite /l_dec nmulr_rgt0; last by rewrite invr_lt0.
+  suff: (A *m x0) i 0 > b i 0 by rewrite -subr_lt0.
+    by move: (relint_point_in_relint Hin).
 Qed.
 
 (* The minimum among all l_dec *)
-Definition ldec_tot (v: 'cV[R]_n) :=
+Definition ldec_tot (v : 'cV[R]_n) :=
   let J := [ seq j <- (enum 'I_m) | j \notin eq_indices & (A *m v) j 0 < 0 ] in
   (min_seq [seq l_dec j v | j <- J] 1).
 
-Lemma ldec_tot_positive (v: 'cV[R]_n) : ldec_tot v > 0.
+Lemma ldec_tot_positive (v : 'cV[R]_n) : ldec_tot v > 0.
 Proof.
   set S := [seq l_dec j v | j <- enum 'I_m &
     ((j \notin eq_indices) && ((A *m v) j 0 < 0))].
@@ -397,7 +395,7 @@ Proof.
 Qed.
 
 (* Auxiliary lemma, required for Veq_as_polypoint *)
-Lemma ldec_tot_suffices (v: 'cV[R]_n) (i: 'I_m) :
+Lemma ldec_tot_suffices (v : 'cV[R]_n) (i : 'I_m) :
   (i \notin eq_indices) ->
   b_[ i] - (A *m x0) i 0 <= ldec_tot v * (A *m v) i 0.
 Proof.
