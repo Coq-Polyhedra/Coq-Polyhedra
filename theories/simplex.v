@@ -597,27 +597,22 @@ suff: col k (matrix_of_prebasis b_pert bas) != 0.
   by move/lt0r_neq0/negP: (@ltr01 R).
 Qed.
 
-Lemma neg_subset_bas_imp_neq_pert_points (bas bas' : basis) :
-  ~~ (bas \subset bas') -> point_of_basis_pert bas != point_of_basis_pert bas'.
+Lemma col_point_of_basis_pert (bas: basis) j :
+  (col (rshift 1 (s j)) (point_of_basis_pert bas) != 0) = (j \in bas).
 Proof.
-rewrite -setD_eq0.
-move/set0Pn => [i Hi].
-move: (setDP Hi).
-move => [Hibas Hibas'].
-move/eqP: (col_point_of_basis_pert_not_in_basis Hibas').
-apply: contraTneq.
-move => H; rewrite -H.
-exact: (col_point_of_basis_pert_in_basis Hibas).
+apply/idP/idP; last exact: col_point_of_basis_pert_in_basis.
+by apply: contraR; move/col_point_of_basis_pert_not_in_basis/eqP.
 Qed.
 
 Lemma eq_pert_point_imp_eq_bas (bas bas' : basis) :
   (point_of_basis_pert bas = point_of_basis_pert bas') -> bas == bas'.
 Proof.
-move/eqP => H; rewrite [bas == bas']eqEsubset.
-move: H; apply contraLR.
-rewrite negb_and.
-move/orP.
-case; [ exact: neg_subset_bas_imp_neq_pert_points | rewrite eq_sym; exact: neg_subset_bas_imp_neq_pert_points]. 
+move => eq_point.
+suff: bas \subset bas'. 
+- move/subset_leqif_cards/geq_leqif.
+  by rewrite 2!prebasis_card leqnn.
+- apply/subsetP => i.
+  by rewrite -2!col_point_of_basis_pert eq_point.
 Qed.
 
 End LexFeasibleBasis.
