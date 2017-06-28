@@ -530,6 +530,96 @@ Definition lex_feasible_basis_finMixin :=
 Canonical lex_feasible_basis_finType := Eval hnf in FinType lex_feasible_basis lex_feasible_basis_finMixin.
 Canonical lex_feasible_basis_subFinType := Eval hnf in [subFinType of lex_feasible_basis].
 
+(* the next 3 lemmas should be merged with the analogous statements in Section Basis. *)
+Lemma row_submx_point_of_basis_pert (bas : basis) :
+  (row_submx A bas) *m (point_of_basis_pert bas) = row_submx b_pert bas.
+Proof.
+apply: (@castmx_inj _ _ _ _ _ (prebasis_card bas) (erefl (1+m)%N)).
+rewrite castmx_mul castmx_id.
+by rewrite /point_of_basis_pert mulKVmx; last exact: matrix_of_basis_in_unitmx.
+Qed.
+
+Lemma is_point_of_basis_pert (bas : basis) x :
+  (row_submx A bas) *m x = row_submx b_pert bas -> x = point_of_basis_pert bas.
+Proof.
+move/(congr1 (castmx (prebasis_card bas, erefl (1+m)%N))); rewrite castmx_mul castmx_id.
+by move/(canRL (mulKmx (matrix_of_basis_in_unitmx _))).
+Qed.
+
+Lemma is_point_of_basis_pert_active (bas : basis) x :
+  (forall i, i \in bas -> row i (A *m x) = row i b_pert) -> x = point_of_basis_pert bas.
+Proof.
+move/row_submx_row_matrixP; rewrite row_submx_mul => H.
+exact: is_point_of_basis_pert.
+Qed.
+
+Lemma col_b_pert_not_in_basis (I : {set 'I_m}) j :
+  (j \notin I) -> col (rshift 1 (s j)) (row_submx b_pert I) = 0.
+Proof.
+move => Hj.
+rewrite row_submx_row_mx colKr.
+rewrite row_submx_col.
+apply/row_submx_col0P => k Hk.
+rewrite !mxE (inj_eq (@perm_inj _ s)).
+move/memPn/(_ _ Hk)/negbTE: Hj => -> /=.
+by rewrite mulr0n oppr0.
+Qed.
+
+Lemma col_point_of_basis_pert_not_in_basis (bas : basis) j :
+  (j \notin bas) -> col (rshift 1 (s j)) (point_of_basis_pert bas) = 0.
+Proof.
+rewrite /point_of_basis_pert col_mul => Hj.
+suff ->: col (rshift 1 (s j)) (matrix_of_prebasis b_pert bas) = 0 by rewrite mulmx0.
+move/col_b_pert_not_in_basis: Hj =>  Hj'.
+apply/colP => i; rewrite !mxE castmxE /= cast_ord_id.
+set j' := cast_ord _ _.
+by move/colP/(_ j'): Hj'; rewrite mxE [RHS]mxE.
+Qed.
+
+Lemma col_point_of_basis_pert_in_basis (bas : basis) j :
+  (j \in bas) -> col (rshift 1 (s j)) (point_of_basis_pert bas) != 0.
+Proof.
+move => Hj.
+rewrite col_mul.
+set k := rshift _ _.
+suff: col k (matrix_of_prebasis b_pert bas) != 0.
+- apply: contraTneq.
+  move/(congr1 (mulmx (matrix_of_prebasis A bas))).
+  rewrite mulKVmx; last exact: matrix_of_basis_in_unitmx. 
+  by rewrite mulmx0 => ->; rewrite eq_refl /=.
+- apply/(contraTneq _ isT) => /=.
+  pose j' := cast_ord (prebasis_card bas) (enum_rank_in Hj j).
+  move/colP/(_ j').
+  rewrite mxE [RHS]mxE castmxE /= cast_ordK cast_ord_id row_submx_mxE enum_rankK_in //.
+  rewrite row_mxEr.
+  rewrite !mxE eq_refl /= mulr1n.
+  move/eqP; rewrite oppr_eq0.
+  by move/lt0r_neq0/negP: (@ltr01 R).
+Qed.
+
+Lemma neg_subset_bas_imp_neq_pert_points (bas bas' : basis) :
+  ~~ (bas \subset bas') -> point_of_basis_pert bas != point_of_basis_pert bas'.
+Proof.
+rewrite -setD_eq0.
+move/set0Pn => [i Hi].
+move: (setDP Hi).
+move => [Hibas Hibas'].
+move/eqP: (col_point_of_basis_pert_not_in_basis Hibas').
+apply: contraTneq.
+move => H; rewrite -H.
+exact: (col_point_of_basis_pert_in_basis Hibas).
+Qed.
+
+Lemma eq_pert_point_imp_eq_bas (bas bas' : basis) :
+  (point_of_basis_pert bas = point_of_basis_pert bas') -> bas == bas'.
+Proof.
+move/eqP => H; rewrite [bas == bas']eqEsubset.
+move: H; apply contraLR.
+rewrite negb_and.
+move/orP.
+case; [ exact: neg_subset_bas_imp_neq_pert_points | rewrite eq_sym; exact: neg_subset_bas_imp_neq_pert_points]. 
+Qed.
+
 End LexFeasibleBasis.
 
 Variable c : 'cV[R]_n.
@@ -739,7 +829,7 @@ move/(congr1 (mulmx B)): Hu'.
 by rewrite mulmxA mulVmx // mul1mx.
 Qed.
 
-Lemma lex_min_gap_lex_pos :
+Lemma lex_min_gap_lex_non_neg :
 let: d := direction bas i in
 let: j := lex_ent_var in
 let: lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0] in
@@ -760,6 +850,41 @@ rewrite scaler0 mulr1 scaleN1r oppv_gelex0 -(lex_add2r (row j A *m point_of_basi
 by move/forallP: Hfeas.
 Qed.
 
+Lemma lex_min_gap_non_null :
+  let: d := direction bas i in
+  let: j := lex_ent_var in
+  let: lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0] in
+  lex_min_gap != 0.
+Proof.
+set d := direction bas i.
+set j := lex_ent_var.
+move: (lex_feasible_basis_is_lex_feasible bas) => Hfeas.
+move/andP: lex_ent_var_properties => [Hj /eqP ->].
+move: Hj; rewrite mem_filter; move/andP => [Hj _].
+rewrite scalemx_eq0 negb_or; apply/andP; split.
+- apply: invr_neq0; exact: ltr0_neq0. 
+- apply/eqP => /subr0_eq-/esym H.  
+  suff /eq_pert_point_imp_eq_bas/eqP Hbas: point_of_basis_pert bas = point_of_basis_pert lex_rule_bas.
+  + by move: lex_ent_var_not_in_basis; rewrite Hbas setU11 /=.
+  + apply: is_point_of_basis_pert_active => k.
+    rewrite in_setU1; move/orP; case. 
+    * by move/eqP ->; rewrite row_mul.
+    * rewrite in_setD1 => /andP [_ Hk].
+      move: (row_submx_point_of_basis_pert bas).
+      by rewrite -row_submx_mul; move/row_submx_row_matrixP/(_ _ Hk).
+Qed.      
+
+Lemma lex_min_gap_lex_pos :
+  let: d := direction bas i in
+  let: j := lex_ent_var in
+  let: lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0] in
+  lex_min_gap >lex 0.
+Proof.
+apply/andP; split. 
+- rewrite eq_sym; exact: lex_min_gap_non_null.
+- exact: lex_min_gap_lex_non_neg.
+Qed.
+  
 Lemma lex_min_gap_lex_prop (h : 'I_m) :
 let: d := direction bas i in
 let: v := point_of_basis_pert bas in
@@ -787,7 +912,7 @@ set v := point_of_basis_pert bas.
 set lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0].
 set u := v + d *m lex_min_gap.
 move: (lex_feasible_basis_is_lex_feasible bas) => Hfeas.
-move: lex_min_gap_lex_pos => Hmin_gap.
+move: lex_min_gap_lex_non_neg => Hmin_gap.
 move: lex_rule_rel_succ_points => Hvu.
 rewrite -/u in Hvu.
 have Hu: [forall j, ((row j A) *m u) >=lex (row j b_pert)].
@@ -824,34 +949,8 @@ move: lex_rule_rel_succ_points => Hv'u.
 rewrite -/u -/v' in Hv'u.
 rewrite Hv'u /u mulmxDr lex_ltrNge -subv_gelex0 addrC addrA addNr add0r -lex_ltrNge mulmxA.
 rewrite -vdot_def vdotC mul_scalar_mx.
-rewrite lex_ltrNge -[X in X *: _]opprK scaleNr -scalerN -[0](scaler0 _ (-'[c,d])).
-rewrite lex_pscalar; last by rewrite oppr_gt0; apply: (direction_improvement Hui).
-- rewrite -lex_ltrNge.
-  apply/andP; split; last first.
-  + rewrite -oppv_gelex0 opprK.
-    by apply: lex_min_gap_lex_pos.
-  + move/andP: lex_ent_var_properties => [Hj /eqP Hj'].
-    move: Hj; rewrite mem_filter; move/andP => [Hj _].
-    rewrite -/j -/d in Hj, Hj'.
-    rewrite /lex_min_gap Hj' /lex_gap -/d -/j oppr_eq0 scaler_eq0.
-    move/invr_neq0/negbTE: (ltr0_neq0 Hj) ->.
-    rewrite /= row_row_mx /point_of_basis_pert.
-    rewrite /matrix_of_prebasis row_submx_row_mx castmx_row !mul_mx_row.
-    rewrite opp_row_mx add_row_mx -row_mx0.
-    apply: contraT; rewrite negbK; move/eqP/eq_row_mx => [_ /matrixP/(_ 0 (s j))].
-    rewrite !mxE eq_refl /=.
-    rewrite big1.
-    * rewrite mulr1n subr0; move/eqP; rewrite oppr_eq0; move/eqP => Hcontra.
-      by move: (oner_neq0 R); rewrite Hcontra eq_refl.
-    * move => ? _.
-      rewrite !mxE; rewrite big1; first by rewrite mulr0.
-      move => l _; rewrite castmxE !mxE /=.
-      have: (enum_val (cast_ord (esym (prebasis_card bas)) l)) !=
-                          cast_ord (erefl m) j.
-      - move/memPn: lex_ent_var_not_in_basis.
-        by move/(_ (enum_val (cast_ord (esym (prebasis_card bas)) l)) (enum_valP _)).
-      rewrite -(inj_eq (@perm_inj _ s)) 2!cast_ord_id; move/negbTE ->.
-      by rewrite /= mulr0n oppr0 mulr0.
+rewrite lex_ltrNge -[0](scaler0 _ ('[c,d])) -lex_negscalar; last exact: direction_improvement.
+rewrite -lex_ltrNge; exact: lex_min_gap_lex_pos.
 Qed.
 
 End Lexicographic_rule.
