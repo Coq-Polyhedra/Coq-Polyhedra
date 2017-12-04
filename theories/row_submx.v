@@ -216,6 +216,20 @@ apply: eqmx_trans.
 by rewrite (big_setD1 i) //=.
 Qed.
 
+Lemma row_submx_subset_submx (m p: nat) (M : 'M[R]_(m,p)) (I J : {set 'I_m}) :
+  (I \subset J) -> (row_submx M I <= row_submx M J)%MS.
+Proof.
+move => I_subset_J.
+apply/row_subP => i; rewrite row_submx_row.
+set i' := enum_val i.
+move: (enum_valP i) => i'_in_I.
+move/subsetP/(_ _ i'_in_I): I_subset_J => i'_in_J.
+set j := enum_rank_in i'_in_J i'.
+have ->: (row i' M = row j (row_submx M J)).
+rewrite row_submx_row enum_rankK_in //.
+exact: row_sub.
+Qed.
+
 End RowSubmx.
 
 Section ExtraFinType.

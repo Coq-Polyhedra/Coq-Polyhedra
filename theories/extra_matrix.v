@@ -396,3 +396,47 @@ Proof.
 Qed.
 
 End TrmxAux.
+
+
+Section PickInKer.
+
+Variable m n: nat.
+Variable R: realFieldType.
+Variable A: 'M[R]_(m,n).
+
+Definition pick_in_ker :=
+  let M := kermx A^T in
+  match [pick j | row j M != 0] with
+  | Some j => (row j M)^T
+  | None => 0
+  end.
+
+Lemma pick_in_kerP : A *m pick_in_ker = 0.
+Proof.
+rewrite /pick_in_ker.
+case: pickP => [i|].
+- set v := row i _.
+  move => v_neq0.
+  suff /(congr1 trmx): v *m A^T = 0. 
+  + by rewrite trmx_mul trmxK trmx0.
+  + by move/sub_kermxP: (row_sub i (kermx A^T)).
+- by rewrite mulmx0.
+Qed.
+
+Lemma pick_in_ker_neq0 : (\rank A < n)%N -> pick_in_ker != 0.
+Proof.
+move => rk_lt_n.
+rewrite /pick_in_ker; case: pickP => [i |].
+- by apply: contraNneq; move/(congr1 trmx); rewrite trmxK trmx0 => ->.
+- move => no_non_null_row.
+  have ker_eq0: (kermx A^T = 0).
+  + apply/row_matrixP => i; rewrite row0.
+    move/(_ i): no_non_null_row.
+    by move/negbT; rewrite negbK => /eqP.
+  move: (mxrank_ker A^T); rewrite ker_eq0 mxrank0 mxrank_tr.
+  move/eqP; rewrite eq_sym subn_eq0.
+  move/leq_ltn_trans/(_ rk_lt_n).
+  by rewrite ltnn.
+Qed.
+
+End PickInKer.
