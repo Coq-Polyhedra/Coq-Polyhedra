@@ -286,22 +286,7 @@ by apply: extract_basis_point_of_basis.
 Qed.
 
 Section Phase1_removal.
-
-Hypothesis Hpointed: pointed A.
-
-Definition build_non_feasible_direction d :=
-  if feasible_dir A d then -d else d.
-
-Lemma build_non_feasible_directionP d : d != 0 -> ~~ (feasible_dir A (build_non_feasible_direction d)).
-Proof.
-move => d_not_null.
-rewrite /build_non_feasible_direction.
-case: ifP; last exact: negbT.
-move => d_feas_dir.
-move: Hpointed; apply: contraL => md_feas_dir.
-by apply/pointedPn; exists d; split.
-Qed.
-
+  
 Section BoundaryPoint.
 
 Variable d x: 'cV[R]_n.
@@ -468,11 +453,13 @@ Qed.
 
 End BoundaryPoint.
 
+Hypothesis Hpointed : pointed A.
+
 Definition build_basic_point_iter x :=
   let I := active_ineq A b x in
   let d := pick_in_ker (row_submx A I) in
   if @idPn (d == 0) is ReflectT d_neq0 then
-    let infeas_dir := (build_non_feasible_directionP d_neq0) in
+    let infeas_dir := (build_non_feasible_directionP Hpointed d_neq0) in
     (point_along_dir x infeas_dir)
   else x.
 
@@ -495,10 +482,10 @@ case: {-}_/idPn => [d_neq0 | ]; last first.
 - move/negP; rewrite negbK.
   by move/negbTE: (pick_in_ker_neq0 rk_AI) => ->.
 - set I := active_ineq A b x.  
-  set infeas_dir := build_non_feasible_directionP d_neq0.
+  set infeas_dir := build_non_feasible_directionP _ _.
   set y := point_along_dir _ _.
   set J := active_ineq A b y.
-  set d := build_non_feasible_direction (pick_in_ker (row_submx A I)).
+  set d := build_non_feasible_direction A (pick_in_ker (row_submx A I)).
   have Ad_eq0 : (row_submx A I) *m d = 0.
   - rewrite /d /build_non_feasible_direction.
     by case: ifP => [_ | _]; rewrite ?mulmxN;
@@ -523,7 +510,7 @@ Proof.
 pose P := fun x y => x \in polyhedron A b -> y \in polyhedron A b.
 apply: (build_basic_point_ind (P := P)).  
 - by move => x _; rewrite /=.
-- move => x ? <- _ => ind_hyp. 
+- move => x ? <- _ => ind_hyp.  
   by move/build_basic_point_iter_feasible/ind_hyp.
 Qed.  
   

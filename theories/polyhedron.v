@@ -59,9 +59,78 @@ apply/(iffP rowV0Pn) => [[v] /sub_kermxP Hv Hv'| [d [Hd Hd' Hd'']]].
     apply: congr1; apply: lev_antisym; apply/andP.
     by rewrite !inE mulmxN oppv_ge0 in Hd' Hd''.
 Qed.    
-    
+
+Hypothesis is_pointed: pointed.
+
+Definition build_non_feasible_direction d :=
+  if feasible_dir d then -d else d.
+
+Lemma build_non_feasible_directionP d : d != 0 -> ~~ (feasible_dir (build_non_feasible_direction d)).
+Proof.
+move => d_neq0.
+rewrite /build_non_feasible_direction.
+case: ifP; last exact: negbT.
+move => d_feas_dir.
+move: is_pointed; apply: contraL => md_feas_dir.
+by apply/pointedPn; exists d; split.
+Qed.
+
 End Defs.
 
+Section LexPolyhedron.
+
+Variable R : realFieldType.
+Variable m n : nat.
+  
+Section Def.
+
+Variable p : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'M[R]_(m,p).              
+
+Definition lex_polyhedron := [pred x: 'M[R]_(n,p) | [forall i, (row i (A *m x)) >=lex (row i b)]].
+
+Definition active_lex_ineq (x: 'M[R]_(n,p)) :=
+  [set i : 'I_m | (row i (A *m x)) == (row i b)].
+
+End Def.
+
+Section UsualVsLexPolyhedron.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Lemma polyhedron_equiv_lex_polyhedron :
+  polyhedron A b =i lex_polyhedron A b.
+Proof.
+move => x.
+rewrite 2!inE.
+apply: eq_forallb => i.
+apply/idP/idP => [ineq |].
+- apply: leqlex_seq_lev.
+  apply/forall_inP => j _.
+  rewrite 2!mxE.
+  suff ->: j = 0 by done.
+  + apply/ord_inj.
+    by move: (ltn_ord j); rewrite ltnS leqn0 => /eqP.
+- by move/lex_ord0; rewrite 2!mxE.
+Qed.
+
+Lemma active_ineq_equal_active_lex_ineq (x: 'cV[R]_n) :
+  active_ineq A b x = (active_lex_ineq A b x).
+Proof.
+apply/setP => i.
+rewrite 2!inE; apply/eqP/eqP => [ eq |].
+- rewrite [row i (_ *m _)]mx11_scalar.
+  by rewrite mxE eq [row i _]mx11_scalar mxE.
+- by move/rowP/(_ 0); rewrite 2![(row _ _) _ _]mxE.
+Qed.
+  
+End UsualVsLexPolyhedron.
+
+End LexPolyhedron.
+  
 Section WeakDuality.
 
 Variable R : realFieldType.
