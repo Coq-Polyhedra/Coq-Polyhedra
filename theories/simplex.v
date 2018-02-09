@@ -565,7 +565,29 @@ move/memPn/(_ _ Hk)/negbTE: Hj => -> /=.
 by rewrite mulr0n oppr0.
 Qed.
 
-Lemma col_point_of_basis_pert_not_in_basis (bas : basis) j :
+Lemma col_b_pert (I : prebasis) j :
+  (col (rshift 1 (s j)) (matrix_of_prebasis b_pert I) != 0) = (j \in I).
+Proof.
+case: (boolP (j \in I)) => [j_in_I | j_not_in_I].
+- pose j' := cast_ord (prebasis_card I) (enum_rank_in j_in_I j).
+  apply/(contraTneq _ isT) => /=.
+  move/colP/(_ j').
+  rewrite mxE [RHS]mxE castmxE /= cast_ordK cast_ord_id row_submx_mxE enum_rankK_in //.
+  rewrite row_mxEr.
+  rewrite !mxE eq_refl /= mulr1n.
+  move/eqP; rewrite oppr_eq0.
+  by move/lt0r_neq0/negP: (@ltr01 R).
+- apply: negbTE; rewrite negbK.
+  apply/eqP/colP => i.
+  rewrite !mxE castmxE /= cast_ord_id.
+  rewrite row_submx_mxE row_mxEr.
+  rewrite !mxE (inj_eq (@perm_inj _ s)).
+  set k := cast_ord _ _.
+  move/memPn/(_ _ (enum_valP k))/negbTE: j_not_in_I => -> /=.
+  by rewrite mulr0n oppr0.
+Qed.  
+
+(*Lemma col_point_of_basis_pert_not_in_basis (bas : basis) j :
   (j \notin bas) -> col (rshift 1 (s j)) (point_of_basis_pert bas) = 0.
 Proof.
 rewrite /point_of_basis_pert col_mul => Hj.
@@ -596,12 +618,13 @@ suff: col k (matrix_of_prebasis b_pert bas) != 0.
   move/eqP; rewrite oppr_eq0.
   by move/lt0r_neq0/negP: (@ltr01 R).
 Qed.
-
+*)
 Lemma col_point_of_basis_pert (bas: basis) j :
   (col (rshift 1 (s j)) (point_of_basis_pert bas) != 0) = (j \in bas).
 Proof.
-apply/idP/idP; last exact: col_point_of_basis_pert_in_basis.
-by apply: contraR; move/col_point_of_basis_pert_not_in_basis/eqP.
+rewrite -col_b_pert col_mul.
+have Abas_in_unitmx := (matrix_of_basis_in_unitmx bas).
+by rewrite (can2_eq (mulKVmx Abas_in_unitmx) (mulKmx Abas_in_unitmx)) mulmx0.
 Qed.
 
 Lemma eq_pert_point_imp_eq_bas (bas bas' : basis) :
