@@ -1265,9 +1265,9 @@ Lemma infeasibleP :
   reflect (exists d, dual_feasible_dir A d /\ '[b,d] > 0) (~~ feasible). 
 Proof.
 rewrite /feasible.
-case: phase2P => [[bas d] [/direction_improvement Hd Hd']| bas Hbas]; constructor.
+case: phase2P => [[bas i] [/direction_improvement Hd Hd']| bas Hbas]; constructor.
 - rewrite -dual_feasible_directionE in Hd'.
-  exists (direction bas d); split; first by done.
+  exists (direction bas i); split; first by done.
   by rewrite vdotNl oppr_lt0 in Hd.
 - move => [d [Hd Hd']].
   rewrite -oppr_lt0 -vdotNl in Hd'.
