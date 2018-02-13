@@ -1210,7 +1210,7 @@ Variable m n : nat.
 Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
-Definition dual_set0 := [set (rshift (n+n) i) | i in [set: 'I_m] ].
+Definition dual_set0 := [set (rshift (n+n) i)  | i in [set: 'I_m] ].
 
 Lemma dual_set0_card : (#| dual_set0 | == m)%N.
 Proof.
@@ -1220,11 +1220,16 @@ Qed.
 
 Definition dual_pb0 := Prebasis dual_set0_card.
 
+Fact Adual_pb0_is_id : matrix_of_prebasis (dualA A) dual_pb0 = 1%:M.
+Proof.
+rewrite /matrix_of_prebasis row_submx_col_mx_rshift row_submxT.
+by rewrite !castmx_comp castmx_id.
+Qed.
+
 Lemma dual_pb0_is_basis : (is_basis (dualA A) dual_pb0).
 Proof.
-rewrite /is_basis -row_free_unit -row_leq_rank /matrix_of_prebasis.
-rewrite row_submx_col_mx_rshift row_submxT !rank_castmx.
-by rewrite row_leq_rank row_free_unit unitmx1.
+rewrite /is_basis Adual_pb0_is_id.
+exact: unitmx1.
 Qed.
 
 Definition dual_bas0 := Basis dual_pb0_is_basis.
@@ -1234,8 +1239,9 @@ Proof.
 rewrite /is_feasible -dual_polyhedronE inE.
 suff ->: point_of_basis (dualb m 0) dual_bas0 = 0
   by rewrite mulmx0 eq_refl lev_refl.
-rewrite /point_of_basis {2}/matrix_of_prebasis /dualb row_submx_col_mx_rshift.
-by rewrite row_submxT !castmx_const mulmx0.
+rewrite /point_of_basis Adual_pb0_is_id invmx1 mul1mx.
+rewrite /matrix_of_prebasis row_submx_col_mx_rshift.
+by rewrite row_submxT !castmx_const. 
 Qed.
 
 Definition dual_feasible_bas0 := FeasibleBasis dual_bas0_is_feasible.
