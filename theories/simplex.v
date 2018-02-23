@@ -1210,6 +1210,15 @@ Variable m n : nat.
 Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
+Notation dualA := (dualA A).
+
+Fact dual_coneE : dual_polyhedron A 0 =i polyhedron dualA 0.
+Proof.
+suff {1}<-: dualb _ (0:'cV[R]_n) = (0:'cV[R]_(n+n+m)).
+- exact: dual_polyhedronE.
+- by rewrite /dualb oppr0 !col_mx0. 
+Qed.
+  
 Definition dual_set0 := [set (rshift (n+n) i)  | i in [set: 'I_m] ].
 
 Lemma dual_set0_card : (#| dual_set0 | == m)%N.
@@ -1220,13 +1229,13 @@ Qed.
 
 Definition dual_pb0 := Prebasis dual_set0_card.
 
-Fact Adual_pb0_is_id : matrix_of_prebasis (dualA A) dual_pb0 = 1%:M.
+Fact Adual_pb0_is_id : matrix_of_prebasis dualA dual_pb0 = 1%:M.
 Proof.
 rewrite /matrix_of_prebasis row_submx_col_mx_rshift row_submxT.
 by rewrite !castmx_comp castmx_id.
 Qed.
 
-Lemma dual_pb0_is_basis : (is_basis (dualA A) dual_pb0).
+Lemma dual_pb0_is_basis : (is_basis dualA dual_pb0).
 Proof.
 rewrite /is_basis Adual_pb0_is_id.
 exact: unitmx1.
@@ -1234,13 +1243,13 @@ Qed.
 
 Definition dual_bas0 := Basis dual_pb0_is_basis.
 
-Lemma dual_bas0_is_feasible : (is_feasible (dualb _ 0) dual_bas0).
+Lemma dual_bas0_is_feasible : (is_feasible 0 dual_bas0).
 Proof.
-rewrite /is_feasible -dual_polyhedronE inE.
-suff ->: point_of_basis (dualb m 0) dual_bas0 = 0
+rewrite /is_feasible -dual_coneE inE.
+suff ->: point_of_basis 0 dual_bas0 = 0
   by rewrite mulmx0 eq_refl lev_refl.
 rewrite /point_of_basis Adual_pb0_is_id invmx1 mul1mx.
-rewrite /matrix_of_prebasis row_submx_col_mx_rshift.
+rewrite /matrix_of_prebasis -col_mx0 row_submx_col_mx_rshift.
 by rewrite row_submxT !castmx_const. 
 Qed.
 
@@ -1255,7 +1264,7 @@ Proof.
 rewrite /feasible; case: phase2P => [[bas d] /= [Hd Hd']| bas Hbas]; constructor.
 - move => [x Hx].
   move: (unbounded_cert_on_basis 0 Hd' Hd) => [u].
-  rewrite -dual_polyhedronE inE vdotNl oppr_lt0.
+  rewrite -dual_coneE inE vdotNl oppr_lt0.
   move => [/andP [/eqP Hu Hu'] Hu''].
   move/(vdot_lev Hu'): Hx; rewrite vdot_mulmx Hu vdot0l vdotC.
   by move/(ltr_le_trans Hu''); rewrite ltrr.
@@ -1277,7 +1286,7 @@ case: phase2P => [[bas i] [/direction_improvement Hd Hd']| bas Hbas]; constructo
   by rewrite vdotNl oppr_lt0 in Hd.
 - move => [d [Hd Hd']].
   rewrite -oppr_lt0 -vdotNl in Hd'.
-  pose x := point_of_basis (dualb m 0) bas.
+  pose x := point_of_basis 0 bas.
   rewrite dual_feasible_directionE in Hd.
   move: (unbounded_certificate '[- b,x] (feasible_basis_is_feasible bas) Hd Hd') => [y [Hy Hy']].
   move/(_ _ Hy)/(ltr_le_trans Hy'): (optimal_cert_on_basis Hbas).
