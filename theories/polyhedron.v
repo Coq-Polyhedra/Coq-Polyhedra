@@ -248,9 +248,9 @@ Variable b : 'cV[R]_m.
 
 Implicit Types x : 'cV[R]_n.
 
-Definition is_extreme x (P: 'cV[R]_n -> Prop)  :=
-  P x /\ forall y z, forall lambda,
-           P y -> P z -> (0 < lambda < 1) -> x = lambda *: y + (1 - lambda) *: z
+Definition is_extreme x (P: pred 'cV[R]_n)  :=
+  x \in P /\ forall y z, forall lambda,
+           y \in P -> z \in P -> (0 < lambda < 1) -> x = lambda *: y + (1 - lambda) *: z
            -> x = y /\ x = z.
 
 Lemma active_ineq_eq x ( i : 'I_m) :
@@ -295,7 +295,7 @@ Definition gap_in_direc_seq x (v : 'cV_n) :=
    i <- enum 'I_m & i \notin (active_ineq A b x)].
 
 Lemma extremality_active_ineq_part1 x :
-  is_extreme x (polyhedron A b: _ -> bool) -> (\rank (active_ineq_mx x) = n).
+  is_extreme x (polyhedron A b) -> (\rank (active_ineq_mx x) = n).
 Proof.
 move => [Hpoly Hextreme].
 move/negP: notF; apply: contraNeq => Hrk.
@@ -382,7 +382,7 @@ move/(_ y z lambda): Hextreme; case.
 Qed.
 
 Lemma extremality_active_ineq_part2 x :
-  x \in polyhedron A b -> (\rank (active_ineq_mx x) = n) %N -> is_extreme x (polyhedron A b: _ -> bool).
+  x \in polyhedron A b -> (\rank (active_ineq_mx x) = n) %N -> is_extreme x (polyhedron A b).
 Proof.
 set AI := active_ineq_mx x.
 set bI := active_ineq_col x.
@@ -416,7 +416,7 @@ by done.
 Qed.
 
 Theorem extremality_active_ineq x :
-  is_extreme x (polyhedron A b: _ -> bool) <-> (x \in (polyhedron A b)) && (\rank (active_ineq_mx x) == n) %N.
+  is_extreme x (polyhedron A b) <-> (x \in (polyhedron A b)) && (\rank (active_ineq_mx x) == n) %N.
 Proof.
 split.
 - move => H; apply/andP; split; last by apply/eqP; apply: extremality_active_ineq_part1.

@@ -190,7 +190,7 @@ by rewrite row_submx_row enum_rankK_in //.
 Qed.
 
 Lemma feasible_point_of_basis_is_extreme (bas : feasible_basis) :
-    is_extreme (point_of_basis bas) (polyhedron A b: _ -> bool).
+    is_extreme (point_of_basis bas) (polyhedron A b).
 Proof.
 apply/extremality_active_ineq/andP; split; first by apply: feasible_basis_is_feasible.
 - apply/eqP; move: (mxrank_unit (matrix_of_basis_in_unitmx bas)).
@@ -202,7 +202,7 @@ apply/extremality_active_ineq/andP; split; first by apply: feasible_basis_is_fea
   by move: (leq_ltn_trans H' H); rewrite ltn_neqAle; move/andP => [? _].
 Qed.
 
-Lemma extract_prebasis_card (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
+Lemma extract_prebasis_card (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b)) :
   #|build_row_base A (active_ineq A b x) n| == n.
 Proof.
 move: (leqnn n).
@@ -211,10 +211,10 @@ move/row_base_correctness => [_ {2} -> _].
 apply: eq_refl.
 Qed.
 
-Definition extract_prebasis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :=
+Definition extract_prebasis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b)) :=
   Prebasis (extract_prebasis_card Hextr).
 
-Lemma extract_prebasis_is_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
+Lemma extract_prebasis_is_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b)) :
   is_basis (extract_prebasis Hextr).
 Proof.
 rewrite /is_basis -row_free_unit -row_leq_rank rank_castmx.
@@ -224,7 +224,7 @@ move/row_base_correctness => [_ _ ->].
 apply: leqnn.
 Qed.
 
-Definition extract_basis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :=
+Definition extract_basis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b)) :=
     Basis (extract_prebasis_is_basis Hextr).
 
 Lemma basis_subset_active_ineq_eq (bas : basis) (x : 'cV[R]_n) :
@@ -240,7 +240,7 @@ suff: (matrix_of_prebasis A bas) *m x = matrix_of_prebasis b bas.
   by apply: active_ineq_eq.
 Qed.
 
-Lemma extract_basis_point_of_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
+Lemma extract_basis_point_of_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b)) :
   x = point_of_basis (extract_basis Hextr).
 Proof.
 apply: basis_subset_active_ineq_eq.
@@ -249,17 +249,17 @@ move/extremality_active_ineq: (Hextr) => /andP [_ /eqP {2} <-].
 by move/row_base_correctness => [H _ _].
 Qed.
 
-Lemma extract_basis_is_feasible (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :
+Lemma extract_basis_is_feasible (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b)) :
   is_feasible (extract_basis Hextr).
 Proof.
 rewrite /is_feasible -(extract_basis_point_of_basis Hextr).
 by move/extremality_active_ineq: Hextr => /andP [H _].
 Qed.
 
-Definition extract_feasible_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b: _ -> bool)) :=
+Definition extract_feasible_basis (x : 'cV[R]_n) (Hextr : is_extreme x (polyhedron A b)) :=
   FeasibleBasis (extract_basis_is_feasible Hextr).
 
-Lemma extract_feasible_basis_point_of_basis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b: _ -> bool)) :
+Lemma extract_feasible_basis_point_of_basis (x : 'cV[R]_n) (Hextr: is_extreme x (polyhedron A b)) :
   x = point_of_basis (extract_feasible_basis Hextr).
 Proof.
 by apply: extract_basis_point_of_basis.
@@ -1595,9 +1595,9 @@ by rewrite pos_neg_lev_decomp inE; apply/andP; split.
 Qed.
 
 Lemma extremality_ext x :
-  is_extreme x (polyhedron Aext bext: _ -> bool) -> ('[cext,x] = Mext) ->
+  is_extreme x (polyhedron Aext bext) -> ('[cext,x] = Mext) ->
     let: y := usubmx x in
-    is_extreme y (polyhedron A b: _ -> bool).
+    is_extreme y (polyhedron A b).
 Proof.
 set y := usubmx x.
 move => [Hx Hext] Hcext.
