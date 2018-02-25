@@ -30,11 +30,11 @@ Variable c : 'cV[R]_n.
 
 Lemma strong_duality_primal_dual_feasible :
   feasible A b -> dual_feasible A c ->
-  exists p, [/\ p.1 \in polyhedron A b, p.2 \in dual_polyhedron A c & '[c,p.1] = '[b, p.2]].
+  exists x, exists u, [/\ x \in polyhedron A b, u \in dual_polyhedron A c & '[c,x] = '[b, u]].
 Proof.
 move => Hfeas.
 rewrite -(bounded_is_dual_feasible _ Hfeas) => /boundedP_cert [[x u] /= [Hx Hu Hcx Hbu]].
-exists (x,u); split; try by done.
+exists x; exists u; split; try by done.
 by rewrite /= Hcx Hbu. 
 Qed.
 
