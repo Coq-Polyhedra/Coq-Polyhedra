@@ -553,18 +553,6 @@ move/row_submx_row_matrixP; rewrite row_submx_mul => H.
 exact: is_point_of_basis_pert.
 Qed.
 
-Lemma col_b_pert_not_in_basis (I : {set 'I_m}) j :
-  (j \notin I) -> col (rshift 1 (s j)) (row_submx b_pert I) = 0.
-Proof.
-move => Hj.
-rewrite row_submx_row_mx colKr.
-rewrite row_submx_col.
-apply/row_submx_col0P => k Hk.
-rewrite !mxE (inj_eq (@perm_inj _ s)).
-move/memPn/(_ _ Hk)/negbTE: Hj => -> /=.
-by rewrite mulr0n oppr0.
-Qed.
-
 Lemma col_b_pert (I : prebasis) j :
   (col (rshift 1 (s j)) (matrix_of_prebasis b_pert I) != 0) = (j \in I).
 Proof.
@@ -587,38 +575,6 @@ case: (boolP (j \in I)) => [j_in_I | j_not_in_I].
   by rewrite mulr0n oppr0.
 Qed.  
 
-(*Lemma col_point_of_basis_pert_not_in_basis (bas : basis) j :
-  (j \notin bas) -> col (rshift 1 (s j)) (point_of_basis_pert bas) = 0.
-Proof.
-rewrite /point_of_basis_pert col_mul => Hj.
-suff ->: col (rshift 1 (s j)) (matrix_of_prebasis b_pert bas) = 0 by rewrite mulmx0.
-move/col_b_pert_not_in_basis: Hj =>  Hj'.
-apply/colP => i; rewrite !mxE castmxE /= cast_ord_id.
-set j' := cast_ord _ _.
-by move/colP/(_ j'): Hj'; rewrite mxE [RHS]mxE.
-Qed.
-
-Lemma col_point_of_basis_pert_in_basis (bas : basis) j :
-  (j \in bas) -> col (rshift 1 (s j)) (point_of_basis_pert bas) != 0.
-Proof.
-move => Hj.
-rewrite col_mul.
-set k := rshift _ _.
-suff: col k (matrix_of_prebasis b_pert bas) != 0.
-- apply: contraTneq.
-  move/(congr1 (mulmx (matrix_of_prebasis A bas))).
-  rewrite mulKVmx; last exact: matrix_of_basis_in_unitmx. 
-  by rewrite mulmx0 => ->; rewrite eq_refl /=.
-- apply/(contraTneq _ isT) => /=.
-  pose j' := cast_ord (prebasis_card bas) (enum_rank_in Hj j).
-  move/colP/(_ j').
-  rewrite mxE [RHS]mxE castmxE /= cast_ordK cast_ord_id row_submx_mxE enum_rankK_in //.
-  rewrite row_mxEr.
-  rewrite !mxE eq_refl /= mulr1n.
-  move/eqP; rewrite oppr_eq0.
-  by move/lt0r_neq0/negP: (@ltr01 R).
-Qed.
-*)
 Lemma col_point_of_basis_pert (bas: basis) j :
   (col (rshift 1 (s j)) (point_of_basis_pert bas) != 0) = (j \in bas).
 Proof.
@@ -1996,7 +1952,7 @@ case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | [bas 
 Qed.
 
 Definition unbounded :=
-  if simplex is (Simplex_unbounded _) then true else false.
+  if simplex is Simplex_unbounded _ then true else false.
 
 Lemma unboundedP_cert :
   reflect (exists p, [/\ p.1 \in polyhedron A b, (feasible_dir A p.2) & '[c,p.2] < 0]) unbounded.
@@ -2026,10 +1982,10 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 Qed.
 
 Definition bounded :=
-  if simplex is (Simplex_optimal_point _) then true else false.
+  if simplex is Simplex_optimal_point _ then true else false.
 
 Definition opt_value :=
-  if simplex is (Simplex_optimal_point (x,_)) then
+  if simplex is Simplex_optimal_point (x,_) then
     '[c,x]
   else 0 (* not used *).
 
