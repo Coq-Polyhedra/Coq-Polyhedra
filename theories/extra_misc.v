@@ -78,15 +78,12 @@ Local Notation "1" := idx.
 
 Variable op : Monoid.com_law 1.
 
-Notation Local "'*%M'" := op (at level 0).
-Notation Local "x * y" := (op x y).
-
 Lemma big_rem_idx r (P Q : pred I) F :
   (forall i, i \in r -> P i && ~~(Q i) -> F i = idx) -> \big[op/idx]_(i <- r | P i) F i = \big[op/idx]_(i <- r | (P i) && Q i) F i.
 Proof.
 move => H.
 rewrite (bigID Q).
-have H': \big[*%M/1]_(i <- r | P i && ~~Q i) F i = idx.
+have H': \big[op/idx]_(i <- r | P i && ~~Q i) F i = idx.
 apply: big1_seq.
 - by move => i /andP [ Hi' Hi'']; apply: H.
   by rewrite H' Monoid.mulm1.
