@@ -94,6 +94,11 @@ Definition lex_polyhedron := [pred x: 'M[R]_(n,p) | [forall i, (row i (A *m x)) 
 Definition active_lex_ineq (x: 'M[R]_(n,p)) :=
   [set i : 'I_m | (row i (A *m x)) == (row i b)].
 
+Lemma lex_polyhedron_inP x : reflect (forall i, (row i (A *m x)) >=lex (row i b)) (x \in lex_polyhedron).
+Proof.
+exact: forallP.
+Qed.  
+  
 End Def.
 
 Section UsualVsLexPolyhedron.

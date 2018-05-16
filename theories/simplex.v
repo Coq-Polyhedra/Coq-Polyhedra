@@ -25,9 +25,6 @@ Variable R : realFieldType.
 
 Variable m n : nat.
 
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-
 Section Prebasis.
 
 Inductive prebasis : predArgType := Prebasis (I : {set 'I_m}) of (#|I| == n)%N.
@@ -69,6 +66,8 @@ End Prebasis.
 
 Section Basis.
 
+Variable A : 'M[R]_(m,n).
+  
 Definition is_basis (bas : prebasis) := row_free (row_submx A bas).
 
 Definition is_basisP_rank (bas : prebasis) : reflect (mxrank (row_submx A bas) = n) (is_basis bas).
@@ -93,40 +92,6 @@ Proof.
 by apply: (valP bas).
 Qed.
 
-Lemma mxrank_basis (bas : basis) : (mxrank (row_submx A bas) = n).
-Proof.
-apply/is_basisP_rank; exact: basis_is_basis.
-Qed.
-
-Lemma basis_trmx_row_free (bas : basis) : row_free (row_submx A bas)^T.
-Proof.
-rewrite /row_free mxrank_tr.
-apply/eqP; exact: mxrank_basis.
-Qed.
-
-Definition point_of_basis (bas : basis) :=
-  (qinvmx (prebasis_card bas) (row_submx A bas)) *m (row_submx b bas).
-
-Lemma row_submx_point_of_basis (bas : basis) :
-  (row_submx A bas) *m (point_of_basis bas) = row_submx b bas.
-Proof.
-by rewrite qmulKVmx; last exact: basis_is_basis.
-Qed.
-
-Lemma is_point_of_basis (bas : basis) x :
-  (row_submx A bas) *m x = row_submx b bas -> x = point_of_basis bas.
-Proof.
-move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
-by rewrite qmulKmx; last exact: basis_is_basis.
-Qed.
-
-Lemma is_point_of_basis_active (bas : basis) x :
-  (forall i, i \in bas -> (A *m x) i 0 = b i 0) -> x = point_of_basis bas.
-Proof.
-move/row_submx_colP; rewrite row_submx_mul => H.
-exact: is_point_of_basis.
-Qed.
-
 Definition basis_enum : seq basis := pmap insub [seq bas <- prebasis_enum | is_basis bas].
 
 Lemma basis_enum_uniq : uniq basis_enum.
@@ -146,8 +111,49 @@ Definition basis_finMixin :=
 Canonical basis_finType := Eval hnf in FinType basis basis_finMixin.
 Canonical basis_subFinType := Eval hnf in [subFinType of basis].
 
-End Basis.
+Lemma mxrank_basis (bas : basis) : (mxrank (row_submx A bas) = n).
+Proof.
+apply/is_basisP_rank; exact: basis_is_basis.
+Qed.
 
+Lemma basis_trmx_row_free (bas : basis) : row_free (row_submx A bas)^T.
+Proof.
+rewrite /row_free mxrank_tr.
+apply/eqP; exact: mxrank_basis.
+Qed.
+
+Section PointOfBasis.
+
+Variable p : nat.
+Variable b : 'M[R]_(m,p).
+
+Definition point_of_basis (bas : basis) :=
+  (qinvmx (prebasis_card bas) (row_submx A bas)) *m (row_submx b bas).
+
+Lemma row_submx_point_of_basis (bas : basis) :
+  (row_submx A bas) *m (point_of_basis bas) = row_submx b bas.
+Proof.
+by rewrite qmulKVmx; last exact: basis_is_basis.
+Qed.
+
+Lemma is_point_of_basis (bas : basis) x :
+  (row_submx A bas) *m x = row_submx b bas -> x = point_of_basis bas.
+Proof.
+move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
+by rewrite qmulKmx; last exact: basis_is_basis.
+Qed.
+
+Lemma is_point_of_basis_active (bas : basis) x : (* TO BE IMPROVED ? 
+                                                  * handle the case p = 1 *)
+  (forall i, i \in bas -> (A *m x) i =1 b i) -> x = point_of_basis bas.
+Proof.
+move/row_submx_matrixP; rewrite row_submx_mul => H.
+exact: is_point_of_basis.
+Qed.
+
+End PointOfBasis.
+
+(*
 Section FeasibleBasis.
 
 Definition is_feasible (bas : basis) :=
@@ -283,7 +289,72 @@ Lemma extract_feasible_basis_point_of_basis (x : 'cV[R]_n) (Hextr: is_extreme x 
   x = point_of_basis (extract_feasible_basis Hextr).
 Proof.
 by apply: extract_basis_point_of_basis.
+Qed.*)
+
+Section LexFeasibleBasis.
+
+Variable p : nat.
+Variable b : 'M[R]_(m,p).
+  
+Definition is_feasible (bas : basis) :=
+  (point_of_basis b bas) \in (lex_polyhedron A b).
+
+Lemma row_submx_is_feasible (bas : basis) :
+  (forall x, (row_submx A bas) *m x = (row_submx b bas) -> x \in lex_polyhedron A b) -> is_feasible bas.
+Proof.
+apply.
+by rewrite qmulKVmx; last exact: basis_is_basis bas.
 Qed.
+
+Inductive feasible_basis : predArgType := FeasibleBasis (bas : basis) of is_feasible bas.
+
+Coercion basis_of_feasible_basis bas := let: FeasibleBasis s _ := bas in s.
+Canonical feasible_basis_subType := [subType for basis_of_feasible_basis].
+Definition feasible_basis_eqMixin := Eval hnf in [eqMixin of feasible_basis by <:].
+Canonical feasible_basis_eqType := Eval hnf in EqType feasible_basis feasible_basis_eqMixin.
+Definition feasible_basis_choiceMixin := [choiceMixin of feasible_basis by <:].
+Canonical feasible_basis_choiceType := Eval hnf in ChoiceType feasible_basis feasible_basis_choiceMixin.
+Definition feasible_basis_countMixin := [countMixin of feasible_basis by <:].
+Canonical feasible_basis_countType := Eval hnf in CountType feasible_basis feasible_basis_countMixin.
+Canonical feasible_basis_subCountType := [subCountType of feasible_basis].
+
+Lemma feasible_basis_is_feasible (bas : feasible_basis) :
+  is_feasible bas.
+Proof.
+by apply: (valP bas).
+Qed.
+
+Definition feasible_basis_enum : seq feasible_basis := pmap insub [seq bas <- basis_enum | is_feasible bas].
+
+Lemma feasible_basis_enum_uniq : uniq feasible_basis_enum.
+Proof.
+by apply: pmap_sub_uniq; apply: filter_uniq; apply: basis_enum_uniq.
+Qed.
+
+Lemma mem_feasible_basis_enum bas : bas \in feasible_basis_enum.
+Proof.
+rewrite mem_pmap_sub mem_filter.
+apply/andP; split; last by apply: mem_basis_enum.
+by apply: feasible_basis_is_feasible.
+Qed.
+
+Definition feasible_basis_finMixin :=
+  Eval hnf in UniqFinMixin feasible_basis_enum_uniq mem_feasible_basis_enum.
+Canonical feasible_basis_finType := Eval hnf in FinType feasible_basis feasible_basis_finMixin.
+Canonical feasible_basis_subFinType := Eval hnf in [subFinType of feasible_basis].
+
+Lemma basis_subset_of_active_ineq (bas : basis) :
+   (bas \subset (active_lex_ineq A b (point_of_basis b bas))).
+Proof.
+apply/subsetP => i Hi.
+rewrite inE; apply/eqP.
+move: (row_submx_point_of_basis b bas); rewrite -row_submx_mul.
+by move/row_submx_row_matrixP/(_ _ Hi).
+Qed.
+
+End LexFeasibleBasis.
+
+
 
 Section Phase1_removal.
 
@@ -734,95 +805,6 @@ End Cost.
 Section Lexicographic_rule.
 
 Variable s : 'S_m.
-
-Definition b_pert := row_mx b (-(perm_mx s)).
-
-Definition point_of_basis_pert bas :=
-  qinvmx (prebasis_card bas) (row_submx A bas) *m (row_submx b_pert bas).
-
-Lemma rel_points_of_basis bas :
-  point_of_basis bas = col 0 (point_of_basis_pert bas).
-Proof.
-rewrite col_mul row_submx_row_mx.
-apply: (congr1 (mulmx _)).
-by apply/colP => i; rewrite ![in RHS]mxE split1 unlift_none.
-Qed.
-
-Lemma row_submx_point_of_basis_pert (bas: basis) :
-  (row_submx A bas) *m (point_of_basis_pert bas) = row_submx b_pert bas.
-Proof.
-by rewrite qmulKVmx; last exact: basis_is_basis.
-Qed.
-
-Lemma is_point_of_basis_pert (bas: basis) x :
-  (row_submx A bas) *m x = row_submx b_pert bas -> x = point_of_basis_pert bas.
-Proof.
-move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
-by rewrite qmulKmx; last exact: basis_is_basis.
-Qed.
-
-Lemma is_point_of_basis_pert_active (bas: basis) x :
-  (forall i, i \in bas -> row i (A *m x) = row i b_pert) -> x = point_of_basis_pert bas.
-Proof.
-move/row_submx_row_matrixP; rewrite row_submx_mul => H.
-exact: is_point_of_basis_pert.
-Qed.
-
-Section LexFeasibleBasis.
-
-Definition is_lex_feasible (bas : basis) :=
-  let: x := point_of_basis_pert bas in
-  [forall i, ((row i A) *m x) >=lex (row i b_pert)].
-
-Inductive lex_feasible_basis : predArgType := LexFeasibleBasis (bas: basis) of is_lex_feasible bas.
-Coercion basis_of_lex_feasible_basis bas := let: LexFeasibleBasis s _ := bas in s.
-Canonical lex_feasible_basis_subType := [subType for basis_of_lex_feasible_basis].
-Definition lex_feasible_basis_eqMixin := Eval hnf in [eqMixin of lex_feasible_basis by <:].
-Canonical lex_feasible_basis_eqType := Eval hnf in EqType lex_feasible_basis lex_feasible_basis_eqMixin.
-Definition lex_feasible_basis_choiceMixin := [choiceMixin of lex_feasible_basis by <:].
-Canonical lex_feasible_basis_choiceType := Eval hnf in ChoiceType lex_feasible_basis lex_feasible_basis_choiceMixin.
-Definition lex_feasible_basis_countMixin := [countMixin of lex_feasible_basis by <:].
-Canonical lex_feasible_basis_countType := Eval hnf in CountType lex_feasible_basis lex_feasible_basis_countMixin.
-Canonical lex_feasible_basis_subCountType := [subCountType of lex_feasible_basis].
-
-Lemma lex_feasible_basis_is_lex_feasible (bas : lex_feasible_basis) :
-  is_lex_feasible bas.
-Proof.
-by apply: (valP bas).
-Qed.
-
-Lemma lex_feasible_basis_is_feasible (bas : lex_feasible_basis) :
-  is_feasible bas.
-Proof.
-rewrite /is_feasible (rel_points_of_basis bas).
-apply/forallP => i; rewrite -col_mul mxE.
-move/forallP/(_ i)/lex_ord0: (lex_feasible_basis_is_lex_feasible bas).
-by rewrite -row_mul mxE [X in _ <= X]mxE mxE split1 unlift_none /=.
-Qed.
-
-Coercion feasible_basis_of_lex_feasible_basis bas :=
-  FeasibleBasis (lex_feasible_basis_is_feasible bas).
-
-Definition lex_feasible_basis_enum : seq lex_feasible_basis := pmap insub [seq bas <- basis_enum | is_lex_feasible bas].
-
-Lemma lex_feasible_basis_enum_uniq : uniq lex_feasible_basis_enum.
-Proof.
-by apply: pmap_sub_uniq; apply: filter_uniq; apply: basis_enum_uniq.
-Qed.
-
-Lemma mem_lex_feasible_basis_enum bas : bas \in lex_feasible_basis_enum.
-Proof.
-rewrite mem_pmap_sub mem_filter.
-apply/andP; split; last by apply: mem_basis_enum.
-by apply: lex_feasible_basis_is_lex_feasible.
-Qed.
-
-Definition lex_feasible_basis_finMixin :=
-  Eval hnf in UniqFinMixin lex_feasible_basis_enum_uniq mem_lex_feasible_basis_enum.
-Canonical lex_feasible_basis_finType := Eval hnf in FinType lex_feasible_basis lex_feasible_basis_finMixin.
-Canonical lex_feasible_basis_subFinType := Eval hnf in [subFinType of lex_feasible_basis].
-
-End LexFeasibleBasis.
 
 Variable c : 'cV[R]_n.
 
