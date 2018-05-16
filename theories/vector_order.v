@@ -54,7 +54,7 @@ Qed.
 Lemma lev_add x y (l1 l2 : 'cV[R]_n) : (l1 <=m x) -> (l2 <=m y) ->
   ((l1 + l2) <=m (x + y)).
 Proof.
-  rewrite /lev; move => [/forallP Hx /forallP Hy].
+  rewrite /lev; move => /forallP Hx /forallP Hy.
   by apply/forallP => ?; rewrite !mxE ler_add //.
 Qed.
 
@@ -134,7 +134,7 @@ apply/idP/idP.
 - by move/eqP ->; rewrite lev_refl.
 - by move/lev_antisym/eqP.
 Qed.
-  
+
 Lemma vdot_lev x y z : x >=m 0 -> y <=m z -> '[x,y] <= '[x,z].
 Proof.
 move => /forallP Hx /forallP Hyz.
@@ -152,7 +152,7 @@ suff: forall i, x i 0 * y i 0 = 0.
   rewrite mulf_eq0; move/forallP/(_ i)/lt0r_neq0/negbTE: Hx ->.
   by rewrite /=; move/eqP.
 - move => i; move: Hxy i is_true_true; apply: psumr_eq0P => i _.
-  rewrite (pmulr_rge0 _ ((forallP Hx) i)). 
+  rewrite (pmulr_rge0 _ ((forallP Hx) i)).
   by move/forallP/(_ i): Hy; rewrite mxE.
 Qed.
 
@@ -473,7 +473,7 @@ move => a_nn x_nn.
 suff: (a *: 0) <=lex (a *: x).
 - by rewrite linear0.
 - exact: lex_nnscalar.
-Qed.  
+Qed.
 
 Lemma lex_scalar_le0 a x : a <= 0 -> x <=lex 0 -> 0 <=lex (a *: x).
 Proof.
@@ -484,7 +484,7 @@ suff: 0 <=lex ((-a) *: (-x)).
   + by rewrite oppr_ge0.
   + by rewrite oppv_gelex0.
 Qed.
-  
+
 Lemma lex_negscalar a x y : a < 0 -> (x <=lex y) = ((a *: y) <=lex (a *: x)).
 Proof.
 move => Ha.

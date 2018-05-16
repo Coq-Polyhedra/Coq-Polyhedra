@@ -295,7 +295,7 @@ Section LexFeasibleBasis.
 
 Variable p : nat.
 Variable b : 'M[R]_(m,p).
-  
+
 Definition is_feasible (bas : basis) :=
   (point_of_basis b bas) \in (lex_polyhedron A b).
 
@@ -368,8 +368,8 @@ End LexFeasibleBasis.
 Section BuildFeasibleBasis.
 
 Variable p : nat.
-Variable b : 'M[R]_(m,p).  
-  
+Variable b : 'M[R]_(m,p).
+
 Section BuildBoundaryPoint.
 (* AIM: from a feasible point and an infeasible direction, 
  * follow d from x up to the boundary *)  
@@ -382,7 +382,7 @@ Definition cand_idx := [pred j | (A *m d) j 0 < 0].
 
 Lemma cand_idxP : (#|cand_idx| > 0)%N.
 Proof.
-apply/card_gt0P. 
+apply/card_gt0P.
 move/existsP : d_infeas_dir => [k].
 rewrite mxE -ltrNge => Ak_d_neg.
 by exists k.
@@ -435,7 +435,7 @@ case: pickP => [j /andP [-> /eqP <-] /=|].
 - split; first by done.
   move => k k_is_cand.
   apply: lex_min_seq_ler.
-  by apply: map_f; rewrite mem_enum.   
+  by apply: map_f; rewrite mem_enum.
 - move/hasP: (lex_min_seq_eq gap_seqP) => [? /mapP [k k_is_cand ->]] /= eq_min_gap.
   rewrite mem_enum in k_is_cand.
   by move/(_ k); rewrite k_is_cand eq_min_gap /=.
@@ -444,7 +444,7 @@ Qed.
 Fact min_gap_ge0 : min_gap >=lex 0.
 Proof.
 apply: gap_ge0.
-move: argmin_gapP.  
+move: argmin_gapP.
 exact: fst.
 Qed.
 
@@ -454,16 +454,18 @@ apply/forallP => j.
 rewrite /point_along_dir mulmxDr linearD /=.
 rewrite mulmxA [X in _ + X]row_mul mulmx_row_cV_rV.
 case: (boolP (cand_idx j)) => [j_is_cand | j_is_not_cand].
-Admitted.
-(*
-- rewrite -lter_sub_addl -lter_ndivl_mulr // mulrC.
-  by move/andP: argmin_gapP => [_ /forall_inP/(_ _ j_is_cand)].
-- set z := (_ * _).
-  suff z_le0: (z >= 0).
-  + apply: ler_paddr; first by done.
-    by move/forallP: x_feas.
-  + apply: mulr_ge0; by [ exact: min_gap_ge0 | rewrite lerNgt]. 
-Qed.*)
+- have Hj: ((A *m d) j 0)^-1 < 0
+    by rewrite inE -invr_lt0 in j_is_cand.
+  rewrite lex_subr_addr (lex_negscalar _ _ Hj) scalerA mulVf; last by apply: ltr0_neq0; by rewrite -invr_lt0.
+  rewrite scale1r.
+  exact: (argmin_gapP.2 j j_is_cand).
+- set z := (_ *: _).
+  have z_le_lex0: (z >=lex 0).
+    apply: lex0_nnscalar; by [exact: min_gap_ge0 | rewrite lerNgt].
+  rewrite -[(row j b)]addr0.
+  apply: lex_add; last exact: z_le_lex0.
+  by move/forallP: x_feas.
+Qed.
 
 End Feasibility.
 
@@ -491,14 +493,14 @@ set Aj := row j A.
 set AI := row_submx A I.
  
 have Ajd_neq0 : (Aj *m d) != 0.
-- move: argmin_gapP => [j_is_cand _].
+  move: argmin_gapP => [j_is_cand _].
   move: j_is_cand; rewrite inE.
   apply: contraTneq.
   rewrite -row_mul; move/col0P/(_ 0); rewrite mxE => ->.
   by rewrite ltrr.
  
 have Aj_inter_AI : (Aj :&: AI <= (0:'M_n))%MS.
-- apply/rV_subP => ?; rewrite submx0 sub_capmx.
+  apply/rV_subP => ?; rewrite submx0 sub_capmx.
   move/andP => [/sub_rVP [a ->] /submxP [z]].
   move/(congr1 (mulmx^~ d)).
   rewrite -mulmxA -scalemxAl.
@@ -506,7 +508,7 @@ have Aj_inter_AI : (Aj :&: AI <= (0:'M_n))%MS.
   move/eqP; rewrite scalemx_eq0.
   move/negbTE: Ajd_neq0 ->; rewrite orbF.
   by move/eqP ->; rewrite scale0r.
-  
+ 
 move/leqifP: (mxrank_adds_leqif Aj AI).
 rewrite ifT //. move/eqP ->.
 rewrite rank_rV.
@@ -521,25 +523,22 @@ Hypothesis I_subset_active_ineq_x : I \subset (active_lex_ineq A b x).
 Fact point_along_dir_active_ineq : (* RK *)
   argmin_gap |: I \subset active_lex_ineq A b (point_along_dir).
 Proof.
-apply/subsetP => i.  
+apply/subsetP => i.
 move/setU1P => [-> | i_in_I];
   rewrite inE /point_along_dir; 
   rewrite mulmxDr linearD /=;
           rewrite mulmxA [X in _ + X]row_mul mulmx_row_cV_rV.
-Admitted.
-
-(*- rewrite mulrC mulrA /gap mulfV.
-  + by rewrite mul1r addrCA addrN addr0.
-  + move/andP: argmin_gapP => [is_cand _].
-    move: is_cand; rewrite inE.
-    exact: ltr0_neq0.
+- move: (argmin_gapP.1) => Hargmin_gap.
+  rewrite inE in Hargmin_gap.
+  rewrite eq_sym addrC -subr_eq /min_gap /gap scalerA mulfV; last by apply: ltr0_neq0.
+  by rewrite scale1r.
 - suff ->: (A *m d) i 0 = 0.
-  + rewrite mulr0 addr0. 
+  + rewrite scale0r addr0.
     by move/subsetP/(_ _ i_in_I): I_subset_active_ineq_x; rewrite inE.
   - move/eqP: d_in_kerAI; rewrite -row_submx_mul.
     move/row_submx_row_matrix0P/(_ _ i_in_I)/colP/(_ 0).
     by rewrite mxE [RHS]mxE.
-Qed.*)
+Qed.
 
 Fact point_along_dir_active_ineq_rank :
   let J := active_lex_ineq A b (point_along_dir) in 
@@ -610,9 +609,9 @@ Qed.
 Lemma build_basic_point_is_feas : forall x, x \in lex_polyhedron A b -> build_basic_point x \in lex_polyhedron A b.
 Proof.
 pose P := fun x y => x \in lex_polyhedron A b -> y \in lex_polyhedron A b.
-apply: (build_basic_point_ind (P := P)).  
+apply: (build_basic_point_ind (P := P)).
 - by move => x _; rewrite /=.
-- move => x ? <- _ => ind_hyp.  
+- move => x ? <- _ => ind_hyp.
   by move/build_basic_point_iter_feasible/ind_hyp.
 Qed.
 
@@ -620,8 +619,8 @@ Lemma build_basic_point_rank : forall x, (\rank (row_submx A (active_lex_ineq A 
 Proof.
 pose P := fun (x : 'M[R]_(n,p)) y => (\rank (row_submx A (active_lex_ineq A b y)) >= n)%N.
 apply: (build_basic_point_ind (P := P)); last by done.
-- by move => x; rewrite subn_eq0. 
-Qed.  
+- by move => x; rewrite subn_eq0.
+Qed.
 
 Variable x : 'M[R]_(n,p).
 Hypothesis x_is_feas : x \in lex_polyhedron A b.
