@@ -467,6 +467,24 @@ case: (ltrgt0P a).
 - by move ->; rewrite !scale0r; apply: lex_refl.
 Qed.
 
+Lemma lex0_nnscalar a x : 0 <= a -> 0 <=lex x -> 0 <=lex (a *: x).
+Proof.
+move => a_nn x_nn.
+suff: (a *: 0) <=lex (a *: x).
+- by rewrite linear0.
+- exact: lex_nnscalar.
+Qed.  
+
+Lemma lex_scalar_le0 a x : a <= 0 -> x <=lex 0 -> 0 <=lex (a *: x).
+Proof.
+move => a_np x_np.
+suff: 0 <=lex ((-a) *: (-x)).
+- by rewrite scaleNr linearN /= opprK.
+- apply: lex0_nnscalar.
+  + by rewrite oppr_ge0.
+  + by rewrite oppv_gelex0.
+Qed.
+  
 Lemma lex_negscalar a x y : a < 0 -> (x <=lex y) = ((a *: y) <=lex (a *: x)).
 Proof.
 move => Ha.
@@ -494,6 +512,13 @@ apply/idP/idP.
   move: (lex_refl y) => H'.
   move: (lex_add H H').
   by rewrite -addrA addNr addr0 addrC.
+Qed.
+
+Lemma lex_subr_le0 x y :
+  ((y - x) <=lex 0) = (y <=lex x).
+Proof.
+rewrite -lex_subr_addr.
+by rewrite addr0.
 Qed.
 
 Lemma lex_ltrNge x y: (x <lex y) = ~~(y <=lex x).

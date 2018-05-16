@@ -35,6 +35,13 @@ rewrite [C in LHS]mx11_scalar -scalemx1 scalemx_eq0.
 by move/negbTE: (matrix_nonzero1 R 0) ->; rewrite orbF.
 Qed.
 
+Lemma mulmx_row_cV_rV (R : realFieldType) (n p: nat) (x: 'cV[R]_n) (y: 'rV[R]_p) (j : 'I_n) : (row j x) *m y = (x j 0) *: y.
+Proof.
+rewrite -mul_scalar_mx; apply: (congr1 (mulmx^~ _)).
+rewrite [row _ _]mx11_scalar; apply: congr1.
+by rewrite mxE.
+Qed.  
+  
 Lemma non_trivial_ker (R : realFieldType) (n p : nat) (A' : 'M[R]_(p,n)) (x : 'cV_n) : 
   x != 0 -> A' *m x = 0 -> (\rank A' <= n.-1)%N.
 Proof.
