@@ -67,7 +67,7 @@ End Prebasis.
 Section Basis.
 
 Variable A : 'M[R]_(m,n).
-  
+
 Definition is_basis (bas : prebasis) := row_free (row_submx A bas).
 
 Definition is_basisP_rank (bas : prebasis) : reflect (mxrank (row_submx A bas) = n) (is_basis bas).
@@ -371,7 +371,7 @@ Variable p : nat.
 Variable b : 'M[R]_(m,p).
 
 Section BuildBoundaryPoint.
-(* AIM: from a feasible point and an infeasible direction, 
+(* AIM: from a feasible point x and an infeasible direction d, 
  * follow d from x up to the boundary *)  
 
 Variable d : 'cV[R]_n.
@@ -459,12 +459,9 @@ case: (boolP (cand_idx j)) => [j_is_cand | j_is_not_cand].
   rewrite lex_subr_addr (lex_negscalar _ _ Hj) scalerA mulVf; last by apply: ltr0_neq0; by rewrite -invr_lt0.
   rewrite scale1r.
   exact: (argmin_gapP.2 j j_is_cand).
-- set z := (_ *: _).
-  have z_le_lex0: (z >=lex 0).
-    apply: lex0_nnscalar; by [exact: min_gap_ge0 | rewrite lerNgt].
-  rewrite -[(row j b)]addr0.
-  apply: lex_add; last exact: z_le_lex0.
-  by move/forallP: x_feas.
+- rewrite -[(row j b)]addr0.
+  apply: lex_add; first by move/forallP: x_feas.
+  apply: lex0_nnscalar; by [exact: min_gap_ge0 | rewrite lerNgt].
 Qed.
 
 End Feasibility.
@@ -491,14 +488,12 @@ rewrite row_submx_spanU1; last exact: argmin_gap_not_in_I.
 set j := argmin_gap.
 set Aj := row j A.
 set AI := row_submx A I.
- 
 have Ajd_neq0 : (Aj *m d) != 0.
   move: argmin_gapP => [j_is_cand _].
   move: j_is_cand; rewrite inE.
   apply: contraTneq.
   rewrite -row_mul; move/col0P/(_ 0); rewrite mxE => ->.
   by rewrite ltrr.
- 
 have Aj_inter_AI : (Aj :&: AI <= (0:'M_n))%MS.
   apply/rV_subP => ?; rewrite submx0 sub_capmx.
   move/andP => [/sub_rVP [a ->] /submxP [z]].
@@ -508,7 +503,6 @@ have Aj_inter_AI : (Aj :&: AI <= (0:'M_n))%MS.
   move/eqP; rewrite scalemx_eq0.
   move/negbTE: Ajd_neq0 ->; rewrite orbF.
   by move/eqP ->; rewrite scale0r.
- 
 move/leqifP: (mxrank_adds_leqif Aj AI).
 rewrite ifT //. move/eqP ->.
 rewrite rank_rV.
@@ -533,11 +527,11 @@ move/setU1P => [-> | i_in_I];
   rewrite eq_sym addrC -subr_eq /min_gap /gap scalerA mulfV; last by apply: ltr0_neq0.
   by rewrite scale1r.
 - suff ->: (A *m d) i 0 = 0.
-  + rewrite scale0r addr0.
+    rewrite scale0r addr0.
     by move/subsetP/(_ _ i_in_I): I_subset_active_ineq_x; rewrite inE.
-  - move/eqP: d_in_kerAI; rewrite -row_submx_mul.
-    move/row_submx_row_matrix0P/(_ _ i_in_I)/colP/(_ 0).
-    by rewrite mxE [RHS]mxE.
+  move/eqP: d_in_kerAI; rewrite -row_submx_mul.
+  move/row_submx_row_matrix0P/(_ _ i_in_I)/colP/(_ 0).
+  by rewrite mxE [RHS]mxE.
 Qed.
 
 Fact point_along_dir_active_ineq_rank :
@@ -638,7 +632,7 @@ Let build_basis_prebasis := Prebasis build_basis_setP.
 
 Fact build_basis_prebasisP : is_basis build_basis_prebasis.
 Proof.
-apply/is_basisP_rank.  
+apply/is_basisP_rank.
 by move/build_basic_point_rank/row_base_correctness: x => [_ _].
 Qed.
 
@@ -655,9 +649,7 @@ Qed.
 
 Definition build_feasible_basis := FeasibleBasis build_basis_basisP.
 
-End Phase1_removal.
-
-End FeasibleBasis.
+End BuildFeasibleBasis.
 
 Section Cost.
 
