@@ -604,30 +604,20 @@ set i' := enum_val i.
 set AIi := row_submx A (bas :\ i').
 suff ->: \rank AIi = n.-1.
 - by rewrite (prednK n_is_pos).
-- have rk_AIi: (n <= 1+\rank AIi)%N.
-  + move: (rank_leq_row (row i' A)); rewrite -(leq_add2r (\rank AIi)).
+- apply/eqP.
+  rewrite -subn1 eqn_leq.
+  apply/andP; split.
+  + rewrite -(prebasis_card_D1 (enum_valP i)).
+    exact: (rank_leq_row AIi).
+  + rewrite leq_subLR.
+    move: (rank_leq_row (row i' A)); rewrite -(leq_add2r (\rank AIi)).
     apply: leq_trans.
     move: (mxrank_basis bas).
     rewrite (row_submx_spanD1 A (enum_valP i)) => {1}<-.
     exact: mxrank_adds_leqif.
-  + Search _ ( _.+1 >= _)%N in ssrnat.
-
-
-Search _ row_submx argmin_gap.
-
-
-Search _ is_basis (\rank _).
-
+Qed.
 
 End Pivoting.
-
-
-
-
-Check point_along_dir.
-
-
-
 
 Section Cost.
 
