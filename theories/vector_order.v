@@ -522,7 +522,7 @@ by rewrite addr0.
 Qed.
 
 Lemma lex_ltrNge x y: (x <lex y) = ~~(y <=lex x).
-Proof. 
+Proof.
 rewrite /ltrlex -[X in X = _]negbK negb_and.
 apply/(congr1 negb); rewrite negbK.
 case: (boolP (x <=lex y)).
@@ -531,6 +531,13 @@ case: (boolP (x <=lex y)).
   move => H'; move/andP/lex_antisym: (conj H H') ->; by apply: eq_refl.
 - rewrite /= orbT.
   by move/orP: (lex_total x y); case; try by move ->.
+Qed.
+
+
+Lemma lex_gtr_addl x y : ((x + y) <lex x) = (y <lex 0).
+Proof.
+rewrite 2!lex_ltrNge; apply: congr1.
+by rewrite lex_subr_addr addrN.
 Qed.
 
 Lemma lex_le_ltr_trans x y z : (x <=lex y) -> (y <lex z) -> (x <lex z).
@@ -587,7 +594,7 @@ Qed.
 
 Fixpoint lex_min_seq S :=
   match S with
-  | [::] => 0 
+  | [::] => 0
   | [:: x] => x
   | x :: S' => lex_min x (lex_min_seq S')
   end.
@@ -615,7 +622,7 @@ elim: S => [ | x S']; first by done.
       by rewrite /= lex_min_l //; case H: S'.
     * rewrite -lex_ltrNge => H''.
       move/hasP: IH => [i Hi /= /eqP Hi'].
-      exists i; first by rewrite mem_behead. 
+      exists i; first by rewrite mem_behead.
       case H: S'; first by move: Hi; rewrite H in_nil.
       rewrite lex_min_r -H Hi' //.
       by rewrite -Hi'; apply: lex_ltrW.
@@ -756,4 +763,3 @@ Notation "x >=lex y" := (y <=lex x) (only parsing, at level 0) : ring_scope.
 
 Notation "x <lex y" := (ltrlex x y) (at level 0): ring_scope.
 Notation "x >lex y" := (x <lex y) (only parsing, at level 0) : ring_scope.
-
