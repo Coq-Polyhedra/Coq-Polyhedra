@@ -319,7 +319,7 @@ move: argmin_gapP.
 exact: fst.
 Qed.
 
-Fact point_along_dir_feas : point_along_dir \in lex_polyhedron A b. (* RK *)
+Fact point_along_dir_feas : point_along_dir \in lex_polyhedron A b.
 Proof.
 apply/forallP => j.
 rewrite /point_along_dir mulmxDr linearD /=.
@@ -385,7 +385,7 @@ Qed.
 
 Hypothesis I_subset_active_ineq_x : I \subset (active_lex_ineq A b x).
 
-Fact point_along_dir_active_ineq : (* RK *)
+Fact point_along_dir_active_ineq :
   argmin_gap |: I \subset active_lex_ineq A b (point_along_dir).
 Proof.
 apply/subsetP => i.
@@ -531,7 +531,7 @@ Section Pivoting.
 Variable bas : feasible_basis b.
 Variable i : 'I_#|bas|.
 
-Fact n_is_pos: (n > 0)%N.
+Fact n_is_pos : (n > 0)%N.
 Proof.
 rewrite -(prebasis_card bas); apply/card_gt0P.
 exists (enum_val i); exact: enum_valP.
@@ -543,7 +543,7 @@ Definition direction :=
 
 Local Notation d := direction.
 
-Lemma direction_neq0 : d != 0.
+Fact direction_neq0 : d != 0.
 Proof.
 apply/eqP.
 move/(congr1 (mulmx (row_submx A bas))).
@@ -553,7 +553,7 @@ move/colP/(_ i); rewrite 2!mxE 2!eq_refl /=.
 by move/eqP; rewrite pnatr_eq0.
 Qed.
 
-Lemma direction_prop (j : 'I_m) :
+Fact direction_prop (j : 'I_m) :
   j \in bas -> (A *m d) j 0 = (j == enum_val i)%:R.
 Proof.
 move => Hj.
@@ -566,7 +566,7 @@ suff ->: (A *m d) j 0 = ((row_submx A bas) *m d) (enum_rank_in Hj j) 0.
 - rewrite -row_submx_mul row_submx_mxE enum_rankK_in //.
 Qed.
 
-Lemma mulmx_direction :
+Fact mulmx_direction :
   (row_submx A (bas :\ enum_val i)) *m d = 0.
 Proof.
 rewrite -row_submx_mul.
@@ -583,7 +583,6 @@ Let j := argmin_gap x d_infeas_dir.
 
 Definition lex_rule_set :=
   j |: (bas :\ (enum_val i)).
-
 
 Fact lex_rule_card : #|lex_rule_set| == n.
 Proof.
@@ -763,8 +762,6 @@ apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=direction i));
   try by [exact: feasible_basis_is_feasible | done].
 by rewrite vdot_mulmx vdotr_delta_mx.
 Qed.
-
-
 
 End Cost.
 
