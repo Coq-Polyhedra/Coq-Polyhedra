@@ -73,9 +73,9 @@ Qed.
 
 End Prebasis.
 
-Section Basis.
-
 Variable A : 'M[R]_(m,n).
+
+Section Basis.
 
 Definition is_basis (bas : prebasis) := row_free (row_submx A bas).
 
@@ -130,6 +130,8 @@ Proof.
 rewrite /row_free mxrank_tr.
 apply/eqP; exact: mxrank_basis.
 Qed.
+
+End Basis.
 
 Section PointOfBasis.
 
@@ -790,6 +792,30 @@ Qed.*)
 
 End Cost.
 
+Section LexFeasibleBasis.
+
+Variable b: 'cV[R]_m.
+
+Definition b_pert := row_mx b (-(1%:M)).
+
+Lemma rel_points_of_basis bas :
+  point_of_basis b bas = col 0 (point_of_basis b_pert bas).
+Proof.
+rewrite col_mul row_submx_row_mx.
+apply: (congr1 (mulmx _)).
+by apply/colP => i; rewrite ![in RHS]mxE split1 unlift_none.
+Qed.
+
+Definition lex_feasible_basis := (feasible_basis b_pert). (* TODO: why not Inductive ? *)
+
+Lemma lex_feasible_basis_is_feasible (bas : lex_feasible_basis) :
+  point_of_basis b bas \in polyhedron A b.
+Proof.
+rewrite /is_feasible (rel_points_of_basis bas).
+apply/forallP => i; rewrite -col_mul mxE.
+move/forallP/(_ i)/lex_ord0: (feasible_basis_is_feasible bas).
+by rewrite mxE [X in _ <= X]mxE mxE split1 unlift_none /=.
+Qed.
 
 Section NonDegenerate.
   (* TO DO TO DO TO DO *)
@@ -802,10 +828,8 @@ End NonDegenerate.
 
 Section LexicographicRuleCost.
 
-Variable p : nat.
-Variable b : 'M[R]_(m,p).
 Variable c : 'cV[R]_n.
-Variable bas : feasible_basis b.
+Variable bas : lex_feasible_basis.
 Variable i : 'I_#|bas|.
 
 Hypothesis infeas_dir : ~~ (feasible_dir A (direction i)).
@@ -814,7 +838,7 @@ Lemma lex_rule_dec :
   let bas' := lex_rule_fbasis infeas_dir  in
   let u := reduced_cost_of_basis c bas in
   u i 0 < 0 ->
-  (c^T *m point_of_basis b bas') <lex (c^T *m point_of_basis b bas).
+  (c^T *m point_of_basis b_pert bas') <lex (c^T *m point_of_basis b_pert bas).
 Proof.
 move => bas' u u_i_neg.
 rewrite lex_rule_point_of_basis.
@@ -824,21 +848,24 @@ Admitted. (* complete with thanks to the argument on non-degeneracy, see above *
 
 End LexicographicRuleCost.
 
+End LexFeasibleBasis.
+
 Section Phase2.
 
-Variable p : nat.
-Variable b : 'M[R]_(m,p).
+Variable b : 'cV[R]_m.
+
+Notation b_pert := (b_pert b).
 
 Inductive phase2_final_result :=
-| Phase2_res_unbounded (bas: feasible_basis b) of 'I_#|bas|
-| Phase2_res_optimal_basis of (feasible_basis b).
+| Phase2_res_unbounded (bas: lex_feasible_basis b) of 'I_#|bas|
+| Phase2_res_optimal_basis of (lex_feasible_basis b).
 
 Inductive phase2_intermediate_result :=
 | Phase2_final of phase2_final_result
-| Phase2_next_basis of (feasible_basis b).
+| Phase2_next_basis of (lex_feasible_basis b).
 
 Variable c : 'cV[R]_n.
-Implicit Types bas : (feasible_basis b).
+Implicit Types bas : (lex_feasible_basis b).
 
 Definition basic_step bas :=
   let u := reduced_cost_of_basis c bas in
@@ -851,7 +878,7 @@ Definition basic_step bas :=
     Phase2_final (Phase2_res_optimal_basis bas).
 
 Definition basis_height bas :=
-  #|[ set bas' : (feasible_basis b) | (c^T *m (point_of_basis b bas')) <lex (c^T *m (point_of_basis b bas)) ]|.
+  #|[ set bas' : (lex_feasible_basis b) | (c^T *m (point_of_basis b_pert bas')) <lex (c^T *m (point_of_basis b_pert bas)) ]|.
 
 Function phase2 bas {measure basis_height bas} :=
   match basic_step bas with
@@ -886,8 +913,8 @@ rewrite properEneq; apply/andP; split; last first.
 Qed.
 
 CoInductive phase2_spec : phase2_final_result -> Type :=
-| Phase2_unbounded (bas: feasible_basis b) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : phase2_spec (Phase2_res_unbounded i)
-| Phase2_optimal_basis (bas: feasible_basis b) of (reduced_cost_of_basis c bas) >=m 0 : phase2_spec (Phase2_res_optimal_basis bas).
+| Phase2_unbounded (bas: lex_feasible_basis b) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : phase2_spec (Phase2_res_unbounded i)
+| Phase2_optimal_basis (bas: lex_feasible_basis b) of (reduced_cost_of_basis c bas) >=m 0 : phase2_spec (Phase2_res_optimal_basis bas).
 
 Lemma phase2P bas0 : phase2_spec (phase2 bas0).
 Proof.
@@ -901,145 +928,6 @@ apply: phase2_rect; last by done.
   + constructor; apply/forallP => i; rewrite mxE.
     move/(_ i)/negbT: Hu.
     by rewrite lerNgt.
-Qed.
-
-End LexPhase2.
-
-Section Phase2.
-
-Variable bas0 : feasible_basis.
-
-Lemma n_leq_m : ((m - n) + n = m)%N.
-Proof.
-move: (max_card (pred_of_set bas0)).
-rewrite (prebasis_card bas0) cardE size_enum_ord => ?.
-rewrite subnK //.
-Qed.
-
-Definition C_bas0 := ~: bas0.
-
-Lemma card_C_bas0 :  #|~: bas0| = (m-n)%N.
-Proof.
-move: (cardsC bas0).
-rewrite (prebasis_card bas0) [RHS]cardE size_enum_ord -[RHS]n_leq_m.
-by rewrite [RHS]addnC; move/addnI.
-Qed.
-
-Lemma in_setC' : forall i, ~ (i \in bas0) -> (i \in C_bas0).
-Proof.
-by move=> i; move/setCP; rewrite in_setC.
-Qed.
-
-Definition s0_fun i :=
-  cast_ord n_leq_m
-           (match (@idP (i \in bas0)) with
-            | ReflectT Hi => rshift (m-n)%N (cast_ord (prebasis_card bas0) (enum_rank_in Hi i))
-            | ReflectF Hi => lshift n (cast_ord card_C_bas0 (enum_rank_in (@in_setC' i Hi) i))
-            end).
-
-Definition s0_inj : injective s0_fun.
-Proof.
-move => i j /cast_ord_inj.
-case: {-}_ /idP => [Hi /esym | Hi]; case: {-}_ /idP => [Hj | Hj].
-- move/rshift_inj/cast_ord_inj/(congr1 enum_val).
-  do 2![rewrite enum_rankK_in //].
-- set k := (X in lshift _ X); set l := (X in rshift _ X).
-  by move/eqP: (lrshift_distinct k l).
-- set k := (X in lshift _ X); set l := (X in rshift _ X).
-  by move/eqP: (lrshift_distinct k l).
-- move/lshift_inj/cast_ord_inj/(congr1 enum_val).
-    do 2![rewrite enum_rankK_in //; last by rewrite in_setC; apply/negP].
-Qed.
-
-Definition s0 := perm s0_inj.
-
-Lemma ineq_in_basis_satisfied (i : 'I_m) (s : 'S_m) (bas : basis) :
-  let: u' := point_of_basis_pert s bas in
-  i \in bas -> (row i (b_pert s)) <=lex ((row i A) *m u').
-Proof.
-move => Hi.
-move: (row_submx_point_of_basis_pert s bas); rewrite -row_submx_mul.
-move/row_submx_row_matrixP/(_ _ Hi) => <-.
-rewrite row_mul; exact: lex_refl.
-Qed.
-
-Lemma feasible_to_lex_feasible :
-  is_lex_feasible s0 bas0.
-Proof.
-pose b' := b_pert s0.
-have Hb: forall j, col (rshift 1 (cast_ord n_leq_m (lshift n j))) (row_submx b' bas0) = 0.
-- move => j.
-  rewrite row_submx_row_mx colKr.
-  apply/colP => k; rewrite mxE row_submx_mxE [RHS]mxE.
-  set l := cast_ord _ _. rewrite !mxE permE.
-  suff /negbTE ->: (s0_fun (enum_val k) != l)
-    by rewrite mulr0n oppr0.
-  + rewrite /s0_fun (inj_eq (@cast_ord_inj _ _ n_leq_m)).
-    move: (enum_valP k) => Hk; case: {-}_ /idP => [Hk' |]; last by done.
-    rewrite eq_sym; exact: lrshift_distinct.
-apply/forallP => i.
-- set rowi := (_ *m _).
-  have Hcol : forall j, col (rshift 1 (cast_ord n_leq_m (lshift n j))) rowi = 0.
-  + by move => j; rewrite 2!col_mul (Hb j) 2!mulmx0.
-  case: (boolP (i \in bas0)) => [Hi | Hi]; last first.
-  + apply: lex_ltrW; apply: (@lex_lev_strict _ _ _ _ (rshift 1 (s0_fun i))).
-    rewrite /s0_fun; case: {-}_ /idP => [ Hi' | Hi' ]; first by rewrite Hi' in Hi.
-      set k := (cast_ord card_C_bas0 _).
-    apply/andP; split; last first.
-    * move/colP/(_ 0): (Hcol k); rewrite mxE [RHS]mxE; move ->.
-      rewrite mxE row_mxEr !mxE.
-      suff ->: s0 i == cast_ord n_leq_m (lshift n k).
-      - by rewrite /= mulr1n; apply: ltrN10.
-      - apply/eqP; rewrite permE /s0_fun.
-        apply/(congr1 (cast_ord n_leq_m)); case: {-}_ /idP => [ Hi'' | Hi'' ]; first by done.
-        apply/(congr1 (lshift _))/(congr1 (cast_ord _)); apply: enum_val_inj.
-        by rewrite -in_setC in Hi; do 2![rewrite enum_rankK_in //].
-    * apply/forallP => j.
-      case: (splitP' j) => [l -> | l Hjl].
-      - rewrite row_row_mx row_mxEl [X in X <= _]mxE.
-        rewrite /rowi  /point_of_basis_pert -row_mul [X in _ <= X]mxE.
-        rewrite mulmxA row_submx_row_mx mul_mx_row row_mxEl.
-        rewrite -mulmxA.
-        suff ->: (l = 0) by move/forallP/(_ i): (feasible_basis_is_feasible bas0).
-        + by apply: ord_inj; move: (ltn_ord l); rewrite ltnS leqn0; move/eqP.
-      - apply/implyP; rewrite {1}Hjl /=.
-        rewrite ltn_add2l => Hl.
-        move: (ltn_ord (enum_rank_in (in_setC' Hi') i)); rewrite {2}card_C_bas0.
-        move/(ltn_trans Hl) => Hl0.
-        pose l0 := Ordinal Hl0.
-        have Hj: j = rshift 1 (cast_ord n_leq_m (lshift n l0)).
-          by apply:ord_inj; rewrite Hjl /=.
-        rewrite {Hjl Hl}.
-        move/colP/(_ 0): (Hcol l0); rewrite mxE [RHS]mxE -Hj; move ->.
-        rewrite row_row_mx Hj row_mxEr !mxE.
-        by rewrite oppr_le0 ler0n.
-  + by apply: (ineq_in_basis_satisfied s0 Hi).
-Qed.
-
-Variable c : 'cV[R]_n.
-
-Inductive phase2_final_result :=
-| Phase2_res_unbounded (bas: feasible_basis) of 'I_#|bas|
-| Phase2_res_optimal_basis of feasible_basis.
-
-Definition lex_to_phase2_final_result (res: lex_final_result s0) :=
-  match res with
-  | Lex_res_unbounded bas i => Phase2_res_unbounded (bas := bas) i (* need due to the corecion *)
-  | Lex_res_optimal_basis bas => Phase2_res_optimal_basis bas
-  end.
-
-Definition phase2 :=
-  let: lex_bas0 := LexFeasibleBasis (feasible_to_lex_feasible) in
-    lex_to_phase2_final_result ((@lex_phase2 s0) c lex_bas0).
-
-CoInductive phase2_spec : phase2_final_result -> Type :=
-| Phase2_unbounded (bas: feasible_basis) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : phase2_spec (Phase2_res_unbounded i)
-| Phase2_optimal_basis (bas: feasible_basis) of (reduced_cost_of_basis c bas) >=m 0 : phase2_spec (Phase2_res_optimal_basis bas).
-
-Lemma phase2P : phase2_spec phase2.
-Proof.
-rewrite /phase2 /lex_to_phase2_final_result.
-case: lex_phase2P => [[bas d]|]; try by constructor.
 Qed.
 
 End Phase2.
