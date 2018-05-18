@@ -521,7 +521,7 @@ rewrite -lex_subr_addr.
 by rewrite addr0.
 Qed.
 
-Lemma lex_ltrNge x y: (x <lex y) = ~~(y <=lex x).
+Lemma lex_ltrNge x y : (x <lex y) = ~~(y <=lex x).
 Proof.
 rewrite /ltrlex -[X in X = _]negbK negb_and.
 apply/(congr1 negb); rewrite negbK.
@@ -533,6 +533,9 @@ case: (boolP (x <=lex y)).
   by move/orP: (lex_total x y); case; try by move ->.
 Qed.
 
+Lemma lex_nmulr_rlt0 a x : a < 0 -> ((a *: x) <lex (0) ) = ((0) <lex x).
+Proof.
+Admitted.
 
 Lemma lex_gtr_addl x y : ((x + y) <lex x) = (y <lex 0).
 Proof.
