@@ -842,6 +842,7 @@ Definition x_pert : 'M[R]_(n,1+m) := row_mx x (const_mx 0).
 
 Fact x_pert_feasible : x_pert \in lex_polyhedron A b_pert.
 Proof.
+apply/lex_polyhedron_inP => i.
 Admitted.
 
 Definition build_lex_feasible_basis : lex_feasible_basis :=
