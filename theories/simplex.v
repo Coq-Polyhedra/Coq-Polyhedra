@@ -843,7 +843,7 @@ Hypothesis d_infeas_dir : ~~ (feasible_dir A d).
 Let j := argmin_gap b_pert x d_infeas_dir.
 Let lex_min_gap := (gap b_pert d x j).
 
-Lemma lex_ent_var_not_in_basis : j \notin bas.
+Fact lex_ent_var_not_in_basis : j \notin bas.
 Proof.
 apply: contraT; rewrite negbK.
 move => j_in_bas.
@@ -859,7 +859,7 @@ move/andP: (conj j_is_not_cand j_is_cand).
 by rewrite ler_lt_asym.
 Qed.
 
-Lemma col_b_pert (I : prebasis) k :
+Fact col_b_pert (I : prebasis) k :
   (col (rshift 1 k) (row_submx b_pert I) != 0) = (k \in I).
 Proof.
 case: (boolP (k \in I)) => [k_in_I | k_not_in_I].
@@ -878,7 +878,7 @@ case: (boolP (k \in I)) => [k_in_I | k_not_in_I].
   by rewrite mulr0n oppr0.
 Qed.
 
-Lemma col_point_of_basis_pert (bas' : basis) k :
+Fact col_point_of_basis_pert (bas' : basis) k :
   (col (rshift 1 k) (point_of_basis b_pert bas') != 0) = (k \in bas').
 Proof.
 rewrite -col_b_pert col_mul.
@@ -890,7 +890,7 @@ case: (boolP (z == 0)) => [/eqP z_eq_0 | z_neq_0].
   by rewrite qmulKVmx; last exact: basis_is_basis; rewrite mulmx0.
 Qed.
 
-Lemma eq_pert_point_imp_eq_bas (bas' bas'' : basis) :
+Fact eq_pert_point_imp_eq_bas (bas' bas'' : basis) :
   (point_of_basis b_pert bas' = point_of_basis b_pert bas'') -> bas' == bas''.
 Proof.
 move => eq_point.
@@ -901,7 +901,7 @@ suff: bas' \subset bas''.
   by rewrite -2!col_point_of_basis_pert eq_point.
 Qed.
 
-Lemma lex_min_gap_non_null : lex_min_gap != 0.
+Fact lex_min_gap_non_null : lex_min_gap != 0.
 Proof.
 move: (lex_feasible_basis_is_feasible bas) => Hfeas.
 move: (argmin_gapP b_pert x d_infeas_dir).1 => Hj.
@@ -919,7 +919,7 @@ rewrite scalemx_eq0 negb_or; apply/andP; split.
       by rewrite -row_submx_mul; move/row_submx_row_matrixP/(_ _ Hk).
 Qed.
 
-Lemma lex_min_gap_lex_pos : lex_min_gap >lex 0.
+Fact lex_min_gap_lex_pos : lex_min_gap >lex 0.
 Proof.
 apply/andP; split.
 - rewrite eq_sym; exact: lex_min_gap_non_null.
