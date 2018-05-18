@@ -131,6 +131,12 @@ rewrite /row_free mxrank_tr.
 apply/eqP; exact: mxrank_basis.
 Qed.
 
+Lemma basis_pointedness (bas: basis) : pointed A.
+Proof.
+rewrite /pointed -{1}(mxrank_basis bas).
+apply: mxrankS; exact: row_submx_submx.
+Qed.
+
 End Basis.
 
 Section PointOfBasis.
@@ -825,6 +831,24 @@ move/forallP/(_ i)/lex_ord0: (feasible_basis_is_feasible bas).
 by rewrite mxE [X in _ <= X]mxE mxE split1 unlift_none /=.
 Qed.
 
+
+Section BuildLexFeasibleBasis.
+
+Hypothesis A_pointed : pointed A.
+Variable x : 'cV[R]_n.
+Hypothesis x_feas : x \in polyhedron A b.
+
+Definition x_pert : 'M[R]_(n,1+m) := row_mx x (const_mx 0).
+
+Fact x_pert_feasible : x_pert \in lex_polyhedron A b_pert.
+Proof.
+Admitted.
+
+Definition build_lex_feasible_basis : lex_feasible_basis :=
+  build_feasible_basis A_pointed x_pert_feasible.
+
+End BuildLexFeasibleBasis.
+
 Section NonDegenerate.
   (* TO DO TO DO TO DO *)
 (* Here, we should reimport
@@ -909,7 +933,8 @@ rewrite inE in Hj.
 rewrite scalemx_eq0 negb_or; apply/andP; split.
 - apply: invr_neq0; exact: ltr0_neq0.
 - apply/eqP => /subr0_eq-/esym H.
-  suff /eq_pert_point_imp_eq_bas/eqP Hbas: (point_of_basis b_pert bas) = (point_of_basis b_pert (lex_rule_fbasis d_infeas_dir)).
+  suff /eq_pert_point_imp_eq_bas/eqP Hbas:
+    (point_of_basis b_pert bas) = (point_of_basis b_pert (lex_rule_fbasis d_infeas_dir)).
   + by move: lex_ent_var_not_in_basis; rewrite Hbas setU11 /=.
   + apply: is_point_of_basis_pert_active => k.
     rewrite in_setU1; move/orP; case.
@@ -961,7 +986,7 @@ set v := point_of_basis_pert bas.
 set v' := point_of_basis_pert bas'.
 set lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0].
 set u := v + d *m lex_min_gap.
- 
+
 move => Hui.
 move: lex_rule_rel_succ_points => Hv'u.
 rewrite -/u -/v' in Hv'u.
