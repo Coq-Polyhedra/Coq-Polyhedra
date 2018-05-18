@@ -334,7 +334,7 @@ Notation "x <=lex y" := (leqlex x y) (at level 0): ring_scope.
 Notation "x >=lex y" := (y <=lex x) (only parsing, at level 0) : ring_scope.
 
 Notation "x <lex y" := (ltrlex x y) (at level 0): ring_scope.
-Notation "x >lex y" := (x <lex y) (only parsing, at level 0) : ring_scope.
+Notation "x >lex y" := (y <lex x) (only parsing, at level 0) : ring_scope.
 
 Lemma order_preserving_equiv x y u v :
   (forall i, ((x 0 i < y 0 i) = (u 0 i < v 0 i)) /\ (x 0 i == y 0 i) = (u 0 i == v 0 i)) -> (x <=lex y) = (u <=lex v).
@@ -762,4 +762,4 @@ Notation "x <=lex y" := (leqlex x y) (at level 0): ring_scope.
 Notation "x >=lex y" := (y <=lex x) (only parsing, at level 0) : ring_scope.
 
 Notation "x <lex y" := (ltrlex x y) (at level 0): ring_scope.
-Notation "x >lex y" := (x <lex y) (only parsing, at level 0) : ring_scope.
+Notation "x >lex y" := (y <lex x) (only parsing, at level 0) : ring_scope.

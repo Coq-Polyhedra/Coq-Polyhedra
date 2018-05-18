@@ -162,6 +162,14 @@ move/row_submx_matrixP; rewrite row_submx_mul => H.
 exact: is_point_of_basis.
 Qed.
 
+(*RK: see if we keep this form of the previous lemma*)
+Lemma is_point_of_basis_pert_active (bas : basis) x :
+  (forall i, i \in bas -> row i (A *m x) = row i b) -> x = point_of_basis bas.
+Proof.
+move/row_submx_row_matrixP; rewrite row_submx_mul => H.
+exact: is_point_of_basis.
+Qed.
+
 End PointOfBasis.
 
 Section FeasibleBasis.
@@ -824,6 +832,100 @@ Section NonDegenerate.
  * that bases are not degenerate
  * and that the gap is positive                               *)
 
+Variable bas : lex_feasible_basis.
+Variable i : 'I_#|bas|.
+
+Let d := direction i.
+Let x := point_of_basis b_pert bas.
+
+Hypothesis d_infeas_dir : ~~ (feasible_dir A d).
+
+Let j := argmin_gap b_pert x d_infeas_dir.
+Let lex_min_gap := (gap b_pert d x j).
+
+Lemma lex_ent_var_not_in_basis : j \notin bas.
+Proof.
+apply: contraT; rewrite negbK.
+move => j_in_bas.
+set k := enum_rank_in j_in_bas j.
+have Hk: j = enum_val (A := mem bas) k
+  by rewrite (enum_rankK_in j_in_bas).
+have j_is_not_cand: (row_submx A bas *m d) k 0 >= 0.
+  rewrite mulmxA qmulmxV; last exact: basis_is_basis; rewrite mul1mx mxE.
+  by apply: ler0n.
+rewrite -row_submx_mul row_submx_mxE -{}Hk in j_is_not_cand.
+move: (argmin_gapP b_pert x d_infeas_dir) => [j_is_cand _].
+move/andP: (conj j_is_not_cand j_is_cand).
+by rewrite ler_lt_asym.
+Qed.
+
+Lemma col_b_pert (I : prebasis) k :
+  (col (rshift 1 k) (row_submx b_pert I) != 0) = (k \in I).
+Proof.
+case: (boolP (k \in I)) => [k_in_I | k_not_in_I].
+- pose k' := (enum_rank_in k_in_I k).
+  apply/(contraTneq _ isT) => /=.
+  move/colP/(_ k').
+  rewrite mxE [RHS]mxE /= row_submx_mxE enum_rankK_in //.
+  rewrite row_mxEr.
+  rewrite !mxE eq_refl /= mulr1n.
+  move/eqP; rewrite oppr_eq0.
+  by move/lt0r_neq0/negP: (@ltr01 R).
+- apply: negbTE; rewrite negbK.
+  apply/eqP/colP => h.
+  rewrite mxE /= row_submx_mxE row_mxEr !mxE.
+  move/memPn/(_ _ (enum_valP h))/negbTE: k_not_in_I => -> /=.
+  by rewrite mulr0n oppr0.
+Qed.
+
+Lemma col_point_of_basis_pert (bas' : basis) k :
+  (col (rshift 1 k) (point_of_basis b_pert bas') != 0) = (k \in bas').
+Proof.
+rewrite -col_b_pert col_mul.
+set z:=  col (rshift 1 k) (row_submx b_pert bas').
+case: (boolP (z == 0)) => [/eqP z_eq_0 | z_neq_0].
+- by rewrite z_eq_0 mulmx0 eq_refl.
+- move: z_neq_0; apply: contraNeq; rewrite eqb_id.
+  move/negPn/eqP/(congr1 (mulmx (row_submx A bas')))/eqP.
+  by rewrite qmulKVmx; last exact: basis_is_basis; rewrite mulmx0.
+Qed.
+
+Lemma eq_pert_point_imp_eq_bas (bas' bas'' : basis) :
+  (point_of_basis b_pert bas' = point_of_basis b_pert bas'') -> bas' == bas''.
+Proof.
+move => eq_point.
+suff: bas' \subset bas''.
+- move/subset_leqif_cards/geq_leqif.
+  by rewrite 2!prebasis_card leqnn.
+- apply/subsetP => k.
+  by rewrite -2!col_point_of_basis_pert eq_point.
+Qed.
+
+Lemma lex_min_gap_non_null : lex_min_gap != 0.
+Proof.
+move: (lex_feasible_basis_is_feasible bas) => Hfeas.
+move: (argmin_gapP b_pert x d_infeas_dir).1 => Hj.
+rewrite inE in Hj.
+rewrite scalemx_eq0 negb_or; apply/andP; split.
+- apply: invr_neq0; exact: ltr0_neq0.
+- apply/eqP => /subr0_eq-/esym H.
+  suff /eq_pert_point_imp_eq_bas/eqP Hbas: (point_of_basis b_pert bas) = (point_of_basis b_pert (lex_rule_fbasis d_infeas_dir)).
+  + by move: lex_ent_var_not_in_basis; rewrite Hbas setU11 /=.
+  + apply: is_point_of_basis_pert_active => k.
+    rewrite in_setU1; move/orP; case.
+    * by move/eqP ->.
+    * rewrite in_setD1 => /andP [_ Hk].
+      move: (row_submx_point_of_basis b_pert bas).
+      by rewrite -row_submx_mul; move/row_submx_row_matrixP/(_ _ Hk).
+Qed.
+
+Lemma lex_min_gap_lex_pos : lex_min_gap >lex 0.
+Proof.
+apply/andP; split.
+- rewrite eq_sym; exact: lex_min_gap_non_null.
+- exact: (min_gap_ge0 d_infeas_dir (feasible_basis_is_feasible bas)).
+Qed.
+
 End NonDegenerate.
 
 Section LexicographicRuleCost.
@@ -845,6 +947,29 @@ rewrite lex_rule_point_of_basis.
 rewrite mulmxDr lex_gtr_addl mulmxA.
 rewrite [c^T *m _]mx11_scalar -vdot_def mxE /= mulr1n mul_scalar_mx.
 Admitted. (* complete with thanks to the argument on non-degeneracy, see above *)
+
+(*
+Lemma lex_rule_dec :
+  let: bas' := lex_rule_lex_bas in
+  let: u := reduced_cost_of_basis c bas in
+  u i 0 < 0 -> (c^T *m point_of_basis_pert bas') <lex (c^T *m point_of_basis_pert bas).
+Proof.
+set d := direction bas i.
+set j := lex_ent_var.
+set bas' := lex_rule_lex_bas.
+set v := point_of_basis_pert bas.
+set v' := point_of_basis_pert bas'.
+set lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0].
+set u := v + d *m lex_min_gap.
+ 
+move => Hui.
+move: lex_rule_rel_succ_points => Hv'u.
+rewrite -/u -/v' in Hv'u.
+rewrite Hv'u /u mulmxDr lex_ltrNge -subv_gelex0 addrC addrA addNr add0r -lex_ltrNge mulmxA.
+rewrite -vdot_def vdotC mul_scalar_mx.
+rewrite lex_ltrNge -[0](scaler0 _ ('[c,d])) -lex_negscalar; last exact: direction_improvement.
+rewrite -lex_ltrNge; exact: lex_min_gap_lex_pos.
+Qed.*)
 
 End LexicographicRuleCost.
 
