@@ -21,7 +21,7 @@ Import GRing.Theory Num.Theory.
 Section RowSubmx.
 
 Variable R : realFieldType.
-  
+
 Definition row_submx (m p : nat) (M : 'M[R]_(m,p)) (I : {set 'I_m}) :=
   \matrix_(i < #|I|, j < p) M (enum_val i) j.
 
@@ -50,7 +50,7 @@ Proof.
 apply/row_subP => i; rewrite row_submx_row.
 exact: row_sub.
 Qed.
-  
+
 Lemma row_submx_row_mx (m p q : nat) (M : 'M[R]_(m,p)) (N : 'M[R]_(m,q)) (I : {set 'I_m}) :
   row_submx (row_mx M N) I = row_mx (row_submx M I) (row_submx N I).
 Proof.
@@ -76,7 +76,7 @@ rewrite nth_enum_ord //.
 by move: (ltn_ord i); rewrite {2}cardsT card_ord.
 Qed.
 
-Lemma row_submx_lev (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) : 
+Lemma row_submx_lev (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
       (x <=m y) -> ((row_submx x I) <=m (row_submx y I)).
 Proof.
 by move/forallP => ?; apply/forallP => ?; rewrite !mxE.
@@ -85,9 +85,9 @@ Qed.
 Lemma row_submx_matrixP (m n: nat) (x y : 'M[R]_(m,n)) (I : {set 'I_m}) :
   {in I, x =2 y } <-> row_submx x I = row_submx y I.
 Proof.
-split; move => H. 
+split; move => H.
 - apply/matrixP => i j; rewrite 2!row_submx_mxE.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 - move => i Hi j.
   move/matrixP/(_ (enum_rank_in Hi i) j): H.
   by rewrite 2!row_submx_mxE enum_rankK_in.
@@ -96,20 +96,26 @@ Qed.
 Lemma row_submx_row_matrixP (m n: nat) (x y : 'M[R]_(m,n)) (I : {set 'I_m}) :
   {in I, ((@row _ _ _)^~ x) =1 ((@row _ _ _)^~ y) } <-> row_submx x I = row_submx y I.
 Proof.
-split; move => H. 
+split; move => H.
 - apply/row_matrixP => i; rewrite 2!row_submx_row.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 - move => i Hi.
   move/row_matrixP/(_ (enum_rank_in Hi i)): H.
   by rewrite 2!row_submx_row enum_rankK_in.
 Qed.
 
+Lemma row_submx0 (m n: nat) (I : {set 'I_m}) : (row_submx (0: 'M[R]_(m,n)) I) = 0.
+Proof.
+apply/row_matrixP => i.
+by rewrite row_submx_row 2!row0.
+Qed.
+
 Lemma row_submx_row_matrix0P (m n: nat) (x : 'M[R]_(m,n)) (I : {set 'I_m}) :
   {in I, ((@row _ _ _)^~ x) =1 (fun _ => 0) } <-> row_submx x I = 0.
 Proof.
-split; move => H. 
+split; move => H.
 - apply/row_matrixP => i; rewrite row_submx_row row0.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 - move => i Hi.
   move/row_matrixP/(_ (enum_rank_in Hi i)): H.
   by rewrite row0 row_submx_row enum_rankK_in.
@@ -118,9 +124,9 @@ Qed.
 Lemma row_submx_colP (m: nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
   {in I, x^~ 0 =1 y^~ 0} <-> row_submx x I = row_submx y I.
 Proof.
-split; move => H. 
+split; move => H.
 - apply/colP => i; rewrite 2!row_submx_mxE.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 - move => i Hi.
   move/colP/(_ (enum_rank_in Hi i)): H.
   by rewrite 2!row_submx_mxE enum_rankK_in.
@@ -129,9 +135,9 @@ Qed.
 Lemma row_submx_col0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
   {in I, x^~ 0 =1 (fun _ => 0)} <-> row_submx x I = 0.
 Proof.
-split; move => H. 
+split; move => H.
 - apply/colP => i; rewrite row_submx_mxE mxE.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 - move => i Hi.
   move/colP/(_ (enum_rank_in Hi i)): H.
   by rewrite row_submx_mxE mxE enum_rankK_in.
@@ -144,8 +150,8 @@ apply: (iffP forallP) => [H i Hi | H i].
 - move/(_ (enum_rank_in Hi i)): H.
   by rewrite 2!row_submx_mxE enum_rankK_in.
 - rewrite  2!row_submx_mxE.
-  apply: H; exact: enum_valP. 
-Qed.  
+  apply: H; exact: enum_valP.
+Qed.
 
 Lemma row_submx_gev0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
   reflect (forall i, i \in I -> 0 <= x i 0) (0 <=m (row_submx x I)).
@@ -154,7 +160,7 @@ apply: (iffP forallP) => [H i Hi | H i].
 - move/(_ (enum_rank_in Hi i)): H.
   by rewrite row_submx_mxE mxE enum_rankK_in.
 - rewrite row_submx_mxE mxE.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 Qed.
 
 Lemma row_submx_lev0P (m: nat) (x : 'cV[R]_m) (I : {set 'I_m}) :
@@ -164,7 +170,7 @@ apply: (iffP forallP) => [H i Hi | H i].
 - move/(_ (enum_rank_in Hi i)): H.
   by rewrite row_submx_mxE mxE enum_rankK_in.
 - rewrite row_submx_mxE mxE.
-  apply: H; exact: enum_valP. 
+  apply: H; exact: enum_valP.
 Qed.
 
 Lemma lev_decomp (m : nat) (x y : 'cV[R]_m) (I : {set 'I_m}) :
@@ -266,9 +272,9 @@ End ExtraFinType.
 Section RowSubmxPerm.
 
 Variable R: realFieldType.
-  
+
 Variable m n: nat.
-Variable M: 'M[R]_(m,n). 
+Variable M: 'M[R]_(m,n).
 Variable I: {set 'I_m}.
 
 Variable perm_idx : 'S_m.
@@ -276,7 +282,7 @@ Variable perm_idx : 'S_m.
 Definition perm_card : #|I| = #|perm_idx @: I|.
 Proof.
 by rewrite card_imset; last exact: perm_inj.
-Qed.    
+Qed.
 
 Lemma row_submx_perm :
   let: perm_idx_inj := @perm_inj _ perm_idx in
@@ -310,7 +316,7 @@ by rewrite eqn_add2l; move/eqP/ord_inj.
 Qed.
 
 Lemma enum_lrshift :
-  (enum 'I_(m+n)) = 
+  (enum 'I_(m+n)) =
   [seq (lshift n i) | i <- enum 'I_m]
     ++ [seq (rshift m i) | i <- enum 'I_n].
 Proof.
@@ -324,7 +330,7 @@ have ->: (s1 = [seq (nat_of_ord i) | i <- enum 'I_m])
 have ->: (s2 = map (addn m) [seq (nat_of_ord i)%N | i <- enum 'I_n])
   by rewrite -map_comp; exact: eq_map.
 by rewrite 2!val_enum_ord -iota_addl [in RHS]addnC -iota_add.
-Qed.   
+Qed.
 
 CoInductive split_spec' (i : 'I_(m + n)) : 'I_m + 'I_n -> bool -> Type :=
   | SplitLo' (j : 'I_m) of i = lshift n j : split_spec' i (inl _ j) true
@@ -339,7 +345,7 @@ case: (splitP i) => [j | k].
   by move/ord_inj ->; constructor.
 Qed.
 
-Lemma lrshift_distinct i j: lshift n i != rshift m j. 
+Lemma lrshift_distinct i j: lshift n i != rshift m j.
 Proof.
 apply/eqP; move/(congr1 (@nat_of_ord (m+n)%N)).
 rewrite /= => Hij.
@@ -420,7 +426,7 @@ rewrite /enum_mem -enumT.
 rewrite enum_lrshift filter_cat.
 set s1 := (X in X ++ _).
 set s2 := (X in _ ++ X).
-have ->: s1 = [::]. 
+have ->: s1 = [::].
 - rewrite /s1 filter_map.
   rewrite (@eq_filter _ _ pred0).
   + by rewrite filter_pred0 /=.
@@ -481,7 +487,7 @@ have ->: s1 = [seq x <- [seq lshift n i | i <- enum 'I_m] | (mem [set lshift n x
   have /negbTE ->: ((lshift n j') \notin [set rshift m x | x in J]).
   + apply: (introN idP) => /imsetP [k _].
     apply: (elimN eqP); exact: lrshift_distinct.
-  by rewrite orbF.  
+  by rewrite orbF.
 rewrite {s1}; set s1 := (X in X ++ _).
 have ->: s1 = [seq (lshift n i) | i <- enum I].
 - rewrite /s1 filter_map {2}/enum_mem -enumT.
@@ -510,7 +516,7 @@ have ->: s1 = [seq x <- [seq lshift n i | i <- enum 'I_m] | (mem [set lshift n x
   have /negbTE ->: ((lshift n j') \notin [set rshift m x | x in J]).
   + apply: (introN idP) => /imsetP [k _].
     apply: (elimN eqP); exact: lrshift_distinct.
-  by rewrite orbF.  
+  by rewrite orbF.
 rewrite {s1}; set s1 := (X in X ++ _).
 have ->: s1 = [seq (lshift n i) | i <- enum I].
 - rewrite /s1 filter_map {2}/enum_mem -enumT.
@@ -565,7 +571,7 @@ case: (splitP' i') => [j Hij | j Hij].
 - rewrite Hij col_mxEd.
   case: (splitP' i) => [k Hik | k Hik];
     move: Hij; rewrite /i' Hik.
-  + rewrite -lshift_enum_valC. 
+  + rewrite -lshift_enum_valC.
     by move/eqP: (lrshift_distinct (enum_val k) j).
   + rewrite -rshift_enum_valC => /rshift_inj <-.
     by rewrite col_mxEd row_submx_mxE.
@@ -600,11 +606,11 @@ have /eq_map/(_ (enum 'I_m)) ->: nat_of_ord (n:=m') \o cast_ord em =1 id
   by move => ?; rewrite /=.
 by rewrite val_enum_ord em.
 Qed.
-  
+
 Lemma cast_ord_enum_val i :
   cast_ord em (enum_val i) = enum_val (cast_ord cast_card i).
 Proof.
-rewrite (enum_val_nth (enum_default (cast_ord cast_card i))) /= /enum_mem -enumT. 
+rewrite (enum_val_nth (enum_default (cast_ord cast_card i))) /= /enum_mem -enumT.
 rewrite -cast_ord_enum.
 set s := (X in nth _ X _).
 have ->: s = [seq (cast_ord em i) | i <- enum I].
@@ -618,13 +624,13 @@ Qed.
 
 End Prelim.
 
-Section Core. 
+Section Core.
 
 Lemma row_submx_castmx (I: {set 'I_m}):
   row_submx (castmx (em, erefl n) M) (cast_ord em @: I) = castmx (cast_card I, erefl n) (row_submx M I).
 Proof.
 apply/row_matrixP => i.
-rewrite row_submx_row row_castmx castmx_id. 
+rewrite row_submx_row row_castmx castmx_id.
 rewrite row_castmx castmx_id row_submx_row.
 apply: (congr1 ((@row _ _ _)^~ M)).
 apply: (canLR (cast_ordK em)).
@@ -671,7 +677,7 @@ elim: k => [Hrk | k IH Hrk].
     * move: Hrk; apply: contraL.
       by move/mxrankS; rewrite leqNgt IH'' /=.
   rewrite /bas' /=.
-  case: (pickP _) => [i |]; last by move/(_ i0)/andP. 
+  case: (pickP _) => [i |]; last by move/(_ i0)/andP.
   + rewrite {Hi0 i0} => /andP [Hi Hi'].
     have Hi'': (i \notin bas).
     * move: Hi'; apply: contraNN => Hi'.

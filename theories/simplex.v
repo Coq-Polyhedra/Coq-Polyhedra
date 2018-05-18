@@ -1110,24 +1110,29 @@ Qed.
 
 Definition dual_bas0 := Basis dual_pb0_is_basis.
 
-Lemma dual_bas0_is_feasible : (is_feasible (dualb _ 0) dual_bas0).
+Fact point_of_dual_bas0_is_feasible :
+  point_of_basis 0 dual_bas0 \in polyhedron (dualA A) 0.
 Proof.
-apply: row_submx_is_feasible => x.
-rewrite 2!row_submx_col_mx_rshift 2!row_submxT /=.
-rewrite 2!cast_mulmx mul1mx.
-do 2![move/castmx_inj] => ->.
-rewrite -dual_polyhedronE inE.
-by rewrite mulmx0 eq_refl lev_refl.
+set u0 := point_of_basis _ _.
+suff ->: u0 = 0.
+- rewrite inE mulmx0; exact: lev_refl.
+- by rewrite /u0 /point_of_basis row_submx0 mulmx0.
 Qed.
 
-Definition dual_feasible_bas0 := FeasibleBasis dual_bas0_is_feasible.
+(* WORKAROUND: instead of proving that dual_bas0 is (magically) lex-feasible,
+ * we build a lex-feasible basis from the corresponding feasible basic point
+ * This yields a much shorter proof *)
+Definition dual_lex_feasible_bas0 :=
+  let Apointed := basis_pointedness dual_bas0 in
+  let u0_feas := point_of_dual_bas0_is_feasible in
+  build_lex_feasible_basis Apointed u0_feas.
 
 Inductive emptiness_proc_res :=
 | FeasiblePoint of 'cV[R]_n
 | InconsistencyCert of 'cV[R]_m.
 
 Definition emptiness_proc :=
-  match phase2 dual_feasible_bas0 (-b) with
+  match phase2 (-b) dual_lex_feasible_bas0 with
   | Phase2_res_optimal_basis bas =>
     let v := ext_reduced_cost_of_basis (- b) bas in
     FeasiblePoint (dsubmx (usubmx v) - usubmx (usubmx v))
@@ -1157,8 +1162,6 @@ Qed.
 Fact feasible_and_infeasible_is_false x d :
   x \in polyhedron A b -> (dual_feasible_dir A d /\ '[b,d] > 0) -> False.
 Proof.
-(*RK: the next line was changed to remove a "Nothing to inject" message
-move => x_feas [[/andP [/eqP Ad d_lt0]] b_d_ltr0].*)
 move => x_feas [/andP [/eqP Ad d_lt0] b_d_ltr0].
 move/(vdot_lev d_lt0): x_feas.
 rewrite vdot_mulmx Ad vdot0l vdotC.
@@ -1239,15 +1242,15 @@ Variable c : 'cV[R]_n.
 
 Inductive pointed_final_result :=
 | Pointed_res_infeasible of 'cV[R]_m
-| Pointed_res_unbounded (bas: feasible_basis A b) of 'I_#|bas|
-| Pointed_res_optimal_basis of (feasible_basis A b).
+| Pointed_res_unbounded (bas: lex_feasible_basis A b) of 'I_#|bas|
+| Pointed_res_optimal_basis of (lex_feasible_basis A b).
 
 Definition pointed_simplex :=
   match emptiness_proc A b with
   | FeasiblePoint x =>
     if @idP (x \in polyhedron A b) is ReflectT x_feas then
-      let bas0 := build_feasible_basis Hpointed x_feas in
-      match phase2 bas0 c with
+      let bas0 := build_lex_feasible_basis Hpointed x_feas in
+      match phase2 c bas0 with
       | Phase2_res_unbounded _ i => Pointed_res_unbounded i
       | Phase2_res_optimal_basis bas'' => Pointed_res_optimal_basis bas''
       end
@@ -1259,8 +1262,8 @@ Definition pointed_simplex :=
 
 CoInductive pointed_simplex_spec : pointed_final_result -> Type :=
 | Pointed_infeasible (d : 'cV[R]_m) of dual_feasible_dir A d /\ '[b,d] > 0 : pointed_simplex_spec (Pointed_res_infeasible d)
-| Pointed_unbounded (bas: feasible_basis A b) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : pointed_simplex_spec (Pointed_res_unbounded i)
-| Pointed_optimal_point (bas : feasible_basis A b) of (reduced_cost_of_basis c bas) >=m 0 : pointed_simplex_spec (Pointed_res_optimal_basis bas).
+| Pointed_unbounded (bas: lex_feasible_basis A b) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : pointed_simplex_spec (Pointed_res_unbounded i)
+| Pointed_optimal_point (bas : lex_feasible_basis A b) of (reduced_cost_of_basis c bas) >=m 0 : pointed_simplex_spec (Pointed_res_optimal_basis bas).
 
 Lemma pointed_simplexP : pointed_simplex_spec pointed_simplex.
 Proof.
@@ -1395,14 +1398,14 @@ rewrite /simplex.
 case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | bas i [H H']| bas Hu]; constructor; rewrite //=.
 - split.
   + apply: feasibility_pointed_to_general.
-    exact: feasible_basis_is_feasible.
+    exact: lex_feasible_basis_is_feasible.
   + rewrite -mulmxAv2gen.
     rewrite inE /Apointed mul_col_mx col_mx_gev0 in H'.
     by move/andP: H' => [? _].
   + by rewrite -cost2gen /direction vdot_mulmx vdotr_delta_mx.
 - split.
   + apply: feasibility_pointed_to_general.
-    exact: feasible_basis_is_feasible.
+    exact: lex_feasible_basis_is_feasible.
   + by apply: ext_reduced_cost2gen_dual_feasible.
   + move: (eq_primal_dual_value bpointed cpointed bas).
     rewrite cost2gen => -> /=.
