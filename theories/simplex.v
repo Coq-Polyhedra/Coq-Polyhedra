@@ -19,6 +19,80 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
+Section LexPolyhedron.
+(* On unifying lex-polyhedra and polyhedra:
+ * The idea would be to deal with polyhedra
+ * { x \in 'cV[M]_n | A * x >= b }
+ * where M is a left R-module, R is a ring, both are totally ordered
+ * in a compatible way (making M an ordered left R-module)
+ * BUT this requires major changes in MathComp:
+   - show that 'M[M]_(p,q) is a left-module
+   - extend matrix multiplication to A * B, where A: 'M[R]_(p,q) and
+     B: 'M[M]_(q,r)
+   - define ordered left modules
+   - etc
+ * The benefit in terms of maintainability is not so clear (unless these changes are done
+   in a seperate library...)
+ * Indeed, lex-polyhedra, or more generally, abstract polyhedra over modules, are only
+ * used in this file *)
+
+Variable R : realFieldType.
+Variable m n : nat.
+
+Section Def.
+
+Variable p : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'M[R]_(m,p).
+
+Definition lex_polyhedron := [pred x: 'M[R]_(n,p) | [forall i, (row i (A *m x)) >=lex (row i b)]].
+
+Definition active_lex_ineq (x: 'M[R]_(n,p)) :=
+  [set i : 'I_m | (row i (A *m x)) == (row i b)].
+
+Lemma lex_polyhedron_inP x : reflect (forall i, (row i (A *m x)) >=lex (row i b)) (x \in lex_polyhedron).
+Proof.
+exact: forallP.
+Qed.
+
+End Def.
+
+Section UsualVsLexPolyhedron.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Lemma polyhedron_equiv_lex_polyhedron :
+  polyhedron A b =i lex_polyhedron A b.
+Proof.
+move => x.
+rewrite 2!inE.
+apply: eq_forallb => i.
+apply/idP/idP => [ineq |].
+- apply: leqlex_seq_lev.
+  apply/forall_inP => j _.
+  rewrite 2!mxE.
+  suff ->: j = 0 by done.
+  + apply/ord_inj.
+    by move: (ltn_ord j); rewrite ltnS leqn0 => /eqP.
+- by move/lex_ord0; rewrite 2!mxE.
+Qed.
+
+Lemma active_ineq_equal_active_lex_ineq (x: 'cV[R]_n) :
+  active_ineq A b x = (active_lex_ineq A b x).
+Proof.
+apply/setP => i.
+rewrite 2!inE; apply/eqP/eqP => [ eq |].
+- rewrite [row i (_ *m _)]mx11_scalar.
+  by rewrite mxE eq [row i _]mx11_scalar mxE.
+- by move/rowP/(_ 0); rewrite 2![(row _ _) _ _]mxE.
+Qed.
+
+End UsualVsLexPolyhedron.
+
+End LexPolyhedron.
+
 Section Simplex.
 
 Variable R : realFieldType.

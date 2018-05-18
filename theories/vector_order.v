@@ -695,6 +695,24 @@ Qed.
 
 End Core.
 
+Notation "<=m" := lev: ring_scope.
+Notation ">=m x" := (lev x) (at level 0): ring_scope.
+Notation "<=m x" := (lev^~ x) (at level 0): ring_scope.
+Notation "x <=m y" := (lev x y) (at level 0): ring_scope.
+Notation "x >=m y" := (y <=m x) (only parsing, at level 0) : ring_scope.
+
+Notation "<=lex" := leqlex: ring_scope.
+Notation ">=lex" := geqlex: ring_scope.
+
+Notation "<=lex x" := (geqlex x) (at level 0): ring_scope.
+Notation ">=lex x" := (leqlex x) (at level 0): ring_scope.
+
+Notation "x <=lex y" := (leqlex x y) (at level 0): ring_scope.
+Notation "x >=lex y" := (y <=lex x) (only parsing, at level 0) : ring_scope.
+
+Notation "x <lex y" := (ltrlex x y) (at level 0): ring_scope.
+Notation "x >lex y" := (y <lex x) (only parsing, at level 0) : ring_scope.
+
 Section ExtraLexOrder.
 
 Variable n : nat.
