@@ -778,7 +778,7 @@ by apply/eqP; rewrite subr_eq0 eq_primal_dual_value.
 Qed.
  *)
 
-Lemma direction_improvement c (bas: basis) (i:'I_#|bas|):
+Lemma direction_improvement c (bas : basis) (i : 'I_#|bas|):
   let: u := reduced_cost_of_basis c bas in
   u i 0 < 0 -> '[c, direction i] < 0.
 Proof.
@@ -945,8 +945,10 @@ Proof.
 move => bas' u u_i_neg.
 rewrite lex_rule_point_of_basis.
 rewrite mulmxDr lex_gtr_addl mulmxA.
-rewrite [c^T *m _]mx11_scalar -vdot_def mxE /= mulr1n mul_scalar_mx.
-Admitted. (* complete with thanks to the argument on non-degeneracy, see above *)
+rewrite [c^T *m _]mx11_scalar -vdot_def mxE /= mulr1n mul_scalar_mx vdotC.
+rewrite (lex_nmulr_rlt0 _ (direction_improvement u_i_neg)).
+exact: lex_min_gap_lex_pos.
+Qed. (* complete with thanks to the argument on non-degeneracy, see above *)
 
 (*
 Lemma lex_rule_dec :
