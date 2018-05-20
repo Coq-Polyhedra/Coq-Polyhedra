@@ -814,6 +814,13 @@ rewrite /ltrlex; apply/andP; split.
   by move/forallP/(_ j)/implyP/(_ Hj): H.
 Qed.
 
+Lemma lex_lev u v :
+  (forall j, u 0 j <= v 0 j) -> (u <=lex v).
+Proof.
+move => u_lev_v.
+by apply: leqlex_seq_lev; apply/forall_inP.
+Qed.
+
 End ExtraLexOrder.
 
 End LexOrder.
