@@ -922,10 +922,7 @@ apply: lex_lev => j; rewrite 2!mxE.
 case: (splitP j) => [j' _| j' _]; last first.
 - rewrite !mxE eq_refl /=.
   by rewrite -mulNrn mulrn_wle0 // lerN10.
-- have ->: (j' = 0).
-  + apply/ord_inj;
-    by move: (ltn_ord j'); rewrite ltnS leqn0 => /eqP.
-  rewrite -row_mul 2!mxE.
+- rewrite [j']ord1_eq0 -row_mul 2!mxE.
   by move/forallP: x_feas.
 Qed.
 
