@@ -935,11 +935,6 @@ Definition build_lex_feasible_basis : lex_feasible_basis :=
 End BuildLexFeasibleBasis.
 
 Section NonDegenerate.
-  (* TO DO TO DO TO DO *)
-(* Here, we should reimport
- * (from the JAR branch, see git show JAR:theories/simplex.v)
- * that bases are not degenerate
- * and that the gap is positive                               *)
 
 Variable bas : lex_feasible_basis.
 Variable i : 'I_#|bas|.
