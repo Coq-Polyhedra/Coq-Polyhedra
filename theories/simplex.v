@@ -851,33 +851,6 @@ case: (boolP (i \in bas)) => [Hi | Hi].
 - by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
 Qed.
 
-(*Lemma eq_primal_dual_value c bas :
-  let: x := point_of_basis bas in
-  let: u := ext_reduced_cost_of_basis c bas in
-  '[c, x] = '[b, u].
-Proof.
-set x := point_of_basis bas.
-set u := ext_reduced_cost_of_basis c bas.
-apply/eqP; rewrite -duality_gap_eq0_def; apply/eqP.
-apply: (compl_slack_cond_duality_gap_eq0 (ext_reduced_cost_of_basis_def c bas)).
-apply/compl_slack_condP => i.
-case: (boolP (i \in bas)) => [Hi | Hi].
-- by move/subsetP/(_ i Hi): (basis_subset_of_active_ineq bas); rewrite inE => /eqP ->; right.
-- by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
-Qed.*)
-
-(*Lemma optimal_cert_on_basis c (bas : feasible_basis) :
-  let: x := point_of_basis bas in
-  (reduced_cost_of_basis c bas) >=m 0 ->
-  forall y, y \in polyhedron A b -> '[c,x] <= '[c,y].
-Proof.
-set x := point_of_basis bas.
-set u := ext_reduced_cost_of_basis c bas.
-rewrite ext_reduced_cost_dual_feasible => Hu.
-apply: (duality_gap_eq0_optimality (feasible_basis_is_feasible bas) Hu).
-move: Hu; rewrite inE; move/andP => [/eqP Hu _].
-by apply/eqP; rewrite subr_eq0 eq_primal_dual_value.
-Qed.*)
 Lemma optimal_cert_on_basis (b : 'cV[R]_m) c (bas : basis) :
   let: x := point_of_basis b bas in
     x \in polyhedron A b -> (reduced_cost_of_basis c bas) >=m 0 ->
@@ -897,18 +870,6 @@ Proof.
 by rewrite vdot_mulmx vdotr_delta_mx.
 Qed.
 
-(*
-Lemma unbounded_cert_on_basis c (bas : basis) (i:'I_#|bas|) M:
-  let: u := reduced_cost_of_basis c bas in
-  let: d := direction i in
-  feasible_dir A d -> u i 0 < 0 ->
-  exists x, (x \in polyhedron A b) /\ ('[c,x] < M).
-Proof.
-move => Hd Hui.
-apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=direction i));
-  try by [exact: feasible_basis_is_feasible | done].
-by rewrite vdot_mulmx vdotr_delta_mx.
-Qed.*)
 Lemma unbounded_cert_on_basis (b : 'cV[R]_m) c (bas : basis) (i : 'I_#|bas|) M :
   let: u := reduced_cost_of_basis c bas in
   let: d := direction i in
@@ -974,11 +935,6 @@ Definition build_lex_feasible_basis : lex_feasible_basis :=
 End BuildLexFeasibleBasis.
 
 Section NonDegenerate.
-  (* TO DO TO DO TO DO *)
-(* Here, we should reimport
- * (from the JAR branch, see git show JAR:theories/simplex.v)
- * that bases are not degenerate
- * and that the gap is positive                               *)
 
 Variable bas : lex_feasible_basis.
 Variable i : 'I_#|bas|.
@@ -1098,29 +1054,6 @@ rewrite [c^T *m _]mx11_scalar -vdot_def mxE /= mulr1n mul_scalar_mx vdotC.
 rewrite (lex_nmulr_rlt0 _ (direction_improvement u_i_neg)).
 exact: lex_min_gap_lex_pos.
 Qed. (* complete with thanks to the argument on non-degeneracy, see above *)
-
-(*
-Lemma lex_rule_dec :
-  let: bas' := lex_rule_lex_bas in
-  let: u := reduced_cost_of_basis c bas in
-  u i 0 < 0 -> (c^T *m point_of_basis_pert bas') <lex (c^T *m point_of_basis_pert bas).
-Proof.
-set d := direction bas i.
-set j := lex_ent_var.
-set bas' := lex_rule_lex_bas.
-set v := point_of_basis_pert bas.
-set v' := point_of_basis_pert bas'.
-set lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0].
-set u := v + d *m lex_min_gap.
-
-move => Hui.
-move: lex_rule_rel_succ_points => Hv'u.
-rewrite -/u -/v' in Hv'u.
-rewrite Hv'u /u mulmxDr lex_ltrNge -subv_gelex0 addrC addrA addNr add0r -lex_ltrNge mulmxA.
-rewrite -vdot_def vdotC mul_scalar_mx.
-rewrite lex_ltrNge -[0](scaler0 _ ('[c,d])) -lex_negscalar; last exact: direction_improvement.
-rewrite -lex_ltrNge; exact: lex_min_gap_lex_pos.
-Qed.*)
 
 End LexicographicRuleCost.
 
