@@ -755,32 +755,31 @@ End PivotingLikeOperations.
 
 Section Cost.
 
-Implicit Types c : 'cV[R]_n.
-Implicit Types bas : basis.
+Variable c : 'cV[R]_n.
+Variable bas : basis.
+
 Implicit Types x : 'cV[R]_n.
-Implicit Types u : 'cV[R]_m.
 
 (* Reduced cost of basis: u s.t.
    u = < A^{-1}_I, c >, where I is a basis *)
-Definition reduced_cost_of_basis c bas :=
+Definition reduced_cost_of_basis :=
   (qinvmx (prebasis_card bas) (row_submx A bas))^T *m c.
 
-Definition reduced_cost_of_basis_def c bas :
-  (row_submx A bas)^T *m (reduced_cost_of_basis c bas) = c.
+Definition reduced_cost_of_basis_def :
+  (row_submx A bas)^T *m reduced_cost_of_basis = c.
 Proof.
 rewrite /reduced_cost_of_basis trmx_qinv; last exact: basis_is_basis.
 by rewrite qmulKVmx; last exact: basis_trmx_row_free.
 Qed.
 
-Definition ext_reduced_cost_of_basis c bas :=
-  let: u := reduced_cost_of_basis c bas in
+Definition ext_reduced_cost_of_basis :=
   \col_i (if (@idP (i \in bas)) is ReflectT Hi then
-            u (enum_rank_in Hi i) 0
+            reduced_cost_of_basis (enum_rank_in Hi i) 0
           else 0).
 
-Lemma ext_reduced_cost_of_basis_in_bas c bas i (Hi : (i \in bas)) :
+Fact ext_reduced_cost_of_basis_in_bas i (Hi : (i \in bas)) :
   let: j := enum_rank_in Hi i in
-    (ext_reduced_cost_of_basis c bas) i 0 = (reduced_cost_of_basis c bas) j 0.
+    ext_reduced_cost_of_basis i 0 = reduced_cost_of_basis j 0.
 Proof.
 rewrite /ext_reduced_cost_of_basis mxE.
 case: {-}_ /idP => [Hi' |]; last by done.
@@ -788,31 +787,31 @@ suff ->: enum_rank_in Hi i = enum_rank_in Hi' i by done.
 - apply: enum_val_inj; by do 2![rewrite enum_rankK_in //].
 Qed.
 
-Lemma ext_reduced_cost_of_basis_notin_bas c bas i :
-  (i \notin bas) -> (ext_reduced_cost_of_basis c bas) i 0 = 0.
+Fact ext_reduced_cost_of_basis_notin_bas i :
+  (i \notin bas) -> ext_reduced_cost_of_basis i 0 = 0.
 Proof.
 move/negP => H; rewrite /ext_reduced_cost_of_basis mxE.
 by case: {-}_ /idP => [ ? | _].
 Qed.
 
-Lemma non_neg_reduced_cost_equiv c bas :
-  ((ext_reduced_cost_of_basis c bas) >=m 0) = ((reduced_cost_of_basis c bas) >=m 0).
+Fact non_neg_reduced_cost_equiv :
+  (ext_reduced_cost_of_basis >=m 0) = (reduced_cost_of_basis >=m 0).
 Proof.
 apply/idP/idP => [/gev0P H | /gev0P H].
 - apply/gev0P => i.
-  move: (ext_reduced_cost_of_basis_in_bas c (enum_valP i)).
+  move: (ext_reduced_cost_of_basis_in_bas (enum_valP i)).
   rewrite enum_valK_in => <-.
   exact: H.
 - apply/gev0P => i; case: (boolP (i \in bas)) => [Hi | Hi].
-  + rewrite (ext_reduced_cost_of_basis_in_bas c Hi).
+  + rewrite (ext_reduced_cost_of_basis_in_bas Hi).
     exact: H.
-  + by rewrite (ext_reduced_cost_of_basis_notin_bas c Hi).
+  + by rewrite (ext_reduced_cost_of_basis_notin_bas Hi).
 Qed.
 
-Lemma ext_reduced_cost_of_basis_def c bas :
+Fact ext_reduced_cost_of_basis_def :
   (* should be rewritten using an appropriate lemma to be written in row_submx.v,
    * stating that M = row_perm _ (col_mx (row_submx M bas) (row_submx M ~:bas))   *)
-  A^T *m (ext_reduced_cost_of_basis c bas) = c.
+  A^T *m ext_reduced_cost_of_basis = c.
 Proof.
 apply/colP => i; rewrite !mxE.
 rewrite (bigID (fun j => j \in bas)) /= [X in _ + X]big1;
@@ -821,104 +820,66 @@ rewrite addr0.
 rewrite (reindex (@enum_val _ (mem bas))) /=;
   last by apply: (enum_val_bij_in (enum_valP (cast_ord (esym (prebasis_card bas)) i))).
 rewrite (eq_bigl predT) /=; last by move => k /=; apply: (enum_valP k).
-move/colP/(_ i): (reduced_cost_of_basis_def c bas); rewrite !mxE => <-.
+move/colP/(_ i): reduced_cost_of_basis_def; rewrite !mxE => <-.
 apply: eq_bigr => j _.
-rewrite (ext_reduced_cost_of_basis_in_bas c (enum_valP j)) enum_valK_in.
+rewrite (ext_reduced_cost_of_basis_in_bas (enum_valP j)) enum_valK_in.
 by rewrite 2![_^T _ _]mxE row_submx_mxE.
 Qed.
 
-Lemma ext_reduced_cost_dual_feasible c bas :
-  let: u := ext_reduced_cost_of_basis c bas in
-    (reduced_cost_of_basis c bas) >=m 0 = (u \in dual_polyhedron A c).
+Fact ext_reduced_cost_dual_feasible :
+  reduced_cost_of_basis >=m 0 = (ext_reduced_cost_of_basis \in dual_polyhedron A c).
 Proof.
 rewrite inE.
-move/eqP: (ext_reduced_cost_of_basis_def c bas) ->; rewrite /=.
+move/eqP: ext_reduced_cost_of_basis_def ->; rewrite /=.
 by symmetry; apply: non_neg_reduced_cost_equiv.
 Qed.
 
-Lemma eq_primal_dual_value (b : 'cV[R]_m) c bas :
-  let: x := point_of_basis b bas in
-  let: u := ext_reduced_cost_of_basis c bas in
-    '[c, x] = '[b, u].
+Lemma direction_improvement (i : 'I_#|bas|) :
+  reduced_cost_of_basis i 0 < 0 -> '[c, direction i] < 0.
+Proof.
+by rewrite vdot_mulmx vdotr_delta_mx.
+Qed.
+
+Section Certificates.
+
+Variable (b : 'cV[R]_m).
+
+Lemma eq_primal_dual_value :
+  '[c, point_of_basis b bas] = '[b, ext_reduced_cost_of_basis].
 Proof.
 apply/eqP; rewrite -duality_gap_eq0_def; apply/eqP.
-apply: (compl_slack_cond_duality_gap_eq0 (ext_reduced_cost_of_basis_def c bas)).
+apply: (compl_slack_cond_duality_gap_eq0 ext_reduced_cost_of_basis_def).
 apply/compl_slack_condP => i.
 case: (boolP (i \in bas)) => [Hi | Hi].
 - right.
   move/subsetP/(_ i Hi): (basis_subset_of_active_ineq b bas).
   by rewrite inE; move/eqP/row_eq/(_ 0).
-- by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
+- by move: (ext_reduced_cost_of_basis_notin_bas Hi) => ->; left.
 Qed.
 
-(*Lemma eq_primal_dual_value c bas :
-  let: x := point_of_basis bas in
-  let: u := ext_reduced_cost_of_basis c bas in
-  '[c, x] = '[b, u].
-Proof.
-set x := point_of_basis bas.
-set u := ext_reduced_cost_of_basis c bas.
-apply/eqP; rewrite -duality_gap_eq0_def; apply/eqP.
-apply: (compl_slack_cond_duality_gap_eq0 (ext_reduced_cost_of_basis_def c bas)).
-apply/compl_slack_condP => i.
-case: (boolP (i \in bas)) => [Hi | Hi].
-- by move/subsetP/(_ i Hi): (basis_subset_of_active_ineq bas); rewrite inE => /eqP ->; right.
-- by move: (ext_reduced_cost_of_basis_notin_bas c Hi) => ->; left.
-Qed.*)
-
-(*Lemma optimal_cert_on_basis c (bas : feasible_basis) :
-  let: x := point_of_basis bas in
-  (reduced_cost_of_basis c bas) >=m 0 ->
-  forall y, y \in polyhedron A b -> '[c,x] <= '[c,y].
-Proof.
-set x := point_of_basis bas.
-set u := ext_reduced_cost_of_basis c bas.
-rewrite ext_reduced_cost_dual_feasible => Hu.
-apply: (duality_gap_eq0_optimality (feasible_basis_is_feasible bas) Hu).
-move: Hu; rewrite inE; move/andP => [/eqP Hu _].
-by apply/eqP; rewrite subr_eq0 eq_primal_dual_value.
-Qed.*)
-Lemma optimal_cert_on_basis (b : 'cV[R]_m) c (bas : basis) :
+Lemma optimal_cert_on_basis :
   let: x := point_of_basis b bas in
-    x \in polyhedron A b -> (reduced_cost_of_basis c bas) >=m 0 ->
+    x \in polyhedron A b -> reduced_cost_of_basis >=m 0 ->
       forall y, y \in polyhedron A b -> '[c,x] <= '[c,y].
 Proof.
-move => x_in_poly.
+move => x_feas.
 rewrite ext_reduced_cost_dual_feasible => Hu.
-apply: (duality_gap_eq0_optimality x_in_poly Hu).
+apply: (duality_gap_eq0_optimality x_feas Hu).
 move: Hu; rewrite inE; move/andP => [/eqP Hu _].
 by apply/eqP; rewrite subr_eq0 eq_primal_dual_value.
 Qed.
 
-Lemma direction_improvement c (bas : basis) (i : 'I_#|bas|) :
-  let: u := reduced_cost_of_basis c bas in
-    u i 0 < 0 -> '[c, direction i] < 0.
-Proof.
-by rewrite vdot_mulmx vdotr_delta_mx.
-Qed.
-
-(*
-Lemma unbounded_cert_on_basis c (bas : basis) (i:'I_#|bas|) M:
-  let: u := reduced_cost_of_basis c bas in
-  let: d := direction i in
-  feasible_dir A d -> u i 0 < 0 ->
-  exists x, (x \in polyhedron A b) /\ ('[c,x] < M).
-Proof.
-move => Hd Hui.
-apply: (unbounded_certificate (x0 := point_of_basis bas) (d:=direction i));
-  try by [exact: feasible_basis_is_feasible | done].
-by rewrite vdot_mulmx vdotr_delta_mx.
-Qed.*)
-Lemma unbounded_cert_on_basis (b : 'cV[R]_m) c (bas : basis) (i : 'I_#|bas|) M :
-  let: u := reduced_cost_of_basis c bas in
+Lemma unbounded_cert_on_basis (i : 'I_#|bas|) M :
   let: d := direction i in
   let: z := point_of_basis b bas in
-  feasible_dir A d -> u i 0 < 0 -> z \in polyhedron A b ->
+  feasible_dir A d -> reduced_cost_of_basis i 0 < 0 -> z \in polyhedron A b ->
     exists x, (x \in polyhedron A b) /\ ('[c,x] < M).
 Proof.
 move => Hd Hui Hfeas.
 exact: (unbounded_certificate M Hfeas Hd (direction_improvement Hui)).
 Qed.
+
+End Certificates.
 
 End Cost.
 
@@ -1097,30 +1058,7 @@ rewrite mulmxDr lex_gtr_addl mulmxA.
 rewrite [c^T *m _]mx11_scalar -vdot_def mxE /= mulr1n mul_scalar_mx vdotC.
 rewrite (lex_nmulr_rlt0 _ (direction_improvement u_i_neg)).
 exact: lex_min_gap_lex_pos.
-Qed. (* complete with thanks to the argument on non-degeneracy, see above *)
-
-(*
-Lemma lex_rule_dec :
-  let: bas' := lex_rule_lex_bas in
-  let: u := reduced_cost_of_basis c bas in
-  u i 0 < 0 -> (c^T *m point_of_basis_pert bas') <lex (c^T *m point_of_basis_pert bas).
-Proof.
-set d := direction bas i.
-set j := lex_ent_var.
-set bas' := lex_rule_lex_bas.
-set v := point_of_basis_pert bas.
-set v' := point_of_basis_pert bas'.
-set lex_min_gap := lex_min_seq [ seq lex_gap bas d j | j <- enum 'I_m & (A *m d) j 0 < 0].
-set u := v + d *m lex_min_gap.
-
-move => Hui.
-move: lex_rule_rel_succ_points => Hv'u.
-rewrite -/u -/v' in Hv'u.
-rewrite Hv'u /u mulmxDr lex_ltrNge -subv_gelex0 addrC addrA addNr add0r -lex_ltrNge mulmxA.
-rewrite -vdot_def vdotC mul_scalar_mx.
-rewrite lex_ltrNge -[0](scaler0 _ ('[c,d])) -lex_negscalar; last exact: direction_improvement.
-rewrite -lex_ltrNge; exact: lex_min_gap_lex_pos.
-Qed.*)
+Qed.
 
 End LexicographicRuleCost.
 
@@ -1531,7 +1469,7 @@ case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | bas i
   + apply: feasibility_pointed_to_general.
     exact: lex_feasible_basis_is_feasible.
   + by apply: ext_reduced_cost2gen_dual_feasible.
-  + move: (eq_primal_dual_value bpointed cpointed bas).
+  + move: (eq_primal_dual_value cpointed bas bpointed).
     rewrite cost2gen => -> /=.
     by rewrite -[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
 Qed.
