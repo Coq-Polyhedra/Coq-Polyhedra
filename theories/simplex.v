@@ -959,20 +959,13 @@ Fact x_pert_feasible :
   x_pert \in lex_polyhedron A b_pert.
 Proof.
 apply/lex_polyhedron_inP => i.
-apply/leqlex_seq_lev/forallP => j.
-apply/implyP => Hj.
-rewrite /x_pert mul_mx_row mulmx0 row_row_mx /b_pert mxE.
-case: (splitP' j) => [h Hh | h Hh].
-- rewrite Hh 2!row_mxEl mxE.
-  move/forallP/(_ i): x_feas.
-  suff ->: h = 0 by done.
-  apply/ord_inj.
-  by move: (ltn_ord h); rewrite ltnS leqn0 => /eqP.
-- rewrite Hh 2!row_mxEr !mxE.
-  case: (boolP (i == h)) => [Heq | Hneq].
-  + exact: lerN10.
-  + rewrite -mulrN1 mul0r.
-    exact: lerr.
+rewrite row_mul mul_mx_row mulmx0 row_row_mx linearN /= row1.
+apply: lex_lev => j; rewrite 2!mxE.
+case: (splitP j) => [j' _| j' _]; last first.
+- rewrite !mxE eq_refl /=.
+  by rewrite -mulNrn mulrn_wle0 // lerN10.
+- rewrite [j']ord1_eq0 -row_mul 2!mxE.
+  by move/forallP: x_feas.
 Qed.
 
 Definition build_lex_feasible_basis : lex_feasible_basis :=
