@@ -100,6 +100,7 @@ Section Simplex.
 Variable R : realFieldType.
 
 Variable m n : nat.
+Variable A : 'M[R]_(m,n).
 
 Section Prebasis.
 
@@ -148,8 +149,6 @@ by rewrite basD1 subn1.
 Qed.
 
 End Prebasis.
-
-Variable A : 'M[R]_(m,n).
 
 Section Basis.
 
