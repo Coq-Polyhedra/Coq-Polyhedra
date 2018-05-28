@@ -10,7 +10,7 @@
 
 Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx polyhedron.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -18,6 +18,232 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
+
+Section Polyhedron.
+
+Variable R : realFieldType.
+
+Section Def.
+
+Variable m n : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Implicit Types x : 'cV[R]_n.
+
+Definition polyhedron := [pred x: 'cV_n | (A *m x) >=m b].
+
+Definition active_ineq x :=
+  [set i : 'I_m | (A *m x) i 0 == b i 0].
+
+Definition feasible_dir := [pred d | (A *m d) >=m 0].
+
+Definition pointed := (mxrank A >= n)%N.
+
+Lemma pointedPn : reflect (exists d, [/\ d != 0, feasible_dir d & feasible_dir (-d)]) (~~pointed).
+Proof.
+have ->: ~~pointed = (kermx A^T != 0)%MS.
+by rewrite /pointed -mxrank_tr row_leq_rank -kermx_eq0.
+apply/(iffP rowV0Pn) => [[v] /sub_kermxP Hv Hv'| [d [Hd Hd' Hd'']]].
+- move/(congr1 trmx): Hv; rewrite trmx0 trmx_mul trmxK => Hv.
+  exists v^T; split; try by rewrite inE ?mulmxN Hv ?oppr0 lev_refl.
+  + by rewrite -trmx0 inj_eq; last exact: trmx_inj.
+- exists d^T; last by rewrite -trmx0 inj_eq; last exact: trmx_inj.
+  + apply/sub_kermxP; rewrite -trmx_mul -trmx0.
+    apply: congr1; apply: lev_antisym; apply/andP.
+    by rewrite !inE mulmxN oppv_ge0 in Hd' Hd''.
+Qed.
+
+Hypothesis is_pointed: pointed.
+
+Definition build_non_feasible_direction d :=
+  if feasible_dir d then -d else d.
+
+Lemma build_non_feasible_directionP d : d != 0 -> ~~ (feasible_dir (build_non_feasible_direction d)).
+Proof.
+move => d_neq0.
+rewrite /build_non_feasible_direction.
+case: ifP; last exact: negbT.
+move => d_feas_dir.
+move: is_pointed; apply: contraL => md_feas_dir.
+by apply/pointedPn; exists d; split.
+Qed.
+
+End Def.
+
+Section WeakDuality.
+Variable m n : nat.
+
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+Variable c : 'cV[R]_n.
+
+Implicit Types x : 'cV[R]_n.
+Implicit Types u : 'cV[R]_m.
+
+Definition dualA := col_mx (col_mx A^T (-A^T)) (1%:M).
+Definition dualb := col_mx (col_mx c (-c)) (0:'cV_m).
+
+Definition dual_polyhedron :=
+  [pred u | A^T *m u == c & (u >=m 0)].
+
+Lemma dual_polyhedronE u :
+  (u \in dual_polyhedron) = (u \in polyhedron dualA dualb).
+Proof.
+rewrite 2!inE /dualA /dualb 2!mul_col_mx 2!col_mx_lev mul1mx mulNmx lev_opp2.
+apply: (congr1 (andb^~ _)); apply/idP/idP.
+- by move/eqP ->; rewrite lev_refl.
+- by move/lev_antisym ->; apply: eq_refl.
+Qed.
+
+Definition dual_feasible_dir := [pred d | (A^T *m d == 0) && (d >=m 0)].
+
+Lemma dual_feasible_directionE d :
+  (dual_feasible_dir d) = (feasible_dir dualA d).
+Proof.
+rewrite 2!inE 2!mul_col_mx mul1mx.
+rewrite -[0 in RHS]vsubmxK -[usubmx _]vsubmxK.
+rewrite 2!col_mx_lev !linear0.
+apply: (congr1 (andb^~ _)).
+by rewrite mulNmx oppv_ge0 -eqv_le eq_sym.
+Qed.
+
+Lemma mul_tr_dualA (v : 'cV_(n+n+m)) :
+  let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
+  let: z := dsubmx v in
+  (dualA)^T *m v = z - A *m y.
+Proof.
+rewrite /dualA 2!tr_col_mx linearN /= !trmxK trmx1.
+rewrite -{1}[v]vsubmxK mul_row_col mul1mx.
+rewrite -{1}[usubmx v]vsubmxK mul_row_col.
+rewrite addrC; apply/(congr1 (fun z => _ + z)).
+by rewrite mulmxDr mulNmx mulmxN opprB.
+Qed.
+
+
+Lemma vdot_dualb (v : 'cV_(n+n+m)) :
+  let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
+  '[dualb, v] = -'[c,y].
+Proof.
+rewrite /dualb -{1}[v]vsubmxK -{1}[usubmx v]vsubmxK.
+rewrite 2!vdot_col_mx vdot0l addr0 vdotNl.
+by rewrite -[in RHS]vdotNr opprB vdotDr vdotNr.
+Qed.
+
+Definition duality_gap x u := '[c,x] - '[b,u].
+
+Lemma duality_gap_def x u :
+  (A^T *m u) = c -> duality_gap x u = '[u, A *m x - b].
+Proof.
+by rewrite /duality_gap; move <-; rewrite -vdot_mulmx [X in _ - X]vdotC vdotBr.
+Qed.
+
+Lemma duality_gap_ge0_def x u : (duality_gap x u >= 0) = ('[c,x] >= '[b,u]).
+Proof.
+by rewrite /duality_gap subr_ge0.
+Qed.
+
+Lemma duality_gap_eq0_def x u : (duality_gap x u == 0) = ('[c,x] == '[b,u]).
+Proof.
+by rewrite /duality_gap subr_eq0.
+Qed.
+
+Lemma weak_duality x u :
+  x \in polyhedron A b -> u \in dual_polyhedron -> duality_gap x u >= 0.
+Proof.
+move => Hx; rewrite inE => /andP [/eqP/(duality_gap_def x) -> Hu'].
+rewrite vdotBr subr_ge0.
+by apply: vdot_lev; last by rewrite inE in Hx.
+Qed.
+
+Lemma dual_feasible_bounded u :
+  u \in dual_polyhedron -> forall x, x \in polyhedron A b -> '[c,x] >= '[b,u].
+Proof.
+move => H x Hx; rewrite -duality_gap_ge0_def.
+by apply: weak_duality.
+Qed.
+
+Definition compl_slack_cond (x : 'cV[R]_n) (u : 'cV[R]_m) :=
+  [forall i, (u i 0 == 0) || (i \in active_ineq A b x)].
+
+Lemma compl_slack_condP x u :
+  reflect (forall i, u i 0 = 0 \/ ((A *m x) i 0 = b i 0)) (compl_slack_cond x u).
+Proof.
+apply: (iffP forallP) => [H i | H i].
+- move/(_ i)/orP: H; case => [/eqP | ]; first by left.
+  + by rewrite inE => /eqP; right.
+- move/(_ i): H; rewrite inE; case => [-> | ->] ; by rewrite eq_refl ?orbT.
+Qed.
+
+Lemma duality_gap_eq0_compl_slack_cond x u :
+  x \in polyhedron A b -> u \in dual_polyhedron ->
+  (duality_gap x u = 0) -> compl_slack_cond x u.
+Proof.
+rewrite !inE.
+move => Hx /andP [/eqP Hu Hu'] /eqP; rewrite (duality_gap_def x) // /vdot psumr_eq0.
+- move/allP => H; apply/forallP => i.
+  move/(_ i (mem_index_enum _))/implyP/(_ isT): H.
+  by rewrite mulf_eq0 inE mxE [in X in _ + X]mxE subr_eq0.
+- move => i _; apply: mulr_ge0.
+  + by move/forallP/(_ i): Hu'; rewrite mxE.
+  + by rewrite mxE [in X in _ + X]mxE subr_ge0; move/forallP: Hx.
+Qed.
+
+Lemma compl_slack_cond_duality_gap_eq0 x u :
+  (A^T *m u) = c -> (compl_slack_cond x u) -> (duality_gap x u = 0).
+Proof.
+move => Hu /compl_slack_condP H; apply/eqP; rewrite (duality_gap_def _ Hu) /vdot.
+apply/eqP; apply: big1 => i _.
+move/(_ i): H.
+case => [-> |]; first by rewrite mul0r.
+- rewrite [in X in _ * X]mxE [in X in _ + X]mxE.
+  by move ->; rewrite addrN mulr0.
+Qed.
+
+Lemma compl_slack_cond_duality_gap_equiv x u :
+  x \in polyhedron A b -> u \in dual_polyhedron ->
+  (duality_gap x u == 0) = (compl_slack_cond x u).
+Proof.
+move => Hx Hu.
+move: (Hu); rewrite inE; move/andP => [/eqP Hu' _].
+apply/idP/idP.
+- by move/eqP; apply: duality_gap_eq0_compl_slack_cond.
+- by move/(compl_slack_cond_duality_gap_eq0 Hu')/eqP.
+Qed.
+
+Lemma duality_gap_eq0_optimality x u :
+  x \in polyhedron A b -> u \in dual_polyhedron -> duality_gap x u = 0 ->
+  forall y, y \in polyhedron A b -> '[c,x] <= '[c,y].
+Proof.
+move => Hx Hu /eqP.
+rewrite (duality_gap_eq0_def x u) => /eqP Hcx.
+move => y Hy; rewrite Hcx -duality_gap_ge0_def.
+by apply: weak_duality.
+Qed.
+
+Lemma unbounded_certificate x0 d K:
+  x0 \in polyhedron A b -> feasible_dir A d -> '[c,d] < 0 ->
+         exists x, x \in polyhedron A b /\ '[c,x] < K.
+Proof.
+move => /forallP Hx0 /forallP Hd Hcd.
+set M := Num.max (0%R) ('[c,d]^-1 * (K - 1 - '[c, x0])).
+set x := x0 + M *: d.
+exists x; split.
++ apply/forallP => j.
+  rewrite mulmxDr -scalemxAr mxE [X in _ + X]mxE.
+  rewrite -[X in X <= _]addr0.
+  apply: ler_add; first by apply: (Hx0 _).
+  - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
+    by rewrite lter_maxr lerr.
++ rewrite vdotDr vdotZr -ltr_subr_addl.
+  rewrite -mulrC -ltr_ndivr_mull //.
+  rewrite lter_maxr; apply/orP; right.
+  rewrite -(ltr_nmul2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
+  by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10.
+Qed.
+
+End WeakDuality.
+End Polyhedron.
 
 Section LexPolyhedron.
 (* On unifying lex-polyhedra and polyhedra:
@@ -37,6 +263,7 @@ Section LexPolyhedron.
  * used in this file *)
 
 Variable R : realFieldType.
+
 Variable m n : nat.
 
 Section Def.
@@ -92,13 +319,11 @@ rewrite 2!inE; apply/eqP/eqP => [ eq |].
 Qed.
 
 End UsualVsLexPolyhedron.
-
 End LexPolyhedron.
 
 Section Simplex.
 
 Variable R : realFieldType.
-
 Variable m n : nat.
 Variable A : 'M[R]_(m,n).
 
@@ -882,11 +1107,11 @@ End Certificates.
 
 End Cost.
 
-Section LexFeasibleBasis.
-
 Variable b : 'cV[R]_m.
 
 Definition b_pert := row_mx b (-(1%:M)).
+
+Section LexFeasibleBasis.
 
 Lemma rel_points_of_basis bas :
   point_of_basis b bas = col 0 (point_of_basis b_pert bas).
@@ -1060,20 +1285,16 @@ End LexFeasibleBasis.
 
 Section Phase2.
 
-Variable b : 'cV[R]_m.
-
-Notation b_pert := (b_pert b).
-
 Inductive phase2_final_result :=
-| Phase2_res_unbounded (bas: lex_feasible_basis b) of 'I_#|bas|
-| Phase2_res_optimal_basis of (lex_feasible_basis b).
+| Phase2_res_unbounded (bas: lex_feasible_basis) of 'I_#|bas|
+| Phase2_res_optimal_basis of lex_feasible_basis.
 
 Inductive phase2_intermediate_result :=
 | Phase2_final of phase2_final_result
-| Phase2_next_basis of (lex_feasible_basis b).
+| Phase2_next_basis of lex_feasible_basis.
 
 Variable c : 'cV[R]_n.
-Implicit Types bas : (lex_feasible_basis b).
+Implicit Types bas : lex_feasible_basis.
 
 Definition basic_step bas :=
   let u := reduced_cost_of_basis c bas in
@@ -1086,7 +1307,7 @@ Definition basic_step bas :=
     Phase2_final (Phase2_res_optimal_basis bas).
 
 Definition basis_height bas :=
-  #|[ set bas' : (lex_feasible_basis b) | (c^T *m (point_of_basis b_pert bas')) <lex (c^T *m (point_of_basis b_pert bas)) ]|.
+  #|[ set bas' : lex_feasible_basis | (c^T *m (point_of_basis b_pert bas')) <lex (c^T *m (point_of_basis b_pert bas)) ]|.
 
 Function phase2 bas {measure basis_height bas} :=
   match basic_step bas with
@@ -1118,8 +1339,8 @@ case: pickP => [i |]; last by done.
 Qed.
 
 CoInductive phase2_spec : phase2_final_result -> Type :=
-| Phase2_unbounded (bas: lex_feasible_basis b) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : phase2_spec (Phase2_res_unbounded i)
-| Phase2_optimal_basis (bas: lex_feasible_basis b) of (reduced_cost_of_basis c bas) >=m 0 : phase2_spec (Phase2_res_optimal_basis bas).
+| Phase2_unbounded (bas: lex_feasible_basis) (i: 'I_#|bas|) of (reduced_cost_of_basis c bas) i 0 < 0 /\ feasible_dir A (direction i) : phase2_spec (Phase2_res_unbounded i)
+| Phase2_optimal_basis (bas: lex_feasible_basis) of (reduced_cost_of_basis c bas) >=m 0 : phase2_spec (Phase2_res_optimal_basis bas).
 
 Lemma phase2P bas0 : phase2_spec (phase2 bas0).
 Proof.
@@ -1281,8 +1502,7 @@ Qed.
 
 End DualFeasibility.
 
-
-Section Pointed_simplex.
+Section PointedSimplex.
 (* a complete simplex method (phase 1 + 2) which applies to LP
  * such that the feasible set is pointed *)
 
@@ -1330,9 +1550,9 @@ case: emptiness_procP => [x x_feas | d d_inconsistent]; last first.
   case: phase2P => [[bas' d] /=|]; by constructor.
 Qed.
 
-End Pointed_simplex.
+End PointedSimplex.
 
-Section General_simplex.
+Section GeneralSimplex.
 
 Variable R : realFieldType.
 Variable m n : nat.
@@ -1443,12 +1663,33 @@ Definition simplex :=
     Simplex_optimal_point (v2gen (point_of_basis bpointed bas), ext_reduced_cost2gen bas)
   end.
 
-CoInductive simplex_spec : simplex_final_result -> Type :=
-| Infeasible d of (dual_feasible_dir A d /\ '[b, d] > 0): simplex_spec (Simplex_infeasible d)
-| Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_dir A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p)
-| Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & '[c,p.1] = '[b, p.2]] : simplex_spec (Simplex_optimal_point p).
+Definition unbounded :=
+  if simplex is (Simplex_unbounded _) then true else false.
 
-Lemma simplexP: simplex_spec simplex.
+Definition bounded :=
+  if simplex is (Simplex_optimal_point _) then true else false.
+
+Definition opt_point :=
+  if simplex is (Simplex_optimal_point (x, _)) then
+    x
+  else 0 (* not used *).
+
+Definition dual_opt_point :=
+  if simplex is (Simplex_optimal_point (_, u)) then
+    u
+  else 0 (* not used *).
+
+Definition opt_value := '[c, opt_point].
+(*  if simplex is (Simplex_optimal_point (x, _)) then
+    '[c, x]
+  else 0. *)
+
+CoInductive simplex_spec : simplex_final_result (*-> bool -> bool -> bool*) -> Type :=
+| Infeasible d of (dual_feasible_dir A d /\ '[b, d] > 0): simplex_spec (Simplex_infeasible d)(*false false false*)
+| Unbounded p of [/\ (p.1 \in polyhedron A b), (feasible_dir A p.2) & ('[c,p.2] < 0)] : simplex_spec (Simplex_unbounded p) (*true true false*)
+| Optimal_point p of [/\ (p.1 \in polyhedron A b), (p.2 \in dual_polyhedron A c) & '[c,p.1] = '[b, p.2]] : simplex_spec (Simplex_optimal_point p) (*true false true*).
+
+Lemma simplexP: simplex_spec simplex (*(feasible A b) unbounded bounded*).
 Proof.
 rewrite /simplex.
 case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | bas i [H H']| bas Hu]; constructor; rewrite //=.
@@ -1467,9 +1708,6 @@ case: pointed_simplexP => [ d /infeasibility_pointed_to_general [Hd Hd'] | bas i
     rewrite cost2gen => -> /=.
     by rewrite -[ext_reduced_cost_of_basis _ _]vsubmxK vdot_col_mx vdot0l addr0.
 Qed.
-
-Definition unbounded :=
-  if simplex is (Simplex_unbounded _) then true else false.
 
 Lemma unboundedP_cert :
   reflect (exists p, [/\ p.1 \in polyhedron A b, (feasible_dir A p.2) & '[c,p.2] < 0]) unbounded.
@@ -1499,23 +1737,6 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
   by rewrite ltr_le_asym.
 Qed.
 
-Definition bounded :=
-  if simplex is (Simplex_optimal_point _) then true else false.
-
-Definition opt_point :=
-  if simplex is (Simplex_optimal_point (x, _)) then
-    x
-  else 0 (* not used *).
-
-Definition dual_opt_point :=
-  if simplex is (Simplex_optimal_point (_, u)) then
-    u
-  else 0 (* not used *).
-
-Definition opt_value := '[c, opt_point].
-(*  if simplex is (Simplex_optimal_point (x, _)) then
-    '[c, x]
-  else 0. *)
 
 Lemma opt_point_is_feasible :
   bounded -> opt_point \in polyhedron A b.
@@ -1662,30 +1883,6 @@ Definition bounded_pointed :=
   | _ => false
   end.
 
-(*Lemma bounded_pointed_equiv :
-  bounded_pointed = bounded.
-Proof.
-rewrite /bounded_pointed.
-case: pointed_simplexP =>
-  [ d /(intro_existsT (infeasibleP _ _))/negP Hinfeas
-  | bas i [Hd Hd']
-  | bas Hu].
-- symmetry; apply/(introF idP).
-  move/boundedP.
-  by move => [[x [/(intro_existsT (feasibleP _ _))]]].
-- move/(intro_existsT (feasibleP _ _)): (feasible_basis_is_feasible bas) => Hfeas.
-  suff: unbounded.
-  + by move: (bounded_is_not_unbounded Hfeas) ->; move ->.
-  + apply/unboundedP => K.
-    exact: (unbounded_cert_on_basis K Hd' Hd).
-- symmetry; apply/boundedP.
-  move: (optimal_cert_on_basis Hu) => Hopt.
-  suff <-: '[c, point_of_basis b bas] = opt_value.
-  + split; last by done.
-    * exists (point_of_basis b bas).
-      by split; [exact: feasible_basis_is_feasible | done].
-  + by apply: opt_value_is_optimal; [exact: feasible_basis_is_feasible | done].
-Qed.*)
 Lemma bounded_pointed_equiv :
   bounded_pointed = bounded.
 Proof.
@@ -1710,29 +1907,6 @@ case: pointed_simplexP =>
       by split; [exact: (lex_feasible_basis_is_feasible bas) | done].
   + by apply: opt_value_is_optimal; [exact: (lex_feasible_basis_is_feasible bas) | done].
 Qed.
-
-(*Lemma bounded_pointedP :
-  reflect
-    ((exists fbas: feasible_basis A b, '[c, point_of_basis b fbas] = opt_value)
-     /\ (forall y, y \in polyhedron A b -> opt_value <= '[c,y]))
-    bounded.
-Proof.
-rewrite -bounded_pointed_equiv /bounded_pointed.
-case: pointed_simplexP =>
-  [ d /(intro_existsT (infeasibleP _ _))/negP Hinfeas
-  | fbas i [Hd Hd']
-  | ]; constructor.
-- move => [[fbas _] _].
-  by move/(intro_existsT (feasibleP _ _)): (feasible_basis_is_feasible fbas).
-- move => [_ Hopt].
-  move: (unbounded_cert_on_basis opt_value Hd' Hd) => [x [Hx Hx']].
-  by move/(ltr_le_trans Hx'): (Hopt _ Hx); rewrite ltrr.
-- have Hval: '[ c, point_of_basis b bas] = opt_value.
-  + apply: opt_value_is_optimal;
-      [ exact: feasible_basis_is_feasible | exact: optimal_cert_on_basis].
-  split; first by exists bas.
-  + by rewrite -Hval; exact: optimal_cert_on_basis.
-Qed.*)
 Lemma bounded_pointedP :
   reflect
     ((exists fbas: feasible_basis A b, '[c, point_of_basis b fbas] = opt_value)
@@ -1761,7 +1935,7 @@ case: pointed_simplexP =>
     by exists (FeasibleBasis bas_is_feasible).
 Qed.
 
-End General_simplex.
+End GeneralSimplex.
 
 Section BoundedPolyhedron.
 
