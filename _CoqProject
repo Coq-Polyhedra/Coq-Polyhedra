@@ -4,9 +4,6 @@ theories/vector_order.v
 theories/extra_matrix.v
 theories/inner_product.v
 theories/row_submx.v
-theories/polyhedron.v
 theories/simplex.v
-theories/duality.v
-theories/minkowski.v
-theories/affine_hull.v
-theories/face.v
+theories/hpolyhedron.v
+theories/polyhedron.v
