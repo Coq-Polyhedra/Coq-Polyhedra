@@ -40,7 +40,8 @@ Definition feasible_dir := [pred d | (A *m d) >=m 0].
 
 Definition pointed := (mxrank A >= n)%N.
 
-Lemma pointedPn : reflect (exists d, [/\ d != 0, feasible_dir d & feasible_dir (-d)]) (~~pointed).
+Lemma pointedPn :
+  reflect (exists d, [/\ d != 0, feasible_dir d & feasible_dir (-d)]) (~~pointed).
 Proof.
 have ->: ~~pointed = (kermx A^T != 0)%MS.
 by rewrite /pointed -mxrank_tr row_leq_rank -kermx_eq0.
@@ -59,7 +60,8 @@ Hypothesis is_pointed: pointed.
 Definition build_non_feasible_direction d :=
   if feasible_dir d then -d else d.
 
-Lemma build_non_feasible_directionP d : d != 0 -> ~~ (feasible_dir (build_non_feasible_direction d)).
+Lemma build_non_feasible_directionP d :
+  d != 0 -> ~~ (feasible_dir (build_non_feasible_direction d)).
 Proof.
 move => d_neq0.
 rewrite /build_non_feasible_direction.
@@ -111,7 +113,7 @@ Qed.
 Lemma mul_tr_dualA (v : 'cV_(n+n+m)) :
   let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
   let: z := dsubmx v in
-  (dualA)^T *m v = z - A *m y.
+    (dualA)^T *m v = z - A *m y.
 Proof.
 rewrite /dualA 2!tr_col_mx linearN /= !trmxK trmx1.
 rewrite -{1}[v]vsubmxK mul_row_col mul1mx.
@@ -120,10 +122,9 @@ rewrite addrC; apply/(congr1 (fun z => _ + z)).
 by rewrite mulmxDr mulNmx mulmxN opprB.
 Qed.
 
-
 Lemma vdot_dualb (v : 'cV_(n+n+m)) :
   let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
-  '[dualb, v] = -'[c,y].
+    '[dualb, v] = -'[c,y].
 Proof.
 rewrite /dualb -{1}[v]vsubmxK -{1}[usubmx v]vsubmxK.
 rewrite 2!vdot_col_mx vdot0l addr0 vdotNl.
@@ -132,18 +133,20 @@ Qed.
 
 Definition duality_gap x u := '[c,x] - '[b,u].
 
-Lemma duality_gap_def x u :
+Fact duality_gap_def x u :
   (A^T *m u) = c -> duality_gap x u = '[u, A *m x - b].
 Proof.
 by rewrite /duality_gap; move <-; rewrite -vdot_mulmx [X in _ - X]vdotC vdotBr.
 Qed.
 
-Lemma duality_gap_ge0_def x u : (duality_gap x u >= 0) = ('[c,x] >= '[b,u]).
+Fact duality_gap_ge0_def x u :
+  (duality_gap x u >= 0) = ('[c,x] >= '[b,u]).
 Proof.
 by rewrite /duality_gap subr_ge0.
 Qed.
 
-Lemma duality_gap_eq0_def x u : (duality_gap x u == 0) = ('[c,x] == '[b,u]).
+Fact duality_gap_eq0_def x u :
+  (duality_gap x u == 0) = ('[c,x] == '[b,u]).
 Proof.
 by rewrite /duality_gap subr_eq0.
 Qed.
@@ -177,7 +180,7 @@ Qed.
 
 Lemma duality_gap_eq0_compl_slack_cond x u :
   x \in polyhedron A b -> u \in dual_polyhedron ->
-  (duality_gap x u = 0) -> compl_slack_cond x u.
+    (duality_gap x u = 0) -> compl_slack_cond x u.
 Proof.
 rewrite !inE.
 move => Hx /andP [/eqP Hu Hu'] /eqP; rewrite (duality_gap_def x) // /vdot psumr_eq0.
@@ -243,6 +246,7 @@ exists x; split.
 Qed.
 
 End WeakDuality.
+
 End Polyhedron.
 
 Section LexPolyhedron.
@@ -319,6 +323,7 @@ rewrite 2!inE; apply/eqP/eqP => [ eq |].
 Qed.
 
 End UsualVsLexPolyhedron.
+
 End LexPolyhedron.
 
 Module Simplex.
@@ -1098,8 +1103,8 @@ Qed.
 Lemma unbounded_cert_on_basis (i : 'I_#|bas|) M :
   let: d := direction i in
   let: z := point_of_basis b bas in
-  feasible_dir A d -> reduced_cost_of_basis i 0 < 0 -> z \in polyhedron A b ->
-    exists x, (x \in polyhedron A b) /\ ('[c,x] < M).
+    feasible_dir A d -> reduced_cost_of_basis i 0 < 0 -> z \in polyhedron A b ->
+      exists x, (x \in polyhedron A b) /\ ('[c,x] < M).
 Proof.
 move => Hd Hui Hfeas.
 exact: (unbounded_certificate M Hfeas Hd (direction_improvement Hui)).
@@ -1739,7 +1744,6 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
   by rewrite ltr_le_asym.
 Qed.
 
-
 Lemma opt_point_is_feasible :
   bounded -> opt_point \in polyhedron A b.
 Proof.
@@ -1898,6 +1902,7 @@ case: pointed_simplexP =>
       by split; [exact: (lex_feasible_basis_is_feasible bas) | done].
   + by apply: opt_value_is_optimal; [exact: (lex_feasible_basis_is_feasible bas) | done].
 Qed.
+
 Lemma bounded_pointedP :
   reflect
     ((exists fbas: feasible_basis A b, '[c, point_of_basis b fbas] = opt_value)

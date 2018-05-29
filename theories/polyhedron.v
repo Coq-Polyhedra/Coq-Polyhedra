@@ -50,10 +50,13 @@ Section Def.
 CoInductive hpoly_spec (P : polyhedron) : hpolyhedron -> Type :=
   HpolySpec Q of (P = '| Q |) : hpoly_spec P Q.
 
-Lemma hpolyP (P : polyhedron) : hpoly_spec P (hpoly P).
-Proof. by constructor; rewrite reprK. Qed.
+Lemma hpolyP (P : polyhedron) :
+  hpoly_spec P (hpoly P).
+Proof.
+by constructor; rewrite reprK.
+Qed.
 
-Lemma hpoly_eqP (P Q: hpolyhedron) :
+Lemma hpoly_eqP (P Q : hpolyhedron) :
   (P =i Q) <-> (P =e Q).
 Proof.
 apply: (rwP2 (b := (hpolyhedron_eq P Q))).
@@ -72,8 +75,8 @@ by move/hpoly_eqP.
 Qed.
 
 Canonical pi_mem_morph x := Eval hnf in PiMono1 (pi_mem x).
-Canonical polyhedron_predType := Eval hnf in
-      @mkPredType 'cV[R]_n polyhedron mem_polyhedron.
+Canonical polyhedron_predType :=
+  Eval hnf in @mkPredType 'cV[R]_n polyhedron mem_polyhedron.
 Coercion mem_polyhedron : polyhedron >-> pred_class.
 
 End Def.

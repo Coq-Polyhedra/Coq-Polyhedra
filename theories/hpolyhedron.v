@@ -32,30 +32,42 @@ Record hpolyhedron :=
 
 Definition mem_hpolyhedron (P : hpolyhedron) :=
   [pred x : 'cV_n | ((A P) *m x) >=m (b P)].
-Coercion pred_of_hpolyhedron (P: hpolyhedron) : pred_class := mem_hpolyhedron P.
+
+Coercion pred_of_hpolyhedron (P : hpolyhedron) : pred_class := mem_hpolyhedron P.
 Canonical hpolyhedron_predType := @mkPredType _ hpolyhedron pred_of_hpolyhedron.
 Canonical mem_hpolyhedron_predType := mkPredType mem_hpolyhedron.
 
 Definition feasible_dir (P : hpolyhedron) := S.feasible_dir (A P).
+
 Lemma feasible_dirP (P : hpolyhedron) d :
-  reflect (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P) (feasible_dir P d).
+  reflect (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P)
+          (feasible_dir P d).
+Proof.
+apply: (iffP idP) => [/= feasible_dir_d x lambda x_in_P lambda_pos | H].
+- rewrite inE mulmxDr -[(b P)]addr0.
+  apply: lev_add; first exact: x_in_P.
+  rewrite -scalemxAr -(scaler0 _ lambda).
+  by apply: lev_wpscalar.
+- (* RK: this implication does not seem to hold if we do not assume, for example, that P is non_empty*)
 Admitted.
 
 Section CustomPred.
 
 Variable custom_pred : pred 'cV[R]_n.
 
-Record hpolyhedron_custom := HPolyhedronCustom { P :> hpolyhedron; pred_equiv: forall x, x \in P = custom_pred x }.
+Record hpolyhedron_custom :=
+  HPolyhedronCustom { P :> hpolyhedron; pred_equiv: forall x, x \in P = custom_pred x }.
 
 Definition inE := (pred_equiv, inE).
 
 End CustomPred.
 
-Definition matrix_from_hpolyhedron (P : hpolyhedron) := Tagged (fun m => 'M[R]_(m,n+1)) (row_mx (A P) (b P)).
+Definition matrix_from_hpolyhedron (P : hpolyhedron) :=
+  Tagged (fun m => 'M[R]_(m,n+1)) (row_mx (A P) (b P)).
 
-Definition hpolyhedron_from_matrix (M: {m: nat & 'M[R]_(m, n+1)}) :=
+Definition hpolyhedron_from_matrix (M : {m: nat & 'M[R]_(m, n+1)}) :=
   let Ab := tagged M in
-  HPolyhedron (lsubmx Ab) (rsubmx Ab).
+    HPolyhedron (lsubmx Ab) (rsubmx Ab).
 
 Lemma matrix_from_hpolyhedronK :
   cancel matrix_from_hpolyhedron hpolyhedron_from_matrix.
@@ -93,9 +105,11 @@ CoInductive lp_state P c z : bool -> bool -> bool -> Type :=
 
 Lemma lp_stateP P c :
   lp_state P c (opt_point P c) (non_empty P) (bounded P c) (unbounded P c).
+Proof.
 Admitted.
 
-Lemma non_emptyP P : reflect (exists x, x \in P) (non_empty P).
+Lemma non_emptyP P :
+  reflect (exists x, x \in P) (non_empty P).
 Proof.
 exact: S.Simplex.feasibleP.
 Qed.
