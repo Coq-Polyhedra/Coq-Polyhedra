@@ -321,7 +321,9 @@ Qed.
 End UsualVsLexPolyhedron.
 End LexPolyhedron.
 
-Section Simplex.
+Module Simplex.
+
+Section LexSimplex.
 
 Variable R : realFieldType.
 Variable m n : nat.
@@ -1358,7 +1360,7 @@ Qed.
 
 End Phase2.
 
-End Simplex.
+End LexSimplex.
 
 Section Feasibility.
 
@@ -1849,17 +1851,6 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
 - by move/(intro_existsT (dual_infeasibleP _ _))/negbTE: (conj Hd Hd').
 Qed.
 
-(*Lemma exists_feasible_basis :
-  ([set: (feasible_basis A b)] != set0) = (feasible A b) && (pointed A).
-Proof.
-apply/set0Pn/andP => [[bas] _ | [/feasibleP [x x_feas] Hpointed]].
-- split.
-  + apply/feasibleP; exists (point_of_basis b bas); exact: feasible_basis_is_feasible.
-  + move/is_basisP_rank: (basis_is_basis bas).
-    rewrite /pointed => {1}<-.
-    apply: mxrankS; exact: row_submx_submx.
-- by exists (build_feasible_basis Hpointed x_feas).
-Qed.*)
 Lemma exists_feasible_basis :
   ([set: (feasible_basis A b)] != set0) = (feasible A b) && (pointed A).
 Proof.
@@ -2030,3 +2021,24 @@ exists (x,d); split; try by done.
 Qed.
 
 End BoundedPolyhedron.
+
+End Simplex.
+
+(*
+Section LP.
+
+Variable R : realFieldType.
+Variable m n : nat.
+
+Record LP_t := LP { A : 'M[R]_(m,n);
+                   b : 'cV[R]_m;
+                   c : 'cV[R]_n }.
+
+Implicit Type lp : LP_t.
+
+Definition feasible lp := Simplex.feasible (A lp) (b lp).
+Definition bounded lp := Simplex.bounded (A lp) (b lp) (c lp).
+Definition unbounded lp := Simplex.unbounded (A lp) (b lp) (c lp).
+Definition opt_point lp := Simplex.opt_point (A lp) (b lp) (c lp).
+Definition dual_opt_point lp := Simplex.dual_opt_point (A lp) (b lp) (c lp).
+*)

@@ -10,6 +10,8 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
+Require simplex.
+Module S := simplex. (* to be fixed, simplex.v should be organized into a module *)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -18,546 +20,205 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Section BasicNotion.
-
-Section Defs.
+Section Def.
 
 Variable R : realFieldType.
-Variable m n : nat.
+Variable n : nat.
 
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
+Record hpolyhedron :=
+  HPolyhedron { m : nat ;
+                A : 'M[R]_(m,n) ;
+                b : 'cV[R]_m }.
 
-Implicit Types x : 'cV[R]_n.
+Definition mem_hpolyhedron (P : hpolyhedron) :=
+  [pred x : 'cV_n | ((A P) *m x) >=m (b P)].
+Coercion pred_of_hpolyhedron (P: hpolyhedron) : pred_class := mem_hpolyhedron P.
+Canonical hpolyhedron_predType := @mkPredType _ hpolyhedron pred_of_hpolyhedron.
+Canonical mem_hpolyhedron_predType := mkPredType mem_hpolyhedron.
 
-Definition polyhedron := [pred x: 'cV_n | (A *m x) >=m b].
+Definition feasible_dir (P : hpolyhedron) := S.feasible_dir (A P).
+Lemma feasible_dirP (P : hpolyhedron) d :
+  reflect (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P) (feasible_dir P d).
+Admitted.
 
-Lemma polyhedron_rowinE x:
-  (x \in polyhedron) = [forall i, ((row i A) *m x) 0 0 >= b i 0].
+Section CustomPred.
+
+Variable custom_pred : pred 'cV[R]_n.
+
+Record hpolyhedron_custom := HPolyhedronCustom { P :> hpolyhedron; pred_equiv: forall x, x \in P = custom_pred x }.
+
+Definition inE := (pred_equiv, inE).
+
+End CustomPred.
+
+Definition matrix_from_hpolyhedron (P : hpolyhedron) := Tagged (fun m => 'M[R]_(m,n+1)) (row_mx (A P) (b P)).
+
+Definition hpolyhedron_from_matrix (M: {m: nat & 'M[R]_(m, n+1)}) :=
+  let Ab := tagged M in
+  HPolyhedron (lsubmx Ab) (rsubmx Ab).
+
+Lemma matrix_from_hpolyhedronK :
+  cancel matrix_from_hpolyhedron hpolyhedron_from_matrix.
 Proof.
-rewrite inE; apply: eq_forallb => i.
-by rewrite -row_mul [in RHS]mxE.
+move => hP; destruct hP.
+by rewrite /matrix_from_hpolyhedron /hpolyhedron_from_matrix row_mxKl row_mxKr.
 Qed.
 
-Definition active_ineq x :=
-  [set i : 'I_m | (A *m x) i 0 == b i 0].
+Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyhedronK.
+Canonical hpoly_eqType := Eval hnf in EqType hpolyhedron hpoly_eqMixin.
 
-Definition feasible_dir := [pred d | (A *m d) >=m 0].
+Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyhedronK.
+Canonical hpoly_choiceType := Eval hnf in ChoiceType hpolyhedron hpoly_choiceMixin.
 
-Definition pointed := (mxrank A >= n)%N.
+End Def.
 
-Lemma pointedPn : reflect (exists d, [/\ d != 0, feasible_dir d & feasible_dir (-d)]) (~~pointed).
-Proof.
-have ->: ~~pointed = (kermx A^T != 0)%MS.
-by rewrite /pointed -mxrank_tr row_leq_rank -kermx_eq0.
-apply/(iffP rowV0Pn) => [[v] /sub_kermxP Hv Hv'| [d [Hd Hd' Hd'']]].
-- move/(congr1 trmx): Hv; rewrite trmx0 trmx_mul trmxK => Hv.
-  exists v^T; split; try by rewrite inE ?mulmxN Hv ?oppr0 lev_refl.
-  + by rewrite -trmx0 inj_eq; last exact: trmx_inj.
-- exists d^T; last by rewrite -trmx0 inj_eq; last exact: trmx_inj.
-  + apply/sub_kermxP; rewrite -trmx_mul -trmx0.
-    apply: congr1; apply: lev_antisym; apply/andP.
-    by rewrite !inE mulmxN oppv_ge0 in Hd' Hd''.
-Qed.
-
-Hypothesis is_pointed: pointed.
-
-Definition build_non_feasible_direction d :=
-  if feasible_dir d then -d else d.
-
-Lemma build_non_feasible_directionP d : d != 0 -> ~~ (feasible_dir (build_non_feasible_direction d)).
-Proof.
-move => d_neq0.
-rewrite /build_non_feasible_direction.
-case: ifP; last exact: negbT.
-move => d_feas_dir.
-move: is_pointed; apply: contraL => md_feas_dir.
-by apply/pointedPn; exists d; split.
-Qed.
-
-End Defs.
-
-Section WeakDuality.
+Section BasicPrimitives.
 
 Variable R : realFieldType.
-Variable m n : nat.
+Variable n : nat.
 
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-Variable c : 'cV[R]_n.
+Implicit Types P Q : (hpolyhedron R n).
+Implicit Type c : 'cV[R]_n.
 
-Implicit Types x : 'cV[R]_n.
-Implicit Types u : 'cV[R]_m.
+Definition non_empty P := (S.Simplex.feasible (A P) (b P)).
+Definition bounded P c := (S.Simplex.bounded (A P) (b P) c).
+Definition unbounded P c := (S.Simplex.unbounded (A P) (b P) c).
+Definition opt_point P c := (S.Simplex.opt_point (A P) (b P) c).
+Definition opt_value P c := '[c, opt_point P c].
 
-Definition dualA := col_mx (col_mx A^T (-A^T)) (1%:M).
+CoInductive lp_state P c z : bool -> bool -> bool -> Type :=
+| Empty of P =i pred0 : lp_state P c z false false false
+| Bounded of (z \in P) * (forall x, x \in P -> '[c,z] <= '[c,x]) : lp_state P c z true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state P c z true false true.
 
-Definition dualb := col_mx (col_mx c (-c)) (0:'cV_m).
+Lemma lp_stateP P c :
+  lp_state P c (opt_point P c) (non_empty P) (bounded P c) (unbounded P c).
+Admitted.
 
-Definition dual_polyhedron :=
-  [pred u | A^T *m u == c & (u >=m 0)].
-
-Lemma dual_polyhedronE u :
-  (u \in dual_polyhedron) = (u \in polyhedron dualA dualb).
+Lemma non_emptyP P : reflect (exists x, x \in P) (non_empty P).
 Proof.
-rewrite 2!inE /dualA /dualb 2!mul_col_mx 2!col_mx_lev mul1mx mulNmx lev_opp2.
-apply: (congr1 (andb^~ _)); apply/idP/idP.
-- by move/eqP ->; rewrite lev_refl.
-- by move/lev_antisym ->; apply: eq_refl.
+exact: S.Simplex.feasibleP.
 Qed.
 
-Definition dual_feasible_dir := [pred d | (A^T *m d == 0) && (d >=m 0)].
+(*Lemma boundedP P c :
+  reflect ((exists x, x \in P /\ '[c,x] = opt_value P c) /\ (forall y, y \in P -> opt_value P c <= '[c,y])) (bounded P c).
+Admitted.
 
-Lemma dual_feasible_directionE d :
-  (dual_feasible_dir d) = (feasible_dir dualA d).
-Proof.
-rewrite 2!inE 2!mul_col_mx mul1mx.
-rewrite -[0 in RHS]vsubmxK -[usubmx _]vsubmxK.
-rewrite 2!col_mx_lev !linear0.
-apply: (congr1 (andb^~ _)).
-by rewrite mulNmx oppv_ge0 -eqv_le eq_sym.
-Qed.
+Lemma opt_value_is_optimal P c x :
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> '[c,x] = opt_value P c.
+Admitted.
 
-Definition duality_gap x u := '[c,x] - '[b,u].
+Lemma unboundedP P c :
+  reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
+Admitted.*)
 
-Lemma duality_gap_def x u :
-  (A^T *m u) = c -> duality_gap x u = '[u, A *m x - b].
-Proof.
-by rewrite /duality_gap; move <-; rewrite -vdot_mulmx [X in _ - X]vdotC vdotBr.
-Qed.
+End BasicPrimitives.
 
-Lemma duality_gap_ge0_def x u : (duality_gap x u >= 0) = ('[c,x] >= '[b,u]).
-Proof.
-by rewrite /duality_gap subr_ge0.
-Qed.
-
-Lemma duality_gap_eq0_def x u : (duality_gap x u == 0) = ('[c,x] == '[b,u]).
-Proof.
-by rewrite /duality_gap subr_eq0.
-Qed.
-
-Lemma weak_duality x u :
-  x \in polyhedron A b -> u \in dual_polyhedron -> duality_gap x u >= 0.
-Proof.
-move => Hx; rewrite inE => /andP [/eqP/(duality_gap_def x) -> Hu'].
-rewrite vdotBr subr_ge0.
-by apply: vdot_lev; last by rewrite inE in Hx.
-Qed.
-
-Lemma dual_feasible_bounded u :
-  u \in dual_polyhedron -> forall x, x \in polyhedron A b -> '[c,x] >= '[b,u].
-Proof.
-move => H x Hx; rewrite -duality_gap_ge0_def.
-by apply: weak_duality.
-Qed.
-
-Definition compl_slack_cond (x : 'cV[R]_n) (u : 'cV[R]_m) :=
-  [forall i, (u i 0 == 0) || (i \in active_ineq A b x)].
-
-Lemma compl_slack_condP x u :
-  reflect (forall i, u i 0 = 0 \/ ((A *m x) i 0 = b i 0)) (compl_slack_cond x u).
-Proof.
-apply: (iffP forallP) => [H i | H i].
-- move/(_ i)/orP: H; case => [/eqP | ]; first by left.
-  + by rewrite inE => /eqP; right.
-- move/(_ i): H; rewrite inE; case => [-> | ->] ; by rewrite eq_refl ?orbT.
-Qed.
-
-Lemma duality_gap_eq0_compl_slack_cond x u :
-  x \in polyhedron A b -> u \in dual_polyhedron ->
-  (duality_gap x u = 0) -> compl_slack_cond x u.
-Proof.
-rewrite !inE.
-move => Hx /andP [/eqP Hu Hu'] /eqP; rewrite (duality_gap_def x) // /vdot psumr_eq0.
-- move/allP => H; apply/forallP => i.
-  move/(_ i (mem_index_enum _))/implyP/(_ isT): H.
-  by rewrite mulf_eq0 inE mxE [in X in _ + X]mxE subr_eq0.
-- move => i _; apply: mulr_ge0.
-  + by move/forallP/(_ i): Hu'; rewrite mxE.
-  + by rewrite mxE [in X in _ + X]mxE subr_ge0; move/forallP: Hx.
-Qed.
-
-Lemma compl_slack_cond_duality_gap_eq0 x u :
-  (A^T *m u) = c -> (compl_slack_cond x u) -> (duality_gap x u = 0).
-Proof.
-move => Hu /compl_slack_condP H; apply/eqP; rewrite (duality_gap_def _ Hu) /vdot.
-apply/eqP; apply: big1 => i _.
-move/(_ i): H.
-case => [-> |]; first by rewrite mul0r.
-- rewrite [in X in _ * X]mxE [in X in _ + X]mxE.
-  by move ->; rewrite addrN mulr0.
-Qed.
-
-Lemma compl_slack_cond_duality_gap_equiv x u :
-  x \in polyhedron A b -> u \in dual_polyhedron ->
-  (duality_gap x u == 0) = (compl_slack_cond x u).
-Proof.
-move => Hx Hu.
-move: (Hu); rewrite inE; move/andP => [/eqP Hu' _].
-apply/idP/idP.
-- by move/eqP; apply: duality_gap_eq0_compl_slack_cond.
-- by move/(compl_slack_cond_duality_gap_eq0 Hu')/eqP.
-Qed.
-
-Lemma duality_gap_eq0_optimality x u :
-  x \in polyhedron A b -> u \in dual_polyhedron -> duality_gap x u = 0 ->
-  forall y, y \in polyhedron A b -> '[c,x] <= '[c,y].
-Proof.
-move => Hx Hu /eqP.
-rewrite (duality_gap_eq0_def x u) => /eqP Hcx.
-move => y Hy; rewrite Hcx -duality_gap_ge0_def.
-by apply: weak_duality.
-Qed.
-
-Lemma unbounded_certificate x0 d K:
-  x0 \in polyhedron A b -> feasible_dir A d -> '[c,d] < 0 ->
-         exists x, x \in polyhedron A b /\ '[c,x] < K.
-Proof.
-move => /forallP Hx0 /forallP Hd Hcd.
-set M := Num.max (0%R) ('[c,d]^-1 * (K - 1 - '[c, x0])).
-set x := x0 + M *: d.
-exists x; split.
-+ apply/forallP => j.
-  rewrite mulmxDr -scalemxAr mxE [X in _ + X]mxE.
-  rewrite -[X in X <= _]addr0.
-  apply: ler_add; first by apply: (Hx0 _).
-  - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
-    by rewrite lter_maxr lerr.
-+ rewrite vdotDr vdotZr -ltr_subr_addl.
-  rewrite -mulrC -ltr_ndivr_mull //.
-  rewrite lter_maxr; apply/orP; right.
-  rewrite -(ltr_nmul2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
-  by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10.
-Qed.
-
-Lemma mul_tr_dualA (v : 'cV_(n+n+m)) :
-  let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
-  let: z := dsubmx v in
-  (dualA)^T *m v = z - A *m y.
-Proof.
-rewrite /dualA 2!tr_col_mx linearN /= !trmxK trmx1.
-rewrite -{1}[v]vsubmxK mul_row_col mul1mx.
-rewrite -{1}[usubmx v]vsubmxK mul_row_col.
-rewrite addrC; apply/(congr1 (fun z => _ + z)).
-by rewrite mulmxDr mulNmx mulmxN opprB.
-Qed.
-
-Lemma vdot_dualb (v : 'cV_(n+n+m)) :
-  let: y := dsubmx (usubmx v) - usubmx (usubmx v) in
-  '[dualb, v] = -'[c,y].
-Proof.
-rewrite /dualb -{1}[v]vsubmxK -{1}[usubmx v]vsubmxK.
-rewrite 2!vdot_col_mx vdot0l addr0 vdotNl.
-by rewrite -[in RHS]vdotNr opprB vdotDr vdotNr.
-Qed.
-
-End WeakDuality.
-
-
-Section Perm.
+Section Inclusion.
 
 Variable R : realFieldType.
-Variable m n : nat.
+Variable n : nat.
 
-Variable s: 'S_m.
+Variable P : hpolyhedron R n.
 
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
+Definition is_included_in_halfspace c d :=
+  (non_empty P) ==> (bounded P c && (opt_value P c >= d)).
 
-Lemma perm_polyhedron :
-  polyhedron (row_perm s A) (row_perm s b) =i polyhedron A b.
+Lemma is_included_in_halfspaceP c d :
+  reflect (forall x, x \in P -> '[c,x] >= d) (is_included_in_halfspace c d).
 Proof.
-move => x; rewrite !inE.
-rewrite [X in X *m _]row_permE -mulmxA -row_permE.
-by rewrite -row_perm_lev.
+rewrite /is_included_in_halfspace; apply: (iffP implyP).
+- case: lp_stateP =>
+  [ P_is_empty _
+  | [opt_in_P opt_is_opt] /=
+  | /= _ /(_ is_true_true)]; last by done.
+  + by move => x; rewrite P_is_empty.
+  + move/(_ is_true_true) => d_le_opt.
+    move => x x_in_P; move/(_ _ x_in_P): opt_is_opt.
+    exact: ler_trans.
+- move => inclusion.
+  case: lp_stateP => [/= | [opt_in_P _] /= _ | /= ]; first by done.
+  + exact: inclusion.
+  + move/(_ d) => [x [x_in_P cx_lt_d] _].
+    move/(_ _ x_in_P): inclusion.
+    by rewrite lerNgt => /negP.
 Qed.
 
-Lemma perm_feasible_dir :
-  feasible_dir (row_perm s A) =i feasible_dir A.
+Variable Q : hpolyhedron R n.
+
+Definition hpolyhedron_is_included_in :=
+  [forall i, is_included_in_halfspace (row i (A Q))^T ((b Q) i 0)].
+
+Lemma hpolyhedron_is_included_inP :
+  reflect {subset P <= Q} hpolyhedron_is_included_in.
 Proof.
-move => x; rewrite !inE.
-rewrite row_permE -mulmxA -row_permE.
-by rewrite -row_perm_gev0.
+apply: (iffP idP).
+- move => /forallP H x Hx.
+  apply/forallP => i.
+  move/is_included_in_halfspaceP: (H i) => Hi.
+  move: (Hi x Hx).
+  by rewrite -[(A Q *m x) i 0]vdotl_delta_mx vdot_mulmx rowE trmx_mul trmx_delta.
+- move => H.
+  apply/forallP => i.
+  apply/is_included_in_halfspaceP => x Hx.
+  move/forallP: (H x Hx) => Hx'.
+  move: (Hx' i).
+  by rewrite -[(A Q *m x) i 0]vdotl_delta_mx vdot_mulmx rowE trmx_mul trmx_delta.
 Qed.
 
-End Perm.
+End Inclusion.
 
-Section Cast.
+Section ExtensionalEquality.
 
 Variable R : realFieldType.
-Variable m m' n : nat.
+Variable n : nat.
 
-Hypothesis em: m = m'.
+Definition hpolyhedron_eq : rel (hpolyhedron R n) :=
+    fun P Q => (hpolyhedron_is_included_in P Q) && (hpolyhedron_is_included_in Q P).
 
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-
-Lemma cast_polyhedron :
-  polyhedron (castmx (em, erefl n) A) (castmx (em, erefl 1%N) b) =i polyhedron A b.
+Definition hpolyhedron_eqP P Q :
+  reflect (P =i Q) (hpolyhedron_eq P Q).
 Proof.
-move => x; rewrite !inE.
-by rewrite  cast_mulmx lev_castmx.
+apply: (iffP idP).
+- move/andP => [/hpolyhedron_is_included_inP H1 /hpolyhedron_is_included_inP H2] x.
+  apply/idP/idP; [exact: (H1 x) | exact: (H2 x)].
+- move => H.
+  by apply/andP; split; apply/hpolyhedron_is_included_inP => x; rewrite (H x).
 Qed.
 
-Lemma cast_feasible_dir :
-  feasible_dir (castmx (em, erefl n) A) =i feasible_dir A.
+Lemma hpolyhedron_eq_refl :
+  reflexive hpolyhedron_eq.
 Proof.
-move => x; rewrite !inE.
-by rewrite  cast_mulmx castmx_gev0.
+by move => P; apply/hpolyhedron_eqP.
 Qed.
 
-End Cast.
-
-End BasicNotion.
-
-Section Extremality.
-
-Variable R : realFieldType.
-Variable m n : nat.
-
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-
-Implicit Types x : 'cV[R]_n.
-
-Definition is_extreme x (P: 'cV[R]_n -> Prop)  :=
-  P x /\ forall y z, forall lambda,
-           P y -> P z -> (0 < lambda < 1) -> x = lambda *: y + (1 - lambda) *: z
-           -> x = y /\ x = z.
-
-Lemma active_ineq_eq x ( i : 'I_m) :
-  i \in active_ineq A b x -> row i (A *m x) = row i b.
+Lemma hpolyhedron_eq_sym :
+  symmetric hpolyhedron_eq.
 Proof.
-rewrite inE.
-move/eqP => H.
-by rewrite [RHS]mx11_scalar mxE [LHS]mx11_scalar mxE H.
+move => P Q.
+by apply/idP/idP; move/hpolyhedron_eqP => H;
+  apply/hpolyhedron_eqP => x; move: (H x).
 Qed.
 
-Lemma inactive_ineq x :
-  x \in (polyhedron A b) ->
-       forall i, (i \notin (active_ineq A b x)) = ((A *m x) i 0 > (b i 0)).
+Lemma hpolyhedron_eq_trans :
+  transitive hpolyhedron_eq.
 Proof.
-move/forallP => Hx i; move/(_ i): Hx.
-rewrite inE !mxE ltr_def => H.
-by rewrite andb_idr; last by move => _; apply: H.
+move => ? ? ? /hpolyhedron_eqP H /hpolyhedron_eqP H'.
+apply/hpolyhedron_eqP => x.
+by move: (H x); rewrite (H' x).
 Qed.
 
-Definition active_ineq_mx x :=
-  row_submx A (active_ineq A b x).
-
-Definition active_ineq_col x :=
-  row_submx b (active_ineq A b x).
-
-Lemma active_ineq_mx_col_eq x : (active_ineq_mx x) *m x = active_ineq_col x.
+Lemma hpolyhedron_eq_is_equivalence_rel :
+  equivalence_rel hpolyhedron_eq.
 Proof.
-apply/colP => i.
-rewrite -row_submx_mul 2!row_submx_mxE.
-by apply/eqP; move: (enum_valP i); rewrite inE.
+apply/equivalence_relP; split.
+- exact: hpolyhedron_eq_refl.
+- move => ? ? ?.
+  rewrite /eqfun => ?.
+  by apply/idP/idP; apply: hpolyhedron_eq_trans; [rewrite hpolyhedron_eq_sym | done].
 Qed.
 
-Lemma polyhedron_submx x :
-  x \in (polyhedron A b) -> forall (s: {set 'I_m}), x \in (polyhedron (row_submx A s) (row_submx b s)).
-Proof.
-move => /forallP Hx s.
-apply/forallP => i; by rewrite -row_submx_mul 2!row_submx_mxE.
-Qed.
+Canonical hpolyhedron_eq_equiv_rel : equiv_rel (hpolyhedron R n) :=
+  EquivRel hpolyhedron_eq hpolyhedron_eq_refl hpolyhedron_eq_sym hpolyhedron_eq_trans.
 
-Definition gap_in_direc_seq x (v : 'cV_n) :=
-  [seq (if (A *m v) i 0 == 0 then 1 else ( ((A *m x) i 0 - b i 0 )) * ( `|(A *m v) i 0 |)^-1 ) |
-   i <- enum 'I_m & i \notin (active_ineq A b x)].
-
-Lemma extremality_active_ineq_part1 x :
-  is_extreme x (polyhedron A b: _ -> bool) -> (\rank (active_ineq_mx x) = n).
-Proof.
-move => [Hpoly Hextreme].
-move/negP: notF; apply: contraNeq => Hrk.
-
-set AI := active_ineq_mx x.
-
-(* extract a vector v in the (right) kernel of AI *)
-have: (kermx AI^T != 0).
-- rewrite kermx_eq0 -row_leq_rank -ltnNge ltn_neqAle.
-  apply/andP; split; by [rewrite mxrank_tr | apply:rank_leq_row].
-
-move/rowV0Pn => [v /sub_kermxP/(congr1 trmx) Hv Hv'].
-rewrite trmx0 trmx_mul trmxK in Hv.
-rewrite {Hrk}.
-
-pose gap_seq := gap_in_direc_seq x v^T.
-pose epsilon := if nilp gap_seq then 1 else (min_seq gap_seq 0).
-
-have Hepsilon : epsilon > 0.
-- rewrite /epsilon; case: ifP => [ _ | /nilP H]; first by apply: ltr01.
-  + rewrite min_seq_positive; last by left; apply/eqP.
-    apply/allP => epsilon'.
-    rewrite /gap_seq; move/mapP => [i]; rewrite mem_filter; move/andP => [Hi Hi'].
-    case: ifP => [_ -> | /negbT H' ->]; first by apply: ltr01.
-    * apply: divr_gt0;
-      by [rewrite subr_gt0 -(inactive_ineq Hpoly) | rewrite normr_gt0].
-
-have Hintermediate:
-  (forall i, i \notin (active_ineq A b x) -> (A *m x) i 0 - epsilon *  `| (A *m v^T) i 0 | >= b i 0).
-- move => i Hi.
-  have Hgap_seq: (~~ nilp gap_seq).
-  rewrite /gap_seq /gap_in_direc_seq /nilp size_map; apply/nilP/eqP.
-  rewrite -has_filter. by apply/hasP; exists i; first by rewrite mem_enum.
-  case Hvi: ((A *m v^T) i 0 == 0); first by move/eqP: Hvi => ->; rewrite normr0 mulr0 subr0; move/forallP/(_ i): Hpoly.
-  + rewrite ler_subr_addr addrC -ler_subr_addr.
-    rewrite -ler_pdivl_mulr; last by rewrite normr_gt0 //; apply: negbT.
-    rewrite /epsilon ifF; last by apply: negbTE.
-    apply: min_seq_ler.
-    rewrite /gap_seq /gap_in_direc_seq.
-    apply/mapP; exists i.
-    * rewrite mem_filter; apply/andP; split; by [done | rewrite mem_enum].
-      by rewrite Hvi.
-
-set y := x + epsilon *: v^T.
-set z := x - epsilon *: v^T.
-pose lambda := (1 / (2%:R)): R.
-
-move/(_ y z lambda): Hextreme; case.
-- (* y \in polyhedron A b *)
-  apply/forallP => i; rewrite /y mulmxDr -scalemxAr mxE [X in _ + X]mxE.
-  case: (boolP (i \in (active_ineq A b x))) => [Hi | Hi].
-  + move/colP/(_ (enum_rank_in Hi i)): Hv; rewrite [RHS]mxE -row_submx_mul row_submx_mxE enum_rankK_in //; move ->.
-    by rewrite mulr0 addr0; move/forallP: Hpoly.
-  + have H'': (A *m x) i 0 + epsilon * (A *m v^T) i 0 >= (A *m x) i 0 - epsilon * `|(A *m v^T) i 0|.
-    * by rewrite (ler_add2l ((A *m x) i 0)) -[X in X * `|_|]gtr0_norm // -normrM ler_oppl -normrN; apply: ler_norm.
-    move: (Hintermediate i Hi) H''; apply: ler_trans.
-
-- (* z \in polyhedron A b *)
-  apply/forallP => i; rewrite /z mulmxDr -scaleNr -scalemxAr scaleNr mxE [X in _ + X]mxE [X in _ - X]mxE.
-  case: (boolP (i \in (active_ineq A b x))) => [Hi | Hi].
-  + move/colP/(_ (enum_rank_in Hi i)): Hv; rewrite [RHS]mxE -row_submx_mul row_submx_mxE enum_rankK_in //; move ->.
-    by rewrite mulr0 subr0; move/forallP: Hpoly.
-  + have H'': (A *m x) i 0 - epsilon * (A *m v^T) i 0 >= (A *m x) i 0 - epsilon * `|(A *m v^T) i 0|.
-    * by rewrite (ler_add2l ((A *m x) i 0)) -[X in X * `|_|]gtr0_norm // -normrM ler_opp2; apply: ler_norm.
-    move: (Hintermediate i Hi) H''; apply: ler_trans.
-
-- (* 0 < lambda < 1 *)
-  apply/andP; split; rewrite /lambda.
-  + apply: divr_gt0; by [apply: ltr01 | apply: ltr0n].
-  + rewrite ltr_pdivr_mulr; last by apply: ltr0n.
-    * by rewrite mul1r ltr1n.
-
-- (* x = lambda *: y + (1 - lambda) *: z *)
-  rewrite /y /z 2!scalerDr scalerN [X in _ + _ + X]addrC addrA -[X in X + _]addrA.
-  rewrite -scaleNr -scalerDl [X in (_ - X)*: _]addrC opprD opprK addrA -mulr2n /lambda -mulrnAl divff;
-    last by apply: lt0r_neq0; rewrite ltr0n.
-  by rewrite addrN scale0r addr0 scalerDl addrCA scaleNr addrN scale1r addr0.
-
-(* now we prove the contradiction *)
-- move => /eqP Hcontra _; move: Hcontra.
-  rewrite /y eq_sym addrC -subr_eq0 -addrA addrN addr0 scalemx_eq0.
-  move/orP; case => /eqP; first by move/lt0r_neq0/eqP: Hepsilon.
-  move/(congr1 trmx); rewrite trmxK trmx0; by move/eqP: Hv'.
-Qed.
-
-Lemma extremality_active_ineq_part2 x :
-  x \in polyhedron A b -> (\rank (active_ineq_mx x) = n) %N -> is_extreme x (polyhedron A b: _ -> bool).
-Proof.
-set AI := active_ineq_mx x.
-set bI := active_ineq_col x.
-move => Hpoly /eqP Hrank.
-rewrite /is_extreme; split; first by done.
-move => y z lambda.
-move/polyhedron_submx/(_ (active_ineq A b x)); rewrite inE; move => Hy.
-move/polyhedron_submx/(_ (active_ineq A b x)); rewrite inE; move => Hz.
-move/andP => [Hlambda Hlambda']; move/(congr1 (fun v => AI *m v)).
-rewrite -subr_gt0 in Hlambda'.
-
-rewrite active_ineq_mx_col_eq -/bI mulmxDr -2!scalemxAr.
-have HbI : bI = lambda *: bI + (1 - lambda) *: bI.
-- by rewrite scalerDl addrC -addrA scaleNr addNr addr0 scale1r.
-rewrite {}HbI.
-move/eqP; rewrite eq_sym -subr_eq0; move/eqP;
-rewrite opprD [X in X + _]addrC addrA -[X in X + _]addrA -scalerN -scalerDr
-                                [X in X - _]addrC -addrA -scalerN -scalerDr.
-move/eqP; rewrite paddv_eq0; last 2 first.
-- by rewrite -(scaler0 _ (lambda)) lev_pscalar // subv_ge0.
-- by rewrite -(scaler0 _ (1 - lambda)) lev_pscalar // subv_ge0.
-
-rewrite 2!scaler_eq0.
-move/lt0r_neq0/negbTE: Hlambda => ->; rewrite orFb.
-move/lt0r_neq0/negbTE: Hlambda' => ->; rewrite orFb.
-rewrite 2!subr_eq0 2!/bI -active_ineq_mx_col_eq -/AI.
-move/andP; case.
-- move/eqP/(row_full_inj Hrank) => ->.
-- move/eqP/(row_full_inj Hrank) => ->.
-by done.
-Qed.
-
-Theorem extremality_active_ineq x :
-  is_extreme x (polyhedron A b: _ -> bool) <-> (x \in (polyhedron A b)) && (\rank (active_ineq_mx x) == n) %N.
-Proof.
-split.
-- move => H; apply/andP; split; last by apply/eqP; apply: extremality_active_ineq_part1.
-  by move: H; rewrite /is_extreme; move => [H _].
-- by move/andP => [? /eqP ?]; apply: extremality_active_ineq_part2.
-Qed.
-
-End Extremality.
-
-Section Convexity.
-
-Variables (n m q: nat) (R: realFieldType).
-Variables (A: 'M[R]_(m, n)) (b: 'cV[R]_m).
-
-(* Constanct vector of ones *)
-Definition e := (const_mx 1): 'cV[R]_q.
-
-Lemma polyhedron_is_convex : forall M: 'M[R]_(n, q), forall l: 'cV_q,
-  [/\ l >=m 0, '[e, l] = 1 & (forall i , col i M \in polyhedron A b)] ->
-  M *m l \in polyhedron A b.
-Proof.
-  move => M l [lge0 edotl_eq1 pcol].
-  rewrite inE mulmxA mulmx_sum_col.
-  have ->: b = \sum_i l i 0 *: b.
-  - rewrite -scaler_suml.
-    have ->: \sum_i l i 0 = \sum_i (e i 0) * l i 0.
-    + by apply: eq_bigr => ? _; rewrite mxE mul1r.
-    move: (edotl_eq1); rewrite /vdot => He.
-    by rewrite He scale1r.
-  - apply: lev_sum => i _. apply: lev_wpscalar.
-    + by move/forallP/(_ i): lge0; rewrite mxE.
-    + rewrite col_mul. by apply: pcol.
-Qed.
-
-Lemma bigsum_aux (i: 'I_q) (F G : _ -> R) :
-  (forall (i0: 'I_q), F i0 <= G i0) -> (exists (j0: 'I_q), F j0 < G j0) ->
-  \sum_i F i < \sum_i G i.
-Proof.
-  move=> hleq [z hlt].
-  rewrite [\sum__ F _](bigD1 z) ?[\sum__ G _](bigD1 z) //.
-  by rewrite ltr_le_add ?ler_sum.
-Qed.
-
-Lemma polyhedron_strictly_convex i j : forall M: 'M[R]_(n, q), forall l: 'cV_q,
-  [/\ l >=m 0, '[e, l] = 1, (A *m (col j M)) i 0 > b i 0, l j 0 > 0
-  & (forall k , col k M \in polyhedron A b)] ->
-  (A *m (M *m l)) i 0 > b i 0.
-Proof.
-  move => M l [lge0 edotl_eq1 strict_col ljpos pcol].
-  have Hbs: b = \sum_i l i 0 *: b.
-  - rewrite -scaler_suml.
-    have ->: \sum_i l i 0 = \sum_i (e i 0) * l i 0.
-    + by apply: eq_bigr => ? _; rewrite mxE mul1r.
-    move: (edotl_eq1); rewrite /vdot => He.
-    by rewrite He scale1r.
-  - rewrite Hbs mulmxA mulmx_sum_col.
-    rewrite -col_mul in strict_col. rewrite !summxE bigsum_aux //=.
-    + move => c. rewrite mxE mxE ler_wpmul2l //=.
-      (* Need to show that l >= 0 *)
-      * move/forallP: lge0 => lge0. suff <- : (0: 'cV_q) c 0 = 0.
-        - by apply: lge0.
-        - move => ?; by rewrite mxE.
-      (* Need to show that col c (A *m M) = A *m (col c M) *)
-      * rewrite col_mul. move/(_ c): pcol. rewrite polyhedron_rowinE.
-        move => /forallP /(_ i).
-        suff -> k M1 M2: (row k M1 *m M2) 0 0 = (M1 *m M2) k 0.
-        - by done.
-        - move => ? ? ? ?. by rewrite -row_mul mxE.
-    + exists j; rewrite 2?mxE. (* only 1 extra mxE to keep the col ... defn *)
-      rewrite ltr_pmul2l; last by apply: ljpos. apply: strict_col.
-Qed.
-
-End Convexity.
+End ExtensionalEquality.
