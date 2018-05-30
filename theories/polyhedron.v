@@ -81,6 +81,7 @@ Coercion mem_polyhedron : polyhedron >-> pred_class.
 
 End Def.
 
+
 Section PolyhedronOfSubset.
 
 Variable P : hpolyhedron.
