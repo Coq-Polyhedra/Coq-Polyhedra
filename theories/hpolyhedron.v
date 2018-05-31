@@ -115,7 +115,6 @@ Lemma unboundedP P c :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
 Admitted.*)
 
-
 End BasicPrimitives.
 
 Section Inclusion.
@@ -256,10 +255,10 @@ Section HPolyhedronOfSubset.
 (*Notation "{ x | A *m x >=m b }" := (HPolyhedron A b).
 Notation "{ x | A *m x >=m b with eq on I }" ...*)
 
-Definition A_of_subset (P0 : hpolyhedron R n) I :=
-  col_mx (A P0) (- (row_submx (A P0) I)).
-Definition b_of_subset (P0 : hpolyhedron R n) I :=
-  col_mx (b P0) (- (row_submx (b P0) I)).
+Definition A_of_subset (P : hpolyhedron R n) I :=
+  col_mx (A P) (- (row_submx (A P) I)).
+Definition b_of_subset (P : hpolyhedron R n) I :=
+  col_mx (b P) (- (row_submx (b P) I)).
 
 Record hpoly_of_subset :=
   HPolyhedronOfSubset {
@@ -335,7 +334,15 @@ Qed.
 Lemma subset_of_implicit_eq P :
   I P \subset implicit_eq P.
 Proof.
-Admitted.
+apply/subsetP => i i_in_I_P.
+rewrite inE.
+apply/andP; split;
+apply/is_included_in_halfspaceP => x x_in_P;
+rewrite inE in x_in_P; move/andP: x_in_P => [/forallP x_in_baseP in_I_P].
++ rewrite row_vdot.
+  exact: (x_in_baseP i).
++ by rewrite vdotNl row_vdot (eqP (implyP ((forallP in_I_P) i) i_in_I_P)).
+Qed.
 
 Definition normal_form P :=
   HPolyhedronOfSubset (implicit_eq P).
@@ -344,7 +351,24 @@ Lemma normal_formP (P : hpoly_of_subset) :
   (* TODO: perhaps we should use ext_eq over polyhedra rather than over boolean predicates *)
   (P : (hpolyhedron R n)) =i (normal_form P).
 Proof.
-Admitted.
+move => x.
+apply/idP/idP => [x_in_P | x_in_nf].
+- rewrite hpoly_of_subset_inE /=.
+  apply/andP; split.
+  + rewrite hpoly_of_subset_inE in x_in_P.
+    exact: (proj1 (andP x_in_P)).
+  + apply/forallP => i.
+    apply/implyP => i_in_implicit.
+    rewrite inE in i_in_implicit.
+    move/is_included_in_hyperplaneP: i_in_implicit => in_hyperplane.
+    by rewrite -((in_hyperplane x) x_in_P) row_vdot.
+- rewrite hpoly_of_subset_inE.
+  apply/andP; split; rewrite hpoly_of_subset_inE /= in x_in_nf.
+  + exact: (proj1 (andP x_in_nf)).
+  + apply/forallP => i.
+    apply/implyP => i_in_I_P.
+    exact: ((implyP ((forallP (proj2 (andP x_in_nf))) i)) ((subsetP (subset_of_implicit_eq P)) _ i_in_I_P)).
+Qed.
 
 End HPolyhedronOfSubset.
 
