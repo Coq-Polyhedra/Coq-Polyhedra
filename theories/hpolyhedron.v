@@ -379,7 +379,13 @@ Definition has_normal_form P := (I P == implicit_eq P).
 Lemma has_normal_formP P :
   has_normal_form P = (P == normal_form P).
 Proof.
-Admitted.
+apply/idP/idP => [has_nf_P | P_eq_nf].
+- apply/andP.
+  split; first by done.
+  by rewrite tagged_asE.
+- move/andP/proj2: P_eq_nf.
+  by rewrite tagged_asE.
+Qed.
 
 Inductive hpolyhedron_nf := HPolyhedronEq (P : hpoly_of_subset) of has_normal_form P.
 
