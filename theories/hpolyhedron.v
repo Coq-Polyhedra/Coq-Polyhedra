@@ -37,6 +37,22 @@ Coercion pred_of_hpolyhedron (P : hpolyhedron) : pred_class := mem_hpolyhedron P
 Canonical hpolyhedron_predType := @mkPredType _ hpolyhedron pred_of_hpolyhedron.
 Canonical mem_hpolyhedron_predType := mkPredType mem_hpolyhedron.
 
+Notation "''P' ( A , b )" := (HPolyhedron A b) (at level 0, format "''P' ( A ,  b )").
+
+Definition extract_matrix (P: hpolyhedron) := let: 'P(A,_) := P return 'M[R]_(m P, n) in A.
+
+Section Ex.
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Fact foo : extract_matrix 'P(A,b) = A.
+done.
+Qed.
+
+End Ex.
+
+
 Definition feasible_dir (P : hpolyhedron) := S.feasible_dir (A P).
 
 Lemma feasible_dirP (P : hpolyhedron) d :
@@ -72,6 +88,9 @@ Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyhedronK.
 Canonical hpoly_choiceType := Eval hnf in ChoiceType hpolyhedron hpoly_choiceMixin.
 
 End Def.
+
+Notation "''P' ( A , b )" := (HPolyhedron A b) (at level 0, format "''P' ( A ,  b )").
+
 
 Section BasicPrimitives.
 
@@ -255,6 +274,18 @@ Record hpolyhedron_of_subset :=
   HPolyhedronOfSubset {
       base : hpolyhedron R n;
       I : {set 'I_(m base)} }.
+
+Notation "''P' ( A , b , I )" := (@HPolyhedronOfSubset 'P(A,b) I) (at level 0, format "''P' ( A ,  b ,  I )").
+
+Section Ex.
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Check ('P (A,b)).
+Variable I : {set 'I_m}.
+Check 'P(A,b,I).
+End Ex.
 
 Coercion hpolyhedron_of_hpolyhedron_of_subset P :=
   HPolyhedron (A_of_subset (I P)) (b_of_subset (I P)).
