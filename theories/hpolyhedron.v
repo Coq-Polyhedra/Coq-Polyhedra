@@ -134,7 +134,6 @@ Lemma unboundedP P c :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
 Admitted.*)
 
-
 End BasicPrimitives.
 
 Section Inclusion.
@@ -173,7 +172,17 @@ Definition is_included_in_hyperplane c d :=
 Lemma is_included_in_hyperplaneP c d :
   reflect (forall x, x \in P -> '[c,x] = d)
           (is_included_in_hyperplane c d).
-Admitted.
+Proof.
+apply: (iffP idP) => [/andP [is_included is_included_opp] x x_in_P | H].
+- apply/eqP; rewrite eqr_le.
+  apply/andP; split.
+  + move: ((is_included_in_halfspaceP _ _ is_included_opp) x x_in_P).
+    by rewrite vdotNl ler_opp2.
+  + exact: ((is_included_in_halfspaceP _ _ is_included) x x_in_P).
+- apply/andP; split; apply/is_included_in_halfspaceP => x x_in_P.
+  + by rewrite (H x x_in_P).
+  + by rewrite -(H x x_in_P) vdotNl.
+Qed.
 
 Variable Q : hpolyhedron R n.
 
@@ -265,12 +274,12 @@ Section HPolyhedronOfSubset.
 (*Notation "{ x | A *m x >=m b }" := (HPolyhedron A b).
 Notation "{ x | A *m x >=m b with eq on I }" ...*)
 
-Definition A_of_subset (P0 : hpolyhedron R n) I :=
-  col_mx (A P0) (- (row_submx (A P0) I)).
-Definition b_of_subset (P0 : hpolyhedron R n) I :=
-  col_mx (b P0) (- (row_submx (b P0) I)).
+Definition A_of_subset (P : hpolyhedron R n) I :=
+  col_mx (A P) (- (row_submx (A P) I)).
+Definition b_of_subset (P : hpolyhedron R n) I :=
+  col_mx (b P) (- (row_submx (b P) I)).
 
-Record hpolyhedron_of_subset :=
+Record hpoly_of_subset :=
   HPolyhedronOfSubset {
       base : hpolyhedron R n;
       I : {set 'I_(m base)} }.
@@ -287,10 +296,10 @@ Variable I : {set 'I_m}.
 Check 'P(A,b,I).
 End Ex.
 
-Coercion hpolyhedron_of_hpolyhedron_of_subset P :=
+Coercion hpoly_of_hpoly_of_subset P :=
   HPolyhedron (A_of_subset (I P)) (b_of_subset (I P)).
 
-Lemma hpolyhedron_of_subset_inE P (I: {set 'I_(m P)}) x :
+Lemma hpoly_of_subset_inE P (I : {set 'I_(m P)}) x :
   x \in HPolyhedron (A_of_subset I) (b_of_subset I) = (x \in P) && [forall i in I, ((A P) *m x) i 0 == (b P) i 0].
 Proof.
 rewrite inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2.
@@ -306,26 +315,26 @@ apply/andP/andP.
   by move/(_ _ i_in_I)/eqP: eqI ->.
 Qed.
 
-Definition poly_inE := hpolyhedron_of_subset_inE.
+Definition poly_inE := hpoly_of_subset_inE.
 Definition inE := (poly_inE, inE).
 
 Section Mixins.
 
-Let f (P : hpolyhedron_of_subset) : { Q : hpolyhedron R n & {set 'I_(m Q)} } :=
+Let f (P : hpoly_of_subset) : { Q : hpolyhedron R n & {set 'I_(m Q)} } :=
   Tagged (fun Q : (hpolyhedron R n) => {set 'I_(m Q)}) (I P).
 Let g (x : { Q : hpolyhedron R n & {set 'I_(m Q)} }) :=
   HPolyhedronOfSubset (tagged x).
 
 Fact cancel_f_g : cancel f g.
 Proof.
-move => P; by case: P.
+by move => P; case: P.
 Qed.
 
 Definition hpoly_of_subset_eqMixin := CanEqMixin cancel_f_g.
-Canonical hpoly_of_subset_eqType := Eval hnf in EqType hpolyhedron_of_subset hpoly_of_subset_eqMixin.
+Canonical hpoly_of_subset_eqType := Eval hnf in EqType hpoly_of_subset hpoly_of_subset_eqMixin.
 
 Definition hpoly_of_subset_choiceMixin := CanChoiceMixin cancel_f_g.
-Canonical hpoly_of_subset_choiceType := Eval hnf in ChoiceType hpolyhedron_of_subset hpoly_of_subset_choiceMixin.
+Canonical hpoly_of_subset_choiceType := Eval hnf in ChoiceType hpoly_of_subset hpoly_of_subset_choiceMixin.
 
 End Mixins.
 
@@ -342,21 +351,55 @@ Lemma implicit_eqP P i :
   let b0 := b P0 in
   reflect (forall x, x \in P -> (A0 *m x) i 0 = b0 i 0)
           (i \in implicit_eq P).
-Admitted.
+Proof.
+apply: (iffP idP) => [i_in_implicit_eq x x_in_P | H].
+- rewrite inE in i_in_implicit_eq.
+  rewrite -row_vdot.
+  exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
+- rewrite inE.
+  apply/is_included_in_hyperplaneP => x x_in_P.
+  rewrite row_vdot.
+  by apply: H.
+Qed.
 
 Lemma subset_of_implicit_eq P :
   I P \subset implicit_eq P.
-Admitted.
+Proof.
+apply/subsetP => i i_in_I_P.
+rewrite inE.
+apply/andP; split;
+apply/is_included_in_halfspaceP => x x_in_P;
+rewrite inE in x_in_P; move/andP: x_in_P => [/forallP x_in_baseP in_I_P].
++ rewrite row_vdot.
+  exact: (x_in_baseP i).
++ by rewrite vdotNl row_vdot (eqP (implyP ((forallP in_I_P) i) i_in_I_P)).
+Qed.
 
 Definition normal_form P :=
   HPolyhedronOfSubset (implicit_eq P).
 
-Check normal_form.
-
-Lemma normal_formP (P : hpolyhedron_of_subset) :
+Lemma normal_formP (P : hpoly_of_subset) :
   (* TODO: perhaps we should use ext_eq over polyhedra rather than over boolean predicates *)
   (P : (hpolyhedron R n)) =i (normal_form P).
-Admitted.
+Proof.
+move => x.
+apply/idP/idP => [x_in_P | x_in_nf].
+- rewrite hpoly_of_subset_inE /=.
+  apply/andP; split.
+  + rewrite hpoly_of_subset_inE in x_in_P.
+    exact: (proj1 (andP x_in_P)).
+  + apply/forallP => i.
+    apply/implyP => i_in_implicit.
+    rewrite inE in i_in_implicit.
+    move/is_included_in_hyperplaneP: i_in_implicit => in_hyperplane.
+    by rewrite -((in_hyperplane x) x_in_P) row_vdot.
+- rewrite hpoly_of_subset_inE.
+  apply/andP; split; rewrite hpoly_of_subset_inE /= in x_in_nf.
+  + exact: (proj1 (andP x_in_nf)).
+  + apply/forallP => i.
+    apply/implyP => i_in_I_P.
+    exact: ((implyP ((forallP (proj2 (andP x_in_nf))) i)) ((subsetP (subset_of_implicit_eq P)) _ i_in_I_P)).
+Qed.
 
 End HPolyhedronOfSubset.
 
@@ -366,13 +409,20 @@ Definition has_normal_form P := (I P == implicit_eq P).
 
 Lemma has_normal_formP P :
   has_normal_form P = (P == normal_form P).
-Admitted.
+Proof.
+apply/idP/idP => [has_nf_P | P_eq_nf].
+- apply/andP.
+  split; first by done.
+  by rewrite tagged_asE.
+- move/andP/proj2: P_eq_nf.
+  by rewrite tagged_asE.
+Qed.
 
-Inductive hpolyhedron_nf := HPolyhedronEq (P : hpolyhedron_of_subset) of has_normal_form P.
+Inductive hpolyhedron_nf := HPolyhedronEq (P : hpoly_of_subset) of has_normal_form P.
 
-Coercion hpolyhedron_of_subset_of_hpolyhedron_nf P :=
+Coercion hpoly_of_subset_of_hpoly_nf P :=
   let: HPolyhedronEq Q _ := P in Q.
-Canonical hpolyhedron_nf_subtype := [subType for hpolyhedron_of_subset_of_hpolyhedron_nf].
+Canonical hpolyhedron_nf_subtype := [subType for hpoly_of_subset_of_hpoly_nf].
 
 Section Mixins.
 Definition hpoly_nf_eqMixin := Eval hnf in [eqMixin of hpolyhedron_nf by <:].
@@ -382,6 +432,7 @@ Canonical hpoly_nf_choiceType := Eval hnf in ChoiceType hpolyhedron_nf hpoly_nf_
 End Mixins.
 
 End HPolyhedronNF.
+
 
 Section HFace.
 

@@ -165,7 +165,7 @@ Section Extra.
 Variable n p : nat.
 Variable R : realFieldType.
 
-Lemma vdot_mulmx (A: 'M[R]_(n,p)) u v : '[u, A *m v] = '[A^T *m u, v].
+Lemma vdot_mulmx (A : 'M[R]_(n,p)) u v : '[u, A *m v] = '[A^T *m u, v].
 Proof.
 suffices: '[u, A *m v]%:M = ('[A^T *m u, v]%:M : 'M_1)
   by move/matrixP/(_ 0 0); rewrite !mxE //=. 
@@ -186,6 +186,13 @@ suff: (castmx (epn, erefl 1%N) v)^T *m (castmx (epn, erefl 1%N) u) = v^T *m u.
 - rewrite trmx_cast /= -{2}(esymK epn).
   have {1}->: erefl 1%N = esym (erefl 1%N) by done.
   by rewrite mulmx_cast esymK -{2}(esymK epn) castmx_id castmxKV.
+Qed.
+
+Lemma row_vdot (A : 'M[R]_(n,p)) x i : '[(row i A)^T, x] = ((A *m x) i 0).
+Proof.
+rewrite mxE.
+apply: eq_bigr => j _.
+by rewrite !mxE.
 Qed.
 
 End Extra.
