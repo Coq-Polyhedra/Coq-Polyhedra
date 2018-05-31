@@ -36,17 +36,17 @@ Notation "''P' ( A , b )" := (HPolyhedron A b) (at level 0, format "''P' ( A ,  
 
 Definition mem_hpolyhedron (P : hpolyhedron) :=
   let: 'P(A,b) := P in
-  [pred x : 'cV_n | (A *m x) >=m b].
+    [pred x : 'cV_n | (A *m x) >=m b].
 
 Coercion pred_of_hpolyhedron (P : hpolyhedron) : pred_class := mem_hpolyhedron P.
 Canonical hpolyhedron_predType := @mkPredType _ hpolyhedron pred_of_hpolyhedron.
 Canonical mem_hpolyhedron_predType := mkPredType mem_hpolyhedron.
 
 (* TODO: we keep that just to recall an example of return ... construction *)
-Definition matrix_of (P: hpolyhedron) :=
+Definition matrix_of (P : hpolyhedron) :=
   let: 'P(A,_) := P return 'M[R]_(#ineq P, n) in A.
 
-Definition vector_of (P: hpolyhedron) :=
+Definition vector_of (P : hpolyhedron) :=
   let: 'P(_,b) := P return 'cV[R]_(#ineq P) in b.
 
 Section Ex.
@@ -63,26 +63,42 @@ End Ex.
 
 (* TODO: feasible_dir is a bad name, this should be recession direction, or
    asymptotic direction *)
-Definition feasible_dir (P : hpolyhedron) :=
-  let: 'P(A,_) := P in
-  S.feasible_dir A.
+Definition recession_dir (P : hpolyhedron) d :=
+  let: 'P(A,b) := P in
+    (S.Simplex.feasible A b) && (S.feasible_dir A d).
 
-Lemma feasible_dirP (P : hpolyhedron) d :
-  reflect (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P)
-          (feasible_dir P d).
+Lemma recession_dirP (P : hpolyhedron) d :
+  reflect ((exists y, y \in P) /\ (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P))
+          (recession_dir P d).
 Proof.
 case: P => m A b.
-apply: (iffP idP) => [/= feasible_dir_d x lambda x_in_P lambda_pos | H].
-- rewrite inE mulmxDr -[b]addr0.
-  apply: lev_add; first exact: x_in_P.
-  rewrite -scalemxAr -(scaler0 _ lambda).
-  by apply: lev_wpscalar.
-- (* RK: this implication does not seem to hold if we do not assume, for example, that P is non_empty*)
+apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]]. (*rewrite /= in H../= recession_dir_d x lambda x_in_P lambda_pos*)
+- split.
+  + exact: (S.Simplex.feasibleP _ _ feasible).
+  + move => x lambda x_in_P lambda_pos.
+    rewrite inE mulmxDr -[b]addr0.
+    apply: lev_add; first exact: x_in_P.
+    rewrite -scalemxAr -(scaler0 _ lambda).
+    by apply: lev_wpscalar.
+- apply/andP; split.
+  + by apply/S.Simplex.feasibleP.
+  + apply/contraT.
+    rewrite negb_forall.
+    move/existsP => [i infeasible_dir_i].
+    rewrite -ltrNge /= in infeasible_dir_i.
+    move: feasible => [y y_in_P].
+    suff H: 0 <= ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1).
+    move: ((recession_cond _ ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1) y_in_P) H) => contradic.
+    rewrite inE mulmxDr -scalemxAr in contradic.
+    move: ((forallP contradic) i).
+    rewrite mxE [(((b i 0 - (A *m y) i 0 - 1) / (A *m d) i 0) *: (A *m d)) i 0]mxE -mulrA mulVf.
+    by rewrite mulr1 -ler_subl_addl ler_addl ler0N1.
+    apply: ltr0_neq0.
 Admitted.
 
 Definition matrix_from_hpolyhedron (P : hpolyhedron) :=
   let: 'P(A,b) := P in
-  Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
+    Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
 
 Definition hpolyhedron_from_matrix (M : {m: nat & 'M[R]_(m, n+1)}) :=
   let Ab := tagged M in
@@ -114,21 +130,25 @@ Section BasicPrimitives.
 Variable R : realFieldType.
 Variable n : nat.
 
-Implicit Types P Q : 'hpoly[R]_n.
+Implicit Type P : 'hpoly[R]_n.
 Implicit Type c : 'cV[R]_n.
 
 Definition non_empty P :=
   let: 'P(A,b) := P in
-  S.Simplex.feasible A b.
+    S.Simplex.feasible A b.
+
 Definition bounded P c :=
   let: 'P(A,b) := P in
-  S.Simplex.bounded A b c.
+    S.Simplex.bounded A b c.
+
 Definition unbounded P c :=
   let: 'P(A,b) := P in
-  S.Simplex.unbounded A b c.
+    S.Simplex.unbounded A b c.
+
 Definition opt_point P c :=
   let: 'P(A,b) := P in
-  S.Simplex.opt_point A b c.
+    S.Simplex.opt_point A b c.
+
 Definition opt_value P c := '[c, opt_point P c].
 
 CoInductive lp_state P c z : bool -> bool -> bool -> Type :=
@@ -173,7 +193,8 @@ Definition is_included_in_halfspace c d :=
   (non_empty P) ==> (bounded P c && (opt_value P c >= d)).
 
 Lemma is_included_in_halfspaceP c d :
-  reflect (forall x, x \in P -> '[c,x] >= d) (is_included_in_halfspace c d).
+  reflect (forall x, x \in P -> '[c,x] >= d)
+          (is_included_in_halfspace c d).
 Proof.
 rewrite /is_included_in_halfspace; apply: (iffP implyP).
 - case: lp_stateP =>
@@ -300,13 +321,13 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Record hpolyEq :=
-  HPolyEq { base: 'hpoly[R]_n;
-            eq_set: {set 'I_(#ineq base)} }.
+  HPolyEq { base : 'hpoly[R]_n;
+            eq_set : {set 'I_(#ineq base)} }.
 
 Notation "\base P" := (base P) (at level 0).
 Notation "\eq_set P" := (eq_set P) (at level 0).
 
-Coercion hpoly_of_hpolyEq (Q: hpolyEq) :=
+Coercion hpoly_of_hpolyEq (Q : hpolyEq) :=
   (* TODO : remove calls to matrix_of and vector_of,
    * and use destructive assignments instead *)
   let P := \base Q in
@@ -315,7 +336,7 @@ Coercion hpoly_of_hpolyEq (Q: hpolyEq) :=
   let b := vector_of P in
   let AI := col_mx A (- (row_submx A I)) in
   let bI := col_mx b (- (row_submx b I)) in
-  'P(AI, bI).
+    'P(AI, bI).
 
 Notation "''P^=' ( P ; J )" := (@HPolyEq P J) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
@@ -344,22 +365,21 @@ Check 'P^= (A,b;I).
 End Ex.
 
 
-Lemma hpolyEq_inE (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (J : {set 'I_m}) x :
+Lemma hpolyEq_inE (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) x :
   (x \in 'P^= (A, b; J)) = (x \in 'P(A, b)) && [forall j in J, (A *m x) j 0 == b j 0].
-(*Proof.
-rewrite inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2.
+Proof.
+rewrite inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2 /=.
 apply/andP/andP.
-- move => [x_in_P ineqI]; split; try by done.
-  suff /row_submx_colP H: row_submx (A P *m x) I = row_submx (b P) I.
-  + apply/forall_inP => i i_in_I.
-    move/(_ _ i_in_I): H ->; exact: eq_refl.
+- move => [x_in_P ineqJ]; split; try by done.
+  suff /row_submx_colP H: row_submx (A *m x) J = row_submx b J.
+  + apply/forall_inP => j j_in_J.
+    move/(_ _ j_in_J): H ->; exact: eq_refl.
   + apply: lev_antisym; apply/andP; split; try by done.
     exact: row_submx_lev.
-- move => [x_in_P /forall_inP eqI]; split; try by done.
-  apply/row_submx_levP => i i_in_I.
-  by move/(_ _ i_in_I)/eqP: eqI ->.
-Qed.*)
-Admitted.
+- move => [x_in_P /forall_inP eqJ]; split; try by done.
+  apply/row_submx_levP => j j_in_J.
+  by move/(_ _ j_in_J)/eqP: eqJ ->.
+Qed.
 
 Definition poly_inE := hpolyEq_inE.
 Definition inE := (poly_inE, inE).
@@ -416,18 +436,18 @@ Lemma implicit_eqP Q i :
   let P := \base Q in
   let A := matrix_of P in
   let b := vector_of P in
-  reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
-          (i \in implicit_eq Q).
+    reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
+            (i \in implicit_eq Q).
 Proof.
 move => P A b.
-apply: (iffP idP) => [i_in_implicit_eq x x_in_P | H].
+apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
 - rewrite inE in i_in_implicit_eq.
   rewrite -row_vdot.
   exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
 - rewrite inE.
   apply/is_included_in_hyperplaneP => x x_in_P.
   rewrite row_vdot.
-  by apply: H.
+  by apply: ineq_i_is_sat.
 Qed.
 
 Lemma subset_of_implicit_eq P :
@@ -482,7 +502,7 @@ Section HPolyNF.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition has_normal_form (P: 'hpolyEq[R]_n) := (\eq_set P == implicit_eq P).
+Definition has_normal_form (P : 'hpolyEq[R]_n) := (\eq_set P == implicit_eq P).
 
 Lemma has_normal_formP P :
   has_normal_form P = (P == normal_form P).
@@ -528,6 +548,8 @@ Definition face_of :=
 Lemma face_ofP (Q : 'hpolyNF[R]_n) :
   reflect (exists c, forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in Q)))
           (Q \is a face_of).
+Proof.
 Admitted.
+
 
 End HFace.
