@@ -61,8 +61,6 @@ Qed.
 End Ex.
 (* end of TODO *)
 
-(* TODO: feasible_dir is a bad name, this should be recession direction, or
-   asymptotic direction *)
 Definition recession_dir (P : hpolyhedron) d :=
   let: 'P(A,b) := P in
     (S.Simplex.feasible A b) && (S.feasible_dir A d).
@@ -72,7 +70,7 @@ Lemma recession_dirP (P : hpolyhedron) d :
           (recession_dir P d).
 Proof.
 case: P => m A b.
-apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]]. (*rewrite /= in H../= recession_dir_d x lambda x_in_P lambda_pos*)
+apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]].
 - split.
   + exact: (S.Simplex.feasibleP _ _ feasible).
   + move => x lambda x_in_P lambda_pos.
@@ -85,16 +83,19 @@ apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]]
   + apply/contraT.
     rewrite negb_forall.
     move/existsP => [i infeasible_dir_i].
-    rewrite -ltrNge /= in infeasible_dir_i.
+    rewrite -ltrNge ![X in _ < X]mxE in infeasible_dir_i.
     move: feasible => [y y_in_P].
-    suff H: 0 <= ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1).
-    move: ((recession_cond _ ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1) y_in_P) H) => contradic.
+    set lambda := ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1).
+    have lambda_is_pos: 0 <= lambda.
+      rewrite -invr_lt0 in infeasible_dir_i.
+      rewrite (nmulr_lge0 _ infeasible_dir_i) subr_le0 ler_subl_addl.
+      apply: ler_paddr; [exact: ler01 | exact: ((forallP y_in_P) i)].
+    move: (recession_cond _ _  y_in_P lambda_is_pos) => contradic.
     rewrite inE mulmxDr -scalemxAr in contradic.
     move: ((forallP contradic) i).
-    rewrite mxE [(((b i 0 - (A *m y) i 0 - 1) / (A *m d) i 0) *: (A *m d)) i 0]mxE -mulrA mulVf.
+    rewrite mxE [(lambda *: (A *m d)) i 0]mxE -mulrA mulVf; last by apply: ltr0_neq0.
     by rewrite mulr1 -ler_subl_addl ler_addl ler0N1.
-    apply: ltr0_neq0.
-Admitted.
+Qed.
 
 Definition matrix_from_hpolyhedron (P : hpolyhedron) :=
   let: 'P(A,b) := P in
