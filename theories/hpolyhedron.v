@@ -314,8 +314,6 @@ End ExtensionalEquality.
 Notation "P ==e Q" := (P == Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
 Notation "P =e Q" := (P = Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
 
-Section ImplicitEqualities.
-
 Section HPolyEq.
 
 Variable R : realFieldType.
@@ -328,34 +326,33 @@ Record hpolyEq :=
 Notation "\base P" := (base P) (at level 0).
 Notation "\eq_set P" := (eq_set P) (at level 0).
 
-Coercion hpoly_of_hpolyEq (Q : hpolyEq) :=
-  (* TODO : remove calls to matrix_of and vector_of,
-   * and use destructive assignments instead *)
-  let P := \base Q in
-  let I := \eq_set Q in
-  let A := matrix_of P in
-  let b := vector_of P in
-  let AI := col_mx A (- (row_submx A I)) in
-  let bI := col_mx b (- (row_submx b I)) in
-    'P(AI, bI).
-
 Notation "''P^=' ( P ; J )" := (@HPolyEq P J) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
+
+Coercion hpoly_of_hpolyEq (Q : hpolyEq) :=
+  let: 'P^=(A, b; J) := Q in
+  let A' := col_mx A (- (row_submx A J)) in
+  let b' := col_mx b (- (row_submx b J)) in
+    'P(A', b').
 
 Section Ex.
 
 (* TODO: none below is working, why? *)
-(*
-Let foo (Q : hpoly_eq) :=
-  let: 'P^= (A, b; J) := P return 'M[R]_(#ineq (\base Q), n) in A.
 
-Let foo (Q : hpoly_eq) :=
-  let: 'P^= (P ; _) := Q in
-  let: 'P (A, b) := P return 'M[R]_(#ineq (\base Q), n) in A.
+(*Let foo (Q : hpolyEq) :=
+  let: 'P^=(A, b ; J) := Q return 'M[R]_(#ineq \base Q, n) in A.*)
 
-Let foo (Q : hpoly_eq) :=
-  let: 'P(A,b) := \base Q return 'M[R]_(#ineq (\base Q), n) in A.
-*)
+(* This one is working *)
+(* but is there a way to shorten it? *)
+(*Let foo (Q : hpolyEq) :=
+  let: 'P^=(P; _) := Q return 'M[R]_(#ineq \base Q, n) in
+  let: 'P(A,_) := P return 'M[R]_(#ineq P, n) in A.*)
+
+(* This one is also working _but_ we need the 'as P' and to
+   use the type 'M[R]_(#ineq P, n) as a return type *)
+(*Let foo (Q : hpolyEq) :=
+  let: 'P(A,b) as P := \base Q return 'M[R]_(#ineq P, n) in A.*)
+
 Variable m : nat.
 Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
@@ -427,10 +424,9 @@ Definition implicit_eq (Q: hpolyEq) :=
     is_included_in_hyperplane Q (row i A)^T (b i 0) ].*)
 
 Definition implicit_eq (Q : hpolyEq) :=
-  let P := \base Q in
-  let A := matrix_of P in
-  let b := vector_of P in
-  [ set i : 'I_(#ineq P) |
+  let: 'P^=(P; _) := Q return {set 'I_(#ineq \base Q)} in
+  let: 'P(A,b) as P' := P return {set 'I_(#ineq P')} in
+  [ set i : 'I_(#ineq P') |
     is_included_in_hyperplane Q (row i A)^T (b i 0) ].
 
 Lemma implicit_eqP Q i :
@@ -442,27 +438,29 @@ Lemma implicit_eqP Q i :
 Proof.
 move => P A b.
 apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
-- rewrite inE in i_in_implicit_eq.
+Admitted.
+(*- rewrite inE in i_in_implicit_eq.
   rewrite -row_vdot.
   exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
 - rewrite inE.
   apply/is_included_in_hyperplaneP => x x_in_P.
   rewrite row_vdot.
   by apply: ineq_i_is_sat.
-Qed.
+Qed.*)
 
 Lemma subset_of_implicit_eq P :
   \eq_set P \subset implicit_eq P.
 Proof.
-apply/subsetP => i i_in_I_P.
+Admitted.
+(*apply/subsetP => i i_in_I_P.
 rewrite inE.
 apply/andP; split;
 apply/is_included_in_halfspaceP => x x_in_P;
-rewrite inE in x_in_P; move/andP: x_in_P => [/forallP x_in_baseP in_I_P].
+rewrite hpolyEq_inE in x_in_P; move/andP: x_in_P => [/forallP x_in_baseP in_I_P].
 + rewrite row_vdot.
   exact: (x_in_baseP i).
 + by rewrite vdotNl row_vdot (eqP (implyP ((forallP in_I_P) i) i_in_I_P)).
-Qed.
+Qed.*)
 
 Definition normal_form P := HPolyEq (implicit_eq P).
 
@@ -472,6 +470,8 @@ Lemma normal_formP (P : hpolyEq) :
 Proof.
 move => x.
 apply/idP/idP => [x_in_P | x_in_nf].
+Admitted.
+(*
 - rewrite hpolyEq_inE /=.
   apply/andP; split.
   + rewrite hpolyEq_inE in x_in_P.
@@ -487,7 +487,7 @@ apply/idP/idP => [x_in_P | x_in_nf].
   + apply/forallP => i.
     apply/implyP => i_in_I_P.
     exact: ((implyP ((forallP (proj2 (andP x_in_nf))) i)) ((subsetP (subset_of_implicit_eq P)) _ i_in_I_P)).
-Qed.
+Qed.*)
 
 End HPolyEq.
 
@@ -518,6 +518,12 @@ Qed.
 
 Inductive hpolyNF := HPolyNF (P : 'hpolyEq[R]_n) of has_normal_form P.
 
+Fact normal_form_has_normal_form P :
+  has_normal_form (normal_form P).
+Admitted.
+
+Definition hpolyNF_of_hpolyEq P := HPolyNF (normal_form_has_normal_form P).
+
 Coercion hpoly_of_subset_of_hpoly_nf P :=
   let: HPolyNF Q _ := P in Q.
 Canonical hpolyhedron_nf_subtype := [subType for hpoly_of_subset_of_hpoly_nf].
@@ -531,6 +537,7 @@ End Mixins.
 
 End HPolyNF.
 
+Notation "\nf P" := (hpolyNF_of_hpolyEq P) (at level 0).
 Notation "''hpolyNF[' R ]_ n" := (hpolyNF R n) (at level 0, format "''hpolyNF[' R ]_ n").
 Notation "''hpolyNF_' n" := (hpolyNF _ n) (at level 0, only parsing).
 
@@ -539,18 +546,31 @@ Section HFace.
 Variable n : nat.
 Variable R : realFieldType.
 
-Variable P : 'hpolyNF[R]_n.
+Variable P : 'hpoly[R]_n.
+Let P_NF := \nf ('P^=(P; set0)).
 
-Definition face_of :=
-  [ qualify a Q : 'hpolyNF[R]_n |
-    [exists J : {set 'I_(#ineq \base P)},
-        (\eq_set P \subset J) && (Q ==e 'P^=(\base P; J)) ]].
+Definition hface_of :=
+  [qualify a Q: 'hpoly[R]_n |
+    non_empty Q &&
+    [exists J : {set 'I_(#ineq \base P_NF)},
+        (\eq_set P_NF \subset J) && (Q ==e 'P^=(\base P_NF; J)) ]].
 
-Lemma face_ofP (Q : 'hpolyNF[R]_n) :
-  reflect (exists c, forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in Q)))
-          (Q \is a face_of).
+Hypothesis P_non_empty : non_empty P.
+
+Lemma hface_ofP Q :
+  reflect (exists c, bounded P c /\ forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in Q)))
+          (Q \is a hface_of).
 Proof.
 Admitted.
 
-
 End HFace.
+
+Module HPolyPrim.
+
+Definition non_empty := non_empty.
+Definition bounded := bounded.
+Definition unbounded := unbounded.
+Definition opt_point := opt_point.
+Definition opt_value := opt_value.
+
+End HPolyPrim.
