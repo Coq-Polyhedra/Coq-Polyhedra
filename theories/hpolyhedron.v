@@ -169,17 +169,26 @@ case: P => m A b.
 exact: S.Simplex.feasibleP.
 Qed.
 
-(*Lemma boundedP P c :
+Lemma boundedP P c : (*RK*)
   reflect ((exists x, x \in P /\ '[c,x] = opt_value P c) /\ (forall y, y \in P -> opt_value P c <= '[c,y])) (bounded P c).
-Admitted.
+Proof.
+case: P => m A b.
+exact: S.Simplex.boundedP.
+Qed.
 
-Lemma opt_value_is_optimal P c x :
+Lemma opt_value_is_optimal P c x : (*RK*)
   (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> '[c,x] = opt_value P c.
-Admitted.
+Proof.
+case: P => m A b.
+exact: S.Simplex.opt_value_is_optimal.
+Qed.
 
-Lemma unboundedP P c :
+Lemma unboundedP P c : (*RK*)
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
-Admitted.*)
+Proof.
+case: P => m A b.
+exact: S.Simplex.unboundedP.
+Qed.
 
 End BasicPrimitives.
 
@@ -234,7 +243,7 @@ Qed.
 
 Definition hpolyhedron_is_included_in Q :=
   let: 'P(A,b) := Q in
-  [forall i, is_included_in_halfspace (row i A)^T (b i 0)].
+    [forall i, is_included_in_halfspace (row i A)^T (b i 0)].
 
 Lemma hpolyhedron_is_included_inP Q :
   reflect {subset P <= Q} (hpolyhedron_is_included_in Q).
@@ -362,7 +371,6 @@ Variable I : {set 'I_m}.
 Check 'P^= (A,b;I).
 End Ex.
 
-
 Lemma hpolyEq_inE (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) x :
   (x \in 'P^= (A, b; J)) = (x \in 'P(A, b)) && [forall j in J, (A *m x) j 0 == b j 0].
 Proof.
@@ -436,10 +444,10 @@ Lemma implicit_eqP Q i :
     reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
             (i \in implicit_eq Q).
 Proof.
-move => P A b.
-apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
 Admitted.
-(*- rewrite inE in i_in_implicit_eq.
+(*move => P A b.
+apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
+- rewrite /implicit_eq //= in i_in_implicit_eq. rewrite inE in i_in_implicit_eq.
   rewrite -row_vdot.
   exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
 - rewrite inE.
@@ -503,7 +511,8 @@ Section HPolyNF.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition has_normal_form (P : 'hpolyEq[R]_n) := (\eq_set P == implicit_eq P).
+Definition has_normal_form (P : 'hpolyEq[R]_n) :=
+  (\eq_set P == implicit_eq P).
 
 Lemma has_normal_formP P :
   has_normal_form P = (P == normal_form P).
@@ -520,19 +529,31 @@ Inductive hpolyNF := HPolyNF (P : 'hpolyEq[R]_n) of has_normal_form P.
 
 Fact normal_form_has_normal_form P :
   has_normal_form (normal_form P).
-Admitted.
+Proof. (*RK*)
+rewrite /has_normal_form eqEsubset.
+apply/andP; split.
+- exact: subset_of_implicit_eq.
+- apply/subsetP => i /implicit_eqP i_in_I_nfP.
+  rewrite /normal_form /=.
+  apply/implicit_eqP => x x_in_P.
+  apply: i_in_I_nfP.
+  by rewrite -(normal_formP P x).
+Qed.
 
-Definition hpolyNF_of_hpolyEq P := HPolyNF (normal_form_has_normal_form P).
-
+Definition hpolyNF_of_hpolyEq P :=
+  HPolyNF (normal_form_has_normal_form P).
+Check hpolyNF_of_hpolyEq.
 Coercion hpoly_of_subset_of_hpoly_nf P :=
   let: HPolyNF Q _ := P in Q.
 Canonical hpolyhedron_nf_subtype := [subType for hpoly_of_subset_of_hpoly_nf].
 
 Section Mixins.
+
 Definition hpoly_nf_eqMixin := Eval hnf in [eqMixin of hpolyNF by <:].
 Canonical hpoly_nf_eqType := Eval hnf in EqType hpolyNF hpoly_nf_eqMixin.
 Definition hpoly_nf_choiceMixin := Eval hnf in [choiceMixin of hpolyNF by <:].
 Canonical hpoly_nf_choiceType := Eval hnf in ChoiceType hpolyNF hpoly_nf_choiceMixin.
+
 End Mixins.
 
 End HPolyNF.
