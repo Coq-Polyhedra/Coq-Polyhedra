@@ -320,31 +320,27 @@ Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
 
 End ExtensionalEquality.
 
-Notation "P ==e Q" := (P == Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
-Notation "P =e Q" := (P = Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
+(*Notation "P ==e Q" := (P == Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
+Notation "P =e Q" := (P = Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).*)
 
 Section HPolyEq.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Record hpolyEq :=
-  HPolyEq { base : 'hpoly[R]_n;
-            eq_set : {set 'I_(#ineq base)} }.
+Inductive hpolyEq (base: 'hpoly[R]_n) := HPolyEq of {set 'I_(#ineq base)}.
 
-Notation "\base P" := (base P) (at level 0).
-Notation "\eq_set P" := (eq_set P) (at level 0).
+Notation "''P^=' ( J )" := (@HPolyEq _ J) (at level 0, format "''P^=' ( J )").
 
-Notation "''P^=' ( P ; J )" := (@HPolyEq P J) (at level 0, format "''P^=' ( P ; J )").
-Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
-
-Coercion hpoly_of_hpolyEq (Q : hpolyEq) :=
-  let: 'P^=(A, b; J) := Q in
-  let A' := col_mx A (- (row_submx A J)) in
-  let b' := col_mx b (- (row_submx b J)) in
+Coercion hpoly_of_hpolyEq (base: 'hpoly[R]_n) :=
+  let: 'P(A, b) as P := base in
+  fun (Q : hpolyEq P) =>
+    let: HPolyEq J := Q in
+    let A' := col_mx A (- (row_submx A J)) in
+    let b' := col_mx b (- (row_submx b J)) in
     'P(A', b').
 
-Section Ex.
+(*Section Ex.
 
 (* TODO: none below is working, why? *)
 
@@ -359,8 +355,8 @@ Section Ex.
 
 (* This one is also working _but_ we need the 'as P' and to
    use the type 'M[R]_(#ineq P, n) as a return type *)
-(*Let foo (Q : hpolyEq) :=
-  let: 'P(A,b) as P := \base Q return 'M[R]_(#ineq P, n) in A.*)
+(*Let foo (base: 'hpoly[R]_n) (Q : hpolyEq base) :=
+  let: 'P(A,b) as P := base return 'M[R]_(#ineq P, n) in A.*)
 
 Variable m : nat.
 Variable A : 'M[R]_(m,n).
@@ -369,7 +365,7 @@ Variable b : 'cV[R]_m.
 Check ('P (A,b)).
 Variable I : {set 'I_m}.
 Check 'P^= (A,b;I).
-End Ex.
+End Ex.*)
 
 Lemma hpolyEq_inE (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) x :
   (x \in 'P^= (A, b; J)) = (x \in 'P(A, b)) && [forall j in J, (A *m x) j 0 == b j 0].
@@ -542,10 +538,13 @@ Qed.
 
 Definition hpolyNF_of_hpolyEq P :=
   HPolyNF (normal_form_has_normal_form P).
-Check hpolyNF_of_hpolyEq.
 Coercion hpoly_of_subset_of_hpoly_nf P :=
   let: HPolyNF Q _ := P in Q.
+
 Canonical hpolyhedron_nf_subtype := [subType for hpoly_of_subset_of_hpoly_nf].
+
+Lemma hpolyNF_has_normal_form (P : hpolyNF) : has_normal_form P.
+Proof. exact: valP. Qed.
 
 Section Mixins.
 
@@ -556,25 +555,93 @@ Canonical hpoly_nf_choiceType := Eval hnf in ChoiceType hpolyNF hpoly_nf_choiceM
 
 End Mixins.
 
+Lemma nf_hpolyNF (P: hpolyNF) : hpolyNF_of_hpolyEq P = P.
+Proof.
+move: (hpolyNF_has_normal_form P).
+rewrite has_normal_formP => /eqP H.
+by apply: val_inj => /=; rewrite -H.
+Qed.
+
 End HPolyNF.
 
 Notation "\nf P" := (hpolyNF_of_hpolyEq P) (at level 0).
 Notation "''hpolyNF[' R ]_ n" := (hpolyNF R n) (at level 0, format "''hpolyNF[' R ]_ n").
 Notation "''hpolyNF_' n" := (hpolyNF _ n) (at level 0, only parsing).
 
+Section ExtensionalEqualityNF.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition hpolyNF_ext_eq : rel 'hpolyNF[R]_n :=
+    fun P Q => (hpolyhedron_is_included_in P Q) && (hpolyhedron_is_included_in Q P).
+
+Definition hpolyNF_ext_eqP (P Q : 'hpolyNF[R]_n) :
+  reflect (P =i Q) (hpolyNF_ext_eq P Q).
+Proof.
+apply: (iffP idP).
+- move/andP => [/hpolyhedron_is_included_inP H1 /hpolyhedron_is_included_inP H2] x.
+  apply/idP/idP; [exact: (H1 x) | exact: (H2 x)].
+- move => H.
+  by apply/andP; split; apply/hpolyhedron_is_included_inP => x; rewrite (H x).
+Qed.
+
+Lemma hpolyNF_ext_eq_refl :
+  reflexive hpolyNF_ext_eq.
+Proof.
+by move => P; apply/hpolyNF_ext_eqP.
+Qed.
+
+Lemma hpolyNF_ext_eq_sym :
+  symmetric hpolyNF_ext_eq.
+Proof.
+move => P Q.
+by apply/idP/idP; move/hpolyNF_ext_eqP => H;
+  apply/hpolyNF_ext_eqP => x; move: (H x).
+Qed.
+
+Lemma hpolyNF_ext_eq_trans :
+  transitive hpolyNF_ext_eq.
+Proof.
+move => ? ? ? /hpolyNF_ext_eqP H /hpolyNF_ext_eqP H'.
+apply/hpolyNF_ext_eqP => x.
+by move: (H x); rewrite (H' x).
+Qed.
+
+Lemma hpolyNF_ext_eq_is_equivalence_rel :
+  equivalence_rel hpolyNF_ext_eq.
+Proof.
+apply/equivalence_relP; split.
+- exact: hpolyNF_ext_eq_refl.
+- move => ? ? ?.
+  rewrite /eqfun => ?.
+  by apply/idP/idP; apply: hpolyNF_ext_eq_trans; [rewrite hpolyNF_ext_eq_sym | done].
+Qed.
+
+Canonical hpolyNF_equiv_rel : equiv_rel 'hpolyNF[R]_n :=
+  EquivRel hpolyNF_ext_eq hpolyNF_ext_eq_refl hpolyNF_ext_eq_sym hpolyNF_ext_eq_trans.
+
+End ExtensionalEqualityNF.
+
+Notation "P ==e Q" := (P == Q %[mod_eq (hpolyNF_equiv_rel _ _)])%qT (at level 0).
+Notation "P =e Q" := (P = Q %[mod_eq (hpolyNF_equiv_rel _ _)])%qT (at level 0).
+
 Section HFace.
 
 Variable n : nat.
 Variable R : realFieldType.
 
-Variable P : 'hpoly[R]_n.
-Let P_NF := \nf ('P^=(P; set0)).
+Variable T : R -> Type.
+Check ({ x & T x }).
+
+
+Variable P : 'hpolyNF[R]_n.
 
 Definition hface_of :=
-  [qualify a Q: 'hpoly[R]_n |
+  [qualify a Q: 'hpolyEq[R]_n |
     non_empty Q &&
-    [exists J : {set 'I_(#ineq \base P_NF)},
-        (\eq_set P_NF \subset J) && (Q ==e 'P^=(\base P_NF; J)) ]].
+    [exists J : {set 'I_(#ineq \base P)},
+        (\eq_set P \subset J) && (Q ==e 'P^=(\base P; J)) ]].
 
 Hypothesis P_non_empty : non_empty P.
 
@@ -584,7 +651,7 @@ Lemma hface_ofP Q :
 Proof.
 Admitted.
 
-End HFace.
+End HFace.*)
 
 Module HPolyPrim.
 
