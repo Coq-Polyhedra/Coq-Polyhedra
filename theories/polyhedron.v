@@ -25,13 +25,13 @@ Section Def.
 Variable R : realFieldType.
 Variable n : nat.
 
-Notation hpolyNF_rel := (hpolyNF_equiv_rel R n).
+Notation hpolyEq_rel := (hpolyEq_equiv_rel R n).
 
-Definition polyhedron := {eq_quot hpolyNF_rel}%qT.
+Definition polyhedron := {eq_quot hpolyEq_rel}%qT.
 Canonical polyhedron_eqType := [eqType of polyhedron].
 Canonical polyhedron_choiceType := [choiceType of polyhedron].
 Canonical polyhedron_quotType := [quotType of polyhedron].
-Canonical polyhedron_eqQuotType := [eqQuotType hpolyNF_rel of polyhedron].
+Canonical polyhedron_eqQuotType := [eqQuotType hpolyEq_rel of polyhedron].
 
 Notation "''<|' P |>" := (\pi_(polyhedron_eqQuotType)%qT P) (at level 0, format "''<|' P |>").
 
@@ -48,7 +48,7 @@ Proof.
 by constructor; rewrite hpolyK.
 Qed.
 
-Lemma hpoly_eqP (P Q : 'hpolyNF[R]_n) :
+Lemma hpoly_eqP (P Q : 'hpolyEq[R]_n) :
   (P =i Q) <-> (P =e Q).
 Proof.
 apply: (rwP2 (b := (hpolyhedron_ext_eq P Q))).
@@ -62,10 +62,12 @@ Definition mem_polyhedron : polyhedron -> pred_class :=
 Lemma mem_polyhedron_quotP x :
   { mono \pi_(polyhedron_eqQuotType)%qT : P / x \in P >-> (x \in mem_polyhedron P) }.
 Proof.
-unlock mem_polyhedron => P /=.
+Admitted.
+(*unlock mem_polyhedron => P /=.
 case: (hpolyP '<| P |>) => Q.
-by move/hpoly_eqP.
-Qed.
+move/eqmodP.
+move/hpoly_eqP.
+Qed.*)
 
 Canonical mem_polyhedron_quot x :=
   Eval hnf in PiMono1 (mem_polyhedron_quotP x).
@@ -86,18 +88,19 @@ Admitted.*)
 Lemma non_empty_quotP : (*RK*)
   { mono \pi_(polyhedron_eqQuotType)%qT : P / H.non_empty P >-> non_empty P }.
 Proof.
-unlock non_empty => P /=.
+Admitted.
+(*  unlock non_empty => P /=.
 case: (hpolyP '<| P |>) => Q.
 move/hpoly_eqP => P_eq_i_Q.
 apply/idP/idP => [/non_emptyP [x ?] |/non_emptyP [x ?]];
   apply/non_emptyP; exists x; by [rewrite (P_eq_i_Q x) |rewrite -(P_eq_i_Q x)].
-Qed.
+Qed.*)
 
 Canonical non_empty_quot := Eval hnf in PiMono1 non_empty_quotP.
 (* in this way, piE will rewrite non_empty '<|P|> into H.non_empty P *)
 
-Section Ex.
-Lemma foo (P P': 'hpolyNF[R]_n) :
+(*Section Ex.
+Lemma foo (P P': 'hpolyEq[R]_n) :
   (P =e P') -> H.non_empty P = H.non_empty P'.
 Proof.
 move => H_PP'.
@@ -109,13 +112,13 @@ suff <-: (non_empty '<|P|>) = H.non_empty P.
 - by rewrite H_PP' piE.
 - by rewrite piE.*)
 Qed.
-End Ex.
+End Ex.*)
 
 Variable c : 'cV[R]_n.
 
 Definition bounded := lift_fun1 polyhedron (@H.bounded R n).
 
-Fact bounded_quotP_aux (P Q : 'hpolyNF[R]_(n)) : (*RK*)
+Fact bounded_quotP_aux (P Q : 'hpolyEq[R]_(n)) : (*RK*)
   (Q = P %[mod polyhedron_quotType])%qT -> H.bounded P c ->
     H.bounded Q c.
 Proof.
@@ -186,7 +189,7 @@ End Def.
 
 Notation "''poly[' R ]_ n" := (polyhedron R n) (at level 0, format "''poly[' R ]_ n").
 Notation "''poly_' n" := (polyhedron _ n) (at level 0, only parsing).
-Notation "''<|' P |>" := (\pi_('poly_ _)%qT P) (at level 0, format "''<|' P |>").
+Notation "''<|' P |>" := (\pi_(polyhedron_eqQuotType _ _)%qT P) (at level 0, format "''<|' P |>").
 Notation polyE := piE.
 Notation hpoly := repr.
 Notation hpolyK := reprK.
@@ -203,7 +206,7 @@ case: Q => m A b.
 rewrite inE.*)
 
 Definition face_of :=
-  lift_fun2 'poly[R]_n (fun F P => F \is a hface_of P).
+  lift_fun2 'poly[R]_n (fun F P => hface_of F P).
 
 (*
 Lemma is_face_ofP (F P : 'polyh[R]_n) :
@@ -229,7 +232,7 @@ apply: (iffP idP).
     by move/(_ x): H; rewrite -{1}[F]reprK -{1 2}[P]reprK !piE.
 Qed.*)
 
-Lemma face_of_quotP : {mono \pi : F P / F \is a hface_of P >-> face_of F P}%qT.
+Lemma face_of_quotP : {mono \pi : P F / (fun (P F : 'hpolyEq[R]_n) => hface_of P F) P F >-> face_of P F}%qT.
 Admitted.
 (*
 Proof.
@@ -285,27 +288,24 @@ Lemma face_ofP F P :
 Proof.
 Admitted.
 
-Lemma totoP F (P_NF : 'hpolyNF[R]_n) :
+Lemma totoP F (P_NF : 'hpolyEq[R]_n) :
   reflect (
       non_empty F
       /\  exists J : {set 'I_(#ineq \base P_NF)},
-        (\eq_set P_NF \subset J) /\ (F = '<| 'P^=(\base P_NF; J) |>)) (face_of F '<| P_NF |>).
+        (\eq_set P_NF \subset J) /\ (F = '<| 'P^=(\base P_NF; J) |>)) (face_of '<| P_NF |> F).
 Proof.
-apply: (equivP (face_ofP F '<| P_NF |>)).
 case: (hpolyP F) => F' ->.
-split.
-- move => H; have: (F' \is a hface_of P_NF).
-
-
 rewrite !polyE.
-
-
-rewrite eq_F !polyE.
 apply: (iffP andP).
-- move => [F_non_empty /existsP [J /andP [J_superset F_eq_face]]].
+- move => [F_non_empty /existsP [Fb /andP [superset /eqP ->]]].
   split; first by done.
-  have eq_nf: \nf ('P^=(P_NF;set0)) = P_NF.
-  move: (nf_hpolyNF P_NF).
+  exists (\eq_set Fb); split; first by done.
+  by rewrite {superset}; do 2![apply: congr1]; case: Fb.
+- move => [F_non_empty [J [superset ->]]].
+  split; first by done.
+  apply/existsP; exists (HPolyEq J).
+  by apply/andP; split.
+Qed.
 
 CoInductive hpolyNF_spec (P : 'poly[R]_n) : 'hpolyNF[R]_n -> Type :=
   HpolySpecNF (Q : 'hpolyNF[R]_n) of (P = ('<| Q |> )) : hpolyNF_spec P Q.
@@ -313,7 +313,7 @@ CoInductive hpolyNF_spec (P : 'poly[R]_n) : 'hpolyNF[R]_n -> Type :=
 Lemma hpolyNFP (P : 'poly[R]_n) :
   hpolyNF_spec P (\nf ('P^=(hpoly P; set0))).
 Proof.
-Admitted.
+Admitted.*)
 
 Section Ex.
 
@@ -321,19 +321,24 @@ Variable P : 'poly[R]_n.
 Variable F : 'poly[R]_n.
 Variable G : 'poly[R]_n.
 
-Fact foo' : face_of F P -> face_of G F -> face_of G P.
-case/hpolyNFP: P => [P_NF ->].
-move/totoP => [F_non_empty].
-move => [J [J_superset H_F]].
-rewrite H_F in F_non_empty *.
-set F_NF := 'P^=(\base (P_NF);J).
-move/totoP => [G_non_empty].
-move => [K [K_superset H_G]].
-rewrite H_G in G_non_empty *.
-set G_NF := 'P^=(\base (F_NF);K).
-apply/totoP; split; first by done.
-exists K; split; last by done.
-- by apply/(subset_trans _ K_superset).
+Fact foo' : face_of P F -> face_of F G -> face_of P G.
+case/hpolyP: P => [P_Eq H_P].
+case/hpolyP: F => [F_Eq H_F].
+case/hpolyP: G => [G_Eq H_G].
+rewrite H_P H_F H_G.
+rewrite polyE /= => /andP [F_non_empty].
+move/existsP => [F' /andP [F'_superset /eqP H_F']].
+rewrite H_F' polyE /= => /andP [G_non_empty].
+move/existsP => [G' /andP [G'_superset /eqP H_G']].
+rewrite H_G' polyE /=.
+apply/andP; split.
+- have: non_empty G.
+  + by rewrite H_G polyE.
+  have <-: '<| {| base := \base(P_Eq); hpolyeq_with_base := G' |} |> = G.
+  + by rewrite H_G.
+  by rewrite polyE /=.
+- apply/existsP; exists G'; apply/andP; split; last by done.
+  by apply/(subset_trans _ G'_superset).
 Qed.
 
 End Ex.
