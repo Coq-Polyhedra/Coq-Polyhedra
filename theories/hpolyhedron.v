@@ -336,7 +336,8 @@ Definition eq_set base (Q: hpolyEq base) := let: HPolyEq J := Q in J.
 
 End Def.
 
-Notation "''hpolyEq(' base )" := (hpolyEq base) (at level 0, format "''hpolyEq(' base )").
+Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
+Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
 
 Definition hpoly_of_hpolyEq (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) :=
   (* why do we need to specify R and n as arguments if we want to avoid UIP failure in the coercion? *)
@@ -349,28 +350,7 @@ Definition hpoly_of_hpolyEq (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) :
 
 Coercion hpoly_of_hpolyEq : hpolyEq >-> hpolyhedron.
 
-Definition implicit_eq (R : realFieldType) (n : nat)
-           (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
-  let: 'P(A,b) as P' := base return {set 'I_(#ineq P')} in
-  [ set i : 'I_(#ineq P') |
-    is_included_in_hyperplane Q (row i A)^T (b i 0) ].
-
-(*Lemma implicit_eqP (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (J: {set 'I_(#ineq 'P(A,b))}) i :
-  reflect (forall x, x \in 'P^=(A, b; J) -> (A *m x) i 0 = b i 0)
-          (i \in implicit_eq 'P^=(A, b; J)).
-Proof.
-apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
-- rewrite /implicit_eq //= in i_in_implicit_eq. rewrite inE in i_in_implicit_eq.
-  rewrite -row_vdot.
-  exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
-- rewrite inE.
-  apply/is_included_in_hyperplaneP => x x_in_P.
-  rewrite row_vdot.
-  by apply: ineq_i_is_sat.
-Qed.*)
-
-
-Section FixedBase.
+Section StructEq.
 
 Variable R : realFieldType.
 Variable n: nat.
@@ -391,24 +371,73 @@ Canonical hpolyEq_countType := Eval hnf in CountType 'hpolyEq(base) hpolyEq_coun
 Definition hpolyEq_finMixin := CanFinMixin set_of_hpolyEqK.
 Canonical hpolyEq_finType := Eval hnf in FinType 'hpolyEq(base) hpolyEq_finMixin.
 
-End FixedBase.
+End StructEq.
+
+Section PolyNF.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
+  let: 'P(A,b) as P' := base return {set 'I_(#ineq P')} in
+  [ set i : 'I_(#ineq P') |
+    is_included_in_hyperplane Q (row i A)^T (b i 0) ].
+
+Lemma implicit_eqP (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (Q: 'hpolyEq('P(A,b))) i :
+  reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
+          (i \in implicit_eq Q).
+Proof.
+apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
+- rewrite /implicit_eq //= in i_in_implicit_eq;
+    rewrite inE in i_in_implicit_eq.
+  rewrite -row_vdot.
+  exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
+- rewrite inE.
+  apply/is_included_in_hyperplaneP => x x_in_P.
+  rewrite row_vdot.
+  by apply: ineq_i_is_sat.
+Qed.
+
+Definition has_normal_form (base: 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
+  \eq_set Q == implicit_eq Q.
+
+Inductive hpolyNF (base : 'hpoly[R]_n) :=
+  HPolyNF (Q : 'hpolyEq(base)) of (has_normal_form Q).
+
+Notation "''hpolyNF(' base )" := (hpolyNF base) (at level 0, format "''hpolyNF(' base )").
+
+Section StructNF.
+
+Variable base: 'hpoly[R]_n.
+Coercion hpolyEq_of_hpolyNF (Q : 'hpolyNF(base)) := let: HPolyNF Q' _ := Q in Q'.
+Canonical hpolyNF_subType := [subType for hpolyEq_of_hpolyNF].
+Definition hpolyNF_eqMixin := Eval hnf in [eqMixin of hpolyNF base by <:].
+Canonical hpolyNF_eqType := Eval hnf in EqType 'hpolyNF(base) hpolyNF_eqMixin.
+Definition hpolyNF_choiceMixin := [choiceMixin of 'hpolyNF(base) by <:].
+Canonical hpolyNF_choiceType := Eval hnf in ChoiceType 'hpolyNF(base) hpolyNF_choiceMixin.
+Definition hpolyNF_countMixin := [countMixin of 'hpolyNF(base) by <:].
+Canonical hpolyNF_countType := Eval hnf in CountType 'hpolyNF(base) hpolyNF_countMixin.
+Canonical hpolyNF_subCountType := [subCountType of 'hpolyNF(base)].
+Definition hpolyNF_finMixin := [finMixin of 'hpolyNF(base) by <:].
+Canonical hpolyNF_finType := Eval hnf in FinType 'hpolyNF(base) hpolyNF_finMixin.
+Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].
+
+End StructNF.
+End PolyNF.
+
+Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
 
 Section UnfixedBase.
 
 Record hpolyEqS (R : realFieldType) (n : nat) :=
   (* the Sigma-type based on hpolyEq *)
-  HPolyEqS { base: 'hpoly[R]_n; hpolyeq_with_base :> 'hpolyEq(base) }.
+  HPolyEqS { base: 'hpoly[R]_n; hpolyeq_with_base :> 'hpolyNF(base) }.
 
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
 Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing).
 Notation "\base P" := (base P) (at level 0, format "\base P").
-Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
-
-(*Definition hpolyEq_of_hpolyEqS (R : realFieldType) (n: nat) (Q : 'hpolyEq[R]_n) :=
-  let: HPolyEqS Q' := Q return hpolyEq (tag Q') in tagged Q'.*)
-(*Coercion hpolyeq_with_base : hpolyEqS >-> hpolyEq.*)
 
 Variable R : realFieldType.
 Variable n : nat.
@@ -438,7 +467,7 @@ Variable Q : 'hpolyEq[R]_n.
 
 Fact bar x : x \in Q.
 Proof.
-case: Q => [[m A b] [J]].
+case: Q => [[m A b] [[J] ?]] /=.
 rewrite hpolyEq_inE.
 Abort.
 
@@ -477,8 +506,8 @@ Definition inE := (poly_inE, inE).
 
 Section Mixins.
 
-Let of_hpolyEqS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyEq(Q) } :=
-  Tagged (fun Q : ('hpoly[R]_n) => 'hpolyEq(Q)) (hpolyeq_with_base P).
+Let of_hpolyEqS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyNF(Q) } :=
+  Tagged (fun Q : ('hpoly[R]_n) => 'hpolyNF(Q)) (hpolyeq_with_base P).
 
 Fact of_hpolyEqSK : cancel of_hpolyEqS (fun x => HPolyEqS (tagged x)).
 Proof.
@@ -516,25 +545,12 @@ Definition implicit_eq (Q: hpolyEq) :=
     is_included_in_hyperplane Q (row i A)^T (b i 0) ].*)
 
 
-Lemma subset_of_implicit_eq (P: 'hpolyEq[R]_n) :
-  \eq_set P \subset implicit_eq P.
-Proof.
-case: P => [[m A b] [J]].
-apply/subsetP => i i_in_I_P.
-rewrite inE.
-apply/andP; split;
-apply/is_included_in_halfspaceP => x x_in_P;
-rewrite hpolyEq_inE in x_in_P; move/andP: x_in_P => [/forallP x_in_baseP in_I_P].
-+ rewrite row_vdot.
-  exact: (x_in_baseP i).
-+ by rewrite vdotNl row_vdot (eqP (implyP ((forallP in_I_P) i) i_in_I_P)).
-Qed.
-
 End UnfixedBase.
 
 End HPolyEq.
 
-Notation "''hpolyEq(' base )" := (hpolyEq base) (at level 0, format "''hpolyEq(' base )").
+Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
+Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
 Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing).
 Notation "\base P" := (base P) (at level 0, format "\base P").
@@ -632,21 +648,19 @@ Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
 
 End ExtensionalEqualityEq.
 
-
 Notation "P ==e Q" := (P == Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
 Notation "P =e Q" := (P = Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
-
 
 Section HFace.
 
 Variable n : nat.
 Variable R : realFieldType.
 Variable base: 'hpoly[R]_n.
-Variable P : 'hpolyEq(base).
+Variable P : 'hpolyNF(base).
 
 Definition hface_of :=
   [ pred Q: 'hpolyEq[R]_n |
-    non_empty Q && [exists R: 'hpolyEq(base), (\eq_set P \subset \eq_set R) && (Q ==e (HPolyEqS R)) ] ].
+    non_empty Q && [exists R: 'hpolyNF(base), (\eq_set P \subset \eq_set R) && (Q ==e (HPolyEqS R)) ] ].
 
 Hypothesis P_non_empty : non_empty P.
 

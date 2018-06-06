@@ -288,6 +288,7 @@ Lemma face_ofP F P :
 Proof.
 Admitted.
 
+(*
 Lemma totoP F (P_NF : 'hpolyEq[R]_n) :
   reflect (
       non_empty F
@@ -303,17 +304,12 @@ apply: (iffP andP).
   by rewrite {superset}; do 2![apply: congr1]; case: Fb.
 - move => [F_non_empty [J [superset ->]]].
   split; first by done.
-  apply/existsP; exists (HPolyEq J).
+  apply/existsP. exists (HPolyEq J).
   by apply/andP; split.
-Qed.
+Qed.*)
 
-CoInductive hpolyNF_spec (P : 'poly[R]_n) : 'hpolyNF[R]_n -> Type :=
-  HpolySpecNF (Q : 'hpolyNF[R]_n) of (P = ('<| Q |> )) : hpolyNF_spec P Q.
-
-Lemma hpolyNFP (P : 'poly[R]_n) :
-  hpolyNF_spec P (\nf ('P^=(hpoly P; set0))).
-Proof.
-Admitted.*)
+CoInductive hpolyNF_spec (P : 'poly[R]_n) : 'hpolyEq[R]_n -> Type :=
+  HpolySpecNF (Q : 'hpolyEq[R]_n) of (P = ('<| Q |> )) : hpolyNF_spec P Q.
 
 Section Ex.
 
