@@ -61,13 +61,10 @@ Definition mem_polyhedron : polyhedron -> pred_class :=
 
 Lemma mem_polyhedron_quotP x :
   { mono \pi_(polyhedron_eqQuotType)%qT : P / x \in P >-> (x \in mem_polyhedron P) }.
-Proof.
-Admitted.
-(*unlock mem_polyhedron => P /=.
-case: (hpolyP '<| P |>) => Q.
-move/eqmodP.
-move/hpoly_eqP.
-Qed.*)
+Proof. (* RK *)
+unlock mem_polyhedron => P /=.
+by case: (hpolyP '<| P |>) => Q /hpoly_eqP ?.
+Qed.
 
 Canonical mem_polyhedron_quot x :=
   Eval hnf in PiMono1 (mem_polyhedron_quotP x).
@@ -85,16 +82,14 @@ Admitted.
 Lemma opt_value_quotP (c: 'cV[R]_n) P Q : P =i Q -> opt_value P c = opt_value Q c.
 Admitted.*)
 
-Lemma non_empty_quotP : (*RK*)
+Lemma non_empty_quotP :
   { mono \pi_(polyhedron_eqQuotType)%qT : P / H.non_empty P >-> non_empty P }.
-Proof.
-Admitted.
-(*  unlock non_empty => P /=.
-case: (hpolyP '<| P |>) => Q.
-move/hpoly_eqP => P_eq_i_Q.
+Proof. (*RK*)
+unlock non_empty => P /=.
+case: (hpolyP '<| P |>) => Q /hpoly_eqP P_eq_i_Q.
 apply/idP/idP => [/non_emptyP [x ?] |/non_emptyP [x ?]];
   apply/non_emptyP; exists x; by [rewrite (P_eq_i_Q x) |rewrite -(P_eq_i_Q x)].
-Qed.*)
+Qed.
 
 Canonical non_empty_quot := Eval hnf in PiMono1 non_empty_quotP.
 (* in this way, piE will rewrite non_empty '<|P|> into H.non_empty P *)
@@ -122,21 +117,24 @@ Fact bounded_quotP_aux (P Q : 'hpolyEq[R]_(n)) : (*RK*)
   (Q = P %[mod polyhedron_quotType])%qT -> H.bounded P c ->
     H.bounded Q c.
 Proof.
-Admitted.
-(*case: P => mP AP bP.
-case: Q => mQ AQ bQ.
+case: P => [[mP AP bP] [IP]].
+case: Q => [[mQ AQ bQ] [IQ]].
+set APeq := col_mx AP (- row_submx AP IP).
+set bPeq := col_mx bP (- row_submx bP IP).
 move/hpoly_eqP => P_eq_i_Q.
-move/boundedP => Qbounded.
+rewrite /= in P_eq_i_Q; unlock in P_eq_i_Q.
+rewrite /=; unlock.
+move/boundedP => Pbounded.
 apply/(S.Simplex.boundedP_lower_bound c).
 - apply/S.Simplex.feasibleP.
-  move/proj1: Qbounded => [x [x_in_Q _]].
+  move/proj1: Pbounded => [x [x_in_P _]].
   exists x.
   by rewrite P_eq_i_Q.
-- exists (opt_value 'P(AP, bP) c).
+- exists (opt_value 'P(APeq, bPeq) c).
   move => x x_in_P.
   rewrite P_eq_i_Q in x_in_P.
-  exact: ((proj2 Qbounded) x x_in_P).
-Qed.*)
+  exact: ((proj2 Pbounded) x x_in_P).
+Qed.
 
 Lemma bounded_quotP :
   { mono \pi_(polyhedron_eqQuotType)%qT : P / H.bounded P c >-> bounded P c }.
@@ -161,27 +159,33 @@ Admitted.
 Lemma opt_value_quotP :
   {mono \pi_(polyhedron_eqQuotType)%qT : P / (H.opt_value P c) >-> (opt_value P c)}.
 Proof. (*RK*)
-Admitted.
-(*unlock opt_value => P.
+unlock opt_value => P /=.
 case: (hpolyP '<| P |>) => Q.
-case: P => mP AP bP.
-case: Q => mQ AQ bQ.
-case: (boolP (S.Simplex.bounded AQ bQ c)) => [Q_bounded | Q_unbounded].
+case: P => [[mP AP bP] [IP]].
+case: Q => [[mQ AQ bQ] [IQ]].
+set AQeq := col_mx AQ (- row_submx AQ IQ).
+set bQeq := col_mx bQ (- row_submx bQ IQ).
+set APeq := col_mx AP (- row_submx AP IP).
+set bPeq := col_mx bP (- row_submx bP IP).
+case: (boolP (S.Simplex.bounded AQeq bQeq c)) => [Q_bounded | Q_unbounded].
 - move/hpoly_eqP => P_eq_i_Q.
   rewrite [LHS]/H.opt_value /hpolyhedron.opt_value.
   apply: (opt_value_is_optimal _).
-  + rewrite P_eq_i_Q.
+  + rewrite P_eq_i_Q /=; unlock.
     by apply: S.Simplex.opt_point_is_feasible.
   + move => y y_in_P.
-    rewrite P_eq_i_Q in y_in_P.
+    rewrite P_eq_i_Q /= in y_in_P; unlock in y_in_P.
+    rewrite /=; unlock.
     exact: ((proj2 (S.Simplex.boundedP _ _ _ Q_bounded)) _ y_in_P).
 - move => P_eq_e_Q. symmetry in P_eq_e_Q.
-  suff P_unbounded : ~~ S.Simplex.bounded AP bP c
-    by rewrite /H.opt_value /hpolyhedron.opt_value /opt_point
+  suff P_unbounded : ~~ S.Simplex.bounded APeq bPeq c
+    by rewrite /=; unlock;
+    rewrite /H.opt_value /hpolyhedron.opt_value /opt_point
       (not_bounded_opt_point Q_unbounded) (not_bounded_opt_point P_unbounded).
   move: Q_unbounded; apply: contra.
-  exact: (bounded_quotP_aux P_eq_e_Q).
-Qed.*)
+  move: (bounded_quotP_aux P_eq_e_Q).
+  by rewrite /H.bounded /hpolyhedron.bounded /=; unlock.
+Qed.
 
 Canonical opt_value_quot := PiMono1 opt_value_quotP.
 

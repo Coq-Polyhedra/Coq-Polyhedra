@@ -330,9 +330,9 @@ Section Def.
 Variable R : realFieldType.
 Variable n : nat.
 
-Inductive hpolyEq (base: 'hpoly[R]_n) := HPolyEq of {set 'I_(#ineq base)}.
+Inductive hpolyEq (base : 'hpoly[R]_n) := HPolyEq of {set 'I_(#ineq base)}.
 
-Definition eq_set base (Q: hpolyEq base) := let: HPolyEq J := Q in J.
+Definition eq_set base (Q : hpolyEq base) := let: HPolyEq J := Q in J.
 
 End Def.
 
@@ -353,8 +353,8 @@ Coercion hpoly_of_hpolyEq : hpolyEq >-> hpolyhedron.
 Section StructEq.
 
 Variable R : realFieldType.
-Variable n: nat.
-Variable base: 'hpoly[R]_n.
+Variable n : nat.
+Variable base : 'hpoly[R]_n.
 
 Fact eq_setK : cancel (@eq_set _ _ base) (@HPolyEq _ _ base).
 Proof.
@@ -382,7 +382,7 @@ Definition implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
   [ set i : 'I_(#ineq P') |
     is_included_in_hyperplane Q (row i A)^T (b i 0) ].
 
-Lemma implicit_eqP (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (Q: 'hpolyEq('P(A,b))) i :
+Lemma implicit_eqP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyEq('P(A,b))) i :
   reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
           (i \in implicit_eq Q).
 Proof.
@@ -397,7 +397,7 @@ apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
   by apply: ineq_i_is_sat.
 Qed.
 
-Definition has_normal_form (base: 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
+Definition has_normal_form (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
   \eq_set Q == implicit_eq Q.
 
 Inductive hpolyNF (base : 'hpoly[R]_n) :=
@@ -422,6 +422,7 @@ Canonical hpolyNF_finType := Eval hnf in FinType 'hpolyNF(base) hpolyNF_finMixin
 Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].
 
 End StructNF.
+
 End PolyNF.
 
 Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
@@ -441,10 +442,10 @@ Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' 
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma hpolyEq_inE (x: 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b: 'cV[R]_m) :
+Lemma hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
   let P := 'P(A,b) in
-  forall J : {set 'I_(#ineq P)},
-  (x \in HPolyEq J) = (x \in P) && [forall j in J, (A *m x) j 0 == b j 0].
+    forall J : {set 'I_(#ineq P)},
+      (x \in HPolyEq J) = (x \in P) && [forall j in J, (A *m x) j 0 == b j 0].
 Proof.
 move => P J /=.
 unlock.
@@ -465,11 +466,11 @@ Qed.
 (* TODO: define a point in the relative interior *)
 Section RelativeInterior.
 
-Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b: 'cV[R]_m)
+Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
       (Q : 'hpolyNF('P(A,b))) :
-       exists x, (x \in Q /\ (forall i, i \notin (\eq_set Q) -> (A *m x) i 0 > b i 0)).
+        exists x, (x \in Q /\ (forall i, i \notin (\eq_set Q) -> (A *m x) i 0 > b i 0)).
+Proof.
 Admitted.
-
 
 End RelativeInterior.
 
@@ -610,16 +611,16 @@ Section HFace.
 
 Variable n : nat.
 Variable R : realFieldType.
-Variable base: 'hpoly[R]_n.
+Variable base : 'hpoly[R]_n.
 Variable P : 'hpolyNF(base).
 
 Definition hface_of :=
-  [ pred Q: 'hpolyEq[R]_n |
-    non_empty Q && [exists R: 'hpolyNF(base), (\eq_set P \subset \eq_set R) && (Q ==e (HPolyEqS R)) ] ].
+  [ pred Q : 'hpolyEq[R]_n |
+    non_empty Q && [exists R : 'hpolyNF(base), (\eq_set P \subset \eq_set R) && (Q ==e (HPolyEqS R)) ] ].
 
 Hypothesis P_non_empty : non_empty P.
 
-Lemma hface_ofP (Q: 'hpolyEq[R]_n) :
+Lemma hface_ofP (Q : 'hpolyEq[R]_n) :
   reflect (exists c, bounded P c /\ forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in Q)))
           (hface_of Q).
 Proof.
