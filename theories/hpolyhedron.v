@@ -356,19 +356,18 @@ Variable R : realFieldType.
 Variable n: nat.
 Variable base: 'hpoly[R]_n.
 
-Definition set_of_hpolyEq (P: 'hpolyEq(base)) := let: HPolyEq J := P in J.
-Fact set_of_hpolyEqK : cancel set_of_hpolyEq (@HPolyEq _ _ base).
+Fact eq_setK : cancel (@eq_set _ _ base) (@HPolyEq _ _ base).
 Proof.
 by case.
 Qed.
 
-Definition hpolyEq_eqMixin := CanEqMixin set_of_hpolyEqK.
+Definition hpolyEq_eqMixin := CanEqMixin eq_setK.
 Canonical hpolyEq_eqType := Eval hnf in EqType 'hpolyEq(base) hpolyEq_eqMixin.
-Definition hpolyEq_choiceMixin := CanChoiceMixin set_of_hpolyEqK.
+Definition hpolyEq_choiceMixin := CanChoiceMixin eq_setK.
 Canonical hpolyEq_choiceType := Eval hnf in ChoiceType 'hpolyEq(base) hpolyEq_choiceMixin.
-Definition hpolyEq_countMixin := CanCountMixin set_of_hpolyEqK.
+Definition hpolyEq_countMixin := CanCountMixin eq_setK.
 Canonical hpolyEq_countType := Eval hnf in CountType 'hpolyEq(base) hpolyEq_countMixin.
-Definition hpolyEq_finMixin := CanFinMixin set_of_hpolyEqK.
+Definition hpolyEq_finMixin := CanFinMixin eq_setK.
 Canonical hpolyEq_finType := Eval hnf in FinType 'hpolyEq(base) hpolyEq_finMixin.
 
 End StructEq.
@@ -430,7 +429,7 @@ Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpol
 Section UnfixedBase.
 
 Record hpolyEqS (R : realFieldType) (n : nat) :=
-  (* the Sigma-type based on hpolyEq *)
+  (* the Sigma-type based on hpolyNF *)
   HPolyEqS { base: 'hpoly[R]_n; hpolyeq_with_base :> 'hpolyNF(base) }.
 
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
@@ -461,6 +460,19 @@ apply/andP/andP.
   apply/row_submx_levP => j j_in_J.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
+
+
+(* TODO: define a point in the relative interior *)
+Section RelativeInterior.
+
+Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b: 'cV[R]_m)
+      (Q : 'hpolyNF('P(A,b))) :
+       exists x, (x \in Q /\ (forall i, i \notin (\eq_set Q) -> (A *m x) i 0 > b i 0)).
+Admitted.
+
+
+End RelativeInterior.
+
 
 Section Ex2.
 Variable Q : 'hpolyEq[R]_n.
@@ -557,63 +569,6 @@ Notation "\base P" := (base P) (at level 0, format "\base P").
 Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
-
-(*
-Section ExtensionalEqualityNF.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Definition hpolyEq_ext_eq : rel 'hpolyEq[R]_n :=
-    fun P Q => (hpolyhedron_is_included_in P Q) && (hpolyhedron_is_included_in Q P).
-
-Definition hpolyEq_ext_eqP (P Q : 'hpolyEq[R]_n) :
-  reflect (P =i Q) (hpolyEq_ext_eq P Q).
-Proof.
-apply: (iffP idP).
-- move/andP => [/hpolyhedron_is_included_inP H1 /hpolyhedron_is_included_inP H2] x.
-  apply/idP/idP; [exact: (H1 x) | exact: (H2 x)].
-- move => H.
-  by apply/andP; split; apply/hpolyhedron_is_included_inP => x; rewrite (H x).
-Qed.
-
-Lemma hpolyEq_ext_eq_refl :
-  reflexive hpolyEq_ext_eq.
-Proof.
-by move => P; apply/hpolyEq_ext_eqP.
-Qed.
-
-Lemma hpolyEq_ext_eq_sym :
-  symmetric hpolyEq_ext_eq.
-Proof.
-move => P Q.
-by apply/idP/idP; move/hpolyEq_ext_eqP => H;
-  apply/hpolyEq_ext_eqP => x; move: (H x).
-Qed.
-
-Lemma hpolyEq_ext_eq_trans :
-  transitive hpolyEq_ext_eq.
-Proof.
-move => ? ? ? /hpolyEq_ext_eqP H /hpolyEq_ext_eqP H'.
-apply/hpolyEq_ext_eqP => x.
-by move: (H x); rewrite (H' x).
-Qed.
-
-Lemma hpolyEq_ext_eq_is_equivalence_rel :
-  equivalence_rel hpolyEq_ext_eq.
-Proof.
-apply/equivalence_relP; split.
-- exact: hpolyEq_ext_eq_refl.
-- move => ? ? ?.
-  rewrite /eqfun => ?.
-  by apply/idP/idP; apply: hpolyEq_ext_eq_trans; [rewrite hpolyEq_ext_eq_sym | done].
-Qed.
-
-Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
-  EquivRel hpolyEq_ext_eq hpolyEq_ext_eq_refl hpolyEq_ext_eq_sym hpolyEq_ext_eq_trans.
-
-End ExtensionalEqualityNF.
- *)
 
 Section ExtensionalEqualityEq.
 

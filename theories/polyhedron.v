@@ -288,28 +288,37 @@ Lemma face_ofP F P :
 Proof.
 Admitted.
 
-(*
-Lemma totoP F (P_NF : 'hpolyEq[R]_n) :
+
+Lemma totoP (base: 'hpoly[R]_n) (P_NF : 'hpolyNF(base)) F :
   reflect (
       non_empty F
-      /\  exists J : {set 'I_(#ineq \base P_NF)},
-        (\eq_set P_NF \subset J) /\ (F = '<| 'P^=(\base P_NF; J) |>)) (face_of '<| P_NF |> F).
+      /\  exists Q : 'hpolyNF(base),
+        (\eq_set P_NF \subset \eq_set Q) /\ (F = '<| HPolyEqS Q |>)) (face_of '<| HPolyEqS P_NF |> F).
 Proof.
 case: (hpolyP F) => F' ->.
 rewrite !polyE.
 apply: (iffP andP).
 - move => [F_non_empty /existsP [Fb /andP [superset /eqP ->]]].
   split; first by done.
-  exists (\eq_set Fb); split; first by done.
-  by rewrite {superset}; do 2![apply: congr1]; case: Fb.
-- move => [F_non_empty [J [superset ->]]].
+  by exists Fb; split.
+- move => [F_non_empty [Fb [superset ->]]].
   split; first by done.
-  apply/existsP. exists (HPolyEq J).
+  apply/existsP. exists Fb.
   by apply/andP; split.
-Qed.*)
+Qed.
 
-CoInductive hpolyNF_spec (P : 'poly[R]_n) : 'hpolyEq[R]_n -> Type :=
-  HpolySpecNF (Q : 'hpolyEq[R]_n) of (P = ('<| Q |> )) : hpolyNF_spec P Q.
+(*CoInductive hpolyNF_spec (P : 'poly[R]_n) : Type :=
+  HPolySpecNF (base: 'hpoly[R]_n) (Q : 'hpolyNF(base)) of (P = '<| HPolyEqS Q |>) : hpolyNF_spec P.
+
+Fact hpolyNFP (P : 'poly[R]_n) :
+  hpolyNF_spec P.
+Proof.
+(*move: (erefl (hpoly P)).
+case: {2}(hpoly P) => [base Q] /=.*)
+constructor.
+case: {-1}(hpoly P) (erefl (hpoly P)) => [base Q] /= <-.
+by rewrite reprK.
+Qed.*)
 
 Section Ex.
 
@@ -337,38 +346,9 @@ apply/andP; split.
   by apply/(subset_trans _ G'_superset).
 Qed.
 
-End Ex.
+Fact foo'' : face_of P F -> face_of P G -> ({subset F <= G} <-> face_of G F).
+Admitted.
 
-Fact foo'' : face_of '<| F |> '<| P > -> face_of '<| G |> '<| P > ->
-             ((F \subset G) <-> face_of '<| F |>
-
-rewrite
-
-
-(@equiv_refl _ (polyhedron_eqQuotType R n) P)) .
-have: equiv_refl
-equiv_refl.
-
-
-  rewrite piE /hface_of qualifE.
-
-
-set P' := \nf('P^=(P;set0)).
-move/andP => [F_non_empty].
-move/existsP => [J /andP [H /eqP]].
-set F' := 'P^=(\base (P');J).
-move => F_eq_F'; move: F_non_empty.
-rewrite -[F]reprK.
-rewrite F_eq_F'.
-
-rewrite piE qualifE => /andP [G_non_empty /existsP [K /andP]].
-
-
-have [X in (\eq_set X)]->:  = P.
-
-appl
-/andP.
-Search _ .
 
 
 
