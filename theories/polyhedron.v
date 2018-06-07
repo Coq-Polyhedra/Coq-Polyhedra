@@ -117,14 +117,16 @@ Fact bounded_quotP_aux (P Q : 'hpolyEq[R]_(n)) : (*RK*)
   (Q = P %[mod polyhedron_quotType])%qT -> H.bounded P c ->
     H.bounded Q c.
 Proof.
-case: P => [[mP AP bP] [IP]].
-case: Q => [[mQ AQ bQ] [IQ]].
-set APeq := col_mx AP (- row_submx AP IP).
+Admitted.
+(*case: P => [[mP AP bP] [baseP nfP]].
+case: Q => [[mQ AQ bQ] [baseQ nfQ]].
+set APeq := col_mx AP (- (row_submx AP IP)).
 set bPeq := col_mx bP (- row_submx bP IP).
 move/hpoly_eqP => P_eq_i_Q.
 rewrite /= in P_eq_i_Q; unlock in P_eq_i_Q.
 rewrite /=; unlock.
 move/boundedP => Pbounded.
+rewrite /H.bounded /hpolyhedron.bounded /=. unlock.
 apply/(S.Simplex.boundedP_lower_bound c).
 - apply/S.Simplex.feasibleP.
   move/proj1: Pbounded => [x [x_in_P _]].
@@ -134,7 +136,7 @@ apply/(S.Simplex.boundedP_lower_bound c).
   move => x x_in_P.
   rewrite P_eq_i_Q in x_in_P.
   exact: ((proj2 Pbounded) x x_in_P).
-Qed.
+Qed.*)
 
 Lemma bounded_quotP :
   { mono \pi_(polyhedron_eqQuotType)%qT : P / H.bounded P c >-> bounded P c }.
@@ -158,8 +160,9 @@ Admitted.
 
 Lemma opt_value_quotP :
   {mono \pi_(polyhedron_eqQuotType)%qT : P / (H.opt_value P c) >-> (opt_value P c)}.
-Proof. (*RK*)
-unlock opt_value => P /=.
+Proof.
+Admitted.
+(*unlock opt_value => P /=.
 case: (hpolyP '<| P |>) => Q.
 case: P => [[mP AP bP] [IP]].
 case: Q => [[mQ AQ bQ] [IQ]].
@@ -185,7 +188,7 @@ case: (boolP (S.Simplex.bounded AQeq bQeq c)) => [Q_bounded | Q_unbounded].
   move: Q_unbounded; apply: contra.
   move: (bounded_quotP_aux P_eq_e_Q).
   by rewrite /H.bounded /hpolyhedron.bounded /=; unlock.
-Qed.
+Qed.*)
 
 Canonical opt_value_quot := PiMono1 opt_value_quotP.
 
