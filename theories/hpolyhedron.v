@@ -481,9 +481,10 @@ case: Q => [[J]] nfQ.
 by rewrite hpolyEq_inE.
 Qed.
 
-Lemma eq_set_anti_monotone (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P Q : 'hpolyNF('P(A,b))) :
-  (\eq_set(P) \subset \eq_set(Q)) <-> {subset Q <= P}. (* RK *)
+Fact eq_set_anti_monotone (base : 'hpoly[R]_n) (P Q : 'hpolyNF(base)) :
+  \eq_set(P) \subset \eq_set(Q) <-> {subset Q <= P}. (* RK *)
 Proof.
+case: base P Q => [m A b] P Q.
 split.
 - move => eq_set_inclusion x.
   rewrite 2!hpolyNF_inE.
@@ -510,7 +511,6 @@ Proof.
 Admitted.
 
 End RelativeInterior.
-
 
 Section Ex2.
 Variable Q : 'hpolyEq[R]_n.
@@ -602,7 +602,7 @@ End HPolyEq.
 Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
 Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing).
+Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing). (* RK: Isn't it hpolyEqS here?*) 
 Notation "\base P" := (base P) (at level 0, format "\base P").
 Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
@@ -644,6 +644,14 @@ End ExtensionalEqualityEq.
 Notation "P ==e Q" := (P == Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
 Notation "P =e Q" := (P = Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
 
+Lemma hpoly_eqP (R : realFieldType) (n : nat) (P Q : 'hpolyEq[R]_n) :
+  (P =i Q) <-> (P =e Q).
+Proof.
+apply: (rwP2 (b := (hpolyhedron_ext_eq P Q))).
+- exact: hpolyhedron_ext_eqP.
+- exact: eqmodP.
+Qed.
+
 Section HFace.
 
 Variable n : nat.
@@ -664,6 +672,18 @@ Proof.
 Admitted.
 
 End HFace.
+
+Lemma has_fase_imp_non_empty (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) (P : 'hpolyNF(base)) (F : 'hpolyEq[R]_n) :
+  hface_of P F -> non_empty P.
+Proof.
+case: base P => [m A b] P.
+move/andP => [/non_emptyP [x x_in_F] /existsP [Q /andP [eq_set_inclusion /eqP/hpoly_eqP F_eqi_Q]]].
+have Q_subset_F : {subset Q <= P} by apply/(eq_set_anti_monotone P Q).
+apply/non_emptyP.
+exists x.
+apply: (Q_subset_F x).
+by rewrite -F_eqi_Q.
+Qed.
 
 Module HPolyPrim.
 
