@@ -237,53 +237,151 @@ apply: (iffP idP).
     by move/(_ x): H; rewrite -{1}[F]reprK -{1 2}[P]reprK !piE.
 Qed.*)
 
-Lemma face_of_quotP : {mono \pi : P F / (fun (P F : 'hpolyEq[R]_n) => hface_of P F) P F >-> face_of P F}%qT.
-Admitted.
-(*
+Lemma has_fase_imp_non_empty' (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : 'hpolyNF('P(A,b))) (F : 'hpolyEq[R]_n) :
+  hface_of P F -> H.non_empty P.
 Proof.
-move => F P.
-unlock face_of.
-(*case/hpolyP : '<| P |> => Q H_PQ.
-case/hpolyP : '<| F |> => G H_FG. *)
-case: (boolP (non_empty '<| P |>)) => [P_non_empty | ].
-- apply/idP/idP; last first.
-  move: (P_non_empty); rewrite piE => P_non_empty'.
-  move/(hface_ofP P_non_empty') => [c [bounded_c F_is_face_wrt_c]].
-  move: P_non_empty; rewrite -{1}['<|P|>]hpolyK piE => P_non_empty.
-  apply/(hface_ofP P_non_empty).
-  exists c; split. rewrite -['<|P|>]hpolyK piE.
+move/andP => [/non_emptyP [x x_in_F] /existsP [Q /andP [eq_set_inclusion /eqP/hpoly_eqP F_eqi_Q]]].
+have Q_subset_F : {subset Q <= P}
+  by apply/eq_set_anti_monotone.
+apply/non_emptyP.
+exists x.
+apply: (Q_subset_F x).
+by rewrite F_eqi_Q in x_in_F.
+Qed.
 
-  first by rewrite -(bounded_quotP c H_PQ).
-  move => x; rewrite -H_PQ -H_FG -(opt_value_quotP c H_PQ).
-  exact: F_is_face_wrt_c.
+Lemma has_fase_imp_non_empty (base : 'hpoly[R]_n) (P : 'hpolyNF(base)) (F : 'hpolyEq[R]_n) :
+  hface_of P F -> H.non_empty P.
+Proof.
+Admitted.
+(*case: P => [IP nfP].
+case: base => m A b.
+move/andP => [/non_emptyP [x x_in_F] /existsP [Q /andP [eq_set_inclusion /eqP/hpoly_eqP F_eqi_Q]]].
+have Q_subset_F : {subset Q <= (hpolyEq_of_hpolyNF (HPolyNF nfP))}.
+  move: (eq_set_anti_monotone Q (HPolyNF nfP)).
+apply/non_emptyP.
+exists x.
+apply: (Q_subset_F x).
+by rewrite F_eqi_Q in x_in_F.
+Qed.*)
 
+Lemma face_of_quotP : {mono \pi : P F / (fun (P F : 'hpolyEq[R]_n) => hface_of P F) P F >-> face_of P F}%qT.
+Proof. (* RK: to be improved? *)
+unlock face_of => P F.
+case/hpolyP : '<| P |> => Q.
+case: P => [[mP AP bP] [[IP] nfP]].
+move => H_PQ.
+case/hpolyP : '<| F |> => G H_FG.
+set P := 'P(AP, bP).
+set P' := {| base := 'P(AP, bP); hpolyeq_with_base := HPolyNF nfP |}.
+case: (boolP (non_empty '<| P' |>)) => [P_non_empty | P_empty ].
+- apply/idP/idP.
+  + move: (P_non_empty); rewrite -{1}['<|P'|>]hpolyK piE => P_non_empty'.
+    move/((hface_ofP P_non_empty') (hpoly (\pi_(polyhedron_quotType R n)%qT F))) => [c [bounded_c F_is_face_wrt_c]].
+    move: P_non_empty; rewrite piE => P_non_empty.
+    apply/(hface_ofP P_non_empty).
+    exists c; split.
+      * move: (bounded_quotP c P') => aux.
+        unlock bounded in aux; rewrite /H.bounded in aux.
+        by rewrite -aux.
+      * move => x x_in_P /=.
+        rewrite -(mem_polyhedron_quotP x P') in x_in_P.
+        unlock mem_polyhedron in x_in_P.
+        move: (F_is_face_wrt_c x x_in_P).
+        rewrite -(mem_polyhedron_quotP x F) /=.
+        rewrite -(mem_polyhedron_quotP x (hpoly (\pi_('poly[R]_(n))%qT F))) hpolyK.
+        move: (opt_value_quotP c P') => aux'.
+        unlock opt_value in aux'; rewrite /H.opt_value in aux'.
+        by rewrite aux'.
+  + move: (P_non_empty); rewrite piE => P_non_empty'.
+    move/((hface_ofP P_non_empty') F) => [c [bounded_c F_is_face_wrt_c]].
+    move: P_non_empty; rewrite -{1}['<|P'|>]hpolyK piE => P_non_empty.
+    apply/(hface_ofP P_non_empty).
+    exists c; split.
+      * move: (bounded_quotP c P') => aux.
+        unlock bounded in aux; rewrite /H.bounded in aux.
+        by rewrite aux.
+      * move => x x_in_P /=.
+        move: (mem_polyhedron_quotP x (hpoly (\pi_('poly[R]_(n))%qT P'))) => aux.
+        rewrite hpolyK in aux.
+        rewrite -aux (mem_polyhedron_quotP x P') in x_in_P.
+        move: (F_is_face_wrt_c x x_in_P).
+        rewrite -(mem_polyhedron_quotP x F) /=.
+        rewrite -(mem_polyhedron_quotP x (hpoly (\pi_('poly[R]_(n))%qT F))) hpolyK.
+        move: (opt_value_quotP c P') => aux'.
+        unlock opt_value in aux'; rewrite /H.opt_value in aux'.
+        by rewrite aux'.
+- apply/idP/idP => [F_face_of_P | F_face_of_P]; last first.
+  + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P')
+      by rewrite (non_empty_quotP P'); apply: (has_fase_imp_non_empty' F_face_of_P).
+    move/andP: (conj P_non_empty P_empty).
+    by rewrite andbN.
+  + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P').
+      unlock non_empty; rewrite /H.non_empty.
+move: (has_fase_imp_non_empty' F_face_of_P).
+apply: (has_fase_imp_non_empty' F_face_of_P).
+    move/andP: (conj P_non_empty P_empty).
+    by rewrite andbN.
+  + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P)
+      by rewrite (non_empty_quotP P); apply: (has_fase_imp_non_empty F_face_of_P).
+    move/andP: (conj P_non_empty P_empty).
+    by rewrite andbN.
+Qed.
 
-         /(_ _).
-
-case: (boolP (non_empty P')) => P'_non_empty.
-- have P_non_empty: H.non_empty P by rewrite polyE in P'_non_empty.
-  have hpolyP'_non_empty: H.non_empty (hpoly P').
-  + by rewrite -non_empty_quotP reprK.
-    (* TODO: this is surely not the right way to prove this *)
-  unlock face_of.
-  apply/idP/idP.
-
-
-  have H: H.non_empty (hpoly '<| P |>).
-  + by rewrite -['<| P |>]reprK polyE in P_non_empty.
-    (* TODO: this is certainly not the right thing to do *)
-  have H': H.non_empty P.
-  +
-
-
-  + move/(hface_ofP _ H) => [c [bounded_c F_is_face_wrt_c]].
-    apply/(hface_ofP _ P_non_empty); exists c.
-    split.
-    rewrite polyE. -{1}[P]reprK.
-    Check reprK.
-
-    apply/hface_ofP; exists c.
-move => x x_in_P.*)
+Lemma face_of_quotP : {mono \pi : P F / (fun (P F : 'hpolyEq[R]_n) => hface_of P F) P F >-> face_of P F}%qT.
+Proof. (* RK: to be improved? *)
+unlock face_of => P F.
+case/hpolyP : '<| P |> => Q.
+case: P => [[mP AP bP] [[IP] nfP]] /=.
+move => H_PQ.
+case/hpolyP : '<| F |> => G H_FG.
+set P := {| base := 'P(AP, bP); hpolyeq_with_base := HPolyNF nfP |}.
+case: (boolP (non_empty '<| P |>)) => [P_non_empty | P_empty ].
+- apply/idP/idP.
+  + move: (P_non_empty); rewrite -{1}['<|P|>]hpolyK piE => P_non_empty'.
+    move/((hface_ofP P_non_empty') (hpoly (\pi_(polyhedron_quotType R n)%qT F))) => [c [bounded_c F_is_face_wrt_c]].
+    move: P_non_empty; rewrite piE => P_non_empty.
+    apply/(hface_ofP P_non_empty).
+    exists c; split.
+      * move: (bounded_quotP c P) => aux.
+        unlock bounded in aux; rewrite /H.bounded in aux.
+        by rewrite -aux.
+      * move => x x_in_P /=.
+        rewrite -(mem_polyhedron_quotP x P) in x_in_P.
+        unlock mem_polyhedron in x_in_P.
+        move: (F_is_face_wrt_c x x_in_P).
+        rewrite -(mem_polyhedron_quotP x F) /=.
+        rewrite -(mem_polyhedron_quotP x (hpoly (\pi_('poly[R]_(n))%qT F))) hpolyK.
+        move: (opt_value_quotP c P) => aux'.
+        unlock opt_value in aux'; rewrite /H.opt_value in aux'.
+        by rewrite aux'.
+  + move: (P_non_empty); rewrite piE => P_non_empty'.
+    move/((hface_ofP P_non_empty') F) => [c [bounded_c F_is_face_wrt_c]].
+    move: P_non_empty; rewrite -{1}['<|P|>]hpolyK piE => P_non_empty.
+    apply/(hface_ofP P_non_empty).
+    exists c; split.
+      * move: (bounded_quotP c P) => aux.
+        unlock bounded in aux; rewrite /H.bounded in aux.
+        by rewrite aux.
+      * move => x x_in_P /=.
+        move: (mem_polyhedron_quotP x (hpoly (\pi_('poly[R]_(n))%qT P))) => aux.
+        rewrite hpolyK in aux.
+        rewrite -aux (mem_polyhedron_quotP x P) in x_in_P.
+        move: (F_is_face_wrt_c x x_in_P).
+        rewrite -(mem_polyhedron_quotP x F) /=.
+        rewrite -(mem_polyhedron_quotP x (hpoly (\pi_('poly[R]_(n))%qT F))) hpolyK.
+        move: (opt_value_quotP c P) => aux'.
+        unlock opt_value in aux'; rewrite /H.opt_value in aux'.
+        by rewrite aux'.
+- apply/idP/idP => [F_face_of_P | F_face_of_P].
+  + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P)
+      by unlock non_empty; rewrite /H.non_empty; apply: (has_fase_imp_non_empty F_face_of_P).
+    move/andP: (conj P_non_empty P_empty).
+    by rewrite andbN.
+  + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P)
+      by rewrite (non_empty_quotP P); apply: (has_fase_imp_non_empty F_face_of_P).
+    move/andP: (conj P_non_empty P_empty).
+    by rewrite andbN.
+Qed.
 
 Canonical face_of_quot := PiMono2 face_of_quotP.
 
@@ -292,7 +390,6 @@ Lemma face_ofP F P :
            (face_of F P).
 Proof.
 Admitted.
-
 
 Lemma totoP (base: 'hpoly[R]_n) (P_NF : 'hpolyNF(base)) F :
   reflect (

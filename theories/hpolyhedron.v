@@ -423,6 +423,12 @@ Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].
 
 End StructNF.
 
+Lemma normal_form_has_normal_form  (base : 'hpoly[R]_n) (Q : 'hpolyNF(base)) :
+  has_normal_form Q.
+Proof.
+by apply: (valP Q).
+Qed.
+
 End PolyNF.
 
 Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
@@ -434,7 +440,7 @@ Record hpolyEqS (R : realFieldType) (n : nat) :=
   HPolyEqS { base: 'hpoly[R]_n; hpolyeq_with_base :> 'hpolyNF(base) }.
 
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing).
+Notation "''hpolyEq_' n" := (hpolyEqS _ n) (at level 0, only parsing). (* RK: Isn't it here (hpolyEqS _ n) *)
 Notation "\base P" := (base P) (at level 0, format "\base P").
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
@@ -462,6 +468,31 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
+Lemma hpolyNF_inE (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyNF('P(A,b))) x :
+  (x \in Q) = ((x \in 'P(A,b)) && [forall i, (i \in (\eq_set Q)) ==> ((A *m x) i 0 == b i 0)]). (* RK *)
+Proof.
+case: Q => [[J]] nfQ.
+by rewrite hpolyEq_inE.
+Qed.
+
+Lemma eq_set_anti_monotone (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P Q : 'hpolyNF('P(A,b))) :
+  (\eq_set(P) \subset \eq_set(Q)) <-> {subset Q <= P}. (* RK *)
+Proof.
+split.
+- move => eq_set_inclusion x.
+  rewrite 2!hpolyNF_inE.
+  move/andP => [x_in_base /forallP eq_set_Q_sat].
+  apply/andP; split; first exact: x_in_base.
+  apply/forallP => i.
+  apply/implyP => i_in_eq_set_P.
+  exact: ((implyP (eq_set_Q_sat i)) (((subsetP eq_set_inclusion) i) i_in_eq_set_P)).
+- move => Q_subset_P.
+  apply/subsetP => i i_in_eq_set_P.
+  rewrite (eqP (normal_form_has_normal_form P)) in i_in_eq_set_P.
+  rewrite (eqP (normal_form_has_normal_form Q)).
+  apply/implicit_eqP => x x_in_Q.
+  exact: (((implicit_eqP _ _ i_in_eq_set_P) x) ((Q_subset_P x) x_in_Q)).
+Qed.
 
 (* TODO: define a point in the relative interior *)
 Section RelativeInterior.
