@@ -403,13 +403,20 @@ Definition has_normal_form (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
 Inductive hpolyNF (base : 'hpoly[R]_n) :=
   HPolyNF (Q : 'hpolyEq(base)) of (has_normal_form Q).
 
-Notation "''hpolyNF(' base )" := (hpolyNF base) (at level 0, format "''hpolyNF(' base )").
+End PolyNF.
+
+Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
 
 Section StructNF.
 
+Definition hpolyEq_of_hpolyNF (R: realFieldType) (n: nat) (base: @hpolyhedron R n) (Q : @hpolyNF R n base) := let: HPolyNF Q' _ := Q in Q'.
+Coercion hpolyEq_of_hpolyNF : hpolyNF >-> hpolyEq.
+
+Variable R: realFieldType.
+Variable n: nat.
 Variable base: 'hpoly[R]_n.
-Coercion hpolyEq_of_hpolyNF (Q : 'hpolyNF(base)) := let: HPolyNF Q' _ := Q in Q'.
-Canonical hpolyNF_subType := [subType for hpolyEq_of_hpolyNF].
+
+Canonical hpolyNF_subType := [subType for (@hpolyEq_of_hpolyNF _ _ base)].
 Definition hpolyNF_eqMixin := Eval hnf in [eqMixin of hpolyNF base by <:].
 Canonical hpolyNF_eqType := Eval hnf in EqType 'hpolyNF(base) hpolyNF_eqMixin.
 Definition hpolyNF_choiceMixin := [choiceMixin of 'hpolyNF(base) by <:].
@@ -421,15 +428,14 @@ Definition hpolyNF_finMixin := [finMixin of 'hpolyNF(base) by <:].
 Canonical hpolyNF_finType := Eval hnf in FinType 'hpolyNF(base) hpolyNF_finMixin.
 Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].
 
-End StructNF.
-
-Lemma normal_form_has_normal_form  (base : 'hpoly[R]_n) (Q : 'hpolyNF(base)) :
+Lemma normal_form_has_normal_form  (Q : 'hpolyNF(base)) :
   has_normal_form Q.
 Proof.
 by apply: (valP Q).
 Qed.
 
-End PolyNF.
+
+End StructNF.
 
 Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
 

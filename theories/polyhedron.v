@@ -249,6 +249,36 @@ apply: (Q_subset_F x).
 by rewrite F_eqi_Q in x_in_F.
 Qed.
 
+Require Import Program.
+
+Fact foo (m: nat) (A: 'M[R]_(m,n)) (b: 'cV_m) (P: 'hpoly[R]_n) :
+  'P(A,b) = P -> hpolyNF(P) = hpolyNF('P(A,b)).
+Proof.
+by move => ->.
+Qed.
+
+Fact eq_set_anti_monotone (base: 'hpoly[R]_n) (P Q : 'hpolyNF(base)) :
+  \eq_set(P) \subset \eq_set(Q) <-> {subset Q <= P}.
+Proof.
+case: base P Q => [m A b]; exact: eq_set_anti_monotone.
+Qed.
+
+Lemma has_fase_imp_non_empty (P F: 'poly[R]_n) :
+  face_of P F -> non_empty P.
+Proof.
+unlock face_of.
+move => /andP [/non_emptyP [x x_in_F] /existsP [Q /andP [eq_set_inclusion /eqP/hpoly_eqP F_eqi_Q]]].
+have: H.non_empty Q.
+- by apply/non_emptyP; exists x; rewrite -F_eqi_Q.
+have Q_subset_P : {subset Q <= hpoly P}.
+
+
+
+eq_set_anti_monotone.
+
+  case: (hpolyP P) => [Q ->]; rewrite !polyE.
+
+
 Lemma has_fase_imp_non_empty (base : 'hpoly[R]_n) (P : 'hpolyNF(base)) (F : 'hpolyEq[R]_n) :
   hface_of P F -> H.non_empty P.
 Proof.
