@@ -682,7 +682,7 @@ Proof.
 elim: S => [ | x S']; first by done.
 - case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
   + apply/hasP.
-    case: (boolP (x <=lex (lex_min_seq S'))) => [H'' |].
+    case: (boolP (x <=lex (lex_min_seq S'))) => [ H'' | ]. (* TODO: error if the space | ] is removed *)
     * exists x; first by rewrite mem_head.
       by rewrite /= lex_min_l //; case H: S'.
     * rewrite -lex_ltrNge => H''.

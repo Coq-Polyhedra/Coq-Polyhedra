@@ -17,6 +17,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Reserved Notation "P =e Q" (at level 0, format "'[hv' P '/ '  =e  Q ']'", no associativity).
+
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
@@ -147,18 +149,20 @@ Definition unbounded P c :=
     S.Simplex.unbounded A b c.
 
 Definition opt_point P c :=
-  let: 'P(A,b) := P in
-    S.Simplex.opt_point A b c.
+  if bounded P c then
+    let: 'P(A,b) := P in
+    Some (S.Simplex.opt_point A b c)
+  else None.
 
-Definition opt_value P c := '[c, opt_point P c].
+Definition opt_value P c := omap (vdot c) (opt_point P c).
 
-CoInductive lp_state P c z : bool -> bool -> bool -> Type :=
-| Empty of P =i pred0 : lp_state P c z false false false
-| Bounded of (z \in P) * (forall x, x \in P -> '[c,z] <= '[c,x]) : lp_state P c z true true false
-| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state P c z true false true.
+CoInductive hlp_state P c : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
+| Empty of P =i pred0 : hlp_state P c None false false false
+| Bounded (z: 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : hlp_state P c (Some z) true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : hlp_state P c None true false true.
 
-Lemma lp_stateP P c :
-  lp_state P c (opt_point P c) (non_empty P) (bounded P c) (unbounded P c).
+Lemma hlp_stateP P c :
+  hlp_state P c (opt_point P c) (non_empty P) (bounded P c) (unbounded P c).
 Proof.
 Admitted.
 
@@ -169,26 +173,30 @@ case: P => m A b.
 exact: S.Simplex.feasibleP.
 Qed.
 
+(*
 Lemma boundedP P c : (*RK*)
   reflect ((exists x, x \in P /\ '[c,x] = opt_value P c) /\ (forall y, y \in P -> opt_value P c <= '[c,y])) (bounded P c).
 Proof.
 case: P => m A b.
 exact: S.Simplex.boundedP.
-Qed.
+Qed.*)
 
 Lemma opt_value_is_optimal P c x : (*RK*)
-  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> '[c,x] = opt_value P c.
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->  opt_value P c = Some '[c,x].
 Proof.
-case: P => m A b.
-exact: S.Simplex.opt_value_is_optimal.
+Admitted.
+(*case: P => m A b.
+exact: S.Simplex.opt_value_is_optimal.*)
 Qed.
 
+(*
 Lemma unboundedP P c : (*RK*)
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
 Proof.
 case: P => m A b.
 exact: S.Simplex.unboundedP.
 Qed.
+ *)
 
 End BasicPrimitives.
 
@@ -200,23 +208,26 @@ Variable n : nat.
 Variable P : 'hpoly[R]_n.
 
 Definition is_included_in_halfspace c d :=
-  (non_empty P) ==> (bounded P c && (opt_value P c >= d)).
+  (non_empty P) ==> (match opt_value P c with
+                   | Some opt_val => opt_val >= d
+                   | None => false end).
 
 Lemma is_included_in_halfspaceP c d :
   reflect (forall x, x \in P -> '[c,x] >= d)
           (is_included_in_halfspace c d).
 Proof.
 rewrite /is_included_in_halfspace; apply: (iffP implyP).
-- case: lp_stateP =>
-  [ P_is_empty _
-  | [opt_in_P opt_is_opt] /=
+- rewrite /opt_value.
+  case: (hlp_stateP P c) => /=  [ P_is_empty _
+  | z [opt_in_P opt_is_opt] /=
   | /= _ /(_ is_true_true)]; last by done.
   + by move => x; rewrite P_is_empty.
   + move/(_ is_true_true) => d_le_opt.
     move => x x_in_P; move/(_ _ x_in_P): opt_is_opt.
     exact: ler_trans.
 - move => inclusion.
-  case: lp_stateP => [/= | [opt_in_P _] /= _ | /= ]; first by done.
+  rewrite /opt_value.
+  case: (hlp_stateP P c) => [/= | opt [opt_in_P _] /= _ | /= ]; first by done.
   + exact: inclusion.
   + move/(_ d) => [x [x_in_P cx_lt_d] _].
     move/(_ _ x_in_P): inclusion.
@@ -319,9 +330,6 @@ Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
   EquivRel hpolyhedron_ext_eq hpolyhedron_ext_eq_refl hpolyhedron_ext_eq_sym hpolyhedron_ext_eq_trans.
 
 End ExtensionalEquality.
-
-(*Notation "P ==e Q" := (P == Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
-Notation "P =e Q" := (P = Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).*)
 
 Section HPolyEq.
 
@@ -602,7 +610,7 @@ End HPolyEq.
 Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
 Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing). (* RK: Isn't it hpolyEqS here?*) 
+Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing). (* RK: Isn't it hpolyEqS here?*)
 Notation "\base P" := (base P) (at level 0, format "\base P").
 Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
@@ -641,13 +649,14 @@ Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
 
 End ExtensionalEqualityEq.
 
+
 Notation "P ==e Q" := (P == Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
-Notation "P =e Q" := (P = Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
+Notation "P =e Q" := (P = Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT.
 
 Lemma hpoly_eqP (R : realFieldType) (n : nat) (P Q : 'hpolyEq[R]_n) :
   (P =i Q) <-> (P =e Q).
 Proof.
-apply: (rwP2 (b := (hpolyhedron_ext_eq P Q))).
+apply: (rwP2 (b := hpolyEq_ext_eq _ _ P Q)).
 - exact: hpolyhedron_ext_eqP.
 - exact: eqmodP.
 Qed.
@@ -666,14 +675,14 @@ Definition hface_of :=
 Hypothesis P_non_empty : non_empty P.
 
 Lemma hface_ofP (Q : 'hpolyEq[R]_n) :
-  reflect (exists c, bounded P c /\ forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in Q)))
+  reflect (exists c, bounded P c /\ forall x, (x \in P -> (Some '[c,x] = opt_value P c <-> x \in Q)))
           (hface_of Q).
 Proof.
 Admitted.
 
 End HFace.
 
-Lemma has_fase_imp_non_empty (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) (P : 'hpolyNF(base)) (F : 'hpolyEq[R]_n) :
+Lemma has_face_imp_non_empty (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) (P : 'hpolyNF(base)) (F : 'hpolyEq[R]_n) :
   hface_of P F -> non_empty P.
 Proof.
 case: base P => [m A b] P.

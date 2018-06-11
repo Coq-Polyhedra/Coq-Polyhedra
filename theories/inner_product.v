@@ -28,7 +28,7 @@ Import GRing.Theory Num.Theory.
 
 Section InnerProduct.
 Variable n : nat.
-Variable R : realFieldType.  
+Variable R : realFieldType.
 Implicit Types u v w : 'cV[R]_n.
 
 (* Inner product notation as in classfun *)
@@ -46,7 +46,7 @@ Definition vnorm_head k u   := let: tt := k in vdot u u.
 
 Notation "''[' u , v ]" := (vdot u v) : ring_scope.
 (* Recall: This is the squared norm *)
-Notation "''[' u ]" := '[u, u] : ring_scope.
+Notation "''[|' u |]^2" := '[u, u] : ring_scope.
 
 Notation vdotr := (vdotr_head tt).
 Notation vnorm := (vnorm_head tt).
@@ -89,14 +89,14 @@ Proof.
   by apply: eq_bigr => i _; rewrite mulrC.
 Qed.
 
-Lemma vdotr_delta_mx u i : '[u, delta_mx i 0] = u i 0.  
+Lemma vdotr_delta_mx u i : '[u, delta_mx i 0] = u i 0.
 Proof.
 rewrite /vdot (bigD1 i _) //= mxE eq_refl mulr1.
 suff ->: \sum_(j < n | j != i) u j 0 * ((delta_mx i 0):'cV_n) j 0 = 0 by apply:addr0.
 by apply: big1 => j; rewrite mxE; move/negbTE ->; rewrite mulr0.
 Qed.
 
-Lemma vdotl_delta_mx u i : '[delta_mx i 0, u] = u i 0.  
+Lemma vdotl_delta_mx u i : '[delta_mx i 0, u] = u i 0.
 Proof.
 by rewrite vdotC vdotr_delta_mx.
 Qed.
@@ -107,7 +107,7 @@ rewrite /vdot.
 apply: eq_bigr => i _.
 - by rewrite mxE mulr1.
 Qed.
-  
+
 Lemma vdotBr u v w : '[u, v - w] = '[u, v] - '[u, w].
 Proof. by rewrite !(vdotC u) vdotBl. Qed.
 Canonical vdot_additive u := Additive (vdotBr u).
@@ -140,10 +140,10 @@ apply: (big_morph (fun y => '[y,x])).
 Qed.
 
 (* Order properties *)
-Lemma vnorm_ge0 x : 0 <= '[x].
+Lemma vnorm_ge0 x : 0 <= '[| x |]^2.
 Proof. by rewrite sumr_ge0 // => i _; exact: sqr_ge0. Qed.
 
-Lemma vnorm_eq0 u : ('[u] == 0) = (u == 0).
+Lemma vnorm_eq0 u : ('[| u |]^2 == 0) = (u == 0).
 Proof.
 apply/idP/eqP=> [|->]; last by rewrite vdot0r.
 move/eqP/psumr_eq0P=> /= u0; apply/matrixP=> i j.
@@ -151,14 +151,14 @@ apply/eqP; rewrite ord1 !mxE -sqrf_eq0 expr2.
 by rewrite u0 // => y _; exact: sqr_ge0.
 Qed.
 
-Lemma vnorm_gt0 u : ('[u] > 0) = (u != 0).
+Lemma vnorm_gt0 u : ('[| u |]^2 > 0) = (u != 0).
 Proof. by rewrite ltr_def vnorm_ge0 vnorm_eq0 andbT. Qed.
 
 End InnerProduct.
 
 Notation "''[' u , v ]" := (vdot u v) : ring_scope.
 (* Recall: This is the squared norm *)
-Notation "''[' u ]" := '[u, u] : ring_scope.
+Notation "''[|' u |]^2" := '[u, u] : ring_scope.
 
 Section Extra.
 
@@ -168,7 +168,7 @@ Variable R : realFieldType.
 Lemma vdot_mulmx (A : 'M[R]_(n,p)) u v : '[u, A *m v] = '[A^T *m u, v].
 Proof.
 suffices: '[u, A *m v]%:M = ('[A^T *m u, v]%:M : 'M_1)
-  by move/matrixP/(_ 0 0); rewrite !mxE //=. 
+  by move/matrixP/(_ 0 0); rewrite !mxE //=.
 by rewrite 2!vdot_def trmx_mul mulmxA.
 Qed.
 
