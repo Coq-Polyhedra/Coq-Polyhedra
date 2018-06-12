@@ -103,7 +103,7 @@ Definition matrix_from_hpolyhedron (P : hpolyhedron) :=
   let: 'P(A,b) := P in
     Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
 
-Definition hpolyhedron_from_matrix (M : {m: nat & 'M[R]_(m, n+1)}) :=
+Definition hpolyhedron_from_matrix (M : {m : nat & 'M[R]_(m, n+1)}) :=
   let Ab := tagged M in
     HPolyhedron (lsubmx Ab) (rsubmx Ab).
 
@@ -158,7 +158,7 @@ Definition opt_value P c := omap (vdot c) (opt_point P c).
 
 CoInductive hlp_state P c : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
 | Empty of P =i pred0 : hlp_state P c None false false false
-| Bounded (z: 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : hlp_state P c (Some z) true true false
+| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : hlp_state P c (Some z) true true false
 | Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : hlp_state P c None true false true.
 
 Lemma hlp_stateP P c :
@@ -173,12 +173,12 @@ case: P => m A b.
 exact: S.Simplex.feasibleP.
 Qed.
 
-(*
 Lemma boundedP P c : (*RK*)
-  reflect ((exists x, x \in P /\ '[c,x] = opt_value P c) /\ (forall y, y \in P -> opt_value P c <= '[c,y])) (bounded P c).
+  reflect ((exists x, x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded P c).
 Proof.
 case: P => m A b.
-exact: S.Simplex.boundedP.
+Admitted.
+(*exact: S.Simplex.boundedP.
 Qed.*)
 
 Lemma opt_value_is_optimal P c x : (*RK*)
@@ -186,17 +186,22 @@ Lemma opt_value_is_optimal P c x : (*RK*)
 Proof.
 Admitted.
 (*case: P => m A b.
-exact: S.Simplex.opt_value_is_optimal.*)
-Qed.
+exact: S.Simplex.opt_value_is_optimal.
+Qed.*)
 
-(*
 Lemma unboundedP P c : (*RK*)
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
 Proof.
 case: P => m A b.
 exact: S.Simplex.unboundedP.
 Qed.
- *)
+
+Lemma unbounded_is_not_bounded P c : (* RK *)
+  non_empty P -> unbounded P c = ~~ bounded P c.
+Proof.
+case: P => m A b.
+exact: S.Simplex.unbounded_is_not_bounded.
+Qed.
 
 End BasicPrimitives.
 

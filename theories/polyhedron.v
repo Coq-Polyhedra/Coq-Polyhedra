@@ -88,7 +88,7 @@ Qed.
 Canonical non_empty_quot := Eval hnf in PiMono1 non_empty_quotP.
 (* in this way, piE will rewrite non_empty '[P] into H.non_empty P *)
 
-Implicit Type c: 'cV[R]_n.
+Implicit Type c : 'cV[R]_n.
 
 Definition bounded c := lift_fun1 polyhedron ((@H.bounded _ _)^~ c). (* TODO: IMPLICIT ARGUMENTS (or change the argument order in hpolyhedron?) !!! *)
 Definition unbounded c := lift_fun1 polyhedron ((@H.unbounded _ _)^~ c).
@@ -97,7 +97,7 @@ Definition opt_value c := lift_fun1 polyhedron ((@H.opt_value _ _)^~ c).
 
 CoInductive lp_state (P : polyhedron) c : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
 | Empty of P =i pred0 : lp_state P c None false false false
-| Bounded (z: 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : lp_state P c (Some z) true true false
+| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : lp_state P c (Some z) true true false
 | Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state P c None true false true.
 
 Lemma lp_stateP P c :
@@ -164,46 +164,109 @@ case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
   by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
 Qed.
 
+Lemma all_in_one_quotP :
+  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.bounded P c >-> bounded c P } *
+  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.unbounded P c >-> unbounded c P } *
+  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.opt_value P c >-> opt_value c P }.
+Proof. (*RK*)
+split. split.
+- unlock bounded => P /=.
+  case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_Q.
+  case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
+  + move => z [z_in_Q _] /(_ z).
+    by rewrite P_eq_Q z_in_Q inE.
+  + move => Q_empty z [z_in_Q _]; move/(_ z): Q_empty.
+    by rewrite -P_eq_Q z_in_Q inE.
+  + move => Q_unbounded z [z_in_P z_opt].
+    move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
+    rewrite -P_eq_Q in x_in_Q.
+    move/(_ _ x_in_Q): z_opt => z_le_x.
+    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
+  + move => z [z_in_Q z_opt] P_unbounded.
+    move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
+    rewrite P_eq_Q in x_in_P.
+    move/(_ _ x_in_P): z_opt => z_le_x.
+    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
+- unlock unbounded => P /=.
+  case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_Q.
+  case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
+  + move => Q_unbounded.
+    move/(_ 0): Q_unbounded => [x [x_in_Q x_lt_0]].
+    move/(_ x).
+    by rewrite P_eq_Q x_in_Q inE.
+  + move => Q_unbounded z [z_in_P z_opt].
+    move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
+    rewrite -P_eq_Q in x_in_Q.
+    move/(_ _ x_in_Q): z_opt => z_le_x.
+    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
+  + move => Q_empty P_unbounded.
+    move/(_ 0): P_unbounded => [x [x_in_Q x_lt_0]].
+    move: (Q_empty x).
+    by rewrite -P_eq_Q x_in_Q inE.
+  + move => z [z_in_Q z_opt] P_unbounded.
+    move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
+    rewrite P_eq_Q in x_in_P.
+    move/(_ _ x_in_P): z_opt => z_le_x.
+    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
+- unlock opt_value => P /=.
+  case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_Q.
+  case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
+  + move => Q_empty P_empty.
+    suff Q_not_bounded: (H.bounded Q c) = false.
+      suff P_not_bounded: (H.bounded P c) = false
+        by rewrite /H.opt_value /omap /obind /oapp /H.opt_point Q_not_bounded P_not_bounded.
+      apply: negbTE; apply: contraT.
+      move/negPn/boundedP => [x [x_in_P _]].
+      by rewrite (P_empty x) inE in x_in_P.
+    apply: negbTE; apply: contraT.
+    move/negPn/boundedP => [x [x_in_Q _]].
+    by rewrite (Q_empty x) inE in x_in_Q.
+  + move => z [z_in_Q _] /(_ z).
+    by rewrite (P_eq_Q z) z_in_Q inE.
+  + move/(_ 0) => [z [z_in_Q _]] /(_ z).
+    by rewrite (P_eq_Q z) z_in_Q inE.
+  + move => Q_empty z [z_in_P _].
+    by rewrite (P_eq_Q z) (Q_empty z) inE in z_in_P.
+  + move => z [z_in_Q z_opt_in_Q].
+    move => y [y_in_P y_opt_in_P].
+    rewrite (opt_value_is_optimal z_in_Q z_opt_in_Q).
+    suff z_opt_in_P : forall x : 'cV_n, x \in P -> '[ c, z] <= '[ c, x].
+      rewrite -(P_eq_Q z) in z_in_Q.
+      by rewrite (opt_value_is_optimal z_in_Q z_opt_in_P).
+    move => x.
+    rewrite (P_eq_Q x).
+    exact: (z_opt_in_Q x).
+  + move => Q_unbounded z [z_in_P z_opt].
+    move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
+    rewrite -P_eq_Q in x_in_Q.
+    move/(_ _ x_in_Q): z_opt => z_le_x.
+    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
+  + move => Q_empty P_unbounded.
+    move/(_ 0): P_unbounded => [x [x_in_Q x_lt_0]].
+    move: (Q_empty x).
+    by rewrite -P_eq_Q x_in_Q inE.
+  + move => z [z_in_Q z_opt] P_unbounded.
+    move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
+    rewrite P_eq_Q in x_in_P.
+    move/(_ _ x_in_P): z_opt => z_le_x.
+    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
+  + move => Q_unbounded P_unbounded.
+    have Q_non_empty: H.non_empty Q.
+      move/(_ 0): Q_unbounded => [x [x_in_Q _]].
+      by apply/non_emptyP; exists x.
+    have P_non_empty: H.non_empty P.
+      move/(_ 0): P_unbounded => [x [x_in_P _]].
+      by apply/non_emptyP; exists x.
+    suff Q_not_bounded: (H.bounded Q c) = false.
+      suff P_not_bounded: (H.bounded P c) = false
+        by rewrite /H.opt_value /omap /obind /oapp /H.opt_point Q_not_bounded P_not_bounded.
+      apply: negbTE; rewrite -unbounded_is_not_bounded //.
+      by apply/unboundedP.
+    apply: negbTE; rewrite -unbounded_is_not_bounded //.
+    by apply/unboundedP.
+Qed.
+
 Canonical bounded_quot := Eval hnf in PiMono1 bounded_quotP.
-
-(* TODO: this statement should disappear *)
-Fact not_bounded_opt_point (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) : (*RK*)
-    (~~ S.Simplex.bounded A b c) -> S.Simplex.opt_point A b c = 0.
-Proof.
-Admitted.
-
-(* TODO: see above *)
-Lemma opt_value_quotP :
-  {mono \pi_(polyhedron_eqQuotType)%qT : P / (H.opt_value P c) >-> (opt_value c P)}.
-Proof.
-Admitted.
-(*unlock opt_value => P /=.
-case: (hpolyP '[ P ]) => Q.
-case: P => [[mP AP bP] [[IP] ?]].
-case: Q => [[mQ AQ bQ] [[IQ] ?]].
-set AQeq := col_mx AQ (- row_submx AQ IQ). (* this should be avoided *)
-set bQeq := col_mx bQ (- row_submx bQ IQ).
-set APeq := col_mx AP (- row_submx AP IP).
-set bPeq := col_mx bP (- row_submx bP IP).
-case: (boolP (S.Simplex.bounded AQeq bQeq c)) => [Q_bounded | Q_unbounded].
-- move/hpoly_eqP => P_eq_i_Q.
-  rewrite [LHS]/H.opt_value /hpolyhedron.opt_value.
-  apply: (opt_value_is_optimal _).
-  + rewrite P_eq_i_Q /=; unlock.
-    by apply: S.Simplex.opt_point_is_feasible.
-  + move => y y_in_P.
-    rewrite P_eq_i_Q /= in y_in_P; unlock in y_in_P.
-    rewrite /=; unlock.
-    exact: ((proj2 (S.Simplex.boundedP _ _ _ Q_bounded)) _ y_in_P).
-- move => P_eq_e_Q; symmetry in P_eq_e_Q.
-  suff P_unbounded : ~~ S.Simplex.bounded APeq bPeq c
-    by rewrite /=; unlock;
-    rewrite /H.opt_value /hpolyhedron.opt_value /opt_point
-      (not_bounded_opt_point Q_unbounded) (not_bounded_opt_point P_unbounded).
-  move: Q_unbounded; apply: contra.
-  move: (bounded_quotP_aux P_eq_e_Q).
-  by rewrite /H.bounded /hpolyhedron.bounded /=; unlock.
-Qed.*)
 
 Canonical opt_value_quot := PiMono1 opt_value_quotP.
 
