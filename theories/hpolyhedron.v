@@ -441,12 +441,11 @@ Definition hpolyNF_finMixin := [finMixin of 'hpolyNF(base) by <:].
 Canonical hpolyNF_finType := Eval hnf in FinType 'hpolyNF(base) hpolyNF_finMixin.
 Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].
 
-Lemma normal_form_has_normal_form  (Q : 'hpolyNF(base)) :
+Lemma normal_form_has_normal_form  (Q : 'hpolyNF(base)) : (* RK *)
   has_normal_form Q.
 Proof.
 by apply: (valP Q).
 Qed.
-
 
 End StructNF.
 
@@ -467,7 +466,7 @@ Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' 
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
   let P := 'P(A,b) in
     forall J : {set 'I_(#ineq P)},
       (x \in HPolyEq J) = (x \in P) && [forall j in J, (A *m x) j 0 == b j 0].
@@ -487,11 +486,22 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
-Lemma hpolyNF_inE (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyNF('P(A,b))) x :
+Fact hpolyNF_inE (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyNF('P(A,b))) x :
   (x \in Q) = ((x \in 'P(A,b)) && [forall i, (i \in (\eq_set Q)) ==> ((A *m x) i 0 == b i 0)]). (* RK *)
 Proof.
 case: Q => [[J]] nfQ.
 by rewrite hpolyEq_inE.
+Qed.
+
+Fact eq_set_subset_implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  eq_set Q \subset implicit_eq Q. (* RK *)
+Proof.
+case: base Q => m A b [JQ].
+apply/subsetP => i i_in_JQ; rewrite /= in i_in_JQ.
+apply/implicit_eqP => x x_in_HPolyEq_JQ.
+rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
+move/andP/proj2: x_in_HPolyEq_JQ => /forallP sat_in_JQ.
+by apply/eqP/(implyP (sat_in_JQ i)).
 Qed.
 
 Fact eq_set_anti_monotone (base : 'hpoly[R]_n) (P Q : 'hpolyNF(base)) :
@@ -512,6 +522,55 @@ split.
   rewrite (eqP (normal_form_has_normal_form Q)).
   apply/implicit_eqP => x x_in_Q.
   exact: (((implicit_eqP _ _ i_in_eq_set_P) x) ((Q_subset_P x) x_in_Q)).
+Qed.
+
+Fact has_normal_form_base_with_implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  has_normal_form (HPolyEq (implicit_eq Q)). (* RK *)
+Proof.
+case: base Q => m A b [JQ].
+rewrite /has_normal_form eqEsubset /eq_set.
+apply/andP; split;
+  apply/subsetP => i /implicit_eqP charact_implicit_eq;
+  apply/implicit_eqP => x; last first.
+- move => x_in_HPolyEq_JQ.
+  apply/(charact_implicit_eq x).
+  rewrite hpolyEq_inE.
+  apply/andP; split.
+  + rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
+    by move/andP/proj1: x_in_HPolyEq_JQ.
+  + apply/forallP => j.
+    apply/implyP => /implicit_eqP Hj.
+    by apply/eqP/(Hj x).
+- move => x_in_HPolyEq_implicit.
+  apply/(charact_implicit_eq x).
+  rewrite hpolyEq_inE.
+  apply/andP; split; rewrite hpolyEq_inE in x_in_HPolyEq_implicit.
+  + by move/andP/proj1: x_in_HPolyEq_implicit.
+  + apply/forallP => j.
+    apply/implyP => j_in_JQ.
+    move/(subsetP (eq_set_subset_implicit_eq (HPolyEq JQ))): j_in_JQ => j_in_implicit.
+    move/andP/proj2: x_in_HPolyEq_implicit => /forallP sat_in_implicit.
+    by apply: (implyP (sat_in_implicit j)).
+Qed.
+
+Fact implicit_eq_of_base_with_implicit_eqK (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  implicit_eq (HPolyEq (implicit_eq Q)) = implicit_eq Q. (* RK *)
+Proof.
+case: base Q => m A b [JQ].
+apply/eqP; rewrite eqEsubset.
+apply/andP; split.
+- apply/subsetP => i.
+  move/implicit_eqP => charact_implicit.
+  apply/implicit_eqP => x x_in_HPolyEq_JQ.
+  apply/(charact_implicit x).
+  rewrite hpolyEq_inE.
+  apply/andP; split.
+  + rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
+    exact: (proj1 (andP x_in_HPolyEq_JQ)).
+  + apply/forallP => j.
+    apply/implyP => /implicit_eqP j_in_implicit.
+    by apply/eqP/(j_in_implicit x).
+- exact: (eq_set_subset_implicit_eq (HPolyEq (implicit_eq (HPolyEq JQ)))).
 Qed.
 
 (* TODO: define a point in the relative interior *)
