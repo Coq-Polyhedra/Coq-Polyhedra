@@ -172,6 +172,15 @@ suff: forall i, x i 0 * y i 0 = 0.
   by move/forallP/(_ i): Hy; rewrite mxE.
 Qed.
 
+Lemma vdot_lev_eq x y z : [forall i, x i 0 > 0] -> y >=m z -> '[x,y] = '[x,z] -> y = z.
+Proof.
+move => Hx.
+rewrite -subv_ge0 => Hyz.
+move/eqP; rewrite -subr_eq0 -vdotBr => /eqP Hdot.
+apply/eqP; rewrite -subr_eq0.
+apply/eqP; exact: (vdot_lev_eq0 Hx).
+Qed.
+
 Definition lev_max x y := \col_i (Num.max (x i 0) (y i 0)).
 Definition lev_min x y := \col_i (Num.min (x i 0) (y i 0)).
 
