@@ -151,7 +151,7 @@ Definition unbounded P c :=
 Definition opt_point P c :=
   if bounded P c then
     let: 'P(A,b) := P in
-    Some (S.Simplex.opt_point A b c)
+      Some (S.Simplex.opt_point A b c)
   else None.
 
 Definition opt_value P c := omap (vdot c) (opt_point P c).
@@ -230,9 +230,10 @@ Variable n : nat.
 Variable P : 'hpoly[R]_n.
 
 Definition is_included_in_halfspace c d :=
-  (non_empty P) ==> (match opt_value P c with
-                   | Some opt_val => opt_val >= d
-                   | None => false end).
+  (non_empty P) ==> match opt_value P c with
+                    | Some opt_val => opt_val >= d
+                    | None => false 
+                    end.
 
 Lemma is_included_in_halfspaceP c d :
   reflect (forall x, x \in P -> '[c,x] >= d)
@@ -372,11 +373,11 @@ Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
 Definition hpoly_of_hpolyEq (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) :=
   (* why do we need to specify R and n as arguments if we want to avoid UIP failure in the coercion? *)
   let: 'P(A,b) as P := base in
-  fun (Q: 'hpolyEq(P)) =>
-    let: HPolyEq J := Q in
-    let A' := col_mx A (- (row_submx A J)) in
-    let b' := col_mx b (- (row_submx b J)) in
-    locked 'P(A', b').
+    fun (Q : 'hpolyEq(P)) =>
+      let: HPolyEq J := Q in
+        let AJ := col_mx A (- (row_submx A J)) in
+        let bJ := col_mx b (- (row_submx b J)) in
+          locked 'P(AJ, bJ).
 
 Coercion hpoly_of_hpolyEq : hpolyEq >-> hpolyhedron.
 
@@ -409,8 +410,8 @@ Variable n : nat.
 
 Definition implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
   let: 'P(A,b) as P' := base return {set 'I_(#ineq P')} in
-  [ set i : 'I_(#ineq P') |
-    is_included_in_hyperplane Q (row i A)^T (b i 0) ].
+    [ set i : 'I_(#ineq P') |
+      is_included_in_hyperplane Q (row i A)^T (b i 0) ].
 
 Lemma implicit_eqP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyEq('P(A,b))) i :
   reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
@@ -439,7 +440,8 @@ Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpol
 
 Section StructNF.
 
-Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (base : @hpolyhedron R n) (Q : @hpolyNF R n base) := let: HPolyNF Q' _ := Q in Q'.
+Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (base : @hpolyhedron R n) (Q : @hpolyNF R n base) :=
+  let: HPolyNF Q' _ := Q in Q'.
 Coercion hpolyEq_of_hpolyNF : hpolyNF >-> hpolyEq.
 
 Variable R : realFieldType.
@@ -475,7 +477,7 @@ Record hpolyEqS (R : realFieldType) (n : nat) :=
   HPolyEqS { base: 'hpoly[R]_n; hpolyeq_with_base :> 'hpolyNF(base) }.
 
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEqS _ n) (at level 0, only parsing). (* RK: Isn't it here (hpolyEqS _ n) *)
+Notation "''hpolyEq_' n" := (hpolyEqS _ n) (at level 0, only parsing).
 Notation "\base P" := (base P) (at level 0, format "\base P").
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
