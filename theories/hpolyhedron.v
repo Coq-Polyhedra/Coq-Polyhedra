@@ -177,9 +177,22 @@ Lemma boundedP P c : (*RK*)
   reflect ((exists x, x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded P c).
 Proof.
 case: P => m A b.
-Admitted.
-(*exact: S.Simplex.boundedP.
-Qed.*)
+apply: (iffP idP).
+- move/S.Simplex.boundedP => [[x [x_in_P x_eq_opt_val] x_is_opt]].
+  exists x.
+  split; first exact: x_in_P.
+    move => y y_in_P.
+    rewrite x_eq_opt_val.
+    exact: (x_is_opt _ y_in_P).
+- move => [x [x_in_P x_is_opt]].
+  move: (S.Simplex.opt_value_is_optimal x_in_P x_is_opt) => x_eq_opt_val.
+  apply/S.Simplex.boundedP.
+  split.
+  + by exists x.
+  + move => y y_in_P.
+    rewrite -x_eq_opt_val.
+    exact: x_is_opt.
+Qed.
 
 Lemma opt_value_is_optimal P c x : (*RK*)
   (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->  opt_value P c = Some '[c,x].
