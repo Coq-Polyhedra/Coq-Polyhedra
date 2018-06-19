@@ -195,12 +195,16 @@ apply: (iffP idP).
 Qed.
 
 Lemma opt_value_is_optimal P c x : (*RK*)
-  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->  opt_value P c = Some '[c,x].
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value P c = Some '[c,x].
 Proof.
-Admitted.
-(*case: P => m A b.
-exact: S.Simplex.opt_value_is_optimal.
-Qed.*)
+case: P => m A b.
+move => x_in_P x_is_opt.
+suff opt_point_P_c: opt_point 'P(A, b) c = Some (S.Simplex.opt_point A b c).
+  by rewrite /opt_value /omap /obind /oapp opt_point_P_c
+    (S.Simplex.opt_value_is_optimal x_in_P x_is_opt).
+apply/ifT/boundedP.
+by exists x.
+Qed.
 
 Lemma unboundedP P c : (*RK*)
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
