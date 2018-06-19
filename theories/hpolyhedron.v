@@ -175,7 +175,7 @@ exact: Simplex.feasibleP.
 Qed.
 
 Lemma boundedP P c : (*RK*)
-  reflect ((exists x, x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded P c).
+  reflect (exists x, (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded P c).
 Proof.
 case: P => m A b.
 apply: (iffP idP).
@@ -195,21 +195,38 @@ apply: (iffP idP).
     exact: x_is_opt.
 Qed.
 
-(* TODO:write a lemma stating that if P is nonempty and '[c,x] is bounded from below, then bounded holds*)
+(* TODO: write a lemma stating that if P is nonempty and '[c,x] is bounded from below, then bounded holds. RK: done? see the next two lemmas*)
+Lemma empty_or_boundedP P c : (* RK *)
+  reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (~~ non_empty P || bounded P c).
+Proof.
+case: P => m A b.
+exact: Simplex.infeasible_or_boundedP.
+Qed.
 
-Lemma opt_value_is_optimal P c x : (*RK*)
+Lemma non_empty_and_boundedP P c : (* RK *)
+  reflect ((non_empty P) /\ (exists K, (forall z, z \in P -> '[c,z] >= K))) (bounded P c).
+Proof.
+apply: (iffP (boundedP P c)) => [[x [x_in_P x_is_opt]] | [P_is_non_empty /empty_or_boundedP P_is_empty_or_bounded]].
+- split.
+  + apply/non_emptyP.
+    by exists x.
+  + by exists '[ c, x].
+- rewrite P_is_non_empty /= in P_is_empty_or_bounded.
+  exact: boundedP.
+Qed.
+
+Lemma opt_value_is_optimal P c x : (* RK *)
   (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value P c = Some '[c,x].
 Proof.
 case: P => m A b.
 move => x_in_P x_is_opt.
-suff opt_point_P_c: opt_point 'P(A, b) c = Some (Simplex.opt_point A b c).
-  by rewrite /opt_value /omap /obind /oapp opt_point_P_c (* TODO: Look for a simpler way*)
-    (Simplex.opt_value_is_optimal x_in_P x_is_opt).
+suff opt_point_P_c: opt_point 'P(A, b) c = Some (Simplex.opt_point A b c)
+ by rewrite /opt_value opt_point_P_c (Simplex.opt_value_is_optimal x_in_P x_is_opt). (* TODO: Look for a simpler way. RK: done?*)
 apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma unboundedP P c : (*RK*)
+Lemma unboundedP P c : (* RK *)
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
 Proof.
 case: P => m A b.
