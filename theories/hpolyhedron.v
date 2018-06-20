@@ -18,7 +18,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Reserved Notation "''hpoly[' R ]_ n" (at level 8, n at level 2, format "''hpoly[' R ]_ n").
-Reserved Notation "''hpoly_' n" (at level 8, n at level 2, only parsing).
+Reserved Notation "''hpoly_' n" (at level 8, n at level 2).
 Reserved Notation "'#ineq' P" (at level 10, P at level 0, format "'#ineq'  P").
 Reserved Notation "''P' ( m , A , b )" (at level 0, m at level 99, A at level 99, b at level 99, format "''P' ( m  , A ,  b )").
 Reserved Notation "''P' ( A , b )" (at level 0, A at level 99, b at level 99, format "''P' ( A ,  b )").
@@ -27,15 +27,15 @@ Reserved Notation "''hpolyEq(' base )" (at level 8, base at level 99, format "''
 Reserved Notation "\eq P" (at level 10, P at level 8, format "\eq  P").
 Reserved Notation "\active P" (at level 10, P at level 8, format "\active  P").
 Reserved Notation "''hpolyEq[' R ]_ n" (at level 8, n at level 2, format "''hpolyEq[' R ]_ n").
-Reserved Notation "''hpolyEq_' n" (at level 8, n at level 2, only parsing).
-Reserved Notation "\base P" (at level 10, P at level 8, format "\base P").
+Reserved Notation "''hpolyEq_' n" (at level 8, n at level 2).
+Reserved Notation "\base P" (at level 10, P at level 8, format "\base  P").
 Reserved Notation "''P^=' ( P ; J )"
          (at level 0, P at level 99, J at level 99, format "''P^=' ( P ; J )").
 Reserved Notation "''P^=' ( A , b ; J )"
          (at level 0, A at level 99, b at level 99, J at level 99, format "''P^=' ( A ,  b ;  J )").
 Reserved Notation "''hpolyNF(' base )" (at level 8, base at level 99, format "''hpolyNF(' base )").
 Reserved Notation "''hpolyNF[' R ]_ n" (at level 8, n at level 2, format "''hpolyNF[' R ]_ n").
-Reserved Notation "''hpolyNF_' n" (at level 8, n at level 2, only parsing).
+Reserved Notation "''hpolyNF_' n" (at level 8, n at level 2).
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -158,7 +158,7 @@ case: P => m A b.
 exact: Simplex.feasibleP.
 Qed.
 
-Lemma boundedP c P : (*RK*)
+Lemma boundedP c P :
   reflect (exists x, (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded c P).
 Proof.
 case: P => m A b.
@@ -179,8 +179,7 @@ apply: (iffP idP).
     exact: x_is_opt.
 Qed.
 
-(* TODO: write a lemma stating that if P is nonempty and '[c,x] is bounded from below, then bounded holds. RK: done? see the next two lemmas*)
-Lemma bounded_certP c P : (* RK *)
+Lemma bounded_certP c P :
   non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded c P).
 Proof.
 case: P => m A b.
@@ -190,7 +189,7 @@ suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b).
 - by rewrite P_non_empty /=.
 Qed.
 
-Lemma opt_value_is_optimal c P x : (* RK *)
+Lemma opt_value_is_optimal c P x :
   (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
 Proof.
 case: P => m A b.
@@ -201,14 +200,14 @@ apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma unboundedP c P : (* RK *)
+Lemma unboundedP c P :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded c P).
 Proof.
 case: P => m A b.
 exact: Simplex.unboundedP.
 Qed.
 
-Lemma bounded_xor_unbounded c P : (* RK *)
+Lemma bounded_xor_unbounded c P :
   non_empty P -> (bounded c P) (+) (unbounded c P).
 Proof.
 case: P => m A b.
@@ -374,11 +373,11 @@ Fact hpolyEqKey : unit. by []. Qed.
 
 Definition hpoly_of_hpolyEq (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) :=
   locked_with hpolyEqKey (let: 'P(A,b) as P := base in
-                     fun (Q : 'hpolyEq(P)) =>
-                       let: HPolyEq J := Q in
-                       let AJ := col_mx A (- (row_submx A J)) in
-                       let bJ := col_mx b (- (row_submx b J)) in
-                       'P(AJ, bJ)).
+                            fun (Q : 'hpolyEq(P)) =>
+                              let: HPolyEq J := Q in
+                              let AJ := col_mx A (- (row_submx A J)) in
+                              let bJ := col_mx b (- (row_submx b J)) in
+                                'P(AJ, bJ)).
 
 Coercion hpoly_of_hpolyEq : hpolyEq >-> hpoly.
 
@@ -488,7 +487,7 @@ End HPolyEqS.
 
 Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n).
 Notation "''hpolyEq_' n" := (hpolyEqS _ n).
-Notation "\base P" := (base P).
+Notation "\base P" := (base  P).
 Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J).
 
@@ -535,7 +534,7 @@ Canonical hpolyNF_eqType := Eval hnf in EqType 'hpolyNF[R]_n hpolyNF_eqMixin.
 Definition hpolyNF_choiceMixin := [choiceMixin of 'hpolyNF[R]_n by <:].
 Canonical hpolyNF_choiceType := Eval hnf in ChoiceType 'hpolyNF[R]_n hpolyNF_choiceMixin.
 
-Lemma normal_form_has_normal_form (Q : 'hpolyNF[R]_n) : (* RK *)
+Lemma normal_form_has_normal_form (Q : 'hpolyNF[R]_n) :
   has_normal_form Q.
 Proof.
 by apply: (valP Q).
@@ -571,7 +570,7 @@ apply/andP/andP.
 Qed.
 
 Fact eq_subset_active (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  \eq Q \subset \active Q. (* RK *)
+  \eq Q \subset \active Q.
 Proof.
 case: base Q => m A b [JQ].
 apply/subsetP => i i_in_JQ; rewrite /= in i_in_JQ.
@@ -582,32 +581,41 @@ by apply/eqP/(implyP (sat_in_JQ i)).
 Qed.
 
 Fact activee (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  \active (HPolyEq (\active Q)) = \active Q. (* RK *)
+  \active (HPolyEq (\active Q)) = \active Q.
 Proof.
 case: base Q => m A b [JQ].
 apply/eqP; rewrite eqEsubset.
 apply/andP; split.
 - apply/subsetP => i.
-  move/activeP => charact_implicit.
+  move/activeP => charact_active.
   apply/activeP => x x_in_HPolyEq_JQ.
-  apply/(charact_implicit x).
+  apply/(charact_active x).
   rewrite hpolyEq_inE.
   apply/andP; split.
   + rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
     by move/andP: x_in_HPolyEq_JQ => [?].
   + apply/forallP => j.
-    apply/implyP => /activeP j_in_implicit.
-    by apply/eqP/(j_in_implicit x).
+    apply/implyP => /activeP j_in_active_Q.
+    by apply/eqP/(j_in_active_Q x).
 - set Q' := HPolyEq (\active _).
   have ->: \active (HPolyEq JQ) = \eq Q' by done.
   exact: eq_subset_active.
 Qed.
 
-(* TODO: split this statement into two pieces *)
-Fact eq_set_anti_monotone (Q : 'hpolyNF[R]_n) (P : 'hpolyEq(\base Q)) :
-  \eq P \subset \eq Q <-> {subset Q <= P}. (* RK *)
+(* TODO: do we need this statement? looks redundant with the activee statement *)
+(* RK: That's right, but it might be needed in this form *)
+Fact has_normal_form_base_with_implicit_eq_set (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  has_normal_form (HPolyEq (\active Q)).
 Proof.
-case: base P Q => [m A b] [[JP]] nfP [[JQ]] nfQ.
+by rewrite /has_normal_form activee /=.
+Qed.
+
+(* TODO: split this statement into two pieces. *)
+(* RK: Done? I believe that one of the implication below does not hold, see below *)
+(*Fact eq_set_anti_monotone (Q : 'hpolyNF[R]_n) (P : 'hpolyEq(\base Q)) :
+  \eq P \subset \eq Q <-> {subset Q <= P}.
+Proof.
+case: base P Q => [m A b] P [[JQ]] nfQ.
 split.
 - move => eq_set_inclusion x.
   rewrite 2!hpolyEq_inE.
@@ -622,36 +630,29 @@ split.
   rewrite (eqP (normal_form_has_normal_form (HPolyNF nfQ))).
   apply/implicit_eq_setP => x x_in_Q.
   exact: (((implicit_eq_setP _ _ i_in_eq_set_P) x) ((Q_subset_P x) x_in_Q)).
+Qed.*)
+
+Fact subset_active_antimonotonicity (base : 'hpoly[R]_n) (Q P : 'hpolyEq(base)) :
+  {subset Q <= P} -> \active P \subset \active Q.
+Proof.
+case: base P Q => [m A b] P Q.
+move => Q_subset_P.
+apply/subsetP => i /activeP i_active_in_P.
+apply/activeP => x x_in_Q.
+apply: (i_active_in_P x).
+by apply: (Q_subset_P x).
 Qed.
 
-(* TODO: do we need this statement? looks redundant with the activee statement *)
-Fact has_normal_form_base_with_implicit_eq_set (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  has_normal_form (HPolyEq (implicit_eq_set Q)). (* RK *)
+Fact eqset_subset_antimonotonicity (base : 'hpoly[R]_n) (Q P : 'hpolyEq(base)) :
+  \eq P \subset \eq Q -> {subset Q <= P}.
 Proof.
-case: base Q => m A b [JQ].
-rewrite /has_normal_form eqEsubset /eq_set.
-apply/andP; split;
-  apply/subsetP => i /implicit_eq_setP charact_implicit_eq_set;
-  apply/implicit_eq_setP => x; last first.
-- move => x_in_HPolyEq_JQ.
-  apply/(charact_implicit_eq_set x).
-  rewrite hpolyEq_inE.
-  apply/andP; split.
-  + rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
-    by move/andP/proj1: x_in_HPolyEq_JQ.
-  + apply/forallP => j.
-    apply/implyP => /implicit_eq_setP Hj.
-    by apply/eqP/(Hj x).
-- move => x_in_HPolyEq_implicit.
-  apply/(charact_implicit_eq_set x).
-  rewrite hpolyEq_inE.
-  apply/andP; split; rewrite hpolyEq_inE in x_in_HPolyEq_implicit.
-  + by move/andP/proj1: x_in_HPolyEq_implicit.
-  + apply/forallP => j.
-    apply/implyP => j_in_JQ.
-    move/(subsetP (eq_set_subset_implicit_eq_set (HPolyEq JQ))): j_in_JQ => j_in_implicit.
-    move/andP/proj2: x_in_HPolyEq_implicit => /forallP sat_in_implicit.
-    by apply: (implyP (sat_in_implicit j)).
+case: base P Q => [m A b] [JP] [JQ].
+move => eq_set_inclusion x.
+rewrite 2!hpolyEq_inE => /andP [x_in_base /forallP sat_in_JQ].
+apply/andP; split; first exact: x_in_base.
+apply/forallP => i.
+apply/implyP => i_in_eq_set_P.
+exact: ((implyP (sat_in_JQ i)) (((subsetP eq_set_inclusion) i) i_in_eq_set_P)).
 Qed.
 
 (* TODO: define a point in the relative interior *)
