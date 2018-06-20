@@ -22,52 +22,72 @@ Reserved Notation "P =e Q" (at level 0, format "'[hv' P '/ '  =e  Q ']'", no ass
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
+Section HPoly.
+
 Section Def. (* TODO: reorganize this section so that we can introduce the notation 'hpoly as soon as possible*)
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Record hpolyhedron :=
-  HPolyhedron { nb_ineq : nat ;
-                _ : 'M[R]_(nb_ineq,n) ;
-                _ : 'cV[R]_nb_ineq }.
+Record hpoly :=
+  Hpoly { nb_ineq : nat ;
+          _ : 'M[R]_(nb_ineq,n) ;
+          _ : 'cV[R]_nb_ineq }.
+End Def.
 
+Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 0, format "''hpoly[' R ]_ n").
+Notation "''hpoly_' n" := (hpoly _ n) (at level 0, only parsing).
 Notation "'#ineq' P" := (nb_ineq P) (at level 0, format "'#ineq' P").
-Notation "''P' ( m , A , b )" := (@HPolyhedron m A b) (at level 0, format "''P' ( m  , A ,  b )").
-Notation "''P' ( A , b )" := (HPolyhedron A b) (at level 0, format "''P' ( A ,  b )").
+Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b) (at level 0, format "''P' ( m  , A ,  b )").
+Notation "''P' ( A , b )" := (Hpoly A b) (at level 0, format "''P' ( A ,  b )").
 
-Definition mem_hpolyhedron (P : hpolyhedron) :=
+Section HPolyStruct.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition mem_hpoly (P : 'hpoly[R]_n) :=
   let: 'P(A,b) := P in
     [pred x : 'cV_n | (A *m x) >=m b].
 
-Coercion pred_of_hpolyhedron (P : hpolyhedron) : pred_class := mem_hpolyhedron P.
-Canonical hpolyhedron_predType := @mkPredType _ hpolyhedron pred_of_hpolyhedron.
-Canonical mem_hpolyhedron_predType := mkPredType mem_hpolyhedron.
+Coercion pred_of_hpoly (P : 'hpoly[R]_n) : pred_class := mem_hpoly P.
+Canonical hpoly_predType := @mkPredType _ 'hpoly[R]_n pred_of_hpoly.
+Canonical mem_hpoly_predType := mkPredType mem_hpoly.
 
-(* TODO: we keep that just to recall an example of return ... construction *)
-Definition matrix_of (P : hpolyhedron) :=
-  let: 'P(A,_) := P return 'M[R]_(#ineq P, n) in A.
+Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
+  let: 'P(A,b) := P in
+    Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
 
-Definition vector_of (P : hpolyhedron) :=
-  let: 'P(_,b) := P return 'cV[R]_(#ineq P) in b.
+Definition hpoly_from_matrix (M : {m : nat & 'M[R]_(m, n+1)}) :=
+  let Ab := tagged M in
+    Hpoly (lsubmx Ab) (rsubmx Ab).
 
-Section Ex.
-Variable m : nat.
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-
-Fact foo : matrix_of 'P(A,b) = A.
-done.
+Lemma matrix_from_hpolyK :
+  cancel matrix_from_hpoly hpoly_from_matrix.
+Proof.
+move => hP; destruct hP.
+by rewrite /matrix_from_hpoly /hpoly_from_matrix row_mxKl row_mxKr.
 Qed.
 
-End Ex.
-(* end of TODO *)
+Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
+Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
 
-Definition recession_dir (P : hpolyhedron) d :=
+Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
+Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
+
+Definition matrix_of (P : 'hpoly[R]_n) := (* TODO: not sure that these functions are so useful *)
+  let: 'P(A,_) := P return 'M[R]_(#ineq P, n) in A.
+
+Definition vector_of (P : 'hpoly[R]_n) :=
+  let: 'P(_,b) := P return 'cV[R]_(#ineq P) in b.
+
+End HPolyStruct.
+
+(*Definition recession_dir (P : hpoly) d :=
   let: 'P(A,b) := P in
     (Simplex.feasible A b) && (feasible_dir A d).
 
-Lemma recession_dirP (P : hpolyhedron) d :
+Lemma recession_dirP (P : hpoly) d :
   reflect ((exists y, y \in P) /\ (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P))
           (recession_dir P d).
 Proof.
@@ -99,34 +119,9 @@ apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]]
     by rewrite mulr1 -ler_subl_addl ler_addl ler0N1.
 Qed.
 
-Definition matrix_from_hpolyhedron (P : hpolyhedron) :=
-  let: 'P(A,b) := P in
-    Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
+End Def.*)
 
-Definition hpolyhedron_from_matrix (M : {m : nat & 'M[R]_(m, n+1)}) :=
-  let Ab := tagged M in
-    HPolyhedron (lsubmx Ab) (rsubmx Ab).
 
-Lemma matrix_from_hpolyhedronK :
-  cancel matrix_from_hpolyhedron hpolyhedron_from_matrix.
-Proof.
-move => hP; destruct hP.
-by rewrite /matrix_from_hpolyhedron /hpolyhedron_from_matrix row_mxKl row_mxKr.
-Qed.
-
-Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyhedronK.
-Canonical hpoly_eqType := Eval hnf in EqType hpolyhedron hpoly_eqMixin.
-
-Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyhedronK.
-Canonical hpoly_choiceType := Eval hnf in ChoiceType hpolyhedron hpoly_choiceMixin.
-
-End Def.
-
-Notation "'#ineq' P" := (nb_ineq P) (at level 0, format "'#ineq' P").
-Notation "''P' ( m , A , b )" := (@HPolyhedron _ _ m A b) (at level 0, format "''P' ( m  , A ,  b )").
-Notation "''P' ( A , b )" := (HPolyhedron A b) (at level 0, format "''P' ( A ,  b )").
-Notation "''hpoly[' R ]_ n" := (hpolyhedron R n) (at level 0, format "''hpoly[' R ]_ n").
-Notation "''hpoly_' n" := (hpolyhedron _ n) (at level 0, only parsing).
 
 Section BasicPrimitives.
 
@@ -252,7 +247,7 @@ Variable P : 'hpoly[R]_n.
 Definition is_included_in_halfspace c d :=
   (non_empty P) ==> match opt_value c P with
                     | Some opt_val => opt_val >= d
-                    | None => false 
+                    | None => false
                     end.
 
 Lemma is_included_in_halfspaceP c d :
@@ -295,12 +290,12 @@ apply: (iffP idP) => [/andP [is_included is_included_opp] x x_in_P | sat_eq].
   + by rewrite -(sat_eq _ x_in_P) vdotNl.
 Qed.
 
-Definition hpolyhedron_is_included_in Q :=
+Definition hpoly_is_included_in Q :=
   let: 'P(A,b) := Q in
     [forall i, is_included_in_halfspace (row i A)^T (b i 0)].
 
-Lemma hpolyhedron_is_included_inP Q :
-  reflect {subset P <= Q} (hpolyhedron_is_included_in Q).
+Lemma hpoly_is_included_inP Q :
+  reflect {subset P <= Q} (hpoly_is_included_in Q).
 Proof.
 case: Q => m A b.
 apply: (iffP idP).
@@ -324,53 +319,53 @@ Section ExtensionalEquality.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition hpolyhedron_ext_eq : rel 'hpoly[R]_n :=
-    fun P Q => (hpolyhedron_is_included_in P Q) && (hpolyhedron_is_included_in Q P).
+Definition hpoly_ext_eq : rel 'hpoly[R]_n :=
+    fun P Q => (hpoly_is_included_in P Q) && (hpoly_is_included_in Q P).
 
-Definition hpolyhedron_ext_eqP P Q :
-  reflect (P =i Q) (hpolyhedron_ext_eq P Q).
+Definition hpoly_ext_eqP P Q :
+  reflect (P =i Q) (hpoly_ext_eq P Q).
 Proof.
 apply: (iffP idP).
-- move/andP => [/hpolyhedron_is_included_inP H1 /hpolyhedron_is_included_inP H2] x.
+- move/andP => [/hpoly_is_included_inP H1 /hpoly_is_included_inP H2] x.
   apply/idP/idP; [exact: (H1 x) | exact: (H2 x)].
 - move => H.
-  by apply/andP; split; apply/hpolyhedron_is_included_inP => x; rewrite (H x).
+  by apply/andP; split; apply/hpoly_is_included_inP => x; rewrite (H x).
 Qed.
 
-Lemma hpolyhedron_ext_eq_refl :
-  reflexive hpolyhedron_ext_eq.
+Lemma hpoly_ext_eq_refl :
+  reflexive hpoly_ext_eq.
 Proof.
-by move => P; apply/hpolyhedron_ext_eqP.
+by move => P; apply/hpoly_ext_eqP.
 Qed.
 
-Lemma hpolyhedron_ext_eq_sym :
-  symmetric hpolyhedron_ext_eq.
+Lemma hpoly_ext_eq_sym :
+  symmetric hpoly_ext_eq.
 Proof.
 move => P Q.
-by apply/idP/idP; move/hpolyhedron_ext_eqP => H;
-  apply/hpolyhedron_ext_eqP => x; move: (H x).
+by apply/idP/idP; move/hpoly_ext_eqP => H;
+  apply/hpoly_ext_eqP => x; move: (H x).
 Qed.
 
-Lemma hpolyhedron_ext_eq_trans :
-  transitive hpolyhedron_ext_eq.
+Lemma hpoly_ext_eq_trans :
+  transitive hpoly_ext_eq.
 Proof.
-move => ? ? ? /hpolyhedron_ext_eqP H /hpolyhedron_ext_eqP H'.
-apply/hpolyhedron_ext_eqP => x.
+move => ? ? ? /hpoly_ext_eqP H /hpoly_ext_eqP H'.
+apply/hpoly_ext_eqP => x.
 by move: (H x); rewrite (H' x).
 Qed.
 
-Lemma hpolyhedron_ext_eq_is_equivalence_rel :
-  equivalence_rel hpolyhedron_ext_eq.
+Lemma hpoly_ext_eq_is_equivalence_rel :
+  equivalence_rel hpoly_ext_eq.
 Proof.
 apply/equivalence_relP; split.
-- exact: hpolyhedron_ext_eq_refl.
+- exact: hpoly_ext_eq_refl.
 - move => ? ? ?.
   rewrite /eqfun => ?.
-  by apply/idP/idP; apply: hpolyhedron_ext_eq_trans; [rewrite hpolyhedron_ext_eq_sym | done].
+  by apply/idP/idP; apply: hpoly_ext_eq_trans; [rewrite hpoly_ext_eq_sym | done].
 Qed.
 
 Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
-  EquivRel hpolyhedron_ext_eq hpolyhedron_ext_eq_refl hpolyhedron_ext_eq_sym hpolyhedron_ext_eq_trans.
+  EquivRel hpoly_ext_eq hpoly_ext_eq_refl hpoly_ext_eq_sym hpoly_ext_eq_trans.
 
 End ExtensionalEquality.
 
@@ -399,7 +394,7 @@ Definition hpoly_of_hpolyEq (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) :
         let bJ := col_mx b (- (row_submx b J)) in
           locked 'P(AJ, bJ).
 
-Coercion hpoly_of_hpolyEq : hpolyEq >-> hpolyhedron.
+Coercion hpoly_of_hpolyEq : hpolyEq >-> hpoly.
 
 Section StructEq.
 
@@ -460,7 +455,7 @@ Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpol
 
 Section StructNF.
 
-Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (base : @hpolyhedron R n) (Q : @hpolyNF R n base) :=
+Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (base : @hpoly R n) (Q : @hpolyNF R n base) :=
   let: HPolyNF Q' _ := Q in Q'.
 Coercion hpolyEq_of_hpolyNF : hpolyNF >-> hpolyEq.
 
@@ -687,7 +682,7 @@ Definition implicit_eq (Q: hpolyEq) :=
 
 Definition implicit_eq (Q: hpolyEq) :=
   match Q return {set 'I_(#ineq (\base Q))} with
-  | HPolyEq (HPolyhedron _ A b as P) _ =>
+  | HPolyEq (Hpoly _ A b as P) _ =>
   [ set i | is_included_in_hyperplane Q (row i A)^T (b i 0) ]
   end.
 *)
@@ -717,7 +712,7 @@ Section ExtensionalEqualityEq.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | hpolyhedron_ext_eq P Q ].
+Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | hpoly_ext_eq P Q ].
 
 Lemma hpolyEq_ext_eq_refl :
   reflexive hpolyEq_ext_eq.
@@ -753,7 +748,7 @@ Lemma hpoly_eqP (R : realFieldType) (n : nat) (P Q : 'hpolyEq[R]_n) :
   (P =i Q) <-> (P =e Q).
 Proof.
 apply: (rwP2 (b := hpolyEq_ext_eq _ _ P Q)).
-- exact: hpolyhedron_ext_eqP.
+- exact: hpoly_ext_eqP.
 - exact: eqmodP.
 Qed.
 
@@ -869,7 +864,7 @@ Definition hpolyNF_of_hpolyEq P :=
 Coercion hpoly_of_subset_of_hpoly_nf P :=
   let: HPolyNF Q _ := P in Q.
 
-Canonical hpolyhedron_nf_subtype := [subType for hpoly_of_subset_of_hpoly_nf].
+Canonical hpoly_nf_subtype := [subType for hpoly_of_subset_of_hpoly_nf].
 
 Lemma hpolyNF_has_normal_form (P : hpolyNF) : has_normal_form P.
 Proof. exact: valP. Qed.
