@@ -135,35 +135,35 @@ Variable n : nat.
 
 Implicit Type P : 'hpoly[R]_n.
 Implicit Type c : 'cV[R]_n.
-(* TODO: Switch c and P below*)
+(* TODO: Switch c and P below. RK: done?*)
 Definition non_empty P :=
   let: 'P(A,b) := P in
     Simplex.feasible A b.
 
-Definition bounded P c :=
+Definition bounded c P :=
   let: 'P(A,b) := P in
     Simplex.bounded A b c.
 
-Definition unbounded P c :=
+Definition unbounded c P :=
   let: 'P(A,b) := P in
     Simplex.unbounded A b c.
 
-Definition opt_point P c :=
-  if bounded P c then
+Definition opt_point c P :=
+  if bounded c P then
     let: 'P(A,b) := P in
       Some (Simplex.opt_point A b c)
   else None.
 
-Definition opt_value P c := omap (vdot c) (opt_point P c).
+Definition opt_value c P := omap (vdot c) (opt_point c P).
 
 (*TODO: Simplify the hlp_state statement and remove the option type*)
-CoInductive hlp_state P c : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
-| Empty of P =i pred0 : hlp_state P c None false false false
-| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : hlp_state P c (Some z) true true false
-| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : hlp_state P c None true false true.
+CoInductive hlp_state c P : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
+| Empty of P =i pred0 : hlp_state c P None false false false
+| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : hlp_state c P (Some z) true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : hlp_state c P None true false true.
 
-Lemma hlp_stateP P c :
-  hlp_state P c (opt_point P c) (non_empty P) (bounded P c) (unbounded P c).
+Lemma hlp_stateP c P :
+  hlp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 Admitted.
 
@@ -174,8 +174,8 @@ case: P => m A b.
 exact: Simplex.feasibleP.
 Qed.
 
-Lemma boundedP P c : (*RK*)
-  reflect (exists x, (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded P c).
+Lemma boundedP c P : (*RK*)
+  reflect (exists x, (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded c P).
 Proof.
 case: P => m A b.
 apply: (iffP idP).
@@ -196,17 +196,17 @@ apply: (iffP idP).
 Qed.
 
 (* TODO: write a lemma stating that if P is nonempty and '[c,x] is bounded from below, then bounded holds. RK: done? see the next two lemmas*)
-Lemma empty_or_boundedP P c : (* RK *)
-  reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (~~ non_empty P || bounded P c).
+Lemma empty_or_boundedP c P : (* RK *)
+  reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (~~ non_empty P || bounded c P).
 Proof.
 case: P => m A b.
 exact: Simplex.infeasible_or_boundedP.
 Qed.
 
-Lemma non_empty_and_boundedP P c : (* RK *)
-  reflect ((non_empty P) /\ (exists K, (forall z, z \in P -> '[c,z] >= K))) (bounded P c).
+Lemma non_empty_and_boundedP c P : (* RK *)
+  reflect ((non_empty P) /\ (exists K, (forall z, z \in P -> '[c,z] >= K))) (bounded c P).
 Proof.
-apply: (iffP (boundedP P c)) => [[x [x_in_P x_is_opt]] | [P_is_non_empty /empty_or_boundedP P_is_empty_or_bounded]].
+apply: (iffP (boundedP c P)) => [[x [x_in_P x_is_opt]] | [P_is_non_empty /empty_or_boundedP P_is_empty_or_bounded]].
 - split.
   + apply/non_emptyP.
     by exists x.
@@ -215,26 +215,26 @@ apply: (iffP (boundedP P c)) => [[x [x_in_P x_is_opt]] | [P_is_non_empty /empty_
   exact: boundedP.
 Qed.
 
-Lemma opt_value_is_optimal P c x : (* RK *)
-  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value P c = Some '[c,x].
+Lemma opt_value_is_optimal c P x : (* RK *)
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
 Proof.
 case: P => m A b.
 move => x_in_P x_is_opt.
-suff opt_point_P_c: opt_point 'P(A, b) c = Some (Simplex.opt_point A b c)
+suff opt_point_P_c: opt_point c 'P(A, b) = Some (Simplex.opt_point A b c)
  by rewrite /opt_value opt_point_P_c (Simplex.opt_value_is_optimal x_in_P x_is_opt). (* TODO: Look for a simpler way. RK: done?*)
 apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma unboundedP P c : (* RK *)
-  reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P c).
+Lemma unboundedP c P : (* RK *)
+  reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded c P).
 Proof.
 case: P => m A b.
 exact: Simplex.unboundedP.
 Qed.
 
-Lemma unbounded_is_not_bounded P c : (* RK *)
-  non_empty P -> unbounded P c = ~~ bounded P c.
+Lemma unbounded_is_not_bounded c P : (* RK *)
+  non_empty P -> unbounded c P = ~~ bounded c P.
 Proof.
 case: P => m A b.
 exact: Simplex.unbounded_is_not_bounded.
@@ -250,7 +250,7 @@ Variable n : nat.
 Variable P : 'hpoly[R]_n.
 
 Definition is_included_in_halfspace c d :=
-  (non_empty P) ==> match opt_value P c with
+  (non_empty P) ==> match opt_value c P with
                     | Some opt_val => opt_val >= d
                     | None => false 
                     end.
@@ -261,7 +261,7 @@ Lemma is_included_in_halfspaceP c d :
 Proof.
 rewrite /is_included_in_halfspace; apply: (iffP implyP).
 - rewrite /opt_value.
-  case: (hlp_stateP P c) => /=  [ P_is_empty _
+  case: (hlp_stateP c P) => /=  [ P_is_empty _
   | z [opt_in_P opt_is_opt] /=
   | /= _ /(_ is_true_true)]; last by done.
   + by move => x; rewrite P_is_empty.
@@ -270,7 +270,7 @@ rewrite /is_included_in_halfspace; apply: (iffP implyP).
     exact: ler_trans.
 - move => inclusion.
   rewrite /opt_value.
-  case: (hlp_stateP P c) => [/= | opt [opt_in_P _] /= _ | /= ]; first by done.
+  case: (hlp_stateP c P) => [/= | opt [opt_in_P _] /= _ | /= ]; first by done.
   + exact: inclusion.
   + move/(_ d) => [x [x_in_P cx_lt_d] _].
     move/(_ _ x_in_P): inclusion.
@@ -771,7 +771,7 @@ Definition hface_of :=
 Hypothesis P_non_empty : non_empty P.
 
 Lemma hface_ofP (Q : 'hpolyEq[R]_n) :
-  reflect (exists c, bounded P c /\ forall x, (x \in P -> (Some '[c,x] = opt_value P c <-> x \in Q)))
+  reflect (exists c, bounded c P /\ forall x, (x \in P -> (Some '[c,x] = opt_value c P <-> x \in Q)))
           (hface_of Q).
 Proof.
 Admitted.
