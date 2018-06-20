@@ -17,7 +17,25 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Reserved Notation "P =e Q" (at level 0, format "'[hv' P '/ '  =e  Q ']'", no associativity).
+Reserved Notation "''hpoly[' R ]_ n" (at level 8, n at level 2, format "''hpoly[' R ]_ n").
+Reserved Notation "''hpoly_' n" (at level 8, n at level 2, only parsing).
+Reserved Notation "'#ineq' P" (at level 10, P at level 0, format "'#ineq'  P").
+Reserved Notation "''P' ( m , A , b )" (at level 0, m at level 99, A at level 99, b at level 99, format "''P' ( m  , A ,  b )").
+Reserved Notation "''P' ( A , b )" (at level 0, A at level 99, b at level 99, format "''P' ( A ,  b )").
+Reserved Notation "P =e Q" (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
+Reserved Notation "''hpolyEq(' base )" (at level 8, base at level 99, format "''hpolyEq(' base )").
+Reserved Notation "\eq P" (at level 10, P at level 8, format "\eq  P").
+Reserved Notation "\active P" (at level 10, P at level 8, format "\active  P").
+Reserved Notation "''hpolyEq[' R ]_ n" (at level 8, n at level 2, format "''hpolyEq[' R ]_ n").
+Reserved Notation "''hpolyEq_' n" (at level 8, n at level 2, only parsing).
+Reserved Notation "\base P" (at level 10, P at level 8, format "\base P").
+Reserved Notation "''P^=' ( P ; J )"
+         (at level 0, P at level 99, J at level 99, format "''P^=' ( P ; J )").
+Reserved Notation "''P^=' ( A , b ; J )"
+         (at level 0, A at level 99, b at level 99, J at level 99, format "''P^=' ( A ,  b ;  J )").
+Reserved Notation "''hpolyNF(' base )" (at level 8, base at level 99, format "''hpolyNF(' base )").
+Reserved Notation "''hpolyNF[' R ]_ n" (at level 8, n at level 2, format "''hpolyNF[' R ]_ n").
+Reserved Notation "''hpolyNF_' n" (at level 8, n at level 2, only parsing).
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -33,26 +51,27 @@ Record hpoly :=
   Hpoly { nb_ineq : nat ;
           _ : 'M[R]_(nb_ineq,n) ;
           _ : 'cV[R]_nb_ineq }.
+
 End Def.
 
-Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 0, format "''hpoly[' R ]_ n").
-Notation "''hpoly_' n" := (hpoly _ n) (at level 0, only parsing).
-Notation "'#ineq' P" := (nb_ineq P) (at level 0, format "'#ineq' P").
-Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b) (at level 0, format "''P' ( m  , A ,  b )").
-Notation "''P' ( A , b )" := (Hpoly A b) (at level 0, format "''P' ( A ,  b )").
+Notation "''hpoly[' R ]_ n" := (hpoly R n).
+Notation "''hpoly_' n" := (hpoly _ n).
+Notation "'#ineq' P" := (nb_ineq P).
+Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b).
+Notation "''P' ( A , b )" := (Hpoly A b).
 
 Section HPolyStruct.
 
+Definition mem_hpoly (R : realFieldType) (n : nat) (P : 'hpoly[R]_n) :=
+  let: 'P(A,b) := P in
+    [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
+
+Coercion mem_hpoly : hpoly >-> pred_class.
+
 Variable R : realFieldType.
 Variable n : nat.
-
-Definition mem_hpoly (P : 'hpoly[R]_n) :=
-  let: 'P(A,b) := P in
-    [pred x : 'cV_n | (A *m x) >=m b].
-
-Coercion pred_of_hpoly (P : 'hpoly[R]_n) : pred_class := mem_hpoly P.
-Canonical hpoly_predType := @mkPredType _ 'hpoly[R]_n pred_of_hpoly.
-Canonical mem_hpoly_predType := mkPredType mem_hpoly.
+Canonical hpoly_predType := @mkPredType _ 'hpoly[R]_n (@mem_hpoly R n).
+Canonical mem_hpoly_predType := mkPredType (@mem_hpoly R n).
 
 Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
   let: 'P(A,b) := P in
@@ -83,54 +102,24 @@ Definition vector_of (P : 'hpoly[R]_n) :=
 
 End HPolyStruct.
 
-(*Definition recession_dir (P : hpoly) d :=
-  let: 'P(A,b) := P in
-    (Simplex.feasible A b) && (feasible_dir A d).
+End HPoly.
 
-Lemma recession_dirP (P : hpoly) d :
-  reflect ((exists y, y \in P) /\ (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P))
-          (recession_dir P d).
-Proof.
-case: P => m A b.
-apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]].
-- split.
-  + exact: (Simplex.feasibleP _ _ feasible).
-  + move => x lambda x_in_P lambda_pos.
-    rewrite inE mulmxDr -[b]addr0.
-    apply: lev_add; first exact: x_in_P.
-    rewrite -scalemxAr -(scaler0 _ lambda).
-    by apply: lev_wpscalar.
-- apply/andP; split.
-  + by apply/Simplex.feasibleP.
-  + apply/contraT.
-    rewrite negb_forall.
-    move/existsP => [i infeasible_dir_i].
-    rewrite -ltrNge ![X in _ < X]mxE in infeasible_dir_i.
-    move: feasible => [y y_in_P].
-    set lambda := ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1).
-    have lambda_is_pos: 0 <= lambda.
-      rewrite -invr_lt0 in infeasible_dir_i.
-      rewrite (nmulr_lge0 _ infeasible_dir_i) subr_le0 ler_subl_addl.
-      apply: ler_paddr; [exact: ler01 | exact: ((forallP y_in_P) i)].
-    move: (recession_cond _ _  y_in_P lambda_is_pos) => contradic.
-    rewrite inE mulmxDr -scalemxAr in contradic.
-    move: ((forallP contradic) i).
-    rewrite mxE [(lambda *: (A *m d)) i 0]mxE -mulrA mulVf; last by apply: ltr0_neq0.
-    by rewrite mulr1 -ler_subl_addl ler_addl ler0N1.
-Qed.
+Notation "''hpoly[' R ]_ n" := (hpoly R n).
+Notation "''hpoly_' n" := (hpoly _ n).
+Notation "'#ineq' P" := (nb_ineq P).
+Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b).
+Notation "''P' ( A , b )" := (Hpoly A b).
 
-End Def.*)
+Module HPrim.
 
-
-
-Section BasicPrimitives.
+Section Basic.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Implicit Type P : 'hpoly[R]_n.
 Implicit Type c : 'cV[R]_n.
-(* TODO: Switch c and P below. RK: done?*)
+Implicit Type P : 'hpoly[R]_n.
+
 Definition non_empty P :=
   let: 'P(A,b) := P in
     Simplex.feasible A b.
@@ -151,14 +140,14 @@ Definition opt_point c P :=
 
 Definition opt_value c P := omap (vdot c) (opt_point c P).
 
-(*TODO: Simplify the hlp_state statement and remove the option type*)
-CoInductive hlp_state c P : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
-| Empty of P =i pred0 : hlp_state c P None false false false
-| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : hlp_state c P (Some z) true true false
-| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : hlp_state c P None true false true.
+(*TODO: Simplify the lp_state statement and remove the option type*)
+CoInductive lp_state c P : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
+| Empty of P =i pred0 : lp_state c P None false false false
+| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : lp_state c P (Some z) true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state c P None true false true.
 
-Lemma hlp_stateP c P :
-  hlp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
+Lemma lp_stateP c P : (* TODO: prove it! *)
+  lp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 Admitted.
 
@@ -191,23 +180,14 @@ apply: (iffP idP).
 Qed.
 
 (* TODO: write a lemma stating that if P is nonempty and '[c,x] is bounded from below, then bounded holds. RK: done? see the next two lemmas*)
-Lemma empty_or_boundedP c P : (* RK *)
-  reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (~~ non_empty P || bounded c P).
+Lemma bounded_certP c P : (* RK *)
+  non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded c P).
 Proof.
 case: P => m A b.
-exact: Simplex.infeasible_or_boundedP.
-Qed.
-
-Lemma non_empty_and_boundedP c P : (* RK *)
-  reflect ((non_empty P) /\ (exists K, (forall z, z \in P -> '[c,z] >= K))) (bounded c P).
-Proof.
-apply: (iffP (boundedP c P)) => [[x [x_in_P x_is_opt]] | [P_is_non_empty /empty_or_boundedP P_is_empty_or_bounded]].
-- split.
-  + apply/non_emptyP.
-    by exists x.
-  + by exists '[ c, x].
-- rewrite P_is_non_empty /= in P_is_empty_or_bounded.
-  exact: boundedP.
+move => P_non_empty.
+suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b).
+- exact: Simplex.infeasible_or_boundedP.
+- by rewrite P_non_empty /=.
 Qed.
 
 Lemma opt_value_is_optimal c P x : (* RK *)
@@ -216,7 +196,7 @@ Proof.
 case: P => m A b.
 move => x_in_P x_is_opt.
 suff opt_point_P_c: opt_point c 'P(A, b) = Some (Simplex.opt_point A b c)
- by rewrite /opt_value opt_point_P_c (Simplex.opt_value_is_optimal x_in_P x_is_opt). (* TODO: Look for a simpler way. RK: done?*)
+ by rewrite /opt_value opt_point_P_c (Simplex.opt_value_is_optimal x_in_P x_is_opt).
 apply/ifT/boundedP.
 by exists x.
 Qed.
@@ -228,20 +208,19 @@ case: P => m A b.
 exact: Simplex.unboundedP.
 Qed.
 
-Lemma unbounded_is_not_bounded c P : (* RK *)
-  non_empty P -> unbounded c P = ~~ bounded c P.
+Lemma bounded_xor_unbounded c P : (* RK *)
+  non_empty P -> (bounded c P) (+) (unbounded c P).
 Proof.
 case: P => m A b.
-exact: Simplex.unbounded_is_not_bounded.
+by move/(Simplex.unbounded_is_not_bounded c)/esym/addbP.
 Qed.
 
-End BasicPrimitives.
+End Basic.
 
 Section Inclusion.
 
 Variable R : realFieldType.
 Variable n : nat.
-
 Variable P : 'hpoly[R]_n.
 
 Definition is_included_in_halfspace c d :=
@@ -256,7 +235,7 @@ Lemma is_included_in_halfspaceP c d :
 Proof.
 rewrite /is_included_in_halfspace; apply: (iffP implyP).
 - rewrite /opt_value.
-  case: (hlp_stateP c P) => /=  [ P_is_empty _
+  case: (lp_stateP c P) => /=  [ P_is_empty _
   | z [opt_in_P opt_is_opt] /=
   | /= _ /(_ is_true_true)]; last by done.
   + by move => x; rewrite P_is_empty.
@@ -265,7 +244,7 @@ rewrite /is_included_in_halfspace; apply: (iffP implyP).
     exact: ler_trans.
 - move => inclusion.
   rewrite /opt_value.
-  case: (hlp_stateP c P) => [/= | opt [opt_in_P _] /= _ | /= ]; first by done.
+  case: (lp_stateP c P) => [/= | opt [opt_in_P _] /= _ | /= ]; first by done.
   + exact: inclusion.
   + move/(_ d) => [x [x_in_P cx_lt_d] _].
     move/(_ _ x_in_P): inclusion.
@@ -369,6 +348,10 @@ Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
 
 End ExtensionalEquality.
 
+End HPrim.
+
+Import HPrim.
+
 Section HPolyEq.
 
 Section Def.
@@ -378,34 +361,38 @@ Variable n : nat.
 
 Inductive hpolyEq (base : 'hpoly[R]_n) := HPolyEq of {set 'I_(#ineq base)}.
 
-Definition eq_set base (Q : hpolyEq base) := let: HPolyEq J := Q in J.
+Definition equality_set base (Q : hpolyEq base) := let: HPolyEq J := Q in J.
 
 End Def.
 
-Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
-Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
-(* TODO: Add a key for the lock (should apply to the function?) *)
+Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base).
+Notation "\eq P" := (equality_set P).
+
+Section HPolyEqStruct.
+
+Fact hpolyEqKey : unit. by []. Qed.
+
 Definition hpoly_of_hpolyEq (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) :=
-  (* why do we need to specify R and n as arguments if we want to avoid UIP failure in the coercion? *)
-  let: 'P(A,b) as P := base in
-    fun (Q : 'hpolyEq(P)) =>
-      let: HPolyEq J := Q in
-        let AJ := col_mx A (- (row_submx A J)) in
-        let bJ := col_mx b (- (row_submx b J)) in
-          locked 'P(AJ, bJ).
+  locked_with hpolyEqKey (let: 'P(A,b) as P := base in
+                     fun (Q : 'hpolyEq(P)) =>
+                       let: HPolyEq J := Q in
+                       let AJ := col_mx A (- (row_submx A J)) in
+                       let bJ := col_mx b (- (row_submx b J)) in
+                       'P(AJ, bJ)).
 
 Coercion hpoly_of_hpolyEq : hpolyEq >-> hpoly.
-
-Section StructEq.
 
 Variable R : realFieldType.
 Variable n : nat.
 Variable base : 'hpoly[R]_n.
 
-Fact eq_setK : cancel (@eq_set _ _ base) (@HPolyEq _ _ base).
+Fact eq_setK : cancel (@equality_set _ _ base) (@HPolyEq _ _ base).
 Proof.
 by case.
 Qed.
+
+Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base).
+Notation "\eq P" := (equality_set P).
 
 Definition hpolyEq_eqMixin := CanEqMixin eq_setK.
 Canonical hpolyEq_eqType := Eval hnf in EqType 'hpolyEq(base) hpolyEq_eqMixin.
@@ -416,27 +403,34 @@ Canonical hpolyEq_countType := Eval hnf in CountType 'hpolyEq(base) hpolyEq_coun
 Definition hpolyEq_finMixin := CanFinMixin eq_setK.
 Canonical hpolyEq_finType := Eval hnf in FinType 'hpolyEq(base) hpolyEq_finMixin.
 
-End StructEq.
+End HPolyEqStruct.
 
-Section PolyNF.
+End HPolyEq.
+
+Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base).
+Notation "\eq P" := (equality_set P).
+
+Section ActiveIneq.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
+Definition active_set (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
   let: 'P(A,b) as P' := base return {set 'I_(#ineq P')} in
     [ set i : 'I_(#ineq P') |
       is_included_in_hyperplane Q (row i A)^T (b i 0) ].
 
-Lemma implicit_eqP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyEq('P(A,b))) i :
+Notation "\active Q" := (active_set Q).
+
+Lemma activeP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
+      (Q : 'hpolyEq('P(A,b))) i :
   reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
-          (i \in implicit_eq Q).
+          (i \in \active Q).
 Proof.
-apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
-- rewrite /implicit_eq //= in i_in_implicit_eq;
-    rewrite inE in i_in_implicit_eq.
+apply: (iffP idP) => [i_in_implicit_eq_set x x_in_P | ineq_i_is_sat].
+- rewrite inE in i_in_implicit_eq_set.
   rewrite -row_vdot.
-  exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq) x x_in_P).
+  exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq_set) x x_in_P).
 - rewrite inE.
   apply/is_included_in_hyperplaneP => x x_in_P.
   rewrite row_vdot.
@@ -444,24 +438,84 @@ apply: (iffP idP) => [i_in_implicit_eq x x_in_P | ineq_i_is_sat].
 Qed.
 
 Definition has_normal_form (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
-  \eq_set Q == implicit_eq Q.
+  \eq Q == \active Q.
 
-Inductive hpolyNF (base : 'hpoly[R]_n) :=
-  HPolyNF (Q : 'hpolyEq(base)) of (has_normal_form Q).
+End ActiveIneq.
 
-End PolyNF.
+Notation "\active Q" := (active_set Q).
 
-Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
+Section HPolyEqS.
 
-Section StructNF.
-
-Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (base : @hpoly R n) (Q : @hpolyNF R n base) :=
-  let: HPolyNF Q' _ := Q in Q'.
-Coercion hpolyEq_of_hpolyNF : hpolyNF >-> hpolyEq.
+Section Def.
 
 Variable R : realFieldType.
 Variable n : nat.
-Variable base : 'hpoly[R]_n.
+
+Record hpolyEqS :=
+  HPolyEqS { base: 'hpoly[R]_n; hpolyEq_with_base :> 'hpolyEq(base) }.
+
+End Def.
+
+Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n).
+Notation "''hpolyEq_' n" := (hpolyEqS _ n).
+Notation "\base P" := (base P).
+Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)).
+Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J).
+
+Section HPolyEqStruct.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Let of_hpolyEqS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyEq(Q) } :=
+  Tagged (fun Q : ('hpoly[R]_n) => 'hpolyEq(Q)) (hpolyEq_with_base P).
+
+Fact of_hpolyEqSK : cancel of_hpolyEqS (fun x => HPolyEqS (tagged x)).
+Proof.
+by move => P; case: P.
+Qed.
+
+Definition hpolyEqS_eqMixin := CanEqMixin of_hpolyEqSK.
+Canonical hpolyEqS_eqType := Eval hnf in EqType 'hpolyEq[R]_n hpolyEqS_eqMixin.
+
+Definition hpolyEqS_choiceMixin := CanChoiceMixin of_hpolyEqSK.
+Canonical hpolyEqS_choiceType :=
+  Eval hnf in ChoiceType 'hpolyEq[R]_n hpolyEqS_choiceMixin.
+
+End HPolyEqStruct.
+
+End HPolyEqS.
+
+Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n).
+Notation "''hpolyEq_' n" := (hpolyEqS _ n).
+Notation "\base P" := (base P).
+Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)).
+Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J).
+
+Section HPolyNF.
+
+Section Def.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Inductive hpolyNF := HPolyNF (P : 'hpolyEq[R]_n) of (has_normal_form P).
+
+End Def.
+
+Notation "''hpolyNF[' R ]_ n" := (hpolyNF R n).
+Notation "''hpolyNF_' n" := (hpolyNF _ n).
+
+Section HPolyNFStruct.
+
+Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (Q : 'hpolyNF[R]_n) :=
+  let: HPolyNF Q' _ := Q in Q'.
+Coercion hpolyEq_of_hpolyNF : hpolyNF >-> hpolyEqS.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+(*Variable base : 'hpoly[R]_n.
 
 Canonical hpolyNF_subType := [subType for (@hpolyEq_of_hpolyNF _ _ base)].
 Definition hpolyNF_eqMixin := Eval hnf in [eqMixin of hpolyNF base by <:].
@@ -473,41 +527,37 @@ Canonical hpolyNF_countType := Eval hnf in CountType 'hpolyNF(base) hpolyNF_coun
 Canonical hpolyNF_subCountType := [subCountType of 'hpolyNF(base)].
 Definition hpolyNF_finMixin := [finMixin of 'hpolyNF(base) by <:].
 Canonical hpolyNF_finType := Eval hnf in FinType 'hpolyNF(base) hpolyNF_finMixin.
-Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].
+Canonical hpolyNF_subFinType := [subFinType of 'hpolyNF(base)].*)
 
-Lemma normal_form_has_normal_form (Q : 'hpolyNF(base)) : (* RK *)
+Canonical hpolyNF_subType := [subType for (@hpolyEq_of_hpolyNF R n)].
+Definition hpolyNF_eqMixin := Eval hnf in [eqMixin of 'hpolyNF[R]_n by <:].
+Canonical hpolyNF_eqType := Eval hnf in EqType 'hpolyNF[R]_n hpolyNF_eqMixin.
+Definition hpolyNF_choiceMixin := [choiceMixin of 'hpolyNF[R]_n by <:].
+Canonical hpolyNF_choiceType := Eval hnf in ChoiceType 'hpolyNF[R]_n hpolyNF_choiceMixin.
+
+Lemma normal_form_has_normal_form (Q : 'hpolyNF[R]_n) : (* RK *)
   has_normal_form Q.
 Proof.
 by apply: (valP Q).
 Qed.
 
-End StructNF.
+End HPolyNFStruct.
 
-Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
+End HPolyNF.
 
-Section UnfixedBase.
+Notation "''hpolyNF[' R ]_ n" := (hpolyNF R n).
+Notation "''hpolyNF_' n" := (hpolyNF _ n).
 
-Record hpolyEqS (R : realFieldType) (n : nat) :=
-  (* the Sigma-type based on hpolyNF *)
-  HPolyEqS { base: 'hpoly[R]_n; hpolyeq_with_base :> 'hpolyNF(base) }.
-
-Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEqS _ n) (at level 0, only parsing).
-Notation "\base P" := (base P) (at level 0, format "\base P").
-Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
-Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
+Section PropEqNF.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
-  let P := 'P(A,b) in
-    forall J : {set 'I_(#ineq P)},
-      (x \in HPolyEq J) = (x \in P) && [forall j in J, (A *m x) j 0 == b j 0].
+Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) J :
+  (x \in 'P^=(A, b; J)) = (x \in 'P(A, b)) && [forall j in J, (A *m x) j 0 == b j 0].
 Proof.
-move => P J /=.
-unlock.
-rewrite inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2 /=.
+rewrite /hpoly_of_hpolyEq unlock /=.
+rewrite !inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2 /=.
 apply/andP/andP.
 - move => [x_in_P ineqJ]; split; try by done.
   suff /row_submx_colP H: row_submx (A *m x) J = row_submx b J.
@@ -520,39 +570,42 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
-Fact eq_set_subset_implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  \eq_set Q \subset implicit_eq Q. (* RK *)
+Fact eq_subset_active (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  \eq Q \subset \active Q. (* RK *)
 Proof.
 case: base Q => m A b [JQ].
 apply/subsetP => i i_in_JQ; rewrite /= in i_in_JQ.
-apply/implicit_eqP => x x_in_HPolyEq_JQ.
+apply/activeP => x x_in_HPolyEq_JQ.
 rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
-move/andP/proj2: x_in_HPolyEq_JQ => /forallP sat_in_JQ.
+move/andP: x_in_HPolyEq_JQ => [_ /forallP sat_in_JQ].
 by apply/eqP/(implyP (sat_in_JQ i)).
 Qed.
 
-Fact implicit_eq_of_base_with_implicit_eqK (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  implicit_eq (HPolyEq (implicit_eq Q)) = implicit_eq Q. (* RK *)
+Fact activee (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  \active (HPolyEq (\active Q)) = \active Q. (* RK *)
 Proof.
 case: base Q => m A b [JQ].
 apply/eqP; rewrite eqEsubset.
 apply/andP; split.
 - apply/subsetP => i.
-  move/implicit_eqP => charact_implicit.
-  apply/implicit_eqP => x x_in_HPolyEq_JQ.
+  move/activeP => charact_implicit.
+  apply/activeP => x x_in_HPolyEq_JQ.
   apply/(charact_implicit x).
   rewrite hpolyEq_inE.
   apply/andP; split.
   + rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
-    exact: (proj1 (andP x_in_HPolyEq_JQ)).
+    by move/andP: x_in_HPolyEq_JQ => [?].
   + apply/forallP => j.
-    apply/implyP => /implicit_eqP j_in_implicit.
+    apply/implyP => /activeP j_in_implicit.
     by apply/eqP/(j_in_implicit x).
-- exact: (eq_set_subset_implicit_eq (HPolyEq (implicit_eq (HPolyEq JQ)))).
+- set Q' := HPolyEq (\active _).
+  have ->: \active (HPolyEq JQ) = \eq Q' by done.
+  exact: eq_subset_active.
 Qed.
 
-Fact eq_set_anti_monotone (base : 'hpoly[R]_n) (P Q : 'hpolyNF(base)) :
-  \eq_set(P) \subset \eq_set(Q) <-> {subset Q <= P}. (* RK *)
+(* TODO: split this statement into two pieces *)
+Fact eq_set_anti_monotone (Q : 'hpolyNF[R]_n) (P : 'hpolyEq(\base Q)) :
+  \eq P \subset \eq Q <-> {subset Q <= P}. (* RK *)
 Proof.
 case: base P Q => [m A b] [[JP]] nfP [[JQ]] nfQ.
 split.
@@ -567,35 +620,36 @@ split.
   apply/subsetP => i i_in_eq_set_P.
   rewrite (eqP (normal_form_has_normal_form (HPolyNF nfP))) in i_in_eq_set_P.
   rewrite (eqP (normal_form_has_normal_form (HPolyNF nfQ))).
-  apply/implicit_eqP => x x_in_Q.
-  exact: (((implicit_eqP _ _ i_in_eq_set_P) x) ((Q_subset_P x) x_in_Q)).
+  apply/implicit_eq_setP => x x_in_Q.
+  exact: (((implicit_eq_setP _ _ i_in_eq_set_P) x) ((Q_subset_P x) x_in_Q)).
 Qed.
 
-Fact has_normal_form_base_with_implicit_eq (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  has_normal_form (HPolyEq (implicit_eq Q)). (* RK *)
+(* TODO: do we need this statement? looks redundant with the activee statement *)
+Fact has_normal_form_base_with_implicit_eq_set (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
+  has_normal_form (HPolyEq (implicit_eq_set Q)). (* RK *)
 Proof.
 case: base Q => m A b [JQ].
 rewrite /has_normal_form eqEsubset /eq_set.
 apply/andP; split;
-  apply/subsetP => i /implicit_eqP charact_implicit_eq;
-  apply/implicit_eqP => x; last first.
+  apply/subsetP => i /implicit_eq_setP charact_implicit_eq_set;
+  apply/implicit_eq_setP => x; last first.
 - move => x_in_HPolyEq_JQ.
-  apply/(charact_implicit_eq x).
+  apply/(charact_implicit_eq_set x).
   rewrite hpolyEq_inE.
   apply/andP; split.
   + rewrite hpolyEq_inE in x_in_HPolyEq_JQ.
     by move/andP/proj1: x_in_HPolyEq_JQ.
   + apply/forallP => j.
-    apply/implyP => /implicit_eqP Hj.
+    apply/implyP => /implicit_eq_setP Hj.
     by apply/eqP/(Hj x).
 - move => x_in_HPolyEq_implicit.
-  apply/(charact_implicit_eq x).
+  apply/(charact_implicit_eq_set x).
   rewrite hpolyEq_inE.
   apply/andP; split; rewrite hpolyEq_inE in x_in_HPolyEq_implicit.
   + by move/andP/proj1: x_in_HPolyEq_implicit.
   + apply/forallP => j.
     apply/implyP => j_in_JQ.
-    move/(subsetP (eq_set_subset_implicit_eq (HPolyEq JQ))): j_in_JQ => j_in_implicit.
+    move/(subsetP (eq_set_subset_implicit_eq_set (HPolyEq JQ))): j_in_JQ => j_in_implicit.
     move/andP/proj2: x_in_HPolyEq_implicit => /forallP sat_in_implicit.
     by apply: (implyP (sat_in_implicit j)).
 Qed.
@@ -605,7 +659,7 @@ Section RelativeInterior.
 
 Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
       (Q : 'hpolyNF('P(A,b))) :
-        exists x, (x \in Q /\ (forall i, i \notin (\eq_set Q) -> (A *m x) i 0 > b i 0)).
+        exists x, (x \in Q /\ (forall i, i \notin (\eq Q) -> (A *m x) i 0 > b i 0)).
 Proof.
 Admitted.
 
@@ -655,32 +709,32 @@ Definition inE := (poly_inE, inE).
 
 Section Mixins.
 
-Let of_hpolyEqS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyNF(Q) } :=
+Let of_hpolyNFS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyNF(Q) } :=
   Tagged (fun Q : ('hpoly[R]_n) => 'hpolyNF(Q)) (hpolyeq_with_base P).
 
-Fact of_hpolyEqSK : cancel of_hpolyEqS (fun x => HPolyEqS (tagged x)).
+Fact of_hpolyNFSK : cancel of_hpolyNFS (fun x => HPolyNFS (tagged x)).
 Proof.
 by move => P; case: P.
 Qed.
 
-Definition hpolyEqS_eqMixin := CanEqMixin of_hpolyEqSK.
-Canonical hpolyEqS_eqType := Eval hnf in EqType 'hpolyEq[R]_n hpolyEqS_eqMixin.
+Definition hpolyNFS_eqMixin := CanEqMixin of_hpolyNFSK.
+Canonical hpolyNFS_eqType := Eval hnf in EqType 'hpolyEq[R]_n hpolyNFS_eqMixin.
 
-Definition hpolyEqS_choiceMixin := CanChoiceMixin of_hpolyEqSK.
-Canonical hpolyEqS_choiceType :=
-  Eval hnf in ChoiceType 'hpolyEq[R]_n hpolyEqS_choiceMixin.
+Definition hpolyNFS_choiceMixin := CanChoiceMixin of_hpolyNFSK.
+Canonical hpolyNFS_choiceType :=
+  Eval hnf in ChoiceType 'hpolyEq[R]_n hpolyNFS_choiceMixin.
 
 End Mixins.
 
 (* TODO: not working, why ??? *)
 (*
-Definition implicit_eq (Q: hpolyEq) :=
+Definition implicit_eq_set (Q: hpolyEq) :=
   let: 'P^= (P; _) := Q in
   let: 'P(A,b) as P := P in
   [ set i : 'I_(#ineq P) |
     is_included_in_hyperplane Q (row i A)^T (b i 0) ].
 
-Definition implicit_eq (Q: hpolyEq) :=
+Definition implicit_eq_set (Q: hpolyEq) :=
   match Q return {set 'I_(#ineq (\base Q))} with
   | HPolyEq (Hpoly _ A b as P) _ =>
   [ set i | is_included_in_hyperplane Q (row i A)^T (b i 0) ]
@@ -688,7 +742,7 @@ Definition implicit_eq (Q: hpolyEq) :=
 *)
 
 (* This work but apparently this is not very usable *)
-(*Definition implicit_eq (Q: hpolyEq) :=
+(*Definition implicit_eq_set (Q: hpolyEq) :=
   let: 'P(A, b) as P := \base Q in
   [ set i : 'I_(#ineq P) |
     is_included_in_hyperplane Q (row i A)^T (b i 0) ].*)
@@ -700,11 +754,11 @@ End HPolyEq.
 
 Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
 Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
-Notation "''hpolyEq[' R ]_ n" := (hpolyEqS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing). (* RK: Isn't it hpolyEqS here?*)
+Notation "''hpolyEq[' R ]_ n" := (hpolyNFS R n) (at level 0, format "''hpolyEq[' R ]_ n").
+Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing). (* RK: Isn't it hpolyNFS here?*)
 Notation "\base P" := (base P) (at level 0, format "\base P").
-Notation "\eq_set P" := (eq_set P) (at level 0, format "\eq_set P").
-Notation "''P^=' ( P ; J )" := (@HPolyEqS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
+Notation "\eq P" := (eq_set P) (at level 0, format "\eq P").
+Notation "''P^=' ( P ; J )" := (@HPolyNFS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
 Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
 
 Section ExtensionalEqualityEq.
@@ -761,7 +815,7 @@ Variable P : 'hpolyNF(base).
 
 Definition hface_of :=
   [ pred Q : 'hpolyEq[R]_n |
-    non_empty Q && [exists R : 'hpolyNF(base), (\eq_set P \subset \eq_set R) && (Q ==e (HPolyEqS R)) ] ].
+    non_empty Q && [exists R : 'hpolyNF(base), (\eq P \subset \eq R) && (Q ==e (HPolyNFS R)) ] ].
 
 Hypothesis P_non_empty : non_empty P.
 
@@ -796,7 +850,7 @@ Definition opt_value := opt_value.
 End HPolyPrim.
 
 (*
-Definition normal_form P := HPolyEq (implicit_eq P).
+Definition normal_form P := HPolyEq (implicit_eq_set P).
 
 Lemma normal_formP (P : hpolyEq) :
   (* TODO: perhaps we should use ext_eq over polyhedra rather than over boolean predicates *)
@@ -820,7 +874,7 @@ Admitted.
   + exact: (proj1 (andP x_in_nf)).
   + apply/forallP => i.
     apply/implyP => i_in_I_P.
-    exact: ((implyP ((forallP (proj2 (andP x_in_nf))) i)) ((subsetP (subset_of_implicit_eq P)) _ i_in_I_P)).
+    exact: ((implyP ((forallP (proj2 (andP x_in_nf))) i)) ((subsetP (subset_of_implicit_eq_set P)) _ i_in_I_P)).
 Qed.*)
 
 End HPolyEq.
@@ -831,7 +885,7 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition has_normal_form (P : 'hpolyEq[R]_n) :=
-  (\eq_set P == implicit_eq P).
+  (\eq P == implicit_eq_set P).
 
 Lemma has_normal_formP P :
   has_normal_form P = (P == normal_form P).
@@ -851,10 +905,10 @@ Fact normal_form_has_normal_form P :
 Proof. (*RK*)
 rewrite /has_normal_form eqEsubset.
 apply/andP; split.
-- exact: subset_of_implicit_eq.
-- apply/subsetP => i /implicit_eqP i_in_I_nfP.
+- exact: subset_of_implicit_eq_set.
+- apply/subsetP => i /implicit_eq_setP i_in_I_nfP.
   rewrite /normal_form /=.
-  apply/implicit_eqP => x x_in_P.
+  apply/implicit_eq_setP => x x_in_P.
   apply: i_in_I_nfP.
   by rewrite -(normal_formP P x).
 Qed.
@@ -907,7 +961,7 @@ Definition hface_of :=
   [qualify a Q: 'hpolyEq[R]_n |
     non_empty Q &&
     [exists J : {set 'I_(#ineq \base P)},
-        (\eq_set P \subset J) && (Q ==e 'P^=(\base P; J)) ]].
+        (\eq P \subset J) && (Q ==e 'P^=(\base P; J)) ]].
 
 Hypothesis P_non_empty : non_empty P.
 
@@ -928,3 +982,42 @@ Definition opt_point := opt_point.
 Definition opt_value := opt_value.
 
 End HPolyPrim.*)
+
+
+(*Definition recession_dir (P : hpoly) d :=
+  let: 'P(A,b) := P in
+    (Simplex.feasible A b) && (feasible_dir A d).
+
+Lemma recession_dirP (P : hpoly) d :
+  reflect ((exists y, y \in P) /\ (forall x, forall lambda, x \in P -> lambda >= 0 -> x + lambda *: d \in P))
+          (recession_dir P d).
+Proof.
+case: P => m A b.
+apply: (iffP idP) => [/andP [feasible feasible_dir] | [feasible recession_cond]].
+- split.
+  + exact: (Simplex.feasibleP _ _ feasible).
+  + move => x lambda x_in_P lambda_pos.
+    rewrite inE mulmxDr -[b]addr0.
+    apply: lev_add; first exact: x_in_P.
+    rewrite -scalemxAr -(scaler0 _ lambda).
+    by apply: lev_wpscalar.
+- apply/andP; split.
+  + by apply/Simplex.feasibleP.
+  + apply/contraT.
+    rewrite negb_forall.
+    move/existsP => [i infeasible_dir_i].
+    rewrite -ltrNge ![X in _ < X]mxE in infeasible_dir_i.
+    move: feasible => [y y_in_P].
+    set lambda := ((b i 0 -(A *m y) i 0 - 1)*((A *m d) i 0)^-1).
+    have lambda_is_pos: 0 <= lambda.
+      rewrite -invr_lt0 in infeasible_dir_i.
+      rewrite (nmulr_lge0 _ infeasible_dir_i) subr_le0 ler_subl_addl.
+      apply: ler_paddr; [exact: ler01 | exact: ((forallP y_in_P) i)].
+    move: (recession_cond _ _  y_in_P lambda_is_pos) => contradic.
+    rewrite inE mulmxDr -scalemxAr in contradic.
+    move: ((forallP contradic) i).
+    rewrite mxE [(lambda *: (A *m d)) i 0]mxE -mulrA mulVf; last by apply: ltr0_neq0.
+    by rewrite mulr1 -ler_subl_addl ler_addl ler0N1.
+Qed.
+
+End Def.*)
