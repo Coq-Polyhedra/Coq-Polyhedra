@@ -367,6 +367,8 @@ End HPrim.
 
 Import HPrim.
 
+Canonical HPrim.hpoly_equiv_rel.
+
 Section HPolyEq.
 
 Section Def.
@@ -667,146 +669,20 @@ apply/implyP => i_in_eq_set_P.
 exact: ((implyP (sat_in_JQ i)) (((subsetP eq_set_inclusion) i) i_in_eq_set_P)).
 Qed.
 
+End PropEqNF.
+
 (* TODO: define a point in the relative interior *)
-Section RelativeInterior.
+(*Section RelativeInterior.
 
 Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
-      (Q : 'hpolyNF('P(A,b))) :
-        exists x, (x \in Q /\ (forall i, i \notin (\eq Q) -> (A *m x) i 0 > b i 0)).
+      (Q : 'hpolyEq('P(A,b))) :
+        exists x, (x \in Q /\ (forall i, i \notin (\active Q) -> (A *m x) i 0 > b i 0)).
 Proof.
-Admitted.let: HPolyNF Q' _ := Q in Q'
+Admitted.
 
-End RelativeInterior.
+End RelativeInterior.*)
 
-Section Ex2.
-Variable Q : 'hpolyEq[R]_n.
-
-Fact bar x : x \in Q.
-Proof.
-case: Q => [[m A b] [[J] ?]] /=.
-rewrite hpolyEq_inE.
-Abort.
-
-End Ex2.
-
-(*Section Ex.
-
-(* TODO: none below is working, why? *)
-
-(*Let foo (Q : hpolyEq) :=
-  let: 'P^=(A, b ; J) := Q return 'M[R]_(#ineq \base Q, n) in A.*)
-
-(* This one is working *)
-(* but is there a way to shorten it? *)
-(*Let foo (Q : hpolyEq) :=
-  let: 'P^=(P; _) := Q return 'M[R]_(#ineq \base Q, n) in
-  let: 'P(A,_) := P return 'M[R]_(#ineq P, n) in A.*)
-
-(* This one is also working _but_ we need the 'as P' and to
-   use the type 'M[R]_(#ineq P, n) as a return type *)
-(*Let foo (base: 'hpoly[R]_n) (Q : hpolyEq base) :=
-  let: 'P(A,b) as P := base return 'M[R]_(#ineq P, n) in A.*)
-
-Variable m : nat.
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-
-Check ('P (A,b)).
-Variable I : {set 'I_m}.
-Check 'P^= (A,b;I).
-End Ex.*)
-
-
-Definition poly_inE := hpolyEq_inE.
-Definition inE := (poly_inE, inE).
-
-Section Mixins.
-
-Let of_hpolyNFS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyNF(Q) } :=
-  Tagged (fun Q : ('hpoly[R]_n) => 'hpolyNF(Q)) (hpolyeq_with_base P).
-
-Fact of_hpolyNFSK : cancel of_hpolyNFS (fun x => HPolyNFS (tagged x)).
-Proof.
-by move => P; case: P.
-Qed.
-
-Definition hpolyNFS_eqMixin := CanEqMixin of_hpolyNFSK.
-Canonical hpolyNFS_eqType := Eval hnf in EqType 'hpolyEq[R]_n hpolyNFS_eqMixin.
-
-Definition hpolyNFS_choiceMixin := CanChoiceMixin of_hpolyNFSK.
-Canonical hpolyNFS_choiceType :=
-  Eval hnf in ChoiceType 'hpolyEq[R]_n hpolyNFS_choiceMixin.
-
-End Mixins.
-
-(* TODO: not working, why ??? *)
 (*
-Definition implicit_eq_set (Q: hpolyEq) :=
-  let: 'P^= (P; _) := Q in
-  let: 'P(A,b) as P := P in
-  [ set i : 'I_(#ineq P) |
-    is_included_in_hyperplane Q (row i A)^T (b i 0) ].
-
-Definition implicit_eq_set (Q: hpolyEq) :=
-  match Q return {set 'I_(#ineq (\base Q))} with
-  | HPolyEq (Hpoly _ A b as P) _ =>
-  [ set i | is_included_in_hyperplane Q (row i A)^T (b i 0) ]
-  end.
-*)
-
-(* This work but apparently this is not very usable *)
-(*Definition implicit_eq_set (Q: hpolyEq) :=
-  let: 'P(A, b) as P := \base Q in
-  [ set i : 'I_(#ineq P) |
-    is_included_in_hyperplane Q (row i A)^T (b i 0) ].*)
-
-
-End UnfixedBase.
-
-End HPolyEq.
-
-Notation "''hpolyNF(' base )" := (@hpolyNF _ _ base) (at level 0, format "''hpolyNF(' base )").
-Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base) (at level 0, format "''hpolyEq(' base )").
-Notation "''hpolyEq[' R ]_ n" := (hpolyNFS R n) (at level 0, format "''hpolyEq[' R ]_ n").
-Notation "''hpolyEq_' n" := (hpolyEq _ n) (at level 0, only parsing). (* RK: Isn't it hpolyNFS here?*)
-Notation "\base P" := (base P) (at level 0, format "\base P").
-Notation "\eq P" := (eq_set P) (at level 0, format "\eq P").
-Notation "''P^=' ( P ; J )" := (@HPolyNFS _ _ P (HPolyEq J)) (at level 0, format "''P^=' ( P ; J )").
-Notation "''P^=' ( A , b ; J )" := 'P^=('P (A,b);J) (at level 0, format "''P^=' ( A ,  b ;  J )").
-
-Section ExtensionalEqualityEq.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | hpoly_ext_eq P Q ].
-
-Lemma hpolyEq_ext_eq_refl :
-  reflexive hpolyEq_ext_eq.
-Proof.
-move => P /=; rewrite ?eqmodE.
-exact: equiv_refl.
-Qed.
-
-Lemma hpolyEq_ext_eq_sym :
-  symmetric hpolyEq_ext_eq.
-Proof.
-move => P Q /=; rewrite ?eqmodE.
-exact: equiv_sym.
-Qed.
-
-Lemma hpolyEq_ext_eq_trans :
-  transitive hpolyEq_ext_eq.
-Proof.
-move => P Q S /=; rewrite ?eqmodE.
-exact: equiv_trans.
-Qed.
-
-Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
-  EquivRel hpolyEq_ext_eq hpolyEq_ext_eq_refl hpolyEq_ext_eq_sym hpolyEq_ext_eq_trans.
-
-End ExtensionalEqualityEq.
-
 
 Notation "P ==e Q" := (P == Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
 Notation "P =e Q" := (P = Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT.
@@ -861,6 +737,7 @@ Definition opt_point := opt_point.
 Definition opt_value := opt_value.
 
 End HPolyPrim.
+ *)
 
 (*
 Definition normal_form P := HPolyEq (implicit_eq_set P).

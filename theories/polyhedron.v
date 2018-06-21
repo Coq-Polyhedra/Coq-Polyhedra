@@ -18,9 +18,44 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Module H := hpolyhedron.
-(* TODO: this should not refer to this module,
-   but to a dedicated module of hpolyhedron which should be exported *)
+Section ExtensionalEqualityEq.
+(* Instead of this, we should declare a structure such that
+ * =i is equivalent to a decidable relation                 *)
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Import HPrim. (* we need to import HPrim to benefit from
+               * the canonical structure on hpoly_ext_eq *)
+
+Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | hpoly_ext_eq P Q ].
+
+Lemma hpolyEq_ext_eq_refl :
+  reflexive hpolyEq_ext_eq.
+Proof.
+move => P /=; rewrite ?eqmodE.
+exact: equiv_refl.
+Qed.
+
+Lemma hpolyEq_ext_eq_sym :
+  symmetric hpolyEq_ext_eq.
+Proof.
+move => P Q /=; rewrite ?eqmodE.
+exact: equiv_sym.
+Qed.
+
+Lemma hpolyEq_ext_eq_trans :
+  transitive hpolyEq_ext_eq.
+Proof.
+move => P Q S /=; rewrite ?eqmodE.
+exact: equiv_trans.
+Qed.
+
+Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
+  EquivRel hpolyEq_ext_eq hpolyEq_ext_eq_refl hpolyEq_ext_eq_sym hpolyEq_ext_eq_trans.
+
+End ExtensionalEqualityEq.
+
 
 Section Def.
 
