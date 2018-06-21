@@ -149,6 +149,22 @@ CoInductive lp_state c P : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
 Lemma lp_stateP c P : (* TODO: prove it! *)
   lp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
+case: P => m A b.
+rewrite  /opt_point /non_empty /bounded /unbounded.
+case: (Simplex.simplexP A b c) =>
+    [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty
+  | [x d] /= [Hx Hd Hd']
+  | [_ u] /= [_ /(intro_existsT (Simplex.dual_feasibleP _ _)) Hu _]].
+- move/negP/negbTE: (P_empty) ->.
+  have /negP/negbTE ->: ~ (Simplex.bounded A b c).
+  - move/Simplex.boundedP => [[x] [x_in_P _]] _.
+    by move/(intro_existsT (Simplex.feasibleP _ _)): x_in_P.
+  have /negP/negbTE ->: ~ (Simplex.unbounded A b c).
+  - move/Simplex.unboundedP/(_ 0) => [x [x_in_P _]].
+    by move/(intro_existsT (Simplex.feasibleP _ _)): x_in_P.
+  constructor.
+  move => x; rewrite [RHS]inE; apply/negbTE/negP.
+  by move/(intro_existsT (Simplex.feasibleP _ _)).
 Admitted.
 
 Lemma non_emptyP P :
@@ -654,7 +670,7 @@ Qed.
 (* TODO: define a point in the relative interior *)
 Section RelativeInterior.
 
-Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) 
+Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
       (Q : 'hpolyNF('P(A,b))) :
         exists x, (x \in Q /\ (forall i, i \notin (\eq Q) -> (A *m x) i 0 > b i 0)).
 Proof.
