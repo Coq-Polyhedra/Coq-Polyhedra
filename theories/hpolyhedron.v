@@ -184,9 +184,9 @@ Lemma bounded_certP c P :
 Proof.
 case: P => m A b.
 move => P_non_empty.
-suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b).
-- exact: Simplex.infeasible_or_boundedP.
-- by rewrite P_non_empty /=.
+suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b)
+  by exact: Simplex.infeasible_or_boundedP.
+by rewrite P_non_empty /=.
 Qed.
 
 Lemma opt_value_is_optimal c P x :
@@ -390,9 +390,6 @@ Proof.
 by case.
 Qed.
 
-Notation "''hpolyEq(' base )" := (@hpolyEq _ _ base).
-Notation "\eq P" := (equality_set P).
-
 Definition hpolyEq_eqMixin := CanEqMixin eq_setK.
 Canonical hpolyEq_eqType := Eval hnf in EqType 'hpolyEq(base) hpolyEq_eqMixin.
 Definition hpolyEq_choiceMixin := CanChoiceMixin eq_setK.
@@ -416,13 +413,11 @@ Variable n : nat.
 
 Definition active_set (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
   let: 'P(A,b) as P' := base return {set 'I_(#ineq P')} in
-    [ set i : 'I_(#ineq P') |
-      is_included_in_hyperplane Q (row i A)^T (b i 0) ].
+    [ set i : 'I_(#ineq P') | is_included_in_hyperplane Q (row i A)^T (b i 0) ].
 
 Notation "\active Q" := (active_set Q).
 
-Lemma activeP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
-      (Q : 'hpolyEq('P(A,b))) i :
+Lemma activeP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyEq('P(A,b))) i :
   reflect (forall x, x \in Q -> (A *m x) i 0 = b i 0)
           (i \in \active Q).
 Proof.
@@ -469,7 +464,7 @@ Variable n : nat.
 Let of_hpolyEqS (P : 'hpolyEq[R]_n) : { Q : 'hpoly[R]_n & 'hpolyEq(Q) } :=
   Tagged (fun Q : ('hpoly[R]_n) => 'hpolyEq(Q)) (hpolyEq_with_base P).
 
-Fact of_hpolyEqSK : cancel of_hpolyEqS (fun x => HPolyEqS (tagged x)).
+Fact of_hpolyEqSK : cancel of_hpolyEqS (fun P => HPolyEqS (tagged P)).
 Proof.
 by move => P; case: P.
 Qed.
@@ -509,6 +504,7 @@ Section HPolyNFStruct.
 
 Definition hpolyEq_of_hpolyNF (R : realFieldType) (n : nat) (Q : 'hpolyNF[R]_n) :=
   let: HPolyNF Q' _ := Q in Q'.
+
 Coercion hpolyEq_of_hpolyNF : hpolyNF >-> hpolyEqS.
 
 Variable R : realFieldType.
@@ -658,11 +654,11 @@ Qed.
 (* TODO: define a point in the relative interior *)
 Section RelativeInterior.
 
-Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m)
+Lemma hpolyNF_relint_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) 
       (Q : 'hpolyNF('P(A,b))) :
         exists x, (x \in Q /\ (forall i, i \notin (\eq Q) -> (A *m x) i 0 > b i 0)).
 Proof.
-Admitted.
+Admitted.let: HPolyNF Q' _ := Q in Q'
 
 End RelativeInterior.
 
