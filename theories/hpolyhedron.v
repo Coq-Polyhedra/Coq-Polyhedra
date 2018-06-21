@@ -367,8 +367,6 @@ End HPrim.
 
 Import HPrim.
 
-Canonical HPrim.hpoly_equiv_rel.
-
 Section HPolyEq.
 
 Section Def.

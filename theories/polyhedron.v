@@ -15,10 +15,14 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Reserved Notation "p1 =i p2"
+  (at level 70, format "'[hv' p1 '/ '  =i  p2 ']'", no associativity).
+Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
+
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Section ExtensionalEqualityEq.
+Section ExtensionalEqualityNF.
 (* Instead of this, we should declare a structure such that
  * =i is equivalent to a decidable relation                 *)
 
@@ -28,55 +32,55 @@ Variable n : nat.
 Import HPrim. (* we need to import HPrim to benefit from
                * the canonical structure on hpoly_ext_eq *)
 
-Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | hpoly_ext_eq P Q ].
+Definition hpolyNF_ext_eq := [ rel P Q : 'hpolyNF[R]_n | hpoly_ext_eq P Q ].
 
-Lemma hpolyEq_ext_eq_refl :
-  reflexive hpolyEq_ext_eq.
+Lemma hpolyNF_ext_eq_refl :
+  reflexive hpolyNF_ext_eq.
 Proof.
 move => P /=; rewrite ?eqmodE.
 exact: equiv_refl.
 Qed.
 
-Lemma hpolyEq_ext_eq_sym :
-  symmetric hpolyEq_ext_eq.
+Lemma hpolyNF_ext_eq_sym :
+  symmetric hpolyNF_ext_eq.
 Proof.
 move => P Q /=; rewrite ?eqmodE.
 exact: equiv_sym.
 Qed.
 
-Lemma hpolyEq_ext_eq_trans :
-  transitive hpolyEq_ext_eq.
+Lemma hpolyNF_ext_eq_trans :
+  transitive hpolyNF_ext_eq.
 Proof.
 move => P Q S /=; rewrite ?eqmodE.
 exact: equiv_trans.
 Qed.
 
-Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
-  EquivRel hpolyEq_ext_eq hpolyEq_ext_eq_refl hpolyEq_ext_eq_sym hpolyEq_ext_eq_trans.
+Canonical hpolyNF_equiv_rel : equiv_rel 'hpolyNF[R]_n :=
+  EquivRel hpolyNF_ext_eq hpolyNF_ext_eq_refl hpolyNF_ext_eq_sym hpolyNF_ext_eq_trans.
 
-End ExtensionalEqualityEq.
+End ExtensionalEqualityNF.
 
+Implicit Arguments hpolyNF_equiv_rel [R n].
+
+Notation "P =e Q" := (hpolyNF_equiv_rel P Q).
 
 Section Def.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Notation hpolyEq_rel := (hpolyEq_equiv_rel R n).
-
-Definition polyhedron := {eq_quot hpolyEq_rel}%qT.
+Definition polyhedron := {eq_quot (@hpolyNF_equiv_rel R n)}%qT.
 Canonical polyhedron_eqType := [eqType of polyhedron].
 Canonical polyhedron_choiceType := [choiceType of polyhedron].
-(*Canonical polyhedron_quotType := [quotType of polyhedron].*)
-Canonical polyhedron_eqQuotType := [eqQuotType hpolyEq_rel of polyhedron].
+Canonical polyhedron_eqQuotType := [eqQuotType (@hpolyNF_equiv_rel R n) of polyhedron].
 
-Notation "''[' P ]" := (\pi P)%qT (at level 0, format "''[' P ]").
+Notation "''[' P ]" := (@Pi.f _ _ (Phant _) P).
 
 Notation polyE := piE.
 Notation hpoly := repr.
 Notation hpolyK := reprK.
 
-CoInductive hpoly_spec (P : polyhedron) : 'hpoly[R]_n -> Type :=
+CoInductive hpoly_spec (P : polyhedron) : 'hpolyNF[R]_n -> Type :=
   HpolySpec Q of (P = ('[ Q ])) : hpoly_spec P Q.
 
 Lemma hpolyP (P : polyhedron) :
@@ -92,7 +96,9 @@ Lemma mem_polyhedron_quotP x :
   { mono \pi_(polyhedron_eqQuotType)%qT : P / x \in P >-> (x \in mem_polyhedron P) }.
 Proof. (* RK *)
 unlock mem_polyhedron => P /=.
-by case: (hpolyP '[ P ]) => Q /hpoly_eqP ?.
+case: (hpolyP '[ P ]) => Q.
+move/eqmodP.
+/hpoly_eqP ?.
 Qed.
 
 Canonical mem_polyhedron_quot x :=
