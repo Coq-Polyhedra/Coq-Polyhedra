@@ -152,20 +152,43 @@ Proof.
 case: P => m A b.
 rewrite  /opt_point /non_empty /bounded /unbounded.
 case: (Simplex.simplexP A b c) =>
-    [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty
-  | [x d] /= [Hx Hd Hd']
-  | [_ u] /= [_ /(intro_existsT (Simplex.dual_feasibleP _ _)) Hu _]].
+    [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty |
+      [x d] /= [Hx Hd Hd'] | [x d] /= [Hx Hd Hdx] ].
 - move/negP/negbTE: (P_empty) ->.
   have /negP/negbTE ->: ~ (Simplex.bounded A b c).
-  - move/Simplex.boundedP => [[x] [x_in_P _]] _.
+    move/Simplex.boundedP => [[x] [x_in_P _]] _.
     by move/(intro_existsT (Simplex.feasibleP _ _)): x_in_P.
   have /negP/negbTE ->: ~ (Simplex.unbounded A b c).
-  - move/Simplex.unboundedP/(_ 0) => [x [x_in_P _]].
+    move/Simplex.unboundedP/(_ 0) => [x [x_in_P _]].
     by move/(intro_existsT (Simplex.feasibleP _ _)): x_in_P.
   constructor.
   move => x; rewrite [RHS]inE; apply/negbTE/negP.
   by move/(intro_existsT (Simplex.feasibleP _ _)).
-Admitted.
+- have feasible_A_b: Simplex.feasible A b.
+    by apply/Simplex.feasibleP; exists x.
+  have unbounded_A_b_c: Simplex.unbounded A b c.
+    apply/Simplex.unboundedP_cert.
+    by exists (x , d).
+  have /negbTE ->: ~~ (Simplex.bounded A b c).
+    by rewrite -(Simplex.unbounded_is_not_bounded c feasible_A_b).
+  rewrite feasible_A_b unbounded_A_b_c.
+  constructor.
+  move => K.
+  exact: (unbounded_certificate K Hx Hd Hd').
+- have feasible_A_b: Simplex.feasible A b.
+    by apply/Simplex.feasibleP; exists x.
+  have bounded_A_b_c: Simplex.bounded A b c.
+    apply/Simplex.boundedP_lower_bound; first exact: feasible_A_b.
+    exists '[ b, d].
+    by apply/dual_feasible_bounded.
+  have /negbTE ->: ~~ (Simplex.unbounded A b c).
+    by rewrite -(Simplex.bounded_is_not_unbounded c feasible_A_b).
+  rewrite feasible_A_b bounded_A_b_c.
+  constructor.
+  split.
+  + exact: Simplex.opt_point_is_feasible.
+  + exact: (proj2 (Simplex.boundedP _ _ _ bounded_A_b_c)).
+Qed.
 
 Lemma non_emptyP P :
   reflect (exists x, x \in P) (non_empty P).
