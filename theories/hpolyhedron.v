@@ -680,39 +680,160 @@ Admitted.
 
 End RelativeInterior.*)
 
-(*
+Notation "P ==e Q" := (P == Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
+Notation "P =e Q" := (P = Q %[mod_eq (hpoly_equiv_rel _ _)])%qT.
 
-Notation "P ==e Q" := (P == Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT (at level 0).
-Notation "P =e Q" := (P = Q %[mod_eq (hpolyEq_equiv_rel _ _)])%qT.
-
-Lemma hpoly_eqP (R : realFieldType) (n : nat) (P Q : 'hpolyEq[R]_n) :
+Lemma hpoly_eqP (R : realFieldType) (n : nat) (P Q : 'hpoly[R]_n) :
   (P =i Q) <-> (P =e Q).
 Proof.
-apply: (rwP2 (b := hpolyEq_ext_eq _ _ P Q)).
+apply: (rwP2 (b := hpoly_equiv_rel _ _ P Q)).
 - exact: hpoly_ext_eqP.
 - exact: eqmodP.
 Qed.
 
-Section HFace.
+Section hpolyFace.
+
+Section Def.
 
 Variable n : nat.
 Variable R : realFieldType.
-Variable base : 'hpoly[R]_n.
-Variable P : 'hpolyNF(base).
+Variable P : 'hpoly[R]_n.
 
-Definition hface_of :=
-  [ pred Q : 'hpolyEq[R]_n |
-    non_empty Q && [exists R : 'hpolyNF(base), (\eq P \subset \eq R) && (Q ==e (HPolyNFS R)) ] ].
+Definition hpoly_face_of :=
+  [ pred F : 'hpoly[R]_n | non_empty F && [exists Q : 'hpolyEq(P), F ==e Q ] ].
 
-Hypothesis P_non_empty : non_empty P.
+End Def.
 
-Lemma hface_ofP (Q : 'hpolyEq[R]_n) :
-  reflect (exists c, bounded c P /\ forall x, (x \in P -> (Some '[c,x] = opt_value c P <-> x \in Q)))
-          (hface_of Q).
+Variable n : nat.
+Variable R : realFieldType.
+
+Lemma hpoly_face_ofP (P : 'hpoly[R]_n) (F : 'hpolyEq[R]_n) :
+  non_empty P -> 
+    reflect (exists c, bounded c P /\ forall x, ((x \in P /\ Some '[c,x] = opt_value c P) <-> x \in F))
+            (hpoly_face_of P F).
 Proof.
-Admitted.
+case: P F => [m A b] F.
+move => P_non_empty.
+apply: (iffP idP).
+- move => /andP [F_non_empty /existsP [Q /eqP/hpoly_eqP F_eq_Q]].
+  move: F_eq_Q.
+  case: Q => [JQ] F_eq_Q.
+  pose I := JQ.
+  pose AI := row_submx A I.
+  pose e := const_mx 1: 'cV[R]_#|I|.
+  have e_is_non_neg: e >=m 0 by apply/forallP => i; rewrite !mxE; exact: ler01. 
+  pose c := AI^T *m e.
+  pose opt_v := '[e, row_submx b I].
+  have c_lower_bound: forall x, x \in 'P(A,b) -> '[c,x] >= opt_v.
+    move => x.
+    rewrite inE.
+    move/(row_submx_lev I)/(vdot_lev e_is_non_neg).
+    by rewrite row_submx_mul vdot_mulmx -/c.
+  have F_reaches_lower_bound: forall x, x \in F -> '[c,x] = opt_v.
+    move => x.
+    rewrite F_eq_Q hpolyEq_inE.
+    move/andP => [_ /forall_inP x_active_ineq].
+    rewrite -vdot_mulmx -row_submx_mul /opt_v.
+    apply: congr1.
+    apply/row_submx_colP => i i_in_I.
+    apply/eqP; exact: x_active_ineq.
+  have opt_value_eq_lower_bound: opt_value c 'P(A, b) = Some opt_v.
+    move/non_emptyP: F_non_empty => [x x_in_F].
+    move/F_reaches_lower_bound: (x_in_F) => x_is_opt.
+    move: x_in_F.
+    rewrite F_eq_Q hpolyEq_inE -x_is_opt.
+    move/andP/proj1 => x_in_P.
+    rewrite -x_is_opt in c_lower_bound.
+    exact: (opt_value_is_optimal x_in_P c_lower_bound).
+  have eq_lower_bound_in_F: forall x, x \in 'P(A, b) -> '[c,x] = opt_v -> x \in F.
+    move => x x_in_P x_is_opt.
+    suff /row_submx_colP row_submx_eq: (row_submx (A *m x) I = row_submx b I).
+      rewrite F_eq_Q hpolyEq_inE.
+      apply/andP; split.
+      + exact: x_in_P.
+      + apply/forall_inP => i i_in_I.
+        apply/eqP; exact: row_submx_eq.
+    move: x_is_opt.
+    rewrite -vdot_mulmx -row_submx_mul /opt_v.
+    apply: vdot_lev_eq.
+    + by apply/forallP => i; rewrite !mxE ltr01.
+    + by apply: row_submx_lev.
+  exists c; split.
+  + move/addbP: (bounded_xor_unbounded c P_non_empty).
+    move/negbRL => ->.
+    apply/negP; move/unboundedP/(_ opt_v) => [x [x_in_P x_obj]].
+    move: (c_lower_bound _ x_in_P).
+    by move/(ltr_le_trans x_obj); rewrite ltrr.
+  + rewrite opt_value_eq_lower_bound.
+    move => x.
+    split.
+    * move => [x_in_P /Some_inj x_is_opt].
+      exact: ((eq_lower_bound_in_F x) x_in_P x_is_opt).
+    * move => x_in_F.
+      split.
+      - rewrite F_eq_Q hpolyEq_inE in x_in_F.
+        exact: (proj1 (andP x_in_F)).
+      - by rewrite (F_reaches_lower_bound x x_in_F).
+- move => [c [bounded_c_P F_is_opt]].
+  case: (Simplex.simplexP A b c).
+  + move => d /(intro_existsT (Simplex.infeasibleP A b))/negP.
+    unlock in P_non_empty; rewrite /= in P_non_empty.
+    by rewrite P_non_empty.
+  + move => ? /(intro_existsT (Simplex.unboundedP_cert A b c)).
+    have ->: Simplex.unbounded A b c = unbounded c 'P(A, b) by unlock unbounded.
+    by rewrite -(addbP (bounded_xor_unbounded c P_non_empty)) bounded_c_P.
+  + move => [x u] /= [x_in_polyhedron_P u_in_dualpolyhedron_P x_eq_value_u].
+    apply/andP; split.
+    * move/boundedP: bounded_c_P => [y [y_in_P y_is_opt]].
+      apply/non_emptyP; exists y.
+      apply/(F_is_opt y); split; [exact: y_in_P | by rewrite (opt_value_is_optimal y_in_P y_is_opt)].
+    * pose I := [set i | u i 0 > 0]: {set 'I_#ineq('P(A, b))}.
+      pose Q := HPolyEq I.
+      apply/existsP.
+      exists Q.
+      have opt_value_active_cons: forall y, y \in 'P(A, b) ->
+            ((Some '[c,y] == opt_value c 'P(A, b)) = [forall i in I, (A *m y) i 0 == b i 0]).
+        move => y y_in_P.
+        have ->: opt_value c 'P(A, b) = Some '[b,u].
+          move/eqP: (x_eq_value_u).
+          rewrite -simplex.duality_gap_eq0_def => /eqP.
+          move/(simplex.duality_gap_eq0_optimality x_in_polyhedron_P u_in_dualpolyhedron_P).
+          rewrite -x_eq_value_u.
+          have x_in_P: x \in 'P(A, b) by done.
+          by apply: (opt_value_is_optimal x_in_P).
+        have ->: (Some '[ c, y] == Some '[ b, u]) = ('[ c, y] == '[ b, u])
+            by apply/idP/idP; [move/eqP/Some_inj/eqP | move/eqP ->].
+        rewrite -simplex.duality_gap_eq0_def (simplex.compl_slack_cond_duality_gap_equiv (A := A)) //.
+        apply/(sameP (simplex.compl_slack_condP _ _ _ _)).
+        apply: (iffP forall_inP) => [active_ineq j | active_ineq j].
+        + case: (ler0P (u j 0)) => [uj_is_non_pos | uj_is_pos].
+          * move: u_in_dualpolyhedron_P; rewrite inE => /andP [_].
+            move/forallP/(_ j); rewrite mxE.
+            by move/(conj uj_is_non_pos)/andP/ler_anti; left.
+          * right; by apply/eqP/active_ineq; rewrite inE.
+        + rewrite inE => /lt0r_neq0 uj_neq0.
+          move/(_ j): active_ineq.
+          by case; [move/eqP: uj_neq0 | move/eqP].
+      apply/eqP/hpoly_eqP => y.
+      apply/idP/idP => [y_in_F | y_in_Q].
+      + rewrite hpolyEq_inE.
+        apply/andP.
+        move/(F_is_opt y): y_in_F => [y_in_P /eqP y_is_opt].
+        split.
+        * exact: y_in_P.
+        * by rewrite (opt_value_active_cons y y_in_P) in y_is_opt.
+      + rewrite hpolyEq_inE in y_in_Q.
+        move: y_in_Q => /andP [y_in_P sat_in_I].
+        apply/F_is_opt.
+        split.
+        * exact: y_in_P.
+        * apply/eqP.
+          by rewrite (opt_value_active_cons y y_in_P).
+Qed.
 
-End HFace.
+End hpolyFace.
+
+(*Section HFace.
 
 Lemma has_face_imp_non_empty (R : realFieldType) (n : nat) (base : 'hpoly[R]_n) (P : 'hpolyNF(base)) (F : 'hpolyEq[R]_n) :
   hface_of P F -> non_empty P.
