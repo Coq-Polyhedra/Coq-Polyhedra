@@ -10,8 +10,7 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
-Require Import simplex.
-(*Module S := simplex.*) (* to be fixed, simplex.v should be organized into a module *)
+Require Import simplex exteqtype.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -71,7 +70,7 @@ Coercion mem_hpoly : hpoly >-> pred_class.
 Variable R : realFieldType.
 Variable n : nat.
 Canonical hpoly_predType := @mkPredType _ 'hpoly[R]_n (@mem_hpoly R n).
-Canonical mem_hpoly_predType := mkPredType (@mem_hpoly R n).
+Canonical mem_hpoly_PredType := mkPredType (@mem_hpoly R n).
 
 Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
   let: 'P(A,b) := P in
@@ -152,8 +151,8 @@ Proof.
 case: P => m A b.
 rewrite  /opt_point /non_empty /bounded /unbounded.
 case: (Simplex.simplexP A b c) =>
-    [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty |
-      [x d] /= [Hx Hd Hd'] | [x d] /= [Hx Hd Hdx] ].
+  [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty
+  | [x d] /= [Hx Hd Hd'] | [x d] /= [Hx Hd Hdx] ].
 - move/negP/negbTE: (P_empty) ->.
   have /negP/negbTE ->: ~ (Simplex.bounded A b c).
     move/Simplex.boundedP => [[x] [x_in_P _]] _.
@@ -349,40 +348,8 @@ apply: (iffP idP).
   by apply/andP; split; apply/hpoly_is_included_inP => x; rewrite (H x).
 Qed.
 
-Lemma hpoly_ext_eq_refl :
-  reflexive hpoly_ext_eq.
-Proof.
-by move => P; apply/hpoly_ext_eqP.
-Qed.
-
-Lemma hpoly_ext_eq_sym :
-  symmetric hpoly_ext_eq.
-Proof.
-move => P Q.
-by apply/idP/idP; move/hpoly_ext_eqP => H;
-  apply/hpoly_ext_eqP => x; move: (H x).
-Qed.
-
-Lemma hpoly_ext_eq_trans :
-  transitive hpoly_ext_eq.
-Proof.
-move => ? ? ? /hpoly_ext_eqP H /hpoly_ext_eqP H'.
-apply/hpoly_ext_eqP => x.
-by move: (H x); rewrite (H' x).
-Qed.
-
-Lemma hpoly_ext_eq_is_equivalence_rel :
-  equivalence_rel hpoly_ext_eq.
-Proof.
-apply/equivalence_relP; split.
-- exact: hpoly_ext_eq_refl.
-- move => ? ? ?.
-  rewrite /eqfun => ?.
-  by apply/idP/idP; apply: hpoly_ext_eq_trans; [rewrite hpoly_ext_eq_sym | done].
-Qed.
-
-Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
-  EquivRel hpoly_ext_eq hpoly_ext_eq_refl hpoly_ext_eq_sym hpoly_ext_eq_trans.
+Definition hpolyExtEqMixin := ExtEqMixin hpoly_ext_eqP.
+Canonical hpoly_extEqType := Eval hnf in ExtEqType _ _ hpolyExtEqMixin.
 
 End ExtensionalEquality.
 
@@ -437,6 +404,20 @@ Definition hpolyEq_countMixin := CanCountMixin eq_setK.
 Canonical hpolyEq_countType := Eval hnf in CountType 'hpolyEq(base) hpolyEq_countMixin.
 Definition hpolyEq_finMixin := CanFinMixin eq_setK.
 Canonical hpolyEq_finType := Eval hnf in FinType 'hpolyEq(base) hpolyEq_finMixin.
+
+(*
+Definition hpolyEq_ext_eq : rel 'hpolyEq(base) :=
+    fun P Q => (P ==i Q :> 'hpoly[R]_n).
+
+Canonical hpolyEq_predType := @mkPredType _ 'hpolyEq(base) (@mem_hpoly R n).
+
+Definition hpolyEq_ext_eqP (P Q: 'hpolyEq(base)) :
+  reflect (P =i Q) (hpolyEq_ext_eq P Q).
+exact/(iffP ext_eqP).
+Qed.
+Definition hpolyEqExtEqMixin := ExtEqMixin hpolyEq_ext_eqP.
+Canonical hpolyEq_extEqType := Eval hnf in ExtEqType _ _ (hpolyExtEqMixin R n).
+*)
 
 End HPolyEqStruct.
 
@@ -604,6 +585,8 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
+Let inE := (hpolyEq_inE, inE).
+
 Fact eq_subset_active (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
   \eq Q \subset \active Q.
 Proof.
@@ -703,17 +686,6 @@ Admitted.
 
 End RelativeInterior.*)
 
-Notation "P ==e Q" := (P == Q %[mod_eq (hpoly_equiv_rel _ _)])%qT (at level 0).
-Notation "P =e Q" := (P = Q %[mod_eq (hpoly_equiv_rel _ _)])%qT.
-
-Lemma hpoly_eqP (R : realFieldType) (n : nat) (P Q : 'hpoly[R]_n) :
-  (P =i Q) <-> (P =e Q).
-Proof.
-apply: (rwP2 (b := hpoly_equiv_rel _ _ P Q)).
-- exact: hpoly_ext_eqP.
-- exact: eqmodP.
-Qed.
-
 Section hpolyFace.
 
 Section Def.
@@ -723,7 +695,7 @@ Variable R : realFieldType.
 Variable P : 'hpoly[R]_n.
 
 Definition hpoly_face_of :=
-  [ pred F : 'hpoly[R]_n | non_empty F && [exists Q : 'hpolyEq(P), F ==e Q ] ].
+  [ pred F : 'hpoly[R]_n | non_empty F && [exists Q : 'hpolyEq(P), F ==i Q :> 'hpoly[R]_n ] ].
 
 End Def.
 
@@ -731,20 +703,20 @@ Variable n : nat.
 Variable R : realFieldType.
 
 Lemma hpoly_face_ofP (P : 'hpoly[R]_n) (F : 'hpolyEq[R]_n) :
-  non_empty P -> 
+  non_empty P ->
     reflect (exists c, bounded c P /\ forall x, ((x \in P /\ Some '[c,x] = opt_value c P) <-> x \in F))
             (hpoly_face_of P F).
 Proof.
 case: P F => [m A b] F.
 move => P_non_empty.
 apply: (iffP idP).
-- move => /andP [F_non_empty /existsP [Q /eqP/hpoly_eqP F_eq_Q]].
+- move => /andP [F_non_empty /existsP [Q /ext_eqP F_eq_Q]].
   move: F_eq_Q.
   case: Q => [JQ] F_eq_Q.
   pose I := JQ.
   pose AI := row_submx A I.
   pose e := const_mx 1: 'cV[R]_#|I|.
-  have e_is_non_neg: e >=m 0 by apply/forallP => i; rewrite !mxE; exact: ler01. 
+  have e_is_non_neg: e >=m 0 by apply/forallP => i; rewrite !mxE; exact: ler01.
   pose c := AI^T *m e.
   pose opt_v := '[e, row_submx b I].
   have c_lower_bound: forall x, x \in 'P(A,b) -> '[c,x] >= opt_v.
@@ -837,7 +809,7 @@ apply: (iffP idP).
         + rewrite inE => /lt0r_neq0 uj_neq0.
           move/(_ j): active_ineq.
           by case; [move/eqP: uj_neq0 | move/eqP].
-      apply/eqP/hpoly_eqP => y.
+      apply/ext_eqP => y.
       apply/idP/idP => [y_in_F | y_in_Q].
       + rewrite hpolyEq_inE.
         apply/andP.

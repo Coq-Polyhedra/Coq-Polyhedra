@@ -2042,7 +2042,7 @@ Record LP_t := LP { A : 'M[R]_(m,n);
 Implicit Type lp : LP_t.
 
 Definition feasible lp := Simplex.feasible (A lp) (b lp).
-Definition bounded lp := Simplex.bounded (A lp) (b lp) (c lp).
+Definition bounded lp := Simplex.bounded(A lp) (b lp) (c lp).
 Definition unbounded lp := Simplex.unbounded (A lp) (b lp) (c lp).
 Definition opt_point lp := Simplex.opt_point (A lp) (b lp) (c lp).
 Definition dual_opt_point lp := Simplex.dual_opt_point (A lp) (b lp) (c lp).

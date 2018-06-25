@@ -15,8 +15,10 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Reserved Notation "p1 =i p2"
-  (at level 70, format "'[hv' p1 '/ '  =i  p2 ']'", no associativity).
+Reserved Notation "P =e Q"
+         (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
+Reserved Notation "''poly[' R ]_ n" (at level 8, n at level 2, format "''poly[' R ]_ n").
+Reserved Notation "''poly_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
 
 Local Open Scope ring_scope.
@@ -63,16 +65,33 @@ End ExtensionalEqualityNF.
 Implicit Arguments hpolyNF_equiv_rel [R n].
 
 Notation "P =e Q" := (hpolyNF_equiv_rel P Q).
+(*Notation "P =e" := (hpolyNF_equiv_rel P).
+Notation "=e" := hpolyNF_equiv_rel.*)
+
+(*
+Section Quot.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition canon (P: 'hpolyNF[R]_n) := choose (P =e) P.
+*)
 
 Section Def.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition polyhedron := {eq_quot (@hpolyNF_equiv_rel R n)}%qT.
-Canonical polyhedron_eqType := [eqType of polyhedron].
+Definition poly := {eq_quot (@hpolyNF_equiv_rel R n)}%qT.
+
+(*Canonical polyhedron_eqType := [eqType of polyhedron].
 Canonical polyhedron_choiceType := [choiceType of polyhedron].
 Canonical polyhedron_eqQuotType := [eqQuotType (@hpolyNF_equiv_rel R n) of polyhedron].
+ *)
+
+End Def.
+
+Notation "
 
 Notation "''[' P ]" := (@Pi.f _ _ (Phant _) P).
 
@@ -93,7 +112,7 @@ Definition mem_polyhedron : polyhedron -> pred_class :=
   lift_fun1 polyhedron id.
 
 Lemma mem_polyhedron_quotP x :
-  { mono \pi_(polyhedron_eqQuotType)%qT : P / x \in P >-> (x \in mem_polyhedron P) }.
+  { mono \pi_polyhedron : P / x \in P >-> (x \in mem_polyhedron P) }%qT.
 Proof. (* RK *)
 unlock mem_polyhedron => P /=.
 case: (hpolyP '[ P ]) => Q.
