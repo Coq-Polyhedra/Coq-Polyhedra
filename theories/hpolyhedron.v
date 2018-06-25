@@ -21,7 +21,6 @@ Reserved Notation "''hpoly_' n" (at level 8, n at level 2).
 Reserved Notation "'#ineq' P" (at level 10, P at level 0, format "'#ineq'  P").
 Reserved Notation "''P' ( m , A , b )" (at level 0, m at level 99, A at level 99, b at level 99, format "''P' ( m  , A ,  b )").
 Reserved Notation "''P' ( A , b )" (at level 0, A at level 99, b at level 99, format "''P' ( A ,  b )").
-Reserved Notation "P =e Q" (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
 Reserved Notation "''hpolyEq(' base )" (at level 8, base at level 99, format "''hpolyEq(' base )").
 Reserved Notation "\eq P" (at level 10, P at level 8, format "\eq  P").
 Reserved Notation "\active P" (at level 10, P at level 8, format "\active  P").
