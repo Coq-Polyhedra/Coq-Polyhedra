@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -17,6 +17,8 @@ Unset Printing Implicit Defensive.
 
 Reserved Notation "P =e Q"
          (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
+Reserved Notation "P ==e Q"
+         (at level 70, format "'[hv' P '/ '  ==e  Q ']'", no associativity).
 Reserved Notation "''poly[' R ]_ n" (at level 8, n at level 2, format "''poly[' R ]_ n").
 Reserved Notation "''poly_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
@@ -34,27 +36,24 @@ Variable n : nat.
 Import HPrim. (* we need to import HPrim to benefit from
                * the canonical structure on hpoly_ext_eq *)
 
-Definition hpolyNF_ext_eq := [ rel P Q : 'hpolyNF[R]_n | hpoly_ext_eq P Q ].
+Definition hpolyNF_ext_eq := [ rel P Q : 'hpolyNF[R]_n | P ==i Q :> 'hpoly[R]_n ].
 
 Lemma hpolyNF_ext_eq_refl :
   reflexive hpolyNF_ext_eq.
 Proof.
-move => P /=; rewrite ?eqmodE.
-exact: equiv_refl.
+by move => ? /=.
 Qed.
 
 Lemma hpolyNF_ext_eq_sym :
   symmetric hpolyNF_ext_eq.
 Proof.
-move => P Q /=; rewrite ?eqmodE.
-exact: equiv_sym.
+move => ? ? /=; exact: ext_eq_sym.
 Qed.
 
 Lemma hpolyNF_ext_eq_trans :
   transitive hpolyNF_ext_eq.
 Proof.
-move => P Q S /=; rewrite ?eqmodE.
-exact: equiv_trans.
+move => P Q S /=; exact: ext_eq_trans.
 Qed.
 
 Canonical hpolyNF_equiv_rel : equiv_rel 'hpolyNF[R]_n :=
@@ -62,152 +61,96 @@ Canonical hpolyNF_equiv_rel : equiv_rel 'hpolyNF[R]_n :=
 
 End ExtensionalEqualityNF.
 
-Implicit Arguments hpolyNF_equiv_rel [R n].
+Arguments hpolyNF_equiv_rel [R n].
 
-Notation "P =e Q" := (hpolyNF_equiv_rel P Q).
-(*Notation "P =e" := (hpolyNF_equiv_rel P).
-Notation "=e" := hpolyNF_equiv_rel.*)
+Definition poly R n := {eq_quot (@hpolyNF_equiv_rel R n)}%qT.
 
-(*
-Section Quot.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Definition canon (P: 'hpolyNF[R]_n) := choose (P =e) P.
-*)
-
-Section Def.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Definition poly := {eq_quot (@hpolyNF_equiv_rel R n)}%qT.
-
-(*Canonical polyhedron_eqType := [eqType of polyhedron].
-Canonical polyhedron_choiceType := [choiceType of polyhedron].
-Canonical polyhedron_eqQuotType := [eqQuotType (@hpolyNF_equiv_rel R n) of polyhedron].
- *)
-
-End Def.
-
-Notation "
-
-Notation "''[' P ]" := (@Pi.f _ _ (Phant _) P).
+Notation "''poly[' R ]_ n" := (@poly R n).
+Notation "''poly_' n" := ('poly[_]_n).
+Notation "''[' P ]" := (\pi_('poly_ _) P)%qT.
+Notation "\poly" := (\pi_('poly_ _))%qT.
+Notation "P =e Q" := (\poly P = \poly Q).
+Notation "P ==e Q" := (\poly P == \poly Q).
 
 Notation polyE := piE.
 Notation hpoly := repr.
 Notation hpolyK := reprK.
 
-CoInductive hpoly_spec (P : polyhedron) : 'hpolyNF[R]_n -> Type :=
-  HpolySpec Q of (P = ('[ Q ])) : hpoly_spec P Q.
+Definition mem_polyhedron (R : realFieldType) (n : nat) : 'poly[R]_n -> pred_class :=
+  lift_fun1 'poly[R]_n id.
+Coercion mem_polyhedron : poly >-> pred_class.
 
-Lemma hpolyP (P : polyhedron) :
+Section Lift.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpolyNF[R]_n -> Type :=
+  HpolySpec Q of (P = '[ Q ]) : hpoly_spec P Q.
+
+Lemma hpolyP (P : 'poly[R]_n) :
   hpoly_spec P (hpoly P).
 Proof.
 by constructor; rewrite hpolyK.
 Qed.
 
-Definition mem_polyhedron : polyhedron -> pred_class :=
-  lift_fun1 polyhedron id.
+Lemma ext_eqquotP (P Q: 'hpolyNF[R]_n) : (P =i Q) <-> (P =e Q).
+Proof.
+by split => [? |]; [ apply/eqquotP/ext_eqP | move/eqquotP/ext_eqP].
+Qed.
 
-Lemma mem_polyhedron_quotP x :
-  { mono \pi_polyhedron : P / x \in P >-> (x \in mem_polyhedron P) }%qT.
+Lemma mem_polyhedron_quotP (x: 'cV[R]_n) :
+  { mono \poly : P / x \in P >-> (x \in mem_polyhedron P) }.
 Proof. (* RK *)
 unlock mem_polyhedron => P /=.
-case: (hpolyP '[ P ]) => Q.
-move/eqmodP.
-/hpoly_eqP ?.
+by case: (hpolyP '[ P ]) => Q /ext_eqquotP.
 Qed.
 
 Canonical mem_polyhedron_quot x :=
   Eval hnf in PiMono1 (mem_polyhedron_quotP x).
 Canonical polyhedron_predType :=
-  Eval hnf in @mkPredType 'cV[R]_n polyhedron mem_polyhedron.
-Coercion mem_polyhedron : polyhedron >-> pred_class.
+  Eval hnf in @mkPredType 'cV[R]_n 'poly[R]_n (@mem_polyhedron R n).
 
-Definition non_empty := lift_fun1 polyhedron (@H.non_empty R n).
-
-(*
-Lemma non_empty_quotP (P Q: 'hpoly[R]_n) : P =i Q -> non_empty P = non_empty Q.
-Admitted.
-Lemma bounded_quotP (c: 'cV[R]_n) P Q : P =i Q -> bounded P c = bounded Q c.
-Admitted.
-Lemma opt_value_quotP (c: 'cV[R]_n) P Q : P =i Q -> opt_value P c = opt_value Q c.
-Admitted.*)
+Definition non_empty := lift_fun1 'poly[R]_n (@HPrim.non_empty R n).
 
 Lemma non_empty_quotP :
-  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.non_empty P >-> non_empty P }.
+  { mono \poly : P / HPrim.non_empty P >-> non_empty P }.
 Proof. (*RK*)
 unlock non_empty => P /=.
-case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_i_Q.
-apply/idP/idP => /non_emptyP [x H];
-  apply/non_emptyP; exists x; by rewrite ?P_eq_i_Q in H *.
+case: (hpolyP '[ P ]) => Q /ext_eqquotP P_eq_i_Q.
+apply/idP/idP => /HPrim.non_emptyP [x H];
+  apply/HPrim.non_emptyP; exists x; by rewrite ?P_eq_i_Q in H *.
 Qed.
 
 Canonical non_empty_quot := Eval hnf in PiMono1 non_empty_quotP.
-(* in this way, piE will rewrite non_empty '[P] into H.non_empty P *)
 
 Implicit Type c : 'cV[R]_n.
 
-Definition bounded c := lift_fun1 polyhedron ((@H.bounded _ _)^~ c). (* TODO: IMPLICIT ARGUMENTS (or change the argument order in hpolyhedron?) !!! *)
-Definition unbounded c := lift_fun1 polyhedron ((@H.unbounded _ _)^~ c).
-Definition opt_point c := lift_fun1 polyhedron ((@H.opt_point _ _)^~ c).
-Definition opt_value c := lift_fun1 polyhedron ((@H.opt_value _ _)^~ c).
+Definition bounded c := lift_fun1 'poly[R]_n (HPrim.bounded c).
+Definition unbounded c := lift_fun1 'poly[R]_n (HPrim.unbounded c).
+Definition opt_value c := lift_fun1 'poly[R]_n (HPrim.opt_value c).
 
-CoInductive lp_state (P : polyhedron) c : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
-| Empty of P =i pred0 : lp_state P c None false false false
-| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : lp_state P c (Some z) true true false
-| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state P c None true false true.
+CoInductive lp_state c (P : 'poly[R]_n) : option R -> bool -> bool -> bool -> Type :=
+| Empty of P =i pred0 : lp_state c P None false false false
+| Bounded (v : R) of (exists x, x \in P /\ '[c,x] = v) * (forall x, x \in P -> v <= '[c,x]) : lp_state c P (Some v) true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state c P None true false true.
 
-Lemma lp_stateP P c :
-  lp_state P c (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
+Lemma lp_stateP c P :
+  lp_state c P (opt_value c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 Admitted.
-
-(*
-Fact bounded_quotP_aux (P Q : 'hpolyEq[R]_(n)) : (*RK*)
-  (Q =e P) -> H.bounded P c -> H.bounded Q c. (* TODO: why Q =e P is not displayed like this? *)
-Proof.
-case:
-
-  case: P => [P0 ].
-
-  [mP AP bP] [[IP] nfP]].
-case: Q => [[mQ AQ bQ] [[IQ] nfQ]].
-move/hpoly_eqP => P_eq_i_Q.
-case: (H.lp_stateP .
-
-set APeq := col_mx AP (- (row_submx AP IP)).
-set bPeq := col_mx bP (- row_submx bP IP).
-move/hpoly_eqP => P_eq_i_Q.
-rewrite /= in P_eq_i_Q; unlock in P_eq_i_Q.
-rewrite /=; unlock.
-move/boundedP => Pbounded.
-rewrite /H.bounded /hpolyhedron.bounded /=; unlock.
-apply/(S.Simplex.boundedP_lower_bound c).
-- apply/S.Simplex.feasibleP.
-  move/proj1: Pbounded => [x [x_in_P _]].
-  exists x.
-  by rewrite P_eq_i_Q.
-- exists (opt_value 'P(APeq, bPeq) c).
-  move => x x_in_P.
-  rewrite P_eq_i_Q in x_in_P.
-  exact: ((proj2 Pbounded) x x_in_P).
-Qed.
- *)
 
 Variable c: 'cV[R]_n.
 
 Lemma bounded_quotP :
   (* TODO: we should prove all the quotP statements in a row,
            using the (h)lp_stateP statement *)
-  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.bounded P c >-> bounded c P }.
+  { mono \poly : P / HPrim.bounded c P >-> bounded c P }.
 Proof. (*RK*)
 unlock bounded => P /=.
 case: (hpolyP '[ P ]) => Q.
-move => /hpoly_eqP P_eq_Q.
-case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
+move => /ext_eqquotP P_eq_Q.
+case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q); try by done.
 - move => z [z_in_Q _] /(_ z).
   by rewrite P_eq_Q z_in_Q inE.
 - move => Q_empty z [z_in_Q _]; move/(_ z): Q_empty.
@@ -224,131 +167,69 @@ case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
   by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
 Qed.
 
-Lemma all_in_one_quotP :
-  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.bounded P c >-> bounded c P } *
-  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.unbounded P c >-> unbounded c P } *
-  { mono \pi_(polyhedron_eqQuotType)%qT : P / H.opt_value P c >-> opt_value c P }.
+Lemma unbounded_quotP :
+  { mono \poly : P / HPrim.unbounded c P >-> unbounded c P }.
 Proof. (*RK*)
-split. split.
-- unlock bounded => P /=.
-  case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_Q.
-  case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
-  + move => z [z_in_Q _] /(_ z).
-    by rewrite P_eq_Q z_in_Q inE.
-  + move => Q_empty z [z_in_Q _]; move/(_ z): Q_empty.
-    by rewrite -P_eq_Q z_in_Q inE.
-  + move => Q_unbounded z [z_in_P z_opt].
-    move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
-    rewrite -P_eq_Q in x_in_Q.
-    move/(_ _ x_in_Q): z_opt => z_le_x.
-    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
-  + move => z [z_in_Q z_opt] P_unbounded.
-    move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
-    rewrite P_eq_Q in x_in_P.
-    move/(_ _ x_in_P): z_opt => z_le_x.
-    by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
-- unlock unbounded => P /=.
-  case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_Q.
-  case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
-  + move => Q_unbounded.
-    move/(_ 0): Q_unbounded => [x [x_in_Q x_lt_0]].
-    move/(_ x).
+unlock unbounded => P /=.
+case: (hpolyP '[ P ]) => Q /ext_eqquotP P_eq_Q.
+case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q); try by done.
++ move => Q_unbounded.
+  move/(_ 0): Q_unbounded => [x [x_in_Q x_lt_0]].
+  move/(_ x).
     by rewrite P_eq_Q x_in_Q inE.
-  + move => Q_unbounded z [z_in_P z_opt].
-    move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
-    rewrite -P_eq_Q in x_in_Q.
-    move/(_ _ x_in_Q): z_opt => z_le_x.
++ move => Q_unbounded z [z_in_P z_opt].
+  move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
+  rewrite -P_eq_Q in x_in_Q.
+  move/(_ _ x_in_Q): z_opt => z_le_x.
     by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
-  + move => Q_empty P_unbounded.
-    move/(_ 0): P_unbounded => [x [x_in_Q x_lt_0]].
-    move: (Q_empty x).
++ move => Q_empty P_unbounded.
+  move/(_ 0): P_unbounded => [x [x_in_Q x_lt_0]].
+  move: (Q_empty x).
     by rewrite -P_eq_Q x_in_Q inE.
-  + move => z [z_in_Q z_opt] P_unbounded.
-    move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
-    rewrite P_eq_Q in x_in_P.
-    move/(_ _ x_in_P): z_opt => z_le_x.
++ move => z [z_in_Q z_opt] P_unbounded.
+  move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
+  rewrite P_eq_Q in x_in_P.
+  move/(_ _ x_in_P): z_opt => z_le_x.
     by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
-- unlock opt_value => P /=.
-  case: (hpolyP '[ P ]) => Q /hpoly_eqP P_eq_Q.
-  case: (hlp_stateP P c); case: (hlp_stateP Q c); try by done.
-  + move => Q_empty P_empty.
-    suff Q_not_bounded: (H.bounded Q c) = false.
-      suff P_not_bounded: (H.bounded P c) = false
-        by rewrite /H.opt_value /omap /obind /oapp /H.opt_point Q_not_bounded P_not_bounded.
-      apply: negbTE; apply: contraT.
-      move/negPn/boundedP => [x [x_in_P _]].
-      by rewrite (P_empty x) inE in x_in_P.
-    apply: negbTE; apply: contraT.
-    move/negPn/boundedP => [x [x_in_Q _]].
-    by rewrite (Q_empty x) inE in x_in_Q.
-  + move => z [z_in_Q _] /(_ z).
+Qed.
+
+Lemma opt_value_quotP :
+  { mono \poly : P / HPrim.opt_value c P >-> opt_value c P }.
+unlock opt_value => P /=.
+case: (hpolyP '[ P ]) => Q /ext_eqquotP P_eq_Q.
+rewrite /HPrim.opt_value.
+case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q) => /=; try by done.
++ move => z [z_in_Q _] /(_ z).
     by rewrite (P_eq_Q z) z_in_Q inE.
-  + move/(_ 0) => [z [z_in_Q _]] /(_ z).
-    by rewrite (P_eq_Q z) z_in_Q inE.
-  + move => Q_empty z [z_in_P _].
++ move => Q_empty z [z_in_P _].
     by rewrite (P_eq_Q z) (Q_empty z) inE in z_in_P.
-  + move => z [z_in_Q z_opt_in_Q].
-    move => y [y_in_P y_opt_in_P].
-    rewrite (opt_value_is_optimal z_in_Q z_opt_in_Q).
-    suff z_opt_in_P : forall x : 'cV_n, x \in P -> '[ c, z] <= '[ c, x].
-      rewrite -(P_eq_Q z) in z_in_Q.
-      by rewrite (opt_value_is_optimal z_in_Q z_opt_in_P).
-    move => x.
-    rewrite (P_eq_Q x).
-    exact: (z_opt_in_Q x).
-  + move => Q_unbounded z [z_in_P z_opt].
-    move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
-    rewrite -P_eq_Q in x_in_Q.
-    move/(_ _ x_in_Q): z_opt => z_le_x.
++ move => z [z_in_Q z_opt_in_Q].
+  move => y [y_in_P y_opt_in_P].
+  apply/congr1/eqP; rewrite eqr_le; apply/andP; split.
+  * rewrite P_eq_Q in y_in_P; exact: z_opt_in_Q.
+  * rewrite -P_eq_Q in z_in_Q; exact: y_opt_in_P.
++ move => Q_unbounded z [z_in_P z_opt].
+  move/(_ '[c,z]): Q_unbounded => [x [x_in_Q x_lt_z]].
+  rewrite -P_eq_Q in x_in_Q.
+  move/(_ _ x_in_Q): z_opt => z_le_x.
     by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
-  + move => Q_empty P_unbounded.
-    move/(_ 0): P_unbounded => [x [x_in_Q x_lt_0]].
-    move: (Q_empty x).
-    by rewrite -P_eq_Q x_in_Q inE.
-  + move => z [z_in_Q z_opt] P_unbounded.
-    move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
-    rewrite P_eq_Q in x_in_P.
-    move/(_ _ x_in_P): z_opt => z_le_x.
++ move => z [z_in_Q z_opt] P_unbounded.
+  move/(_ '[c,z]): P_unbounded => [x [x_in_P x_lt_z]].
+  rewrite P_eq_Q in x_in_P.
+  move/(_ _ x_in_P): z_opt => z_le_x.
     by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
-  + move => Q_unbounded P_unbounded.
-    have Q_non_empty: H.non_empty Q.
-      move/(_ 0): Q_unbounded => [x [x_in_Q _]].
-      by apply/non_emptyP; exists x.
-    have P_non_empty: H.non_empty P.
-      move/(_ 0): P_unbounded => [x [x_in_P _]].
-      by apply/non_emptyP; exists x.
-    suff Q_not_bounded: (H.bounded Q c) = false.
-      suff P_not_bounded: (H.bounded P c) = false
-        by rewrite /H.opt_value /omap /obind /oapp /H.opt_point Q_not_bounded P_not_bounded.
-      apply: negbTE; rewrite -unbounded_is_not_bounded //.
-      by apply/unboundedP.
-    apply: negbTE; rewrite -unbounded_is_not_bounded //.
-    by apply/unboundedP.
 Qed.
 
 Canonical bounded_quot := Eval hnf in PiMono1 bounded_quotP.
+Canonical unbounded_quot := Eval hnf in PiMono1 unbounded_quotP.
+Canonical opt_value_quot := Eval hnf in PiMono1 opt_value_quotP.
 
-Canonical opt_value_quot := PiMono1 opt_value_quotP.
-
-End Def.
-
-Notation "''poly[' R ]_ n" := (polyhedron R n) (at level 0, format "''poly[' R ]_ n").
-Notation "''poly_' n" := (polyhedron _ n) (at level 0, only parsing).
-Notation "''[' P ]" := (\pi_(polyhedron_eqQuotType _ _)%qT P) (at level 0, format "''[' P ]").
-Notation polyE := piE.
-Notation hpoly := repr.
-Notation hpolyK := reprK.
+End Lift.
 
 Section Face.
 
 Variable R : realFieldType.
 Variable n : nat.
-
-(*Fact foo (P: 'poly[R]_n) x : x \in P.
-case/hpolyP: {1}P => Q ->.
-rewrite polyE.
-case: Q => m A b.
-rewrite inE.*)
 
 Definition face_of :=
   lift_fun2 'poly[R]_n (fun F P => hface_of F P).
@@ -379,28 +260,28 @@ Qed.*)
 
 
 Fact face_of_quotP_aux (P F P' F' : 'hpolyEq[R]_n) :
-  H.non_empty P -> (P = P' %[mod polyhedron_eqQuotType R n])%qT ->
+  HPrim.non_empty P -> (P = P' %[mod polyhedron_eqQuotType R n])%qT ->
     (F = F' %[mod polyhedron_eqQuotType R n])%qT ->
       (hface_of P) F -> (hface_of P') F'.
 Proof.
 Admitted.
 (*move => P_non_empty P_eq_P' F_eq_F'.
-have P'_non_empty: H.non_empty P'
+have P'_non_empty: HPrim.non_empty P'
   by rewrite -(non_empty_quotP P') -P_eq_P' (non_empty_quotP P).
 move/((hface_ofP P_non_empty) F) => [c [bounded_c F_is_face_wrt_c]].
 apply/(hface_ofP P'_non_empty).
 exists c; split.
 - move: (bounded_quotP c P') => bounded_quotP_c_P'.
   (* RK: I believe that this could we avoided if we do not   *)
-  rewrite /H.bounded in bounded_quotP_c_P'.         (* define H.bounded and work only with hpolyhedron.bounded *)
-  by rewrite -bounded_quotP_c_P' -P_eq_P' (bounded_quotP c P) /H.bounded.
+  rewrite /HPrim.bounded in bounded_quotP_c_P'.         (* define HPrim.bounded and work only with hpolyhedron.bounded *)
+  by rewrite -bounded_quotP_c_P' -P_eq_P' (bounded_quotP c P) /HPrim.bounded.
 - move => x x_in_P' /=.
   rewrite -(mem_polyhedron_quotP x P') -P_eq_P' (mem_polyhedron_quotP x P) in x_in_P'.
   move: (F_is_face_wrt_c x x_in_P').
   rewrite -(mem_polyhedron_quotP x F) F_eq_F' (mem_polyhedron_quotP x F').
   move: (opt_value_quotP c P) => opt_value_quotP_c_P.                         (* RK: The same commet as  *)
-  rewrite /H.opt_value P_eq_P' (opt_value_quotP c P') in opt_value_quotP_c_P. (* above but for opt_value *)
-  by rewrite -(opt_value_quotP_c_P) /H.opt_value.
+  rewrite /HPrim.opt_value P_eq_P' (opt_value_quotP c P') in opt_value_quotP_c_P. (* above but for opt_value *)
+  by rewrite -(opt_value_quotP_c_P) /HPrim.opt_value.
 Qed.*)
 
 Lemma face_of_quotP : {mono \pi : P F / (fun (P F : 'hpolyEq[R]_n) => hface_of P F) P F >-> face_of P F}%qT.
@@ -422,7 +303,7 @@ case: (boolP (non_empty '[ P ])) => [P_non_empty | P_empty ].
     exact: face_of_quotP_aux.
 - apply/idP/idP => [F_face_of_P | F_face_of_P].
   + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P)
-      by unlock non_empty; rewrite /H.non_empty; apply: (has_face_imp_non_empty F_face_of_P).
+      by unlock non_empty; rewrite /HPrim.non_empty; apply: (has_face_imp_non_empty F_face_of_P).
     move/andP: (conj P_non_empty P_empty).
     by rewrite andbN.
   + have P_non_empty : non_empty (\pi_(polyhedron_eqQuotType R n)%qT P)
