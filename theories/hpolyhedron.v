@@ -69,7 +69,7 @@ Coercion mem_hpoly : hpoly >-> pred_class.
 Variable R : realFieldType.
 Variable n : nat.
 Canonical hpoly_predType := @mkPredType _ 'hpoly[R]_n (@mem_hpoly R n).
-Canonical mem_hpoly_PredType := mkPredType (@mem_hpoly R n).
+Canonical mem_hpoly_PredType := mkPredType (@mem_hpoly R n). (* RK: It seems that this is not used and it causes a warning *)
 
 Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
   let: 'P(A,b) := P in
@@ -144,7 +144,7 @@ CoInductive lp_state c P : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
 | Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : lp_state c P (Some z) true true false
 | Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state c P None true false true.
 
-Lemma lp_stateP c P : (* TODO: prove it! *)
+Lemma lp_stateP c P :
   lp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 case: P => m A b.
@@ -694,7 +694,8 @@ Variable R : realFieldType.
 Variable P : 'hpoly[R]_n.
 
 Definition hpoly_face_of :=
-  [ pred F : 'hpoly[R]_n | non_empty F && [exists Q : 'hpolyEq(P), F ==i Q :> 'hpoly[R]_n ] ].
+  [ pred F : 'hpoly[R]_n |
+    non_empty F && [exists Q : 'hpolyEq(P), F ==i Q :> 'hpoly[R]_n ] ].
 
 End Def.
 
@@ -994,12 +995,11 @@ apply: (iffP idP).
             - apply/forallP => j.
               apply/implyP.
               rewrite in_setU.
-              move/orP.
-              case; last first.
-              + rewrite hpolyEq_inE in y_in_P.
-                exact: (implyP ((forallP (proj2 (andP y_in_P))) j)).
+              move/orP; case.
               + rewrite opt_value_active_cons // in y_is_opt.
                 exact: (implyP ((forallP y_is_opt) j)).
+              + rewrite hpolyEq_inE in y_in_P.
+                exact: (implyP ((forallP (proj2 (andP y_in_P))) j)).
         + have y_in_P: y \in HPolyEq JP.
             rewrite hpolyEq_inE.
             apply/andP; split.

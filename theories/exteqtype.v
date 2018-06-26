@@ -17,6 +17,7 @@ Unset Printing Implicit Defensive.
 Module ExtEquality.
 
 Section ExtEquality.
+
 Variable U : Type.
 
 Definition axiom (T : predType U) (e : rel T) := forall x y, reflect (x =i y) (e x y).
@@ -53,9 +54,11 @@ Notation "[ 'extEqType' 'of' T ]" := (@clone T _ _ id id)
 End Exports.
 
 End ExtEquality.
+
 Export ExtEquality.Exports.
 
 Section BasicProp.
+
 Variable U : Type.
 Implicit Type T : extEqType U.
 
@@ -66,6 +69,7 @@ Proof. by []. Qed.
 
 Lemma ext_eqP T : ExtEquality.axiom (@ext_eq_op T).
 Proof. by case: T => ? []. Qed.
+
 Arguments ext_eqP [T x y].
 
 Delimit Scope eq_scope with EQ.

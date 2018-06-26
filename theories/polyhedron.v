@@ -101,7 +101,7 @@ Qed.
 
 Lemma mem_polyhedron_quotP (x: 'cV[R]_n) :
   { mono \poly : P / x \in P >-> (x \in mem_polyhedron P) }.
-Proof. (* RK *)
+Proof.
 unlock mem_polyhedron => P /=.
 by case: (hpolyP '[ P ]) => Q /ext_eqquotP.
 Qed.
@@ -115,7 +115,7 @@ Definition non_empty := lift_fun1 'poly[R]_n (@HPrim.non_empty R n).
 
 Lemma non_empty_quotP :
   { mono \poly : P / HPrim.non_empty P >-> non_empty P }.
-Proof. (*RK*)
+Proof.
 unlock non_empty => P /=.
 case: (hpolyP '[ P ]) => Q /ext_eqquotP P_eq_i_Q.
 apply/idP/idP => /HPrim.non_emptyP [x H];
@@ -146,7 +146,7 @@ Lemma bounded_quotP :
   (* TODO: we should prove all the quotP statements in a row,
            using the (h)lp_stateP statement *)
   { mono \poly : P / HPrim.bounded c P >-> bounded c P }.
-Proof. (*RK*)
+Proof.
 unlock bounded => P /=.
 case: (hpolyP '[ P ]) => Q.
 move => /ext_eqquotP P_eq_Q.
@@ -169,7 +169,7 @@ Qed.
 
 Lemma unbounded_quotP :
   { mono \poly : P / HPrim.unbounded c P >-> unbounded c P }.
-Proof. (*RK*)
+Proof.
 unlock unbounded => P /=.
 case: (hpolyP '[ P ]) => Q /ext_eqquotP P_eq_Q.
 case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q); try by done.
@@ -232,15 +232,16 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition face_of :=
-  lift_fun2 'poly[R]_n (fun F P => hface_of F P).
+  lift_fun2 'poly[R]_n (fun F P => hpolyEq_face_of F P).
 
-(*
-Lemma is_face_ofP (F P : 'polyh[R]_n) :
+
+(*Lemma is_face_ofP (F P : 'poly[R]_n) :
   (non_empty P) ->
-    reflect (exists c, bounded P c /\ (forall x, x \in F <-> (x \in P /\ '[c,x] = opt_value P c)))
+    reflect (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in F))
           (face_of F P).
 Proof.
-unlock feasible.
+case: (hpolyP P) => nfP -> /=.
+rewrite /non_empty.
 move => Hfeas.
 apply: (iffP idP).
 - unlock is_face_of.
