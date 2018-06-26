@@ -137,8 +137,27 @@ CoInductive lp_state c (P : 'poly[R]_n) : option R -> bool -> bool -> bool -> Ty
 
 Lemma lp_stateP c P :
   lp_state c P (opt_value c P) (non_empty P) (bounded c P) (unbounded c P).
-Proof.
-Admitted.
+Proof. (* RK *)
+unlock opt_value non_empty bounded unbounded; rewrite /HPrim.opt_value.
+case: (HPrim.lp_stateP c (hpoly P)) =>
+  [empty_hpoly_P | x [x_in_hpoly_P x_is_opt] | unbounded_hpoly_P].
+- constructor.
+  move => x.
+  by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)) empty_hpoly_P.
+- constructor.
+  split.
+  + exists x.
+    split; last by done.
+      by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
+  + move => y.
+    rewrite -{1}[P]reprK (mem_polyhedron_quotP y (hpoly P)).
+    exact: x_is_opt.
+- constructor.
+  move => K.
+  move: (unbounded_hpoly_P K) => [x ?].
+  exists x.
+  by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
+Qed.
 
 Variable c: 'cV[R]_n.
 
