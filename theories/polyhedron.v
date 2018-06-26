@@ -36,34 +36,34 @@ Variable n : nat.
 Import HPrim. (* we need to import HPrim to benefit from
                * the canonical structure on hpoly_ext_eq *)
 
-Definition hpolyNF_ext_eq := [ rel P Q : 'hpolyNF[R]_n | P ==i Q :> 'hpoly[R]_n ].
+Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | P ==i Q :> 'hpoly[R]_n ].
 
-Lemma hpolyNF_ext_eq_refl :
-  reflexive hpolyNF_ext_eq.
+Lemma hpolyEq_ext_eq_refl :
+  reflexive hpolyEq_ext_eq.
 Proof.
 by move => ? /=.
 Qed.
 
-Lemma hpolyNF_ext_eq_sym :
-  symmetric hpolyNF_ext_eq.
+Lemma hpolyEq_ext_eq_sym :
+  symmetric hpolyEq_ext_eq.
 Proof.
 move => ? ? /=; exact: ext_eq_sym.
 Qed.
 
-Lemma hpolyNF_ext_eq_trans :
-  transitive hpolyNF_ext_eq.
+Lemma hpolyEq_ext_eq_trans :
+  transitive hpolyEq_ext_eq.
 Proof.
 move => P Q S /=; exact: ext_eq_trans.
 Qed.
 
-Canonical hpolyNF_equiv_rel : equiv_rel 'hpolyNF[R]_n :=
-  EquivRel hpolyNF_ext_eq hpolyNF_ext_eq_refl hpolyNF_ext_eq_sym hpolyNF_ext_eq_trans.
+Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
+  EquivRel hpolyEq_ext_eq hpolyEq_ext_eq_refl hpolyEq_ext_eq_sym hpolyEq_ext_eq_trans.
 
 End ExtensionalEqualityNF.
 
-Arguments hpolyNF_equiv_rel [R n].
+Arguments hpolyEq_equiv_rel [R n].
 
-Definition poly R n := {eq_quot (@hpolyNF_equiv_rel R n)}%qT.
+Definition poly R n := {eq_quot (@hpolyEq_equiv_rel R n)}%qT.
 
 Notation "''poly[' R ]_ n" := (@poly R n).
 Notation "''poly_' n" := ('poly[_]_n).
@@ -85,7 +85,7 @@ Section Lift.
 Variable R : realFieldType.
 Variable n : nat.
 
-CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpolyNF[R]_n -> Type :=
+CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpolyEq[R]_n -> Type :=
   HpolySpec Q of (P = '[ Q ]) : hpoly_spec P Q.
 
 Lemma hpolyP (P : 'poly[R]_n) :
@@ -94,7 +94,7 @@ Proof.
 by constructor; rewrite hpolyK.
 Qed.
 
-Lemma ext_eqquotP (P Q: 'hpolyNF[R]_n) : (P =i Q) <-> (P =e Q).
+Lemma ext_eqquotP (P Q: 'hpolyEq[R]_n) : (P =i Q) <-> (P =e Q).
 Proof.
 by split => [? |]; [ apply/eqquotP/ext_eqP | move/eqquotP/ext_eqP].
 Qed.
@@ -304,10 +304,10 @@ Canonical face_of_quot := PiMono2 face_of_quotP.
 Proof.
 Admitted.
 
-Lemma totoP (base : 'hpoly[R]_n) (P_NF : 'hpolyNF(base)) F :
+Lemma totoP (base : 'hpoly[R]_n) (P_NF : 'hpolyEq(base)) F :
   reflect (
       non_empty F
-      /\  exists Q : 'hpolyNF(base),
+      /\  exists Q : 'hpolyEq(base),
         (\eq_set P_NF \subset \eq_set Q) /\ (F = '[ HPolyEqS Q ])) (face_of '[ HPolyEqS P_NF ] F).
 Proof.
 case: (hpolyP F) => F' ->.
@@ -322,11 +322,11 @@ apply: (iffP andP).
   by apply/andP; split.
 Qed.*)
 
-(*CoInductive hpolyNF_spec (P : 'poly[R]_n) : Type :=
-  HPolySpecNF (base: 'hpoly[R]_n) (Q : 'hpolyNF(base)) of (P = '[ HPolyEqS Q ]) : hpolyNF_spec P.
+(*CoInductive hpolyEq_spec (P : 'poly[R]_n) : Type :=
+  HPolySpecNF (base: 'hpoly[R]_n) (Q : 'hpolyEq(base)) of (P = '[ HPolyEqS Q ]) : hpolyEq_spec P.
 
-Fact hpolyNFP (P : 'poly[R]_n) :
-  hpolyNF_spec P.
+Fact hpolyEqP (P : 'poly[R]_n) :
+  hpolyEq_spec P.
 Proof.
 (*move: (erefl (hpoly P)).
 case: {2}(hpoly P) => [base Q] /=.*)
@@ -342,19 +342,20 @@ Variable F : 'poly[R]_n.
 Variable G : 'poly[R]_n.
 
 Fact foo' : face_of P F -> face_of F G -> face_of P G.
-case/hpolyP: P => [P_Eq H_P].
-case/hpolyP: F => [F_Eq H_F].
-case/hpolyP: G => [G_Eq H_G].
+case/hpolyP: P => P_Eq H_P.
+case/hpolyP: F => F_Eq H_F.
+case/hpolyP: G => G_Eq H_G.
 rewrite H_P H_F H_G.
-rewrite polyE /= => /andP [F_non_empty].
-move/existsP => [F' /andP [F'_superset /eqP H_F']].
-rewrite H_F' polyE /= => /andP [G_non_empty].
-move/existsP => [G' /andP [G'_superset /eqP H_G']].
-rewrite H_G' polyE /=.
+rewrite /= polyE => /andP [F_non_empty].
+move/existsP => [F' /andP [F'_superset /ext_eqP/ext_eqquotP H_F']].
+rewrite H_F' /= polyE => /andP [G_non_empty].
+move/existsP => [G' /andP [G'_superset /ext_eqP/ext_eqquotP /= H_G']].
+rewrite H_G' /= polyE.
+rewrite /= in G'_superset.
 apply/andP; split.
 - have: non_empty G.
   + by rewrite H_G polyE.
-  have <-: '[ {| base := \base(P_Eq); hpolyeq_with_base := G' |} ] = G.
+  have <-: '[ {| base := \base(P_Eq); hpolyEq_with_base := G' |} ] = G.
   + by rewrite H_G.
   by rewrite polyE /=.
 - apply/existsP; exists G'; apply/andP; split; last by done.

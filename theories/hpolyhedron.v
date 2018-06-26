@@ -354,6 +354,8 @@ End ExtensionalEquality.
 
 End HPrim.
 
+Canonical HPrim.hpoly_extEqType.
+
 Import HPrim.
 
 Section HPolyEq.
@@ -828,7 +830,7 @@ Qed.
 
 Definition hpolyEq_face_of (base : 'hpoly[R]_n) (P : 'hpolyEq(base)) :=
   [ pred F : 'hpolyEq[R]_n |
-      non_empty F && [exists Q : 'hpolyEq(base), (\eq P \subset \eq Q) && (F ==i Q :> 'hpoly[R]_n) ] ].
+      non_empty F && [exists Q : 'hpolyEq(base), (\eq P \subset \eq Q) && (F ==i (HPolyEqS Q) :> 'hpoly[R]_n) ] ].
 
 Lemma hpolyEq_face_ofP (base : 'hpoly[R]_n) (P : 'hpolyEq(base)) (F : 'hpolyEq[R]_n) :
   non_empty P ->
@@ -845,7 +847,7 @@ apply: (iffP idP).
   pose I := \eq (HPolyEq JQ).
   pose AI := row_submx A I.
   pose e := const_mx 1: 'cV[R]_#|I|.
-  have e_is_non_neg: e >=m 0 by apply/forallP => i; rewrite !mxE; exact: ler01. 
+  have e_is_non_neg: e >=m 0 by apply/forallP => i; rewrite !mxE; exact: ler01.
   pose c := AI^T *m e.
   pose opt_v := '[e, row_submx b I].
   have c_lower_bound: forall x, x \in (HPolyEq JP) -> '[c,x] >= opt_v.
@@ -972,7 +974,7 @@ apply: (iffP idP).
               - right; rewrite j_eq_rshift_k mul_col_mx 2!col_mxEd mulNmx mxE [in RHS]mxE.
                 apply/eqP; rewrite eqr_opp -row_submx_mul 2!row_submx_mxE.
                 rewrite hpolyEq_inE in y_in_P.
-                exact: ((implyP ((forallP (proj2 (andP y_in_P))) (enum_val k))) (enum_valP k)). 
+                exact: ((implyP ((forallP (proj2 (andP y_in_P))) (enum_val k))) (enum_valP k)).
           + rewrite inE => /lt0r_neq0 uj_neq0.
             move/(_ (lshift #|JP| j)): active_ineq.
             case; first by move/eqP: uj_neq0.
