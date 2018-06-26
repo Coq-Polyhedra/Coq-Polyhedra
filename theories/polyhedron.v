@@ -275,8 +275,11 @@ apply: (iffP idP).
     by move/(_ x): H; rewrite -{1}[F]reprK -{1 2}[P]reprK !polyE.
 Qed.
 
-Lemma has_face_imp_non_empty' P F : face_of P F -> non_empty P.
-Admitted.
+Fact has_face_imp_non_empty P F : face_of P F -> non_empty P.
+Proof.
+unlock face_of non_empty.
+exact: has_hpolyEq_face_imp_non_empty.
+Qed.
 
 Lemma face_of_quotP : {mono \poly : P F / (fun (P F : 'hpolyEq[R]_n) => hpolyEq_face_of P F) P F >-> face_of P F}.
 Proof.
@@ -289,11 +292,9 @@ case: (boolP (non_empty '[ P ])) => [polyP_non_empty | polyP_empty ].
     exists c; rewrite !polyE in c_bounded is_face *; split;
       [ done | by move => x; move/(_ x): is_face; rewrite !polyE
       | done | by move => x; move/(_ x): is_face; rewrite !polyE ].
-- symmetry.
-  have /negbTE ->: ~~ (face_of (\poly P) (\poly F)).
-    move: polyP_empty; apply: contra; exact: has_face_imp_non_empty'.
-  apply/negbTE; move: polyP_empty; rewrite polyE;
-    apply: contra; exact: has_face_imp_non_empty.
+- have /negbTE ->: ~~ (hpolyEq_face_of P F)
+    by move: polyP_empty; apply: contra; rewrite polyE; exact: has_hpolyEq_face_imp_non_empty.
+  apply/negbTE; move: polyP_empty; apply: contra; exact: has_face_imp_non_empty.
 Qed.
 
 Canonical face_of_quot := PiMono2 face_of_quotP.
@@ -365,6 +366,7 @@ Qed.
 Fact foo'' : face_of P F -> face_of P G -> ({subset F <= G} <-> face_of G F).
 Admitted.
 
+End Ex.
 
 
 End Face.

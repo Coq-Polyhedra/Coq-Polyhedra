@@ -1024,7 +1024,7 @@ apply: (iffP idP).
           by apply: ((subsetP (subsetUl I JP)) i).
 Qed.
 
-Fact has_face_imp_non_empty (base : 'hpoly[R]_n) (P : 'hpolyEq(base)) (F : 'hpolyEq[R]_n) :
+Fact has_hpolyEq_face_imp_non_empty (base : 'hpoly[R]_n) (P : 'hpolyEq(base)) (F : 'hpolyEq[R]_n) :
   hpolyEq_face_of P F -> non_empty P. (* RK *)
 Proof.
 move/andP => [/non_emptyP [x x_in_F] /existsP [Q /andP [eq_set_inclusion /ext_eqP F_eqi_Q]]].
