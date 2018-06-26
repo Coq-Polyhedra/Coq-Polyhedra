@@ -232,38 +232,34 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition face_of :=
-  lift_fun2 'poly[R]_n (fun F P => hpolyEq_face_of F P).
+  lift_fun2 'poly[R]_n (fun F P => hpolyEq_face_of P F). (* RK *)
 
-
-(*Lemma is_face_ofP (F P : 'poly[R]_n) :
+Lemma face_ofP (F P : 'poly[R]_n) :
   (non_empty P) ->
     reflect (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in F))
-          (face_of F P).
+          (face_of F P). (* RK *)
 Proof.
-case: (hpolyP P) => nfP -> /=.
-rewrite /non_empty.
-move => Hfeas.
+unlock non_empty => non_empty_P /=.
 apply: (iffP idP).
-- unlock is_face_of.
-  move/(is_hface_ofP (repr F) Hfeas) => [c [Hbounded H]].
+- unlock face_of.
+  move/(hpolyEq_face_ofP (hpoly F) non_empty_P) => [c [? ?]].
   exists c; split.
   + by rewrite -[P]reprK piE.
   + move => x.
     by rewrite -[F]reprK -[P]reprK !piE.
-- move => [c [Hbounded H]].
-  unlock is_face_of.
-  apply/(is_hface_ofP (repr F) Hfeas).
+- move => [c [bounded_c_P H]].
+  unlock face_of.
+  apply/(hpolyEq_face_ofP (repr F) non_empty_P).
   exists c; split.
-  + by rewrite -[P]reprK piE in Hbounded.
+  + by rewrite -[P]reprK piE in bounded_c_P.
   + move => x.
     by move/(_ x): H; rewrite -{1}[F]reprK -{1 2}[P]reprK !piE.
-Qed.*)
-
+Qed.
 
 Fact face_of_quotP_aux (P F P' F' : 'hpolyEq[R]_n) :
   HPrim.non_empty P -> (P = P' %[mod polyhedron_eqQuotType R n])%qT ->
     (F = F' %[mod polyhedron_eqQuotType R n])%qT ->
-      (hface_of P) F -> (hface_of P') F'.
+      (hpolyEq_face_of P) F -> (hpolyEq_face_of P') F'.
 Proof.
 Admitted.
 (*move => P_non_empty P_eq_P' F_eq_F'.
