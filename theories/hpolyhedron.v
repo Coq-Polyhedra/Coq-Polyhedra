@@ -27,10 +27,8 @@ Reserved Notation "\active P" (at level 10, P at level 8, format "\active  P").
 Reserved Notation "''hpolyEq[' R ]_ n" (at level 8, n at level 2, format "''hpolyEq[' R ]_ n").
 Reserved Notation "''hpolyEq_' n" (at level 8, n at level 2).
 Reserved Notation "\base P" (at level 10, P at level 8, format "\base  P").
-Reserved Notation "''P^=' ( P ; J )"
-         (at level 0, P at level 99, J at level 99, format "''P^=' ( P ; J )").
-Reserved Notation "''P^=' ( A , b ; J )"
-         (at level 0, A at level 99, b at level 99, J at level 99, format "''P^=' ( A ,  b ;  J )").
+Reserved Notation "''P^=' ( P ; J )" (at level 0, P at level 99, J at level 99, format "''P^=' ( P ; J )").
+Reserved Notation "''P^=' ( A , b ; J )" (at level 0, A at level 99, b at level 99, J at level 99, format "''P^=' ( A ,  b ;  J )").
 Reserved Notation "''hpolyNF(' base )" (at level 8, base at level 99, format "''hpolyNF(' base )").
 Reserved Notation "''hpolyNF[' R ]_ n" (at level 8, n at level 2, format "''hpolyNF[' R ]_ n").
 Reserved Notation "''hpolyNF_' n" (at level 8, n at level 2).
@@ -492,10 +490,8 @@ Qed.
 
 Definition hpolyEqS_eqMixin := CanEqMixin of_hpolyEqSK.
 Canonical hpolyEqS_eqType := Eval hnf in EqType 'hpolyEq[R]_n hpolyEqS_eqMixin.
-
 Definition hpolyEqS_choiceMixin := CanChoiceMixin of_hpolyEqSK.
-Canonical hpolyEqS_choiceType :=
-  Eval hnf in ChoiceType 'hpolyEq[R]_n hpolyEqS_choiceMixin.
+Canonical hpolyEqS_choiceType := Eval hnf in ChoiceType 'hpolyEq[R]_n hpolyEqS_choiceMixin.
 
 End HPolyEqStruct.
 

@@ -94,22 +94,21 @@ Proof.
 by constructor; rewrite hpolyK.
 Qed.
 
-Lemma ext_eqquotP (P Q: 'hpolyEq[R]_n) : (P =i Q) <-> (P =e Q).
+Lemma ext_eqquotP (P Q : 'hpolyEq[R]_n) :
+  (P =i Q) <-> (P =e Q).
 Proof.
 by split => [? |]; [ apply/eqquotP/ext_eqP | move/eqquotP/ext_eqP].
 Qed.
 
-Lemma mem_polyhedron_quotP (x: 'cV[R]_n) :
+Lemma mem_polyhedron_quotP (x : 'cV[R]_n) :
   { mono \poly : P / x \in P >-> (x \in mem_polyhedron P) }.
 Proof.
 unlock mem_polyhedron => P /=.
 by case: (hpolyP '[ P ]) => Q /ext_eqquotP.
 Qed.
 
-Canonical mem_polyhedron_quot x :=
-  Eval hnf in PiMono1 (mem_polyhedron_quotP x).
-Canonical polyhedron_predType :=
-  Eval hnf in @mkPredType 'cV[R]_n 'poly[R]_n (@mem_polyhedron R n).
+Canonical mem_polyhedron_quot x := Eval hnf in PiMono1 (mem_polyhedron_quotP x).
+Canonical polyhedron_predType := Eval hnf in @mkPredType 'cV[R]_n 'poly[R]_n (@mem_polyhedron R n).
 
 Definition non_empty := lift_fun1 'poly[R]_n (@HPrim.non_empty R n).
 
@@ -159,7 +158,7 @@ case: (HPrim.lp_stateP c (hpoly P)) =>
   by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
 Qed.
 
-Variable c: 'cV[R]_n.
+Variable c : 'cV[R]_n.
 
 Lemma bounded_quotP :
   (* TODO: we should prove all the quotP statements in a row,
@@ -185,6 +184,8 @@ case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q); try by done.
   move/(_ _ x_in_P): z_opt => z_le_x.
   by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
 Qed.
+
+Canonical bounded_quot := Eval hnf in PiMono1 bounded_quotP.
 
 Lemma unbounded_quotP :
   { mono \poly : P / HPrim.unbounded c P >-> unbounded c P }.
@@ -212,8 +213,11 @@ case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q); try by done.
     by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
 Qed.
 
+Canonical unbounded_quot := Eval hnf in PiMono1 unbounded_quotP.
+
 Lemma opt_value_quotP :
   { mono \poly : P / HPrim.opt_value c P >-> opt_value c P }.
+Proof.
 unlock opt_value => P /=.
 case: (hpolyP '[ P ]) => Q /ext_eqquotP P_eq_Q.
 rewrite /HPrim.opt_value.
@@ -239,8 +243,6 @@ case: (HPrim.lp_stateP c P); case: (HPrim.lp_stateP c Q) => /=; try by done.
     by move/andP: (conj z_le_x x_lt_z); rewrite lter_anti.
 Qed.
 
-Canonical bounded_quot := Eval hnf in PiMono1 bounded_quotP.
-Canonical unbounded_quot := Eval hnf in PiMono1 unbounded_quotP.
 Canonical opt_value_quot := Eval hnf in PiMono1 opt_value_quotP.
 
 End Lift.
@@ -297,7 +299,7 @@ case: (boolP (non_empty '[ P ])) => [polyP_non_empty | polyP_empty ].
   apply/negbTE; move: polyP_empty; apply: contra; exact: has_face_imp_non_empty.
 Qed.
 
-Canonical face_of_quot := PiMono2 face_of_quotP.
+Canonical face_of_quot := Eval hnf in PiMono2 face_of_quotP.
 
 (*Lemma face_ofP F P :
   reflect (exists c, bounded P c /\ forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in F)))
@@ -367,6 +369,5 @@ Fact foo'' : face_of P F -> face_of P G -> ({subset F <= G} <-> face_of G F).
 Admitted.
 
 End Ex.
-
 
 End Face.
