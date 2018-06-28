@@ -26,51 +26,27 @@ Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Section ExtensionalEqualityNF.
-(* Instead of this, we should declare a structure such that
- * =i is equivalent to a decidable relation                 *)
+Section EquivRel.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Import HPrim. (* we need to import HPrim to benefit from
-               * the canonical structure on hpoly_ext_eq *)
+Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
+  EquivRel (@HPrim.hpoly_ext_eq R n)
+           (ext_eq_refl _) (ext_eq_sym _) (ext_eq_trans _).
 
-Definition hpolyEq_ext_eq := [ rel P Q : 'hpolyEq[R]_n | P ==i Q :> 'hpoly[R]_n ].
+End EquivRel.
 
-Lemma hpolyEq_ext_eq_refl :
-  reflexive hpolyEq_ext_eq.
-Proof.
-by move => ? /=.
-Qed.
+Arguments hpoly_equiv_rel [R n].
 
-Lemma hpolyEq_ext_eq_sym :
-  symmetric hpolyEq_ext_eq.
-Proof.
-move => ? ? /=; exact: ext_eq_sym.
-Qed.
-
-Lemma hpolyEq_ext_eq_trans :
-  transitive hpolyEq_ext_eq.
-Proof.
-move => P Q S /=; exact: ext_eq_trans.
-Qed.
-
-Canonical hpolyEq_equiv_rel : equiv_rel 'hpolyEq[R]_n :=
-  EquivRel hpolyEq_ext_eq hpolyEq_ext_eq_refl hpolyEq_ext_eq_sym hpolyEq_ext_eq_trans.
-
-End ExtensionalEqualityNF.
-
-Arguments hpolyEq_equiv_rel [R n].
-
-Definition poly R n := {eq_quot (@hpolyEq_equiv_rel R n)}%qT.
+Definition poly R n := {eq_quot (@hpoly_equiv_rel R n)}%qT.
 
 Notation "''poly[' R ]_ n" := (@poly R n).
 Notation "''poly_' n" := ('poly[_]_n).
-Notation "''[' P ]" := (\pi_('poly_ _) P)%qT.
 Notation "\poly" := (\pi_('poly_ _))%qT.
-Notation "P =e Q" := (\poly P = \poly Q).
-Notation "P ==e Q" := (\poly P == \poly Q).
+Notation "''[' P ]" := (\pi_('poly_ _) P)%qT.
+Notation "P =e Q" := ('[ P ] = '[ Q ]).
+Notation "P ==e Q" := ('[ P ] == '[ Q ]).
 
 Notation polyE := piE.
 Notation hpoly := repr.
@@ -85,7 +61,7 @@ Section Lift.
 Variable R : realFieldType.
 Variable n : nat.
 
-CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpolyEq[R]_n -> Type :=
+CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpoly[R]_n -> Type :=
   HpolySpec Q of (P = '[ Q ]) : hpoly_spec P Q.
 
 Lemma hpolyP (P : 'poly[R]_n) :
@@ -94,10 +70,28 @@ Proof.
 by constructor; rewrite hpolyK.
 Qed.
 
-Lemma ext_eqquotP (P Q : 'hpolyEq[R]_n) :
+Lemma ext_eqquotP (P Q : 'hpoly[R]_n) :
   (P =i Q) <-> (P =e Q).
 Proof.
 by split => [? |]; [ apply/eqquotP/ext_eqP | move/eqquotP/ext_eqP].
+Qed.
+
+Definition has_base (P : 'poly[R]_n) (base: 'hpoly[R]_n) :=
+  [exists Q : 'hpolyEq(base), P == '[ Q ]].
+
+Lemma repr_hpolyEq (P : 'poly[R]_n) (Q : 'hpoly[R]_n) : P = '[Q] -> P = '[ 'P^=(Q; set0) ].
+case: Q => [m A b] ->.
+apply/ext_eqquotP => x.
+rewrite hpolyEq_inE.
+suff ->: [forall j in set0, (A *m x) j 0 == b j 0].
+- by rewrite andbT.
+- by apply/forall_inP => j; rewrite inE.
+Qed.
+
+Lemma self_base (P : 'poly[R]_n) (Q : 'hpoly[R]_n) : P = '[Q] -> has_base P Q.
+Proof.
+move/repr_hpolyEq => P_eq.
+by apply/existsP; exists 'P^=(Q; set0); rewrite P_eq.
 Qed.
 
 Lemma mem_polyhedron_quotP (x : 'cV[R]_n) :
@@ -252,36 +246,94 @@ Section Face.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition face_of :=
-  lift_fun2 'poly[R]_n (fun P F => hpolyEq_face_of P F). (* RK *)
+Definition face_of (P : 'poly[R]_n) :=
+  let Q := 'P^=(hpoly P; set0) in
+  lift_fun1 'poly[R]_n (hface_of Q).
 
 Lemma face_ofP (F P : 'poly[R]_n) :
   (non_empty P) ->
     reflect (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in F))
           (face_of P F). (* RK *)
 Proof.
-unlock non_empty => non_empty_P /=.
+unlock face_of.
+case: (hpolyP F) => G ->.
+case: (hpolyP P) => Q /repr_hpolyEq P_repr.
+move => P_non_empty; rewrite P_repr polyE in P_non_empty.
 apply: (iffP idP).
-- unlock face_of.
-  move/(hpolyEq_face_ofP (hpoly F) non_empty_P) => [c [? ?]].
+- move/(hface_ofP _ P_non_empty) => [c [? ?]].
   exists c; split.
-  + by rewrite -[P]reprK polyE.
-  + move => x.
-    by rewrite -[F]reprK -[P]reprK !polyE.
+  + by rewrite P_repr polyE.
+  + by move => x; rewrite P_repr !polyE.
 - move => [c [bounded_c_P H]].
-  unlock face_of.
-  apply/(hpolyEq_face_ofP (repr F) non_empty_P).
+  apply/(hface_ofP _ P_non_empty).
   exists c; split.
-  + by rewrite -[P]reprK polyE in bounded_c_P.
+  + by rewrite P_repr polyE in bounded_c_P.
   + move => x.
-    by move/(_ x): H; rewrite -{1}[F]reprK -{1 2}[P]reprK !polyE.
+    by move/(_ x): H; rewrite {1 2}P_repr !polyE.
 Qed.
 
 Fact has_face_imp_non_empty P F : face_of P F -> non_empty P.
 Proof.
-unlock face_of non_empty.
-exact: has_hpolyEq_face_imp_non_empty.
+unlock face_of.
+case: (hpolyP P) => Q /repr_hpolyEq ->.
+rewrite polyE; exact: has_hface_imp_non_empty.
 Qed.
+
+Lemma face_of_quotP (P F : 'poly[R]_n) :
+  reflect (forall base, forall P': hpolyEq(base), forall F', P = '[ P' ] -> F = '[F'] -> hface_of P' F') (face_of P F).
+Proof.
+case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
+- apply/(iffP (face_ofP _ P_non_empty)).
+  + move => [c [bounded eq_face]] base P' F' P_eq_P' F_eq_F'.
+    apply/hface_ofP; first by rewrite P_eq_P' polyE in P_non_empty.
+    exists c; split; first by rewrite P_eq_P' polyE in bounded.
+      by move => x; move/(_ x): eq_face; rewrite P_eq_P' F_eq_F' !polyE.
+  + move => H.
+    suff: face_of P F by exact: face_ofP.
+    by unlock face_of; apply: H; do ?[apply: repr_hpolyEq]; rewrite reprK.
+- Admitted.
+
+Definition active (P: 'poly[R]_n) (base: 'hpoly[R]_n) (has_base: has_base P base) :
+  match [pick Q: 'hpolyEq(base) | P = '[Q]] with
+  | Some Q => \active Q
+  | None => set0
+  end.
+
+Lemma face_of_defP (P F : 'poly[R]_n) :
+  reflect (forall base, forall P': hpolyEq(base), P = '[ P' ] -> exists F' : hpolyEq(base),
+                  [/\ F = '[F'], HPrim.non_empty F' & \active P' \subset \active F']
+
+
+
+    Proof.
+apply/(iffP (face_ofP _ P_non_empty)).
+- move => [c [bounded eq_face]]; split; last first.
+  + move => base P' P_eq_P'.
+    rewrite P_eq_P' !piE in bounded eq_face.
+    * have : hface_of P' (hpoly F).
+      apply/hface_ofP; first by rewrite P_eq_P' polyE in P_non_empty.
+    exists c; split; first by done.
+    by move => x; move/(_ x): eq_face; rewrite -{1}[F]hpolyK !polyE.
+    rewrite /hface_of => /andP [F_non_empty /existsP [F' /andP [F_eq_F' active]]].
+    exists F'; split; last by done.
+    * by rewrite -[F]hpolyK; apply/eqquotP.
+
+
+
+    move/ext_eqP/ext_eqquotP: F_eq_F'.
+    first by rewrite -F_eq_F' hpolyK.
+
+
+      move:
+
+
+      HPrim.bounded c P' /\
+          (forall x : 'cV_n, x \in P' /\ Some '[ c, x] = HPrim.opt_value c P' <-> x \in hpoly F).
+    * split; first
+
+
+=> [is_face base |].
+
 
 Lemma face_of_quotP : {mono \poly : P F / (fun (P F : 'hpolyEq[R]_n) => hpolyEq_face_of P F) P F >-> face_of P F}.
 Proof.
