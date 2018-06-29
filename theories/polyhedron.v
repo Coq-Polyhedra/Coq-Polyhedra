@@ -288,13 +288,32 @@ Qed.
 Lemma face_of_quotP (P F : 'poly[R]_n) :
   forall base (P' : 'hpolyEq(base)) (F' : 'hpoly[R]_n),
     P = '[P'] -> F = '[F'] -> face_of P F = hface_of P' F'.
-Proof.
+Proof. (* RK *)
 move => base P' F' P_eq_P' F_eq_F'.
 case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
 - apply/(sameP (face_ofP _ P_non_empty)).
   rewrite P_eq_P' polyE in P_non_empty.
   apply/(equivP (hface_ofP _ P_non_empty)).
-Admitted.
+  split.
+  + move => [c [bounded_c_P' F'_is_opt]].
+    exists c.
+    split.
+    * by rewrite P_eq_P' polyE.
+    * move => x.
+      by rewrite P_eq_P' F_eq_F' !polyE.
+  + move => [c [bounded_c_P F_is_opt]].
+    exists c.
+    split.
+    * by rewrite P_eq_P' polyE in bounded_c_P.
+    * move => x.
+      move: (F_is_opt x).
+      by rewrite P_eq_P' F_eq_F' !polyE.
+- have -> : face_of P F = false
+    by move: P_empty; apply: contraNF; exact: has_face_imp_non_empty.
+  symmetry.
+  move: P_empty; rewrite P_eq_P' polyE.
+  by apply: contraNF; exact: has_hface_imp_non_empty.
+Qed.
 
 Arguments face_of_quotP [P F base P' F'].
 
