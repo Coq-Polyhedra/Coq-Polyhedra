@@ -361,21 +361,21 @@ Section HPolyEq.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition hpolyEq_of_set (base : 'hpoly[R]_n)  :=
+Definition hpolyEq_of_set (base : 'hpoly[R]_n) :=
   let: 'P(A,b) as P := base in
-  fun (J: {set 'I_(#ineq P)}) =>
-    let AJ := col_mx A (- (row_submx A J)) in
-    let bJ := col_mx b (- (row_submx b J)) in
-    'P(AJ, bJ).
+    fun (J : {set 'I_(#ineq P)}) =>
+      let AJ := col_mx A (-(row_submx A J)) in
+      let bJ := col_mx b (-(row_submx b J)) in
+        'P(AJ, bJ).
 
-Definition has_base (base: 'hpoly[R]_n) (P: 'hpoly[R]_n) :=
+Definition has_base (base : 'hpoly[R]_n) (P : 'hpoly[R]_n) :=
   [exists I : {set 'I_(#ineq base)}, P == hpolyEq_of_set I].
 
 Section FixedBase.
 
-Variable base: 'hpoly[R]_n.
+Variable base : 'hpoly[R]_n.
 
-Inductive hpolyEq := HPolyEq (P: 'hpoly[R]_n) of has_base base P.
+Inductive hpolyEq := HPolyEq (P : 'hpoly[R]_n) of has_base base P.
 
 Coercion hpoly_of_hpolyEq Q := let: HPolyEq P _ := Q in P.
 Canonical hpolyEq_subType := [subType for hpoly_of_hpolyEq].
@@ -384,7 +384,7 @@ Canonical hpolyEq_eqType := Eval hnf in EqType hpolyEq hpolyEq_eqMixin.
 Definition hpolyEq_choiceMixin := [choiceMixin of hpolyEq by <:].
 Canonical hpolyEq_choiceType := Eval hnf in ChoiceType hpolyEq hpolyEq_choiceMixin.
 
-Lemma hpolyEq_of_setP (J: {set 'I_(#ineq base)}) :
+Lemma hpolyEq_of_setP (J : {set 'I_(#ineq base)}) :
   has_base base (hpolyEq_of_set J).
 Proof.
 by apply/existsP; exists J.
@@ -440,18 +440,20 @@ Lemma relint (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (Q : 'hpolyEq('P(A,b))) 
 Proof.
 Admitted.
 
-Lemma active_inj (base: 'hpoly[R]_n) : injective (@active_set base).
+Lemma active_inj (base : 'hpoly[R]_n) : injective (@active_set base).
+Proof.
 Admitted.
 
-Lemma active_idem (base: 'hpoly[R]_n) (Q: 'hpolyEq(base)) :
+Lemma active_idem (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
   let Q' := HPolyEq (hpolyEq_of_setP (\active Q)) in
-  \active Q' = \active Q.
+    \active Q' = \active Q.
+Proof.
 Admitted.
 
-Definition active_inv (base: 'hpoly[R]_n) (J: {set 'I_(#ineq base)}) :=
+Definition active_inv (base : 'hpoly[R]_n) (J : {set 'I_(#ineq base)}) :=
   (HPolyEq (hpolyEq_of_setP J)).
 
-Lemma activeK (base: 'hpoly[R]_n) :
+Lemma activeK (base : 'hpoly[R]_n) :
   cancel (@active_set base) (@active_inv base).
 Proof.
 move => Q.
@@ -460,7 +462,7 @@ Qed.
 
 Section FinType.
 
-Variable base: 'hpoly[R]_n.
+Variable base : 'hpoly[R]_n.
 
 Definition hpolyEq_countMixin := CanCountMixin (@activeK base).
 Canonical hpolyEq_countType  :=
@@ -483,19 +485,23 @@ Section HFace.
 
 Variable R : realFieldType.
 Variable n : nat.
-Variable base: 'hpoly[R]_n.
+Variable base : 'hpoly[R]_n.
 Variable P : 'hpolyEq(base).
 
-Definition hface_of (F: 'hpoly[R]_n) :=
+Definition hface_of (F : 'hpoly[R]_n) :=
   non_empty F &&
-  [exists Q: 'hpolyEq(base), (F ==i Q :> 'hpoly[R]_n) && ((\active P) \subset \active Q)].
+    [exists Q: 'hpolyEq(base), (F ==i Q :> 'hpoly[R]_n) && ((\active P) \subset \active Q)].
 
-Lemma hface_ofP (F: 'hpoly[R]_n) :
+Lemma hface_ofP (F : 'hpoly[R]_n) :
   non_empty P ->
-  reflect (exists c, bounded c P /\ (forall x, (x \in P /\ (Some '[c,x] = opt_value c P)) <-> (x \in F))) (hface_of F).
+    reflect (exists c, bounded c P /\ (forall x, (x \in P /\ (Some '[c,x] = opt_value c P)) <-> (x \in F)))
+            (hface_of F).
+Proof.
 Admitted.
 
-Lemma has_hface_imp_non_empty (F: 'hpoly[R]_n) : hface_of F -> non_empty P.
+Lemma has_hface_imp_non_empty (F : 'hpoly[R]_n) :
+  hface_of F -> non_empty P.
+Proof.
 Admitted.
 
 End HFace.

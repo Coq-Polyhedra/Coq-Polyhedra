@@ -15,10 +15,8 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Reserved Notation "P =e Q"
-         (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
-Reserved Notation "P ==e Q"
-         (at level 70, format "'[hv' P '/ '  ==e  Q ']'", no associativity).
+Reserved Notation "P =e Q" (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
+Reserved Notation "P ==e Q" (at level 70, format "'[hv' P '/ '  ==e  Q ']'", no associativity).
 Reserved Notation "''poly[' R ]_ n" (at level 8, n at level 2, format "''poly[' R ]_ n").
 Reserved Notation "''poly_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
@@ -32,8 +30,7 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
-  EquivRel (@HPrim.hpoly_ext_eq R n)
-           (ext_eq_refl _) (ext_eq_sym _) (ext_eq_trans _).
+  EquivRel (@HPrim.hpoly_ext_eq R n) (ext_eq_refl _) (ext_eq_sym _) (ext_eq_trans _).
 
 End EquivRel.
 
@@ -76,8 +73,8 @@ Proof.
 by split => [? |]; [ apply/eqquotP/ext_eqP | move/eqquotP/ext_eqP].
 Qed.
 
-Definition has_base (P : 'poly[R]_n) (base: 'hpoly[R]_n) :=
-  [exists Q : 'hpolyEq(base), P == '[ Q ]].
+Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
+  [exists Q : 'hpolyEq(base), P == '[Q]].
 
 Lemma has_baseP (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
   reflect (exists (Q : 'hpolyEq(base)), P = '[Q]) (has_base P base).
@@ -85,16 +82,19 @@ Proof.
 exact: exists_eqP.
 Qed.
 
-Lemma repr_hpolyEq (P : 'poly[R]_n) (Q : 'hpoly[R]_n) : P = '[Q] -> P = '[ 'P^=(Q; set0) ].
+Lemma repr_hpolyEq (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
+  P = '[ Q ] -> P = '[ 'P^=(Q; set0) ].
+Proof.
 case: Q => [m A b] ->.
 apply/ext_eqquotP => x.
 rewrite hpolyEq_inE.
 suff ->: [forall j in set0, (A *m x) j 0 == b j 0].
-- by rewrite andbT.
-- by apply/forall_inP => j; rewrite inE.
+  by rewrite andbT.
+by apply/forall_inP => j; rewrite inE.
 Qed.
 
-Lemma self_base (P : 'poly[R]_n) (Q : 'hpoly[R]_n) : P = '[Q] -> has_base P Q.
+Lemma self_base (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
+  P = '[Q] -> has_base P Q.
 Proof.
 move/repr_hpolyEq => P_eq.
 by apply/existsP; exists 'P^=(Q; set0); rewrite P_eq.
@@ -254,7 +254,7 @@ Variable n : nat.
 
 Definition face_of (P : 'poly[R]_n) :=
   let Q := 'P^=(hpoly P; set0) in
-  lift_fun1 'poly[R]_n (hface_of Q).
+    lift_fun1 'poly[R]_n (hface_of Q).
 
 Lemma face_ofP (F P : 'poly[R]_n) :
   (non_empty P) ->
@@ -286,8 +286,8 @@ rewrite polyE; exact: has_hface_imp_non_empty.
 Qed.
 
 Lemma face_of_quotP (P F : 'poly[R]_n) :
-  forall base (P' : 'hpolyEq(base)) (F' : 'hpoly[R]_n), P = '[ P' ] -> F = '[ F' ] ->
-                                                      face_of P F = hface_of P' F'.
+  forall base (P' : 'hpolyEq(base)) (F' : 'hpoly[R]_n),
+    P = '[P'] -> F = '[F'] -> face_of P F = hface_of P' F'.
 Proof.
 move => base P' F' P_eq_P' F_eq_F'.
 case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
@@ -298,14 +298,15 @@ Admitted.
 
 Arguments face_of_quotP [P F base P' F'].
 
-Definition active (P: 'poly[R]_n) (base: 'hpoly[R]_n) :=
+Definition active (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
   match [pick Q : 'hpolyEq(base) | P == '[Q]] with
   | Some Q => \active Q
   | None => set0
   end.
 
-Lemma active_quotP (P: 'poly[R]_n) (base: 'hpoly[R]_n) (Q: 'hpolyEq(base)) :
+Lemma active_quotP (P : 'poly[R]_n) (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
   P = '[Q] -> active P base = \active Q.
+Proof.
 Admitted.
 
 Lemma face_of_defP (P F : 'poly[R]_n) :
