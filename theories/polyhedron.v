@@ -59,7 +59,7 @@ Variable R : realFieldType.
 Variable n : nat.
 
 CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpoly[R]_n -> Type :=
-  HpolySpec Q of (P = '[ Q ]) : hpoly_spec P Q.
+  HpolySpec Q of (P = '[Q]) : hpoly_spec P Q.
 
 Lemma hpolyP (P : 'poly[R]_n) :
   hpoly_spec P (hpoly P).
@@ -83,12 +83,12 @@ exact: exists_eqP.
 Qed.
 
 Lemma repr_hpolyEq (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
-  P = '[ Q ] -> P = '[ 'P^=(Q; set0) ].
+  P = '[Q] -> P = '['P^=(Q; set0)].
 Proof.
 case: Q => [m A b] ->.
 apply/ext_eqquotP => x.
 rewrite hpolyEq_inE.
-suff ->: [forall j in set0, (A *m x) j 0 == b j 0].
+suff ->: [forall j in set0, (A *m x) j 0 == b j 0]
   by rewrite andbT.
 by apply/forall_inP => j; rewrite inE.
 Qed.
@@ -305,9 +305,32 @@ Definition active (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
   end.
 
 Lemma active_quotP (P : 'poly[R]_n) (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :
-  P = '[Q] -> active P base = \active Q.
+  P = '[Q] -> active P base = \active Q. (* RK *)
 Proof.
-Admitted.
+case: base Q => [m A b] Q.
+case: (hpolyP P) => hP ->.
+move/ext_eqquotP => P_eq_Q.
+apply/eqP.
+rewrite eqEsubset.
+apply/andP.
+split.
+- apply/subsetP => i.
+  rewrite /active.
+  case: pickP => [Q' /eqP/ext_eqquotP P_eq_Q' | ].
+  + move/activeP => i_in_active_Q'.
+    apply/activeP => x x_in_Q.
+    apply: i_in_active_Q'.
+    by rewrite -P_eq_Q' P_eq_Q.
+  + by rewrite inE.
+- apply/subsetP => i /activeP i_in_active_Q.
+  rewrite /active.
+  case: pickP => [Q' /eqP/ext_eqquotP P_eq_Q' | empty_class_P].
+  + apply/activeP => x x_in_Q'.
+    apply: i_in_active_Q.
+    by rewrite -P_eq_Q P_eq_Q'.
+  + move: (empty_class_P Q).
+    by move/ext_eqquotP/eqP: P_eq_Q ->.
+Qed.
 
 Lemma face_of_defP (P F : 'poly[R]_n) :
   forall base, has_base P base ->
