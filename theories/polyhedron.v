@@ -15,8 +15,6 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Reserved Notation "P =e Q" (at level 70, format "'[hv' P '/ '  =e  Q ']'", no associativity).
-Reserved Notation "P ==e Q" (at level 70, format "'[hv' P '/ '  ==e  Q ']'", no associativity).
 Reserved Notation "''poly[' R ]_ n" (at level 8, n at level 2, format "''poly[' R ]_ n").
 Reserved Notation "''poly_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
@@ -24,13 +22,237 @@ Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Section EquivRel.
+Section QuotDef.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Canonical hpoly_equiv_rel : equiv_rel 'hpoly[R]_n :=
-  EquivRel (@HPrim.hpoly_ext_eq R n) (ext_eq_refl _) (ext_eq_sym _) (ext_eq_trans _).
+Definition canon (P : 'hpoly[R]_n) := choose (ext_eq_op P) P.
+
+Record poly := Poly {
+  hpoly : 'hpoly[R]_n;
+  _ : canon hpoly == hpoly;
+}.
+
+Lemma canon_id P : canon (canon P) == canon P.
+Proof.
+rewrite /canon.
+set P' := choose (ext_eq_op P) P.
+have P_eq_P': (P ==i P') by exact: chooseP.
+suff /eq_choose ->: ext_eq_op P' =1 ext_eq_op P.
+- by apply/eqP; apply: choose_id.
+- move => Q.
+  by apply/idP/idP; apply: ext_eq_trans; last by rewrite ext_eq_sym.
+Qed.
+
+Definition class_of P := Poly (canon_id P).
+
+End QuotDef.
+
+Arguments hpoly [R n].
+Prenex Implicits hpoly.
+Notation "''poly[' R ]_ n" := (@poly R n).
+Notation "''poly_' n" := ('poly[_]_n).
+Notation "''[' P ]" := (class_of P).
+
+Section QuotStruct.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Canonical poly_subType := [subType for (@hpoly R n)].
+Definition poly_eqMixin := Eval hnf in [eqMixin of 'poly[R]_n by <:].
+Canonical poly_eqType := Eval hnf in EqType 'poly[R]_n poly_eqMixin.
+Definition poly_choiceMixin := Eval hnf in [choiceMixin of 'poly[R]_n by <:].
+Canonical poly_choiceType := Eval hnf in ChoiceType 'poly[R]_n poly_choiceMixin.
+Definition mem_poly (P : 'poly[R]_n) := hpoly P : pred_class.
+
+Lemma hpoly_inj : injective (@hpoly R n).
+Proof.
+exact: val_inj.
+Qed.
+
+Lemma hpolyK (P : 'poly[R]_n) : '[ hpoly P ] = P.
+case: P => [P P_eq]; apply: hpoly_inj.
+exact: eqP.
+Qed.
+
+CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpoly[R]_n -> Type :=
+  HpolySpec Q of (P = '[Q]) : hpoly_spec P Q.
+
+Lemma hpolyP (P : 'poly[R]_n) :
+  hpoly_spec P (hpoly P).
+Proof.
+by constructor; rewrite hpolyK.
+Qed.
+
+Lemma poly_eqE (P Q : 'hpoly[R]_n) : ('[ P ] == '[ Q ]) = (P ==i Q).
+Proof.
+Admitted.
+
+Lemma poly_eqP (P Q : 'hpoly[R]_n) : ('[ P ] = '[ Q ]) <-> (P =i Q).
+Proof.
+Admitted.
+
+End QuotStruct.
+
+Arguments hpolyP [R n].
+Prenex Implicits hpolyP.
+Coercion mem_poly : poly >-> pred_class.
+
+Section Lift.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Lemma mem_quotP (P : 'hpoly[R]_n) : '[ P ] =i P.
+Proof.
+move => x; rewrite /mem_poly.
+by case/hpolyP: '[P] => Q /poly_eqP.
+Qed.
+
+Let quotE := mem_quotP.
+
+Definition non_empty (P : 'poly[R]_n) := (HPrim.non_empty (hpoly P)).
+
+Lemma non_emptyP (P : 'poly[R]_n) :
+  reflect (exists x, x \in P) (non_empty P).
+Proof.
+exact: (equivP HPrim.non_emptyP).
+Qed.
+
+Arguments non_emptyP [P].
+
+Lemma non_empty_quotP (P : 'hpoly[R]_n) :
+  non_empty '[ P ] = HPrim.non_empty P.
+Proof.
+apply/(sameP non_emptyP)/(equivP HPrim.non_emptyP).
+by split; move => [x x_in]; exists x; rewrite ?quotE in x_in *.
+Qed.
+
+Definition is_included_in_hyperplane (P : 'poly[R]_n) c d :=
+  HPrim.is_included_in_hyperplane (hpoly P) c d.
+
+Lemma is_included_in_hyperplaneP (P : 'poly[R]_n) c d :
+  reflect (forall x : 'cV_n, x \in P -> '[ c, x] = d)
+          (is_included_in_hyperplane P c d).
+Proof.
+exact: (equivP HPrim.is_included_in_hyperplaneP).
+Qed.
+
+Arguments is_included_in_hyperplaneP [P c d].
+
+Lemma is_included_in_hyperplane_quotP (P : 'hpoly[R]_n) c d :
+  is_included_in_hyperplane '[ P ] c d = HPrim.is_included_in_hyperplane P c d.
+Proof.
+apply/(sameP is_included_in_hyperplaneP)/(equivP HPrim.is_included_in_hyperplaneP).
+by split; move => H x; move/(_ x): H; rewrite quotE.
+Qed.
+
+Variable c : 'cV[R]_n.
+
+Definition bounded (P: 'poly[R]_n) := HPrim.bounded c (hpoly P).
+Definition unbounded (P: 'poly[R]_n) := HPrim.unbounded c (hpoly P).
+Definition opt_value (P: 'poly[R]_n) := HPrim.opt_value c (hpoly P).
+
+CoInductive lp_state (P : 'poly[R]_n) : option R -> bool -> bool -> bool -> Type :=
+| Empty of P =i pred0 : lp_state P None false false false
+| Bounded (v : R) of (exists x, x \in P /\ '[c,x] = v) * (forall x, x \in P -> v <= '[c,x]) : lp_state P (Some v) true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state P None true false true.
+
+Lemma lp_stateP P :
+  lp_state P (opt_value P) (non_empty P) (bounded P) (unbounded P).
+Admitted.
+(*
+Proof. (* RK *)
+unlock opt_value non_empty bounded unbounded; rewrite /HPrim.opt_value.
+case: (HPrim.lp_stateP c (hpoly P)) =>
+  [empty_hpoly_P | x [x_in_hpoly_P x_is_opt] | unbounded_hpoly_P].
+- constructor.
+  move => x.
+  by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)) empty_hpoly_P.
+- constructor.
+  split.
+  + exists x.
+    split; last by done.
+      by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
+  + move => y.
+    rewrite -{1}[P]reprK (mem_polyhedron_quotP y (hpoly P)).
+    exact: x_is_opt.
+- constructor.
+  move => K.
+  move: (unbounded_hpoly_P K) => [x ?].
+  exists x.
+  by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
+Qed.*)
+
+Lemma boundedP (P : 'poly[R]_n) :
+  reflect (exists x, x \in P /\ (forall y, y \in P -> '[ c, x] <= '[ c, y]))
+         (bounded P).
+Proof.
+exact: (equivP HPrim.boundedP).
+Qed.
+
+Lemma unboundedP (P : 'poly[R]_n) :
+  reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P).
+Proof.
+exact: (equivP HPrim.unboundedP).
+Qed.
+
+Lemma bounded_certP P :
+  non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded P).
+Proof.
+move => P_non_empty.
+exact: (equivP (HPrim.bounded_certP _)).
+Qed.
+
+Lemma lp_quotP (P : 'hpoly[R]_n) :
+  (non_empty '[ P ] = HPrim.non_empty P)
+  * (bounded '[ P ] = HPrim.bounded c P)
+  * (unbounded '[ P ] = HPrim.unbounded c P)
+  * (opt_value '[ P ] = HPrim.opt_value c P).
+Proof.
+Admitted.
+
+End Lift.
+
+Section Base.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
+  [exists I , P == '[ 'P^=(base; I) ]].
+
+Variable P : 'poly[R]_n.
+Variable base: 'hpoly[R]_n.
+Hypothesis P_base : has_base P base.
+
+Definition active :=
+  let P' := hpoly P in
+  let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
+    [ set i : 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
+
+Definition active :=
+
+
+
+
+Lemma hpoly_of_baseP (P: 'poly[R]_n) (base : 'hpoly[R]_n) :
+  has_base P base -> P = '[  ]
+
+  isSome [pick I | P == '[ 'P^=(base; I) ]].
+Admitted.
+Search _ isSome.
+
+
+Variable P : 'poly[R]_n.
+Variable base : 'hpoly[R]_n.
+
+
+Check (existsP (idP (has_base P base))).
+
+Definition hpoly_base (P
 
 End EquivRel.
 

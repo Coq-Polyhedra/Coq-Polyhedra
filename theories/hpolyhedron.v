@@ -251,6 +251,15 @@ Qed.
 
 End Basic.
 
+Arguments non_empty [R n].
+Arguments bounded [R n].
+Arguments unbounded [R n].
+Arguments non_emptyP [R n P].
+Arguments boundedP [R n c P].
+Arguments bounded_certP [R n c P].
+Arguments unboundedP [R n c P].
+Prenex Implicits non_emptyP boundedP bounded_certP unboundedP.
+
 Section Inclusion.
 
 Variable R : realFieldType.
@@ -327,6 +336,9 @@ Qed.
 
 End Inclusion.
 
+Arguments is_included_in_hyperplaneP [R n P c d].
+Prenex Implicits is_included_in_hyperplaneP.
+
 Section ExtensionalEquality.
 
 Variable R : realFieldType.
@@ -366,7 +378,25 @@ Definition hpolyEq_of_set (base : 'hpoly[R]_n) :=
     fun (J : {set 'I_(#ineq P)}) =>
       let AJ := col_mx A (-(row_submx A J)) in
       let bJ := col_mx b (-(row_submx b J)) in
-        'P(AJ, bJ).
+      'P(AJ, bJ).
+
+Notation "''P^=' ( P ; J )" := (@hpolyEq_of_set P J).
+Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
+
+Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J: {set 'I_m}) :
+  (x \in 'P^=(A, b; J)) = (x \in 'P(A, b)) && [forall j in J, ((A *m x) j 0 == b j 0)].
+Admitted.
+
+
+End HPolyEq.
+
+Arguments hpolyEq_of_set [R n].
+Prenex Implicits hpolyEq_of_set.
+Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
+Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
+Definition inE := (hpolyEq_inE, inE).
+
+(*
 
 Definition has_base (base : 'hpoly[R]_n) (P : 'hpoly[R]_n) :=
   [exists I : {set 'I_(#ineq base)}, P == hpolyEq_of_set I].
@@ -505,3 +535,4 @@ Proof.
 Admitted.
 
 End HFace.
+*)

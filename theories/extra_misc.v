@@ -193,3 +193,14 @@ Proof.
 Qed.
 
 End ExtraNum.
+
+Section ExtraBool.
+
+Variable T : Type.
+
+Lemma predsym (p1 p2: pred T) : p1 =i p2 -> p2 =i p1.
+Proof.
+by move => eq x; symmetry.
+Qed.
+
+End ExtraBool.
