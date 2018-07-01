@@ -206,7 +206,7 @@ move => P_non_empty.
 exact: (equivP (HPrim.bounded_certP _)).
 Qed.
 
-Lemma lp_quotP (P : 'hpoly[R]_n) :
+Lemma lp_quotE (P : 'hpoly[R]_n) :
   (non_empty '[ P ] = HPrim.non_empty P)
   * (bounded '[ P ] = HPrim.bounded c P)
   * (unbounded '[ P ] = HPrim.unbounded c P)
@@ -224,35 +224,77 @@ Variable n : nat.
 Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
   [exists I , P == '[ 'P^=(base; I) ]].
 
-Variable P : 'poly[R]_n.
-Variable base: 'hpoly[R]_n.
-Hypothesis P_base : has_base P base.
+Lemma has_baseP (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
+  reflect (exists I, P = '[ 'P^=(base; I) ]) (has_base P base).
+Proof.
+exact: exists_eqP.
+Qed.
 
-Definition active :=
-  let P' := hpoly P in
+Lemma repr_hpolyEq (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
+  P = '[Q] -> P = '['P^=(Q; set0)].
+Proof.
+case: Q => [m A b] ->.
+apply/poly_eqP => x; rewrite hpolyEq_inE.
+suff ->: [forall j in set0, (A *m x) j 0 == b j 0]
+  by rewrite andbT.
+by apply/forall_inP => j; rewrite inE.
+Qed.
+
+Lemma self_base (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
+  P = '[Q] -> has_base P Q.
+Proof.
+move/repr_hpolyEq => P_eq.
+by apply/has_baseP; exists set0.
+Qed.
+
+Definition active (P: 'poly[R]_n) base :=
   let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
-    [ set i : 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
+  [ set i: 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
 
-Definition active :=
-
-
-
-
-Lemma hpoly_of_baseP (P: 'poly[R]_n) (base : 'hpoly[R]_n) :
-  has_base P base -> P = '[  ]
-
-  isSome [pick I | P == '[ 'P^=(base; I) ]].
+Lemma active_inP (P: 'poly[R]_n) (m: nat) (A:'M[R]_(m,n)) (b: 'cV[R]_m) i :
+  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in active P 'P(A,b)).
 Admitted.
-Search _ isSome.
 
+Arguments active_inP [P m A b].
+Prenex Implicits active_inP.
 
 Variable P : 'poly[R]_n.
-Variable base : 'hpoly[R]_n.
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+Hypothesis P_base : has_base P 'P(A,b).
 
+Lemma activeP I :
+  P = '['P^=(A, b; I)] -> I \subset (active P 'P(A,b)).
+Proof.
+move => P_eq.
+apply/subsetP => i i_in_I; apply/active_inP => x.
+rewrite P_eq mem_quotP.
+by rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i_in_I)/eqP].
+Qed.
 
-Check (existsP (idP (has_base P base))).
+Lemma hpoly_of_baseP : P = '[ 'P^=(A, b; active P 'P(A, b)) ].
+Proof.
+move/has_baseP: P_base => [I P_eq_Pact].
+move/activeP: (P_eq_Pact); rewrite {}P_eq_Pact.
+set P' := 'P^=(A, b; I).
+move => I_subset; apply/poly_eqP.
+move => x; apply/idP/idP => [x_in |].
+- have x_in_P': x \in '[P'] by rewrite mem_quotP.
+  have x_in_Pab : x \in 'P(A, b)
+    by rewrite hpolyEq_inE in x_in; move/andP: x_in => [?].
+  rewrite hpolyEq_inE; rewrite x_in_Pab.
+  by apply/forall_inP => i /active_inP/(_ _ x_in_P') ->.
+- rewrite hpolyEq_inE => /andP [x_in_Pab /forall_inP act_eq].
+  rewrite hpolyEq_inE; apply/andP; split; first by done.
+  apply/forall_inP => i i_in_I.
+  suff: i \in (active '[P'] 'P(A, b)) by exact: act_eq.
+  + by move/subsetP/(_ _ i_in_I): I_subset.
+Qed.
 
-Definition hpoly_base (P
+End Base.
+
+Check hpoly_of_baseP.
 
 End EquivRel.
 
