@@ -317,6 +317,14 @@ Section Face.
 Variable R : realFieldType.
 Variable n : nat.
 
+Definition face_of (P Q : 'poly[R]_n) :=
+  let base := hpoly P in
+  [ && non_empty Q, [ Q has \base base ]
+                    & { eq P on base } \subset { eq Q on base } ].
+
+
+
+
 Definition face_of (P : 'poly[R]_n) :=
   let Q := 'P^=(hpoly P; set0) in
     lift_fun1 'poly[R]_n (hface_of Q).
