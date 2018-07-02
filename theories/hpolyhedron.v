@@ -312,12 +312,12 @@ apply: (iffP idP) => [/andP [is_included is_included_opp] x x_in_P | sat_eq].
   + by rewrite -(sat_eq _ x_in_P) vdotNl.
 Qed.
 
-Definition hpoly_is_included_in Q :=
+Definition is_included_in Q :=
   let: 'P(A,b) := Q in
     [forall i, is_included_in_halfspace (row i A)^T (b i 0)].
 
-Lemma hpoly_is_included_inP Q :
-  reflect {subset P <= Q} (hpoly_is_included_in Q).
+Lemma is_included_inP Q :
+  reflect {subset P <= Q} (is_included_in Q).
 Proof.
 case: Q => m A b.
 apply: (iffP idP).
@@ -345,16 +345,16 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition hpoly_ext_eq : rel 'hpoly[R]_n :=
-    fun P Q => (hpoly_is_included_in P Q) && (hpoly_is_included_in Q P).
+    fun P Q => (is_included_in P Q) && (is_included_in Q P).
 
 Definition hpoly_ext_eqP P Q :
   reflect (P =i Q) (hpoly_ext_eq P Q).
 Proof.
 apply: (iffP idP).
-- move/andP => [/hpoly_is_included_inP H1 /hpoly_is_included_inP H2] x.
+- move/andP => [/is_included_inP H1 /is_included_inP H2] x.
   apply/idP/idP; [exact: (H1 x) | exact: (H2 x)].
 - move => H.
-  by apply/andP; split; apply/hpoly_is_included_inP => x; rewrite (H x).
+  by apply/andP; split; apply/is_included_inP => x; rewrite (H x).
 Qed.
 
 Definition hpolyExtEqMixin := ExtEqMixin hpoly_ext_eqP.
