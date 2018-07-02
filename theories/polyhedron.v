@@ -18,6 +18,9 @@ Unset Printing Implicit Defensive.
 Reserved Notation "''poly[' R ]_ n" (at level 8, n at level 2, format "''poly[' R ]_ n").
 Reserved Notation "''poly_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
+Reserved Notation "{ 'eq' P 'on' base }" (at level 0, format "{ 'eq' P  'on'  base }").
+Reserved Notation "{ 'eq' P }" (at level 0, format "{ 'eq'  P }").
+Reserved Notation "[ P 'has' '\base' base ]" (at level 0, format "[ P  'has'  '\base'  base ]").
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -224,8 +227,10 @@ Variable n : nat.
 Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
   [exists I , P == '[ 'P^=(base; I) ]].
 
+Notation "[ P 'has' '\base' base ]" := (has_base P base).
+
 Lemma has_baseP (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
-  reflect (exists I, P = '[ 'P^=(base; I) ]) (has_base P base).
+  reflect (exists I, P = '[ 'P^=(base; I) ]) [P has \base base].
 Proof.
 exact: exists_eqP.
 Qed.
@@ -251,8 +256,11 @@ Definition active (P: 'poly[R]_n) base :=
   let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
   [ set i: 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
 
+Notation "{ 'eq' P 'on' base }" := (active P base).
+Notation "{ 'eq' P }" := (active P _).
+
 Lemma active_inP (P: 'poly[R]_n) (m: nat) (A:'M[R]_(m,n)) (b: 'cV[R]_m) i :
-  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in active P 'P(A,b)).
+  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
 Admitted.
 
 Arguments active_inP [P m A b].
@@ -265,7 +273,7 @@ Variable b : 'cV[R]_m.
 Hypothesis P_base : has_base P 'P(A,b).
 
 Lemma activeP I :
-  P = '['P^=(A, b; I)] -> I \subset (active P 'P(A,b)).
+  P = '['P^=(A, b; I)] -> I \subset { eq P }.
 Proof.
 move => P_eq.
 apply/subsetP => i i_in_I; apply/active_inP => x.
@@ -273,7 +281,7 @@ rewrite P_eq mem_quotP.
 by rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i_in_I)/eqP].
 Qed.
 
-Lemma hpoly_of_baseP : P = '[ 'P^=(A, b; active P 'P(A, b)) ].
+Lemma hpoly_of_baseP : P = '[ 'P^=(A, b; { eq P }) ].
 Proof.
 move/has_baseP: P_base => [I P_eq_Pact].
 move/activeP: (P_eq_Pact); rewrite {}P_eq_Pact.
@@ -288,11 +296,14 @@ move => x; apply/idP/idP => [x_in |].
 - rewrite hpolyEq_inE => /andP [x_in_Pab /forall_inP act_eq].
   rewrite hpolyEq_inE; apply/andP; split; first by done.
   apply/forall_inP => i i_in_I.
-  suff: i \in (active '[P'] 'P(A, b)) by exact: act_eq.
+  suff: i \in { eq '[P'] on 'P(A, b) } by exact: act_eq.
   + by move/subsetP/(_ _ i_in_I): I_subset.
 Qed.
 
 End Base.
+
+Notation "{ 'eq' P 'on' base }" := (active P base).
+Notation "{ 'eq' P }" := (active P _).
 
 Check hpoly_of_baseP.
 
@@ -306,12 +317,6 @@ Notation "''poly[' R ]_ n" := (@poly R n).
 Notation "''poly_' n" := ('poly[_]_n).
 Notation "\poly" := (\pi_('poly_ _))%qT.
 Notation "''[' P ]" := (\pi_('poly_ _) P)%qT.
-Notation "P =e Q" := ('[ P ] = '[ Q ]).
-Notation "P ==e Q" := ('[ P ] == '[ Q ]).
-
-Notation polyE := piE.
-Notation hpoly := repr.
-Notation hpolyK := reprK.
 
 Definition mem_polyhedron (R : realFieldType) (n : nat) : 'poly[R]_n -> pred_class :=
   lift_fun1 'poly[R]_n id.
