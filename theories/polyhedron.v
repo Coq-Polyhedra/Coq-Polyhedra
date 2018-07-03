@@ -30,25 +30,27 @@ Section QuotDef.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition canon (P : 'hpoly[R]_n) := choose (ext_eq_op P) P.
+Definition canon (hP : 'hpoly[R]_n) :=
+  choose (ext_eq_op hP) hP.
 
 Record poly := Poly {
   hpoly : 'hpoly[R]_n;
   _ : canon hpoly == hpoly;
 }.
 
-Lemma canon_id P : canon (canon P) == canon P.
+Lemma canon_id hP :
+  canon (canon hP) == canon hP.
 Proof.
 rewrite /canon.
-set P' := choose (ext_eq_op P) P.
-have P_eq_P': (P ==i P') by exact: chooseP.
-suff /eq_choose ->: ext_eq_op P' =1 ext_eq_op P.
-- by apply/eqP; apply: choose_id.
-- move => Q.
-  by apply/idP/idP; apply: ext_eq_trans; last by rewrite ext_eq_sym.
+set hQ := choose (ext_eq_op hP) hP.
+have hP_eq_hQ: (hP ==i hQ) by exact: chooseP.
+suff /eq_choose ->: ext_eq_op hQ =1 ext_eq_op hP
+  by apply/eqP; apply: choose_id.
+move => hR.
+by apply/idP/idP; apply: ext_eq_trans; last by rewrite ext_eq_sym.
 Qed.
 
-Definition class_of P := Poly (canon_id P).
+Definition class_of hP := Poly (canon_id hP).
 
 End QuotDef.
 
@@ -70,18 +72,21 @@ Definition poly_choiceMixin := Eval hnf in [choiceMixin of 'poly[R]_n by <:].
 Canonical poly_choiceType := Eval hnf in ChoiceType 'poly[R]_n poly_choiceMixin.
 Definition mem_poly (P : 'poly[R]_n) := hpoly P : pred_class.
 
-Lemma hpoly_inj : injective (@hpoly R n).
+Lemma hpoly_inj :
+  injective (@hpoly R n).
 Proof.
 exact: val_inj.
 Qed.
 
-Lemma hpolyK (P : 'poly[R]_n) : '[ hpoly P ] = P.
+Lemma hpolyK (P : 'poly[R]_n) :
+  '[hpoly P] = P.
+Proof.
 case: P => [P P_eq]; apply: hpoly_inj.
 exact: eqP.
 Qed.
 
 CoInductive hpoly_spec (P : 'poly[R]_n) : 'hpoly[R]_n -> Type :=
-  HpolySpec Q of (P = '[Q]) : hpoly_spec P Q.
+  HpolySpec hQ of (P = '[hQ]) : hpoly_spec P hQ.
 
 Lemma hpolyP (P : 'poly[R]_n) :
   hpoly_spec P (hpoly P).
@@ -89,13 +94,35 @@ Proof.
 by constructor; rewrite hpolyK.
 Qed.
 
-Lemma poly_eqE (P Q : 'hpoly[R]_n) : ('[ P ] == '[ Q ]) = (P ==i Q).
-Proof.
-Admitted.
+Lemma poly_eqE (hP hQ : 'hpoly[R]_n) :
+  ('[hP] == '[hQ]) = (hP ==i hQ).
+Proof. (* RK: to be improved? *)
+apply/idP/idP => [/eqP eq_classes | hP_eq_hQ].
+- have canonhP : canon (hpoly '[hP]) = (hpoly '[hP])
+    by exact: (eqP (canon_id hP)).
+  have canonhQ : canon (hpoly '[hQ]) = (hpoly '[hQ])
+    by exact: (eqP (canon_id hQ)).
+  rewrite [in LHS]eq_classes canonhQ /= in canonhP.
+  have: hQ ==i canon hQ
+    by rewrite /canon; apply/chooseP.
+  rewrite canonhP ext_eq_sym.
+  apply: ext_eq_trans.
+  by rewrite /canon; apply/chooseP.
+- have H: ext_eq_op hQ =1 ext_eq_op hP
+    by move => hR; apply/idP/idP; apply: ext_eq_trans; [done | rewrite ext_eq_sym].
+  apply/eqP; apply: hpoly_inj.
+  rewrite /= /canon (eq_choose H).
+  by apply: choose_id.
+Qed.
 
-Lemma poly_eqP (P Q : 'hpoly[R]_n) : ('[ P ] = '[ Q ]) <-> (P =i Q).
-Proof.
-Admitted.
+Lemma poly_eqP (hP hQ : 'hpoly[R]_n) :
+  ('[hP] = '[hQ]) <-> (hP =i hQ).
+Proof. (* RK: to be improved? *)
+split.
+- by move/eqP; rewrite poly_eqE; apply/HPrim.hpoly_ext_eqP.
+- move/HPrim.hpoly_ext_eqP => ?.
+  by apply/eqP; rewrite poly_eqE.
+Qed.
 
 End QuotStruct.
 
@@ -108,10 +135,10 @@ Section Lift.
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma mem_quotP (P : 'hpoly[R]_n) : '[ P ] =i P.
+Lemma mem_quotP (hP : 'hpoly[R]_n) : '[hP] =i hP.
 Proof.
 move => x; rewrite /mem_poly.
-by case/hpolyP: '[P] => Q /poly_eqP.
+by case/hpolyP: '[hP] => hQ /poly_eqP.
 Qed.
 
 Let quotE := mem_quotP.
@@ -126,8 +153,8 @@ Qed.
 
 Arguments non_emptyP [P].
 
-Lemma non_empty_quotP (P : 'hpoly[R]_n) :
-  non_empty '[ P ] = HPrim.non_empty P.
+Lemma non_empty_quotP (hP : 'hpoly[R]_n) :
+  non_empty '[hP] = HPrim.non_empty hP.
 Proof.
 apply/(sameP non_emptyP)/(equivP HPrim.non_emptyP).
 by split; move => [x x_in]; exists x; rewrite ?quotE in x_in *.
@@ -145,8 +172,8 @@ Qed.
 
 Arguments is_included_in_hyperplaneP [P c d].
 
-Lemma is_included_in_hyperplane_quotP (P : 'hpoly[R]_n) c d :
-  is_included_in_hyperplane '[ P ] c d = HPrim.is_included_in_hyperplane P c d.
+Lemma is_included_in_hyperplane_quotP (hP : 'hpoly[R]_n) c d :
+  is_included_in_hyperplane '[hP] c d = HPrim.is_included_in_hyperplane hP c d.
 Proof.
 apply/(sameP is_included_in_hyperplaneP)/(equivP HPrim.is_included_in_hyperplaneP).
 by split; move => H x; move/(_ x): H; rewrite quotE.
@@ -157,17 +184,19 @@ Definition is_included_in (P Q : 'poly[R]_n) :=
 
 Lemma is_included_inP (P Q : 'poly[R]_n) :
   reflect {subset P <= Q } (is_included_in P Q).
+Proof.
 Admitted.
 
-Lemma is_included_in_quotP (P Q : 'poly[R]_n) (P' Q' : 'hpoly[R]_n) :
-  P = '[ P' ] -> Q = '[ Q' ] -> is_included_in P Q = HPrim.is_included_in P' Q'.
+Lemma is_included_in_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
+  P = '[hP] -> Q = '[hQ] -> is_included_in P Q = HPrim.is_included_in hP hQ.
+Proof.
 Admitted.
 
 Variable c : 'cV[R]_n.
 
-Definition bounded (P: 'poly[R]_n) := HPrim.bounded c (hpoly P).
-Definition unbounded (P: 'poly[R]_n) := HPrim.unbounded c (hpoly P).
-Definition opt_value (P: 'poly[R]_n) := HPrim.opt_value c (hpoly P).
+Definition bounded (P : 'poly[R]_n) := HPrim.bounded c (hpoly P).
+Definition unbounded (P : 'poly[R]_n) := HPrim.unbounded c (hpoly P).
+Definition opt_value (P : 'poly[R]_n) := HPrim.opt_value c (hpoly P).
 
 CoInductive lp_state (P : 'poly[R]_n) : option R -> bool -> bool -> bool -> Type :=
 | Empty of P =i pred0 : lp_state P None false false false
@@ -176,6 +205,7 @@ CoInductive lp_state (P : 'poly[R]_n) : option R -> bool -> bool -> bool -> Type
 
 Lemma lp_stateP P :
   lp_state P (opt_value P) (non_empty P) (bounded P) (unbounded P).
+Proof.
 Admitted.
 (*
 Proof. (* RK *)
@@ -220,11 +250,11 @@ move => P_non_empty.
 exact: (equivP (HPrim.bounded_certP _)).
 Qed.
 
-Lemma lp_quotE (P : 'hpoly[R]_n) :
-  (non_empty '[ P ] = HPrim.non_empty P)
-  * (bounded '[ P ] = HPrim.bounded c P)
-  * (unbounded '[ P ] = HPrim.unbounded c P)
-  * (opt_value '[ P ] = HPrim.opt_value c P).
+Lemma lp_quotE (hP : 'hpoly[R]_n) :
+  (non_empty '[hP] = HPrim.non_empty hP)
+  * (bounded '[hP] = HPrim.bounded c hP)
+  * (unbounded '[hP] = HPrim.unbounded c hP)
+  * (opt_value '[hP] = HPrim.opt_value c hP).
 Proof.
 Admitted.
 
@@ -239,7 +269,7 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
-  [exists I , P == '[ 'P^=(base; I) ]].
+  [exists I , P == '['P^=(base; I)]].
 
 Notation "[ P 'has' '\base' base ]" := (has_base P base).
 
@@ -249,36 +279,37 @@ Proof.
 exact: exists_eqP.
 Qed.
 
-Lemma repr_hpolyEq (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
-  P = '[Q] -> P = '['P^=(Q; set0)].
+Lemma repr_hpolyEq (P : 'poly[R]_n) (hP : 'hpoly[R]_n) :
+  P = '[hP] -> P = '['P^=(hP; set0)].
 Proof.
-case: Q => [m A b] ->.
+case: hP => [m A b] ->.
 apply/poly_eqP => x; rewrite hpolyEq_inE.
 suff ->: [forall j in set0, (A *m x) j 0 == b j 0]
   by rewrite andbT.
 by apply/forall_inP => j; rewrite inE.
 Qed.
 
-Lemma self_base (P : 'poly[R]_n) (Q : 'hpoly[R]_n) :
-  P = '[Q] -> has_base P Q.
+Lemma self_base (P : 'poly[R]_n) (hP : 'hpoly[R]_n) :
+  P = '[hP] -> has_base P hP.
 Proof.
 move/repr_hpolyEq => P_eq.
 by apply/has_baseP; exists set0.
 Qed.
 
-Lemma hpoly_base (P : 'poly[R]_n) : has_base P (hpoly P).
+Lemma hpoly_base (P : 'poly[R]_n) :
+  has_base P (hpoly P).
 Proof.
 by apply/self_base; rewrite hpolyK.
 Qed.
 
-Definition active (P: 'poly[R]_n) base :=
+Definition active (P : 'poly[R]_n) base :=
   let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
-  [ set i: 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
+    [ set i: 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
 
 Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
 
-Lemma active_inP (P: 'poly[R]_n) (m: nat) (A:'M[R]_(m,n)) (b: 'cV[R]_m) i :
+Lemma active_inP (P : 'poly[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) i :
   reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
 Proof.
 rewrite inE; apply/(equivP is_included_in_hyperplaneP).
@@ -303,8 +334,8 @@ rewrite P_eq mem_quotP.
 by rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i_in_I)/eqP].
 Qed.
 
-
-Lemma hpoly_of_baseP : P = '[ 'P^=(A, b; { eq P }) ].
+Lemma hpoly_of_baseP :
+  P = '[ 'P^=(A, b; { eq P }) ].
 Proof.
 move/has_baseP: P_base => [I P_eq_Pact].
 move/activeP: (P_eq_Pact); rewrite {}P_eq_Pact.
@@ -349,7 +380,8 @@ Definition face_of (P : 'poly[R]_n) :=
 Lemma face_ofP (P Q : 'poly[R]_n) :
   (non_empty P) ->
     reflect (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
-            (Q \in face_of P). (* RK *)
+            (Q \in face_of P).
+Proof.
 Admitted.
 (*
 unlock face_of.
@@ -371,7 +403,8 @@ Qed.*)
 
 Arguments face_ofP [P Q].
 
-Fact has_face_imp_non_empty P Q : Q \in (face_of P) -> non_empty P.
+Fact has_face_imp_non_empty P Q :
+  Q \in (face_of P) -> non_empty P.
 Proof.
 move => /and3P [ /non_emptyP [x x_in_Q] Q_base ].
 move/(inclusion_on_base Q_base (hpoly_base _)) => Q_subset_P.
