@@ -319,6 +319,12 @@ Qed.
 Arguments active_inP [P m A b].
 Prenex Implicits active_inP.
 
+Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
+  [P has \base base] -> [Q has \base base] ->
+  reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
+Proof. (* TODO: should follow from the relint point of P and/or Q *)
+Admitted.
+
 Variable P : 'poly[R]_n.
 Variable m : nat.
 Variable A : 'M[R]_(m,n).
@@ -360,27 +366,26 @@ Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
 Notation "[ P 'has' '\base' base ]" := (has_base P base).
 
-Section Face.
+Module FaceBase.
+
+Section FaceBase.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
-  [P has \base base] -> [Q has \base base] ->
-  reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
-Proof. (* TODO: should follow from the relint point of P and/or Q *)
-Admitted.
+Variable base : 'hpoly[R]_n.
+Variable P : 'poly[R]_n.
+Hypothesis P_base : [P has \base base].
 
-Definition face_of (P : 'poly[R]_n) :=
-  let base := hpoly P in
+Definition face :=
   [ pred Q : 'poly[R]_n |
     [ && non_empty Q, [ Q has \base base ]
                       & { eq P on base } \subset { eq Q on base } ]].
 
-Lemma face_ofP (P Q : 'poly[R]_n) :
+Lemma face_ofP (Q : 'poly[R]_n) :
   (non_empty P) ->
     reflect (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
-            (Q \in face_of P).
+            (Q \in face).
 Proof.
 Admitted.
 (*
@@ -401,165 +406,82 @@ apply: (iffP idP).
     by move/(_ x): H; rewrite {1 2}P_repr !polyE.
 Qed.*)
 
-Arguments face_ofP [P Q].
+Arguments face_ofP [Q].
 
-Fact has_face_imp_non_empty P Q :
-  Q \in (face_of P) -> non_empty P.
+
+Definition face_empty : ~~ (non_empty P) -> face =i pred0.
 Proof.
+move => P_empty Q; rewrite !inE /= .
+apply/negbTE; move: P_empty; apply: contra.
 move => /and3P [ /non_emptyP [x x_in_Q] Q_base ].
-move/(inclusion_on_base Q_base (hpoly_base _)) => Q_subset_P.
+move/(inclusion_on_base Q_base P_base) => Q_subset_P.
 by apply/non_emptyP; exists x; apply: Q_subset_P.
 Qed.
 
-Lemma face_baseP (P Q : 'poly[R]_n) :
-  forall base, has_base P base ->
-          reflect ([/\ non_empty Q, has_base Q base &
-                                   { eq P on base } \subset { eq Q on base } ])
-                  (Q \in (face_of P)).
-Proof.
-move => base P_base.
-case: (boolP (non_empty P)) => [P_non_empty | P_empty].
-- apply/(iffP (face_ofP P_non_empty)).
+Hypothesis P_non_empty : non_empty P.
 
-
-
- P_base.
-apply/(iffP idP);
-  move/has_baseP : P_base => [P' P_eq_P'];
-  move: (hpolyP F) => [F' F_eq_F'];
-  rewrite (face_of_quotP P_eq_P' F_eq_F').
-- move/andP => [F'_non_empty /existsP [F'']
-                 /andP [/ext_eqP/ext_eqquotP F'_eq_F'' active_subset]].
-  move: (F_eq_F'); rewrite F'_eq_F'' => F_eq_F''.
-  split.
-  + by apply/has_baseP; exists F''.
-  + by rewrite F_eq_F' polyE.
-  + by rewrite (active_quotP P_eq_P') (active_quotP F_eq_F'').
-- move => [F_base F_non_empty active_subset].
-  apply/andP; split.
-  + by rewrite F_eq_F' polyE in F_non_empty.
-  + apply/existsP.
-    move/has_baseP : F_base => [F'' F_eq_F''].
-    exists F''; apply/andP; split.
-    * by apply/ext_eqP/ext_eqquotP; rewrite -F_eq_F''.
-    * by rewrite -(active_quotP P_eq_P') -(active_quotP F_eq_F'').
-
-
-
-Lemma face_of_quotP (P Q : 'poly[R]_n) (base: 'hpoly[R]_n) :
-
-
-  forall base (P' : 'hpolyEq(base)) (F' : 'hpoly[R]_n),
-    P = '[P'] -> F = '[F'] -> face_of P F = hface_of P' F'.
-Proof. (* RK *)
-move => base P' F' P_eq_P' F_eq_F'.
-case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
-- apply/(sameP (face_ofP _ P_non_empty)).
-  rewrite P_eq_P' polyE in P_non_empty.
-  apply/(equivP (hface_ofP _ P_non_empty)).
-  split.
-  + move => [c [bounded_c_P' F'_is_opt]].
-    exists c.
-    split.
-    * by rewrite P_eq_P' polyE.
-    * move => x.
-      by rewrite P_eq_P' F_eq_F' !polyE.
-  + move => [c [bounded_c_P F_is_opt]].
-    exists c.
-    split.
-    * by rewrite P_eq_P' polyE in bounded_c_P.
-    * move => x.
-      move: (F_is_opt x).
-      by rewrite P_eq_P' F_eq_F' !polyE.
-- have -> : face_of P F = false
-    by move: P_empty; apply: contraNF; exact: has_face_imp_non_empty.
-  symmetry.
-  move: P_empty; rewrite P_eq_P' polyE.
-  by apply: contraNF; exact: has_hface_imp_non_empty.
-Qed.
-
-
-Lemma face_of_defP (P F : 'poly[R]_n) :
-  forall base, has_base P base ->
-          reflect ([/\ has_base F base, non_empty F & (active P base) \subset (active F base)])
-                  (face_of P F).
-Proof.
-move => base P_base.
-apply/(iffP idP);
-  move/has_baseP : P_base => [P' P_eq_P'];
-  move: (hpolyP F) => [F' F_eq_F'];
-  rewrite (face_of_quotP P_eq_P' F_eq_F').
-- move/andP => [F'_non_empty /existsP [F'']
-                 /andP [/ext_eqP/ext_eqquotP F'_eq_F'' active_subset]].
-  move: (F_eq_F'); rewrite F'_eq_F'' => F_eq_F''.
-  split.
-  + by apply/has_baseP; exists F''.
-  + by rewrite F_eq_F' polyE.
-  + by rewrite (active_quotP P_eq_P') (active_quotP F_eq_F'').
-- move => [F_base F_non_empty active_subset].
-  apply/andP; split.
-  + by rewrite F_eq_F' polyE in F_non_empty.
-  + apply/existsP.
-    move/has_baseP : F_base => [F'' F_eq_F''].
-    exists F''; apply/andP; split.
-    * by apply/ext_eqP/ext_eqquotP; rewrite -F_eq_F''.
-    * by rewrite -(active_quotP P_eq_P') -(active_quotP F_eq_F'').
-Qed.
-
-Arguments face_of_defP [P F base].
-
-(*Lemma face_ofP F P :
-  reflect (exists c, bounded P c /\ forall x, (x \in P -> ('[c,x] = opt_value P c <-> x \in F)))
-           (face_of F P).
+Lemma faceP (Q : 'poly[R]_n) :
+  reflect
+    (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
+    (Q \in face). (* RK *)
 Proof.
 Admitted.
 
-Lemma totoP (base : 'hpoly[R]_n) (P_NF : 'hpolyEq(base)) F :
-  reflect (
-      non_empty F
-      /\  exists Q : 'hpolyEq(base),
-        (\eq_set P_NF \subset \eq_set Q) /\ (F = '[ HPolyEqS Q ])) (face_of '[ HPolyEqS P_NF ] F).
+End FaceBase.
+
+End FaceBase.
+
+Arguments FaceBase.faceP [_ _ _ _ _ _ _].
+
+Section Face.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition face (P: 'poly[R]_n) := FaceBase.face (hpoly P) P.
+
+Lemma face_empty (P : 'poly[R]_n) : ~~ (non_empty P) -> (face P) =i pred0.
 Proof.
-case: (hpolyP F) => F' ->.
-rewrite !polyE.
-apply: (iffP andP).
-- move => [F_non_empty /existsP [Fb /andP [superset /eqP ->]]].
-  split; first by done.
-  by exists Fb; split.
-- move => [F_non_empty [Fb [superset ->]]].
-  split; first by done.
-  apply/existsP. exists Fb.
-  by apply/andP; split.
-Qed.*)
-
-(*CoInductive hpolyEq_spec (P : 'poly[R]_n) : Type :=
-  HPolySpecNF (base: 'hpoly[R]_n) (Q : 'hpolyEq(base)) of (P = '[ HPolyEqS Q ]) : hpolyEq_spec P.
-
-Fact hpolyEqP (P : 'poly[R]_n) :
-  hpolyEq_spec P.
-Proof.
-(*move: (erefl (hpoly P)).
-case: {2}(hpoly P) => [base Q] /=.*)
-constructor.
-case: {-1}(hpoly P) (erefl (hpoly P)) => [base Q] /= <-.
-by rewrite reprK.
-Qed.*)
-
-Section Ex.
-
-Variable P : 'poly[R]_n.
-Variable F : 'poly[R]_n.
-Variable G : 'poly[R]_n.
-
-Fact foo' : face_of P F -> face_of F G -> face_of P G.
-case/hpolyP: P => P_base ->.
-have P_self_base := (self_base (erefl '[ P_base ])).
-move/(face_of_defP P_self_base) => [F_base _ active_F].
-move/(face_of_defP F_base) => [G_base G_non_empty active_G].
-apply/(face_of_defP P_self_base); split; try by done.
-by apply/(subset_trans _ active_G).
+apply: FaceBase.face_empty; exact: hpoly_base.
 Qed.
 
-End Ex.
+Lemma face_baseP (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
+  [P has \base base] ->
+  reflect ([/\ non_empty Q, has_base Q base &
+                           { eq P on base } \subset { eq Q on base } ])
+          (Q \in (face P)).
+Proof.
+move => P_base.
+suff ->: (Q \in face P) = (Q \in (FaceBase.face base P)) by exact: and3P.
+case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
+- apply/(sameP FaceBase.faceP); try by done.
+  + exact: hpoly_base.
+  + exact: FaceBase.faceP.
+- move/face_empty: (P_empty) ->.
+  by move/FaceBase.face_empty: P_empty ->.
+Qed.
+
+Arguments face_baseP [P Q _].
+
+Lemma faceP (P Q : 'poly[R]_n) :
+  non_empty P ->
+  reflect
+    (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
+    (Q \in face P).
+Proof.
+move => P_non_empty.
+apply/FaceBase.faceP; by [done | exact: hpoly_base].
+Qed.
+
+Lemma face_of_face (P Q: 'poly[R]_n) :
+  Q \in (face P) -> {subset (face Q) <= (face P)}.
+Proof.
+move/(face_baseP (hpoly_base _)).
+set base := (hpoly P).
+move => [_ Q_base eqQ_sub_eqP].
+move => Q' /(face_baseP Q_base) [Q'_non_empty Q'_base eqQ'_sub_eqQ].
+apply/(face_baseP (hpoly_base _)); split; try by done.
+by apply/(subset_trans _ eqQ'_sub_eqQ).
+Qed.
 
 End Face.
