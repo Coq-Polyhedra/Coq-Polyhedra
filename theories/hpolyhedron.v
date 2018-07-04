@@ -239,6 +239,13 @@ apply/ifT/boundedP.
 by exists x.
 Qed.
 
+Lemma opt_value_ccs (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n)  :
+  let P := 'P(A,b) in
+  (non_empty P) -> (bounded c P) ->
+  exists u, (u \in dual_polyhedron A c) /\
+       (forall x, x \in P -> (opt_value c P = Some '[c, x] <-> (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0))).
+Admitted.
+
 Lemma unboundedP c P :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K)
           (unbounded c P).

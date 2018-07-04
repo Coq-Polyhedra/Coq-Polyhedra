@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron simplex.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -245,6 +245,12 @@ Proof.
 exact: (equivP HPrim.boundedP).
 Qed.
 
+Lemma opt_value_is_optimal (P : 'poly[R]_n) x :
+  (x \in P) ->
+    (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value P = Some '[c,x].
+Proof.
+Admitted.
+
 Lemma unboundedP (P : 'poly[R]_n) :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P).
 Proof.
@@ -258,7 +264,7 @@ move => P_non_empty.
 exact: (equivP (HPrim.bounded_certP _)).
 Qed.
 
-Lemma lp_quotE (hP : 'hpoly[R]_n) :
+Lemma lp_quotE (hP : 'hpoly[R]_n) : (* TODO: fix the dependency in c issue *)
   (non_empty '[hP] = HPrim.non_empty hP)
   * (bounded '[hP] = HPrim.bounded c hP)
   * (unbounded '[hP] = HPrim.unbounded c hP)
@@ -390,33 +396,6 @@ Definition face :=
     [ && non_empty Q, [ Q has \base base ]
                       & { eq P on base } \subset { eq Q on base } ]].
 
-Lemma face_ofP (Q : 'poly[R]_n) :
-  (non_empty P) ->
-    reflect (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
-            (Q \in face).
-Proof.
-Admitted.
-(*
-unlock face_of.
-case: (hpolyP F) => G ->.
-case: (hpolyP P) => Q /repr_hpolyEq P_repr.
-move => P_non_empty; rewrite P_repr polyE in P_non_empty.
-apply: (iffP idP).
-- move/(hface_ofP _ P_non_empty) => [c [? ?]].
-  exists c; split.
-  + by rewrite P_repr polyE.
-  + by move => x; rewrite P_repr !polyE.
-- move => [c [bounded_c_P H]].
-  apply/(hface_ofP _ P_non_empty).
-  exists c; split.
-  + by rewrite P_repr polyE in bounded_c_P.
-  + move => x.
-    by move/(_ x): H; rewrite {1 2}P_repr !polyE.
-Qed.*)
-
-Arguments face_ofP [Q].
-
-
 Definition face_empty : ~~ (non_empty P) -> face =i pred0.
 Proof.
 move => P_empty Q; rewrite !inE /= .
@@ -446,8 +425,42 @@ apply/(iffP idP).
   pose c := (e *m (row_submx A { eq Q on 'P(A, b) }))^T.
   exists c; admit.
 - move/hpoly_of_baseP: P_base => P_repr.
-  move => [c] [c_bounded c_opt].
-  rewrite P_repr !lp_quotE in P_non_empty c_bounded *.
+  move => [c] [c_bounded c_opt'].
+  apply/andP; split.
+  + move/boundedP: c_bounded => [x] [x_in_P x_opt].
+    apply/non_emptyP; exists x; apply/c_opt'; split; first by done.
+    by symmetry; apply: opt_value_is_optimal.
+  + set I := ({eq P}) in P_repr *. (* TODO: parsing error if parenthesis are removed *)
+    suff: exists (J: {set 'I_(#ineq 'P(A, b))}), (I \subset J /\ Q = '['P^=(A, b; J)]).
+    * move => [J] [I_sub_J Q_eq_PabJ]; apply/andP; split.
+      - by apply/has_baseP; exists J.
+      - by move/activeP: Q_eq_PabJ; apply: subset_trans.
+    * rewrite P_repr non_empty_quotP !lp_quotE in P_non_empty c_bounded c_opt'.
+      (* the next 5 lines are required to rewriter under lambda *)
+      have c_opt : forall x : 'cV_n, (x \in 'P^=(A, b; I) /\ Some '[ c, x] = HPrim.opt_value c 'P^=(A, b; I)) <-> x \in Q.
+      - move => x; split; move => H.
+        + by apply/c_opt'; rewrite mem_quotP.
+        + by move/c_opt': H; rewrite mem_quotP.
+      rewrite {c_opt'}.
+      move: (HPrim.opt_value_ccs P_non_empty c_bounded) => [u].
+      rewrite inE; move => [/andP [_ u_ge0] csc'].
+      pose J := I :|: [set i | (usubmx u) i 0 > 0].
+      exists J; split; first exact: subsetUl.
+      suff PAbJ_eq_Q : 'P^=(A, b; J) =i Q. (* we should introduce a lemma for that: P = '[Q] <-> P =i Q *)
+      - case: (hpolyP Q) => [Q' Q_eq_Q'].
+        rewrite Q_eq_Q'; apply/poly_eqP => x.
+        by rewrite PAbJ_eq_Q Q_eq_Q' mem_quotP.
+      - move => x; apply/idP/idP => [x_in_PAbJ | x_in_Q].
+        have x_in_PAbI : x \in 'P^=(A, b; I).
+          admit.
+        + apply/c_opt; split; first by done.
+          * symmetry; apply/(csc' _ x_in_PAbI) => i.
+            case: (splitP' i) => [j -> | j ->].
+            rewrite -[u]vsubmxK mul_col_mx !col_mxEu => u_j_gt0.
+            have: (j \in J).
+
+
+
 Admitted.
 
 End FaceP.
