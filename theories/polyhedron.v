@@ -336,7 +336,7 @@ Notation "[ P 'has' '\base' base ]" := (has_base P base).
 
 Module FaceBase.
 
-Section FaceBase.
+Section Def.
 
 Variable R : realFieldType.
 Variable n : nat.
@@ -359,15 +359,35 @@ move/(inclusion_on_base Q_base P_base) => Q_subset_P.
 by apply/non_emptyP; exists x; apply: Q_subset_P.
 Qed.
 
-Hypothesis P_non_empty : non_empty P.
+End Def.
 
-Lemma faceP (Q : 'poly[R]_n) :
+Section FaceP.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
+  [P has \base base ] -> non_empty P ->
   reflect
     (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
-    (Q \in face). (* RK *)
+    (Q \in (face base P)). (* RK *)
+Proof.
+case: base => [m A b] P_base P_non_empty.
+apply/(iffP idP).
+- move/and3P => [Q_non_empty Qbase eqP_sub_eqQ].
+  pose e := (const_mx 1): 'rV[R]_(#|{ eq Q on 'P(A,b) }|).
+  pose c := (e *m (row_submx A { eq Q on 'P(A, b) }))^T.
+  exists c; admit.
+- move/hpoly_of_baseP: P_base => P_repr.
+  move => [c] [c_bounded c_opt].
+  rewrite P_repr !lp_quotE in P_non_empty c_bounded *.
+
+
+  rewrite lp_quotE in
+
 Admitted.
 
-End FaceBase.
+End FaceP.
 
 End FaceBase.
 
@@ -418,10 +438,10 @@ Lemma face_of_face (P Q: 'poly[R]_n) :
 Proof.
 move/(face_baseP (hpoly_base _)).
 set base := (hpoly P).
-move => [_ Q_base eqQ_sub_eqP].
-move => Q' /(face_baseP Q_base) [Q'_non_empty Q'_base eqQ'_sub_eqQ].
+move => [_ Q_base eqP_sub_eqQ].
+move => Q' /(face_baseP Q_base) [Q'_non_empty Q'_base eqQ_sub_eqQ'].
 apply/(face_baseP (hpoly_base _)); split; try by done.
-by apply/(subset_trans _ eqQ'_sub_eqQ).
+by apply/(subset_trans _ eqQ_sub_eqQ').
 Qed.
 
 End Face.
