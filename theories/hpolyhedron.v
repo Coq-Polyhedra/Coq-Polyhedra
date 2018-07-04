@@ -227,6 +227,14 @@ suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b)
 by rewrite P_non_empty /=.
 Qed.
 
+Lemma bounded_normal_cone (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n) :
+  bounded c 'P(A,b) -> exists u, u >=m 0 /\ c = A^T *m u.
+Admitted.
+
+Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
+  u >=m 0 -> bounded (A^T *m u) 'P(A,b).
+Admitted.
+
 Lemma opt_value_is_optimal c P x :
   (x \in P) ->
     (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
@@ -239,11 +247,11 @@ apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma opt_value_ccs (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n)  :
-  let P := 'P(A,b) in
-  (non_empty P) -> (bounded c P) ->
-  exists u, (u \in dual_polyhedron A c) /\
-       (forall x, x \in P -> (opt_value c P = Some '[c, x] <-> (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0))).
+Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) (x: 'cV[R]_n) :
+  u >=m 0 -> x \in 'P(A,b) ->
+  let c := A^T *m u in
+  reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
+          (opt_value c 'P(A,b) == Some '[c,x]).
 Admitted.
 
 Lemma unboundedP c P :

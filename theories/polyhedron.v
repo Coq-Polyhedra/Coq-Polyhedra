@@ -434,7 +434,7 @@ apply/(iffP idP).
         + by apply/c_opt'; rewrite mem_quotP.
         + by move/c_opt': H; rewrite mem_quotP.
       rewrite {c_opt'}.
-      move: (HPrim.opt_value_ccs P_non_empty c_bounded) => [u].
+      move: (HPrim.opt_value_csc P_non_empty c_bounded) => [u].
       rewrite inE; move => [/andP [_ u_ge0] csc'].
       pose J := I :|: [set i | (usubmx u) i 0 > 0].
       exists J; split; first exact: subsetUl.
@@ -449,8 +449,7 @@ apply/(iffP idP).
           * symmetry; apply/(csc' _ x_in_PAbI) => i.
             case: (splitP' i) => [j -> | j ->].
             rewrite -[u]vsubmxK mul_col_mx !col_mxEu => u_j_gt0.
-            have: (j \in J).
-
+            have j_in_J : (j \in J) by rewrite !inE; apply/orP; right.
 
 
 Admitted.
