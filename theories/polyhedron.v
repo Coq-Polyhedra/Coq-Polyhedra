@@ -135,7 +135,8 @@ Section Lift.
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma mem_quotP (hP : 'hpoly[R]_n) : '[hP] =i hP.
+Lemma mem_quotP (hP : 'hpoly[R]_n) :
+  '[hP] =i hP.
 Proof.
 move => x; rewrite /mem_poly.
 by case/hpolyP: '[hP] => hQ /poly_eqP.
@@ -143,7 +144,8 @@ Qed.
 
 Let quotE := mem_quotP.
 
-Definition non_empty (P : 'poly[R]_n) := (HPrim.non_empty (hpoly P)).
+Definition non_empty (P : 'poly[R]_n) :=
+  (HPrim.non_empty (hpoly P)).
 
 Lemma non_emptyP (P : 'poly[R]_n) :
   reflect (exists x, x \in P) (non_empty P).
@@ -176,21 +178,27 @@ Lemma is_included_in_hyperplane_quotP (hP : 'hpoly[R]_n) c d :
   is_included_in_hyperplane '[hP] c d = HPrim.is_included_in_hyperplane hP c d.
 Proof.
 apply/(sameP is_included_in_hyperplaneP)/(equivP HPrim.is_included_in_hyperplaneP).
-by split; move => H x; move/(_ x): H; rewrite quotE.
+by split; move => Hsubset x; move/(_ x): Hsubset; rewrite quotE.
 Qed.
 
 Definition is_included_in (P Q : 'poly[R]_n) :=
   HPrim.is_included_in (hpoly P) (hpoly Q).
 
 Lemma is_included_inP (P Q : 'poly[R]_n) :
-  reflect {subset P <= Q } (is_included_in P Q).
+  reflect {subset P <= Q} (is_included_in P Q).
 Proof.
-Admitted.
+exact: (equivP (HPrim.is_included_inP (hpoly P) (hpoly Q))).
+Qed.
+
+Arguments is_included_inP [P Q].
 
 Lemma is_included_in_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
   P = '[hP] -> Q = '[hQ] -> is_included_in P Q = HPrim.is_included_in hP hQ.
 Proof.
-Admitted.
+move => PeqClasshP QeqClasshQ.
+apply/(sameP is_included_inP)/(equivP (HPrim.is_included_inP hP hQ)).
+by split; move => Hsubset x; move/(_ x): Hsubset; rewrite PeqClasshP QeqClasshQ 2!quotE.
+Qed.
 
 Variable c : 'cV[R]_n.
 
