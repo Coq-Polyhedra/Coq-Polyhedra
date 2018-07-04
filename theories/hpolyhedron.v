@@ -147,7 +147,7 @@ Lemma lp_stateP c P :
   lp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 case: P => m A b.
-rewrite  /opt_point /non_empty /bounded /unbounded.
+rewrite /opt_point /non_empty /bounded /unbounded.
 case: (Simplex.simplexP A b c) =>
   [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty
   | [x d] /= [Hx Hd Hd'] | [x d] /= [Hx Hd Hdx] ].
@@ -236,8 +236,8 @@ Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) 
 Admitted.
 
 Lemma opt_value_is_optimal c P x :
-  (x \in P) ->
-    (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->
+    opt_value c P = Some '[c,x].
 Proof.
 case: P => m A b.
 move => x_in_P x_is_opt.
@@ -298,9 +298,9 @@ Lemma is_included_in_halfspaceP c d :
 Proof.
 rewrite /is_included_in_halfspace; apply: (iffP implyP).
 - rewrite /opt_value.
-  case: (lp_stateP c P) => /=  [ P_is_empty _
-  | z [opt_in_P opt_is_opt] /=
-  | /= _ /(_ is_true_true)]; last by done.
+  case: (lp_stateP c P) => /= [ P_is_empty _
+    | z [opt_in_P opt_is_opt] /=
+    | /= _ /(_ is_true_true)]; last by done.
   + by move => x; rewrite P_is_empty.
   + move/(_ is_true_true) => d_le_opt.
     move => x x_in_P; move/(_ _ x_in_P): opt_is_opt.
@@ -406,8 +406,18 @@ Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
 Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
   (x \in 'P^=(A, b; J)) = (x \in 'P(A, b)) && [forall j in J, ((A *m x) j 0 == b j 0)].
 Proof.
-Admitted.
-
+rewrite !inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2 /=.
+apply/andP/andP.
+- move => [x_in_P ineqJ]; split; try by done.
+  suff /row_submx_colP H: row_submx (A *m x) J = row_submx b J.
+  + apply/forall_inP => j j_in_J.
+    move/(_ _ j_in_J): H ->; exact: eq_refl.
+  + apply: lev_antisym; apply/andP; split; try by done.
+    exact: row_submx_lev.
+- move => [x_in_P /forall_inP eqJ]; split; try by done.
+  apply/row_submx_levP => j j_in_J.
+  by move/(_ _ j_in_J)/eqP: eqJ ->.
+Qed.
 
 End HPolyEq.
 

@@ -135,7 +135,8 @@ Section Lift.
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma mem_quotP (hP : 'hpoly[R]_n) : '[hP] =i hP.
+Lemma mem_quotP (hP : 'hpoly[R]_n) :
+  '[hP] =i hP.
 Proof.
 move => x; rewrite /mem_poly.
 by case/hpolyP: '[hP] => hQ /poly_eqP.
@@ -143,7 +144,8 @@ Qed.
 
 Let quotE := mem_quotP.
 
-Definition non_empty (P : 'poly[R]_n) := (HPrim.non_empty (hpoly P)).
+Definition non_empty (P : 'poly[R]_n) :=
+  (HPrim.non_empty (hpoly P)).
 
 Lemma non_emptyP (P : 'poly[R]_n) :
   reflect (exists x, x \in P) (non_empty P).
@@ -176,21 +178,27 @@ Lemma is_included_in_hyperplane_quotP (hP : 'hpoly[R]_n) c d :
   is_included_in_hyperplane '[hP] c d = HPrim.is_included_in_hyperplane hP c d.
 Proof.
 apply/(sameP is_included_in_hyperplaneP)/(equivP HPrim.is_included_in_hyperplaneP).
-by split; move => H x; move/(_ x): H; rewrite quotE.
+by split; move => Hsubset x; move/(_ x): Hsubset; rewrite quotE.
 Qed.
 
 Definition is_included_in (P Q : 'poly[R]_n) :=
   HPrim.is_included_in (hpoly P) (hpoly Q).
 
 Lemma is_included_inP (P Q : 'poly[R]_n) :
-  reflect {subset P <= Q } (is_included_in P Q).
+  reflect {subset P <= Q} (is_included_in P Q).
 Proof.
-Admitted.
+exact: (equivP (HPrim.is_included_inP (hpoly P) (hpoly Q))).
+Qed.
+
+Arguments is_included_inP [P Q].
 
 Lemma is_included_in_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
   P = '[hP] -> Q = '[hQ] -> is_included_in P Q = HPrim.is_included_in hP hQ.
 Proof.
-Admitted.
+move => PeqClasshP QeqClasshQ.
+apply/(sameP is_included_inP)/(equivP (HPrim.is_included_inP hP hQ)).
+by split; move => Hsubset x; move/(_ x): Hsubset; rewrite PeqClasshP QeqClasshQ 2!quotE.
+Qed.
 
 Variable c : 'cV[R]_n.
 
@@ -205,30 +213,32 @@ CoInductive lp_state (P : 'poly[R]_n) : option R -> bool -> bool -> bool -> Type
 
 Lemma lp_stateP P :
   lp_state P (opt_value P) (non_empty P) (bounded P) (unbounded P).
-Proof.
-Admitted.
-(*
 Proof. (* RK *)
-unlock opt_value non_empty bounded unbounded; rewrite /HPrim.opt_value.
-case: (HPrim.lp_stateP c (hpoly P)) =>
-  [empty_hpoly_P | x [x_in_hpoly_P x_is_opt] | unbounded_hpoly_P].
-- constructor.
-  move => x.
-  by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)) empty_hpoly_P.
-- constructor.
-  split.
-  + exists x.
-    split; last by done.
-      by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
-  + move => y.
-    rewrite -{1}[P]reprK (mem_polyhedron_quotP y (hpoly P)).
-    exact: x_is_opt.
-- constructor.
-  move => K.
-  move: (unbounded_hpoly_P K) => [x ?].
-  exists x.
-  by rewrite -{1}[P]reprK (mem_polyhedron_quotP x (hpoly P)).
-Qed.*)
+rewrite /opt_value /non_empty /bounded /unbounded.
+case: (HPrim.lp_stateP c (hpoly P)) => [empty_hP | z [z_in_hP z_is_opt] | unbounded_hP].
+- have ->: (HPrim.opt_value c (hpoly P)) = None.
+    suff neg_bounded: (HPrim.bounded c (hpoly P)) = false
+      by rewrite /HPrim.opt_value /HPrim.opt_point neg_bounded.
+    apply/negbTE/contraT.
+    rewrite negbK.
+    move/HPrim.boundedP => [x [x_in_hP _]].
+    by rewrite empty_hP inE in x_in_hP.
+  constructor => x.
+  by rewrite empty_hP.
+- rewrite (HPrim.opt_value_is_optimal z_in_hP z_is_opt).
+  constructor.
+  split; by [exists z | done].
+- have ->: (HPrim.opt_value c (hpoly P)) = None.
+    suff neg_bounded: (HPrim.bounded c (hpoly P)) = false
+      by rewrite /HPrim.opt_value /HPrim.opt_point neg_bounded.
+    apply/negbTE/contraT.
+    rewrite negbK.
+    move/HPrim.boundedP => [x [x_in_hP x_is_opt]].
+    move: (unbounded_hP '[ c, x]) => [z [z_in_hP valz_slt_valx]].
+    move: (x_is_opt _ z_in_hP).
+    by rewrite lerNgt valz_slt_valx.
+  by constructor.
+Qed.
 
 Lemma boundedP (P : 'poly[R]_n) :
   reflect (exists x, x \in P /\ (forall y, y \in P -> '[ c, x] <= '[ c, y]))
@@ -237,9 +247,26 @@ Proof.
 exact: (equivP HPrim.boundedP).
 Qed.
 
+Arguments boundedP [P].
+
+Lemma bounded_quotP (hP : 'hpoly[R]_n) :
+  bounded '[hP] = HPrim.bounded c hP. (* RK *)
+Proof.
+apply/(sameP boundedP)/(equivP HPrim.boundedP).
+by split; move => [x [x_in x_is_opt]]; exists x; split;
+  [rewrite quotE | move => y; rewrite quotE; exact: (x_is_opt y) |
+    rewrite -quotE | move => y; rewrite -quotE; exact: (x_is_opt y)].
+Qed.
+
 Lemma opt_value_is_optimal (P : 'poly[R]_n) x :
-  (x \in P) ->
-    (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value P = Some '[c,x].
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->
+    opt_value P = Some '[c,x].
+Proof.
+exact: HPrim.opt_value_is_optimal.
+Qed.
+
+Lemma opt_value_quotP (hP : 'hpoly[R]_n) :
+  opt_value '[hP] = HPrim.opt_value c hP. (* RK *)
 Proof.
 Admitted.
 
@@ -247,6 +274,16 @@ Lemma unboundedP (P : 'poly[R]_n) :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P).
 Proof.
 exact: (equivP HPrim.unboundedP).
+Qed.
+
+Arguments unboundedP [P].
+
+Lemma unbounded_quotP (hP : 'hpoly[R]_n) :
+  unbounded '[hP] = HPrim.unbounded c hP. (* RK *)
+Proof.
+apply/(sameP unboundedP)/(equivP HPrim.unboundedP).
+by split; move => unbounded K; move: (unbounded K) => [x [x_in val_x]];
+  exists x; [rewrite quotE | rewrite -quotE].
 Qed.
 
 Lemma bounded_certP P :
@@ -262,7 +299,8 @@ Lemma lp_quotE (hP : 'hpoly[R]_n) : (* TODO: fix the dependency in c issue *)
   * (unbounded '[hP] = HPrim.unbounded c hP)
   * (opt_value '[hP] = HPrim.opt_value c hP).
 Proof.
-Admitted.
+by rewrite non_empty_quotP bounded_quotP unbounded_quotP opt_value_quotP.
+Qed.
 
 End Lift.
 
