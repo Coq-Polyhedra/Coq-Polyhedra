@@ -446,7 +446,7 @@ End FaceP.
 
 End FaceBase.
 
-Arguments FaceBase.faceP [_ _ _ _ _ _ _].
+Arguments FaceBase.faceP [_ _ _ _ _].
 
 Section Face.
 
@@ -469,8 +469,7 @@ Proof.
 move => P_base.
 suff ->: (Q \in face P) = (Q \in (FaceBase.face base P)) by exact: and3P.
 case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
-- apply/(sameP FaceBase.faceP); try by done.
-  + exact: hpoly_base.
+- apply/(sameP (FaceBase.faceP (hpoly_base _) P_non_empty)); try by done.
   + exact: FaceBase.faceP.
 - move/face_empty: (P_empty) ->.
   by move/FaceBase.face_empty: P_empty ->.
