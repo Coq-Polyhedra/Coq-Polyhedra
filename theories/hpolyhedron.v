@@ -147,7 +147,7 @@ Lemma lp_stateP c P :
   lp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 case: P => m A b.
-rewrite  /opt_point /non_empty /bounded /unbounded.
+rewrite /opt_point /non_empty /bounded /unbounded.
 case: (Simplex.simplexP A b c) =>
   [ d /(intro_existsT (Simplex.infeasibleP _ _))/negP P_empty
   | [x d] /= [Hx Hd Hd'] | [x d] /= [Hx Hd Hdx] ].
@@ -228,8 +228,8 @@ by rewrite P_non_empty /=.
 Qed.
 
 Lemma opt_value_is_optimal c P x :
-  (x \in P) ->
-    (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
+  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->
+    opt_value c P = Some '[c,x].
 Proof.
 case: P => m A b.
 move => x_in_P x_is_opt.
