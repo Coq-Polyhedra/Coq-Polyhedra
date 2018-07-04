@@ -239,11 +239,12 @@ apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma opt_value_ccs (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n)  :
+Lemma opt_value_ccs (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n)  :
   let P := 'P(A,b) in
-  (non_empty P) -> (bounded c P) ->
-  exists u, (u \in dual_polyhedron A c) /\
-       (forall x, x \in P -> (opt_value c P = Some '[c, x] <-> (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0))).
+    (non_empty P) -> (bounded c P) ->
+      exists u, (u \in dual_polyhedron A c) /\
+        (forall x, x \in P -> (opt_value c P = Some '[c, x] <-> (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0))).
+Proof.
 Admitted.
 
 Lemma unboundedP c P :
@@ -290,9 +291,9 @@ Lemma is_included_in_halfspaceP c d :
 Proof.
 rewrite /is_included_in_halfspace; apply: (iffP implyP).
 - rewrite /opt_value.
-  case: (lp_stateP c P) => /=  [ P_is_empty _
-  | z [opt_in_P opt_is_opt] /=
-  | /= _ /(_ is_true_true)]; last by done.
+  case: (lp_stateP c P) => /= [ P_is_empty _
+    | z [opt_in_P opt_is_opt] /=
+    | /= _ /(_ is_true_true)]; last by done.
   + by move => x; rewrite P_is_empty.
   + move/(_ is_true_true) => d_le_opt.
     move => x x_in_P; move/(_ _ x_in_P): opt_is_opt.
@@ -398,8 +399,18 @@ Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
 Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
   (x \in 'P^=(A, b; J)) = (x \in 'P(A, b)) && [forall j in J, ((A *m x) j 0 == b j 0)].
 Proof.
-Admitted.
-
+rewrite !inE mul_col_mx col_mx_lev mulNmx -row_submx_mul lev_opp2 /=.
+apply/andP/andP.
+- move => [x_in_P ineqJ]; split; try by done.
+  suff /row_submx_colP H: row_submx (A *m x) J = row_submx b J.
+  + apply/forall_inP => j j_in_J.
+    move/(_ _ j_in_J): H ->; exact: eq_refl.
+  + apply: lev_antisym; apply/andP; split; try by done.
+    exact: row_submx_lev.
+- move => [x_in_P /forall_inP eqJ]; split; try by done.
+  apply/row_submx_levP => j j_in_J.
+  by move/(_ _ j_in_J)/eqP: eqJ ->.
+Qed.
 
 End HPolyEq.
 
