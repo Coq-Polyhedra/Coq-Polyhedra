@@ -43,10 +43,11 @@ Section Def. (* TODO: reorganize this section so that we can introduce the notat
 Variable R : realFieldType.
 Variable n : nat.
 
-Record hpoly :=
-  Hpoly { nb_ineq : nat ;
-          _ : 'M[R]_(nb_ineq,n) ;
-          _ : 'cV[R]_nb_ineq }.
+Record hpoly := Hpoly {
+  nb_ineq : nat ;
+  _ : 'M[R]_(nb_ineq,n) ;
+  _ : 'cV[R]_nb_ineq
+}.
 
 End Def.
 
@@ -215,7 +216,9 @@ apply: (iffP idP).
 Qed.
 
 Lemma bounded_certP c P :
-  non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded c P).
+  non_empty P ->
+    reflect (exists K, (forall z, z \in P -> '[c,z] >= K))
+            (bounded c P).
 Proof.
 case: P => m A b.
 move => P_non_empty.
@@ -225,7 +228,8 @@ by rewrite P_non_empty /=.
 Qed.
 
 Lemma opt_value_is_optimal c P x :
-  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
+  (x \in P) ->
+    (forall y, y \in P -> '[c,x] <= '[c,y]) -> opt_value c P = Some '[c,x].
 Proof.
 case: P => m A b.
 move => x_in_P x_is_opt.
@@ -236,7 +240,8 @@ by exists x.
 Qed.
 
 Lemma unboundedP c P :
-  reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded c P).
+  reflect (forall K, exists x, x \in P /\ '[c,x] < K)
+          (unbounded c P).
 Proof.
 case: P => m A b.
 exact: Simplex.unboundedP.
@@ -378,13 +383,14 @@ Definition hpolyEq_of_set (base : 'hpoly[R]_n) :=
     fun (J : {set 'I_(#ineq P)}) =>
       let AJ := col_mx A (-(row_submx A J)) in
       let bJ := col_mx b (-(row_submx b J)) in
-      'P(AJ, bJ).
+        'P(AJ, bJ).
 
 Notation "''P^=' ( P ; J )" := (@hpolyEq_of_set P J).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
 
-Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J: {set 'I_m}) :
+Fact hpolyEq_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
   (x \in 'P^=(A, b; J)) = (x \in 'P(A, b)) && [forall j in J, ((A *m x) j 0 == b j 0)].
+Proof.
 Admitted.
 
 
