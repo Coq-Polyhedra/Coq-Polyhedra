@@ -469,7 +469,8 @@ apply/(iffP idP).
   + by rewrite lp_quotE; apply: HPrim.normal_cone_bounded.
   + move => x; rewrite !mem_quotP lp_quotE; split.
     * move => [x_in_PAbI].
-      move/eqP; rewrite eq_sym => /(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc.
+      admit.
+      (*move/eqP; rewrite eq_sym => /(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc
       rewrite hpolyEq_inE; apply/andP; split;
         first by rewrite hpolyEq_inE in x_in_PAbI; move/andP: x_in_PAbI => [? _].
       apply/forall_inP => i i_in_J.
@@ -477,7 +478,7 @@ apply/(iffP idP).
       suff /x_csc: u i' 0 > 0 by rewrite mul_col_mx !col_mxEu => ->.
       - rewrite mxE; case: splitP' => [? /lshift_inj <- | ?].
         + by rewrite ifT // ltr01.
-        + by move/eqP; rewrite -[i' == _]negbK lrshift_distinct.
+        + by move/eqP; rewrite -[i' == _]negbK lrshift_distinct.*)
     * move => [x_in_PAbJ].
       have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
       split; first by done.
@@ -528,7 +529,8 @@ apply/(iffP idP).
               rewrite hpolyEq_inE in x_in_PAbI.
               by move/andP: x_in_PAbI => [_ /forall_inP/(_ _ (enum_valP j))/eqP].
         + move/c_opt: x_in_Q => [x_in_PAbI].
-          move: (x_in_PAbI); rewrite hpolyEq_inE => [[/andP [x_in_P /forall_inP x_act]] x_opt].
+          admit.
+          (*move: (x_in_PAbI); rewrite hpolyEq_inE => [[/andP [x_in_P /forall_inP x_act]] x_opt].
           rewrite hpolyEq_inE; apply/andP; split; first by done.
           apply/forall_inP => j; rewrite inE; case/orP; first by exact: x_act.
           rewrite inE => u_j_gt0.
@@ -536,7 +538,7 @@ apply/(iffP idP).
           have u_j'_gt0: u j' 0 > 0 by rewrite -[u]vsubmxK col_mxEu.
           symmetry in x_opt; rewrite c_eq in x_opt.
           move/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI)/(_ _ u_j'_gt0): x_opt.
-          by rewrite mul_col_mx !col_mxEu => ->.
+          by rewrite mul_col_mx !col_mxEu => ->.*)
 Qed.
 
 End FaceP.
