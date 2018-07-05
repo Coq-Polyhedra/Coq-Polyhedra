@@ -261,6 +261,33 @@ Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) (x: '
   let c := A^T *m u in
   reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
           (opt_value c 'P(A,b) == Some '[c,x]).
+Proof.
+move => u_ge0 x_in_P /=.
+set c := A^T *m u.
+have c_bounded: bounded c 'P(A, b).
+- apply/normal_cone_bounded; try by done.
+  by apply/non_emptyP; exists x.
+have u_in_dual : u \in dual_polyhedron A c.
+- by rewrite inE eq_refl.
+set csc := forall i, _.
+have csc_equiv_gap : reflect csc (compl_slack_cond A b x u).
+- apply/(iffP idP).
+(* stupid proof, because of the fact that compl_slack_cond has not the right formulation *)
+  + move => Hcsc i u_i_gt0.
+    move/forallP/(_ i): Hcsc; rewrite inE.
+    by move/lt0r_neq0/negbTE: u_i_gt0 => -> /= /eqP.
+  + move => Hcsc; apply/forallP => i; rewrite -[X in X || _]negbK.
+    have ->: (u i 0 != 0) = (u i 0 > 0).
+      by rewrite lt0r; move/gev0P/(_ i): u_ge0 ->; rewrite andbT.
+    by rewrite -implybE; apply/implyP; rewrite inE; move/Hcsc ->.
+rewrite -(compl_slack_cond_duality_gap_equiv (c := c)) // in csc_equiv_gap.
+suff <-: (duality_gap b c x u == 0) = (opt_value c 'P(A, b) == Some '[c,x]) by [].
+Search _ duality_gap.
+Search _ Simplex.opt_value.
+
+Search _ compl_slack_cond.
+
+
 Admitted.
 
 Lemma unboundedP c P :
