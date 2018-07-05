@@ -451,7 +451,8 @@ Proof.
 case: base => [m A b] P_base P_non_empty.
 apply/(iffP idP).
 - move/and3P => [Q_non_empty Q_base eqP_sub_eqQ].
-  move/hpoly_of_baseP: P_base ->.
+  move/hpoly_of_baseP: P_base => P_repr.
+  rewrite {}P_repr non_empty_quotP in P_non_empty *.
   move/hpoly_of_baseP: Q_base ->.
   set I := ({eq P}) in eqP_sub_eqQ *.
   set J := ({eq Q}) in eqP_sub_eqQ *.
@@ -465,7 +466,7 @@ apply/(iffP idP).
   pose AI := col_mx A (-(row_submx A I)).
   pose bI := col_mx b (-(row_submx b I)).
   pose c := AI^T *m u; exists c; split.
-  + rewrite lp_quotE; exact: HPrim.normal_cone_bounded.
+  + by rewrite lp_quotE; apply: HPrim.normal_cone_bounded.
   + move => x; rewrite !mem_quotP lp_quotE; split.
     * move => [x_in_PAbI].
       move/eqP; rewrite eq_sym => /(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc.

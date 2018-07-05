@@ -237,8 +237,12 @@ by rewrite inE in u_dual; move/andP: u_dual => [/eqP ? ?].
 Qed.
 
 Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
-  u >=m 0 -> bounded (A^T *m u) 'P(A,b).
-Admitted.
+  non_empty 'P(A, b) -> u >=m 0 -> bounded (A^T *m u) 'P(A,b).
+Proof.
+move => P_non_empty u_ge0; apply/bounded_certP; first by done.
+exists '[u, b]; move => z z_in_P.
+by rewrite -vdot_mulmx; apply: vdot_lev.
+Qed.
 
 Lemma opt_value_is_optimal c P x :
   (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->
