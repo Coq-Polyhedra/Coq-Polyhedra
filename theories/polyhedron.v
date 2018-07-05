@@ -266,9 +266,24 @@ exact: HPrim.opt_value_is_optimal.
 Qed.
 
 Lemma opt_value_quotP (hP : 'hpoly[R]_n) :
-  opt_value '[hP] = HPrim.opt_value c hP. (* RK *)
+  opt_value '[hP] = HPrim.opt_value c hP. (* RK: improve the proof? Rely on new results? *)
 Proof.
-Admitted.
+case: (boolP (bounded '[hP])).
+- case: hP => m A b.
+  move => bounded_hP.
+  rewrite bounded_quotP in bounded_hP.
+  rewrite /HPrim.opt_value /HPrim.opt_point bounded_hP /=.
+  apply/opt_value_is_optimal.
+  + rewrite mem_quotP.
+    by apply/Simplex.opt_point_is_feasible.
+  + move => y; rewrite mem_quotP.
+    exact: ((proj2 (Simplex.boundedP _ _ _ bounded_hP)) y).
+- rewrite bounded_quotP.
+  move/negbTE => neg_bounded_hP.
+  rewrite /HPrim.opt_value /HPrim.opt_point neg_bounded_hP.
+  rewrite -bounded_quotP /bounded in neg_bounded_hP.
+  by rewrite /opt_value /HPrim.opt_value /HPrim.opt_point neg_bounded_hP.
+Qed.
 
 Lemma unboundedP (P : 'poly[R]_n) :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P).
