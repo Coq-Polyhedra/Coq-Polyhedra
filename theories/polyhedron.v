@@ -266,9 +266,24 @@ exact: HPrim.opt_value_is_optimal.
 Qed.
 
 Lemma opt_value_quotP (hP : 'hpoly[R]_n) :
-  opt_value '[hP] = HPrim.opt_value c hP. (* RK *)
+  opt_value '[hP] = HPrim.opt_value c hP. (* RK: improve the proof? Rely on new results? *)
 Proof.
-Admitted.
+case: (boolP (bounded '[hP])).
+- case: hP => m A b.
+  move => bounded_hP.
+  rewrite bounded_quotP in bounded_hP.
+  rewrite /HPrim.opt_value /HPrim.opt_point bounded_hP /=.
+  apply/opt_value_is_optimal.
+  + rewrite mem_quotP.
+    by apply/Simplex.opt_point_is_feasible.
+  + move => y; rewrite mem_quotP.
+    exact: ((proj2 (Simplex.boundedP _ _ _ bounded_hP)) y).
+- rewrite bounded_quotP.
+  move/negbTE => neg_bounded_hP.
+  rewrite /HPrim.opt_value /HPrim.opt_point neg_bounded_hP.
+  rewrite -bounded_quotP /bounded in neg_bounded_hP.
+  by rewrite /opt_value /HPrim.opt_value /HPrim.opt_point neg_bounded_hP.
+Qed.
 
 Lemma unboundedP (P : 'poly[R]_n) :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P).
@@ -446,7 +461,7 @@ Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base ] -> non_empty P ->
   reflect
     (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
-    (Q \in (face base P)). (* RK *)
+    (Q \in (face base P)).
 Proof.
 case: base => [m A b] P_base P_non_empty.
 apply/(iffP idP).
@@ -544,7 +559,7 @@ apply/(iffP idP).
               rewrite hpolyEq_inE in x_in_PAbI.
               by move/andP: x_in_PAbI => [_ /forall_inP/(_ _ (enum_valP j))/eqP].
         + move/c_opt: x_in_Q => [x_in_PAbI [cx_eq_bu]].
-          move: (x_in_PAbI); rewrite hpolyEq_inE => [[/andP [x_in_P /forall_inP x_act]]].
+          move: (x_in_PAbI); rewrite hpolyEq_inE => [/andP [x_in_P /forall_inP x_act]].
           rewrite hpolyEq_inE; apply/andP; split; first by done.
           apply/forall_inP => j; rewrite inE; case/orP; first by exact: x_act.
           rewrite inE => u_j_gt0.
