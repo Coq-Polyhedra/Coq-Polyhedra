@@ -453,40 +453,54 @@ apply/(iffP idP).
 - move/and3P => [Q_non_empty Q_base eqP_sub_eqQ].
   move/hpoly_of_baseP: P_base => P_repr.
   rewrite {}P_repr non_empty_quotP in P_non_empty *.
-  move/hpoly_of_baseP: Q_base ->.
+  move/hpoly_of_baseP: Q_base => Q_repr.
+  rewrite {}Q_repr non_empty_quotP in Q_non_empty *.
   set I := ({eq P}) in eqP_sub_eqQ *.
   set J := ({eq Q}) in eqP_sub_eqQ *.
-  pose u := (\col_i (match split i with
-                   | inl i => if i \in J then 1 else 0
-                   | inr i => 0
-                    end)): 'cV[R]_(m+#|I|).
+
+  pose u := col_mx (\col_i (if i \in J then 1 else 0)) 0: 'cV[R]_(m+#|I|).
   have u_ge0 : u >=m 0.
-  + apply/gev0P => i; rewrite mxE; case: splitP => [i' _ | i' _]; last exact: lerr.
+  + rewrite col_mx_gev0 lev_refl andbT.
+    apply/gev0P => i; rewrite mxE.
     case: ifP => [_ | _]; by [exact: ler01 | exact: lerr].
+  have u_i_gt0 : forall i, (u (lshift #|I| i) 0 > 0) = (i \in J).
+  + move => i; rewrite col_mxEu mxE.
+    case: ifP => [_|_]; [exact: ltr01 | exact: ltrr].
+
   pose AI := col_mx A (-(row_submx A I)).
   pose bI := col_mx b (-(row_submx b I)).
-  pose c := AI^T *m u; exists c; split.
-  + by rewrite lp_quotE; apply: HPrim.normal_cone_bounded.
-  + admit. (*move => x; rewrite !mem_quotP lp_quotE; split.
-  move => [x_in_PAbI].
-      admit.
-      (*move/eqP; rewrite eq_sym => /(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc
+  pose c := AI^T *m u; exists c.
+  have c_bounded : bounded c '['P^=(A, b; I)]
+    by rewrite lp_quotE; exact: HPrim.normal_cone_bounded.
+  have -> : opt_value c '['P^=(A, b; I)] = Some '[bI, u].
+  + move/boundedP: c_bounded => [x] [x_in_P x_opt].
+    move/(opt_value_is_optimal x_in_P): (x_opt) => ->.
+    apply/congr1/eqP; rewrite eqr_le; apply/andP; split; last first.
+    * apply: HPrim.normal_cone_lower_bound; [ done | by rewrite mem_quotP in x_in_P].
+    * move/HPrim.non_emptyP: Q_non_empty => [y y_in_Q].
+      suff <-: '[c,y] = '[bI,u].
+      - apply: x_opt; rewrite mem_quotP; exact: (hpolyEq_antimono eqP_sub_eqQ).
+      - rewrite -vdot_mulmx mul_col_mx !vdot_col_mx vdot0l vdot0r !addr0.
+        apply: eq_bigr => i _; rewrite mxE.
+        case: ifP => [ i_in_J | _]; last by rewrite mulr0 mul0r.
+        rewrite mul1r mulr1.
+        by move: y_in_Q; rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i_in_J)/eqP].
+  split; first by done.
+  + move => x; rewrite !mem_quotP ; split.
+    * move => [x_in_PAbI].
+      case => /eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc.
       rewrite hpolyEq_inE; apply/andP; split;
         first by rewrite hpolyEq_inE in x_in_PAbI; move/andP: x_in_PAbI => [? _].
-      apply/forall_inP => i i_in_J.
-      set i' := lshift #|I| i.
-      suff /x_csc: u i' 0 > 0 by rewrite mul_col_mx !col_mxEu => ->.
-      - rewrite mxE; case: splitP' => [? /lshift_inj <- | ?].
-        + by rewrite ifT // ltr01.
-        + by move/eqP; rewrite -[i' == _]negbK lrshift_distinct.*)
+      apply/forall_inP => i; rewrite -u_i_gt0.
+      move/x_csc; by rewrite mul_col_mx !col_mxEu => ->.
     * move => [x_in_PAbJ].
       have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
       split; first by done.
-      symmetry; apply/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i; rewrite mxE.
-      case: (splitP' i) => [i' -> |]; last by rewrite ltrr.
+      apply/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i; rewrite mxE.
+      case: (splitP' i) => [i' -> |?]; rewrite mxE; last by rewrite ltrr.
       case: ifP => [i'_in_J _ | ?]; last by rewrite ltrr.
       rewrite mul_col_mx !col_mxEu.
-      by move: x_in_PAbJ; rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i'_in_J)/eqP].*)
+      by move: x_in_PAbJ; rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i'_in_J)/eqP].
 - move/hpoly_of_baseP: P_base => P_repr.
   move => [c] [c_bounded c_opt'].
   apply/andP; split.

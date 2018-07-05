@@ -238,6 +238,10 @@ move/and3P => [_ u_dual _]; exists u.
 by rewrite inE in u_dual; move/andP: u_dual => [/eqP ? ?].
 Qed.*)
 
+Lemma normal_cone_lower_bound (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
+  u >=m 0 -> forall x, x \in 'P(A, b) -> '[A^T *m u,x] >= '[b,u].
+Admitted.
+
 Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
   non_empty 'P(A, b) -> u >=m 0 -> bounded (A^T *m u) 'P(A,b).
 Proof.
