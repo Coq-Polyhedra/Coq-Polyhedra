@@ -450,10 +450,41 @@ Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
 Proof.
 case: base => [m A b] P_base P_non_empty.
 apply/(iffP idP).
-- move/and3P => [Q_non_empty Qbase eqP_sub_eqQ].
-  pose e := (const_mx 1): 'rV[R]_(#|{ eq Q on 'P(A,b) }|).
-  pose c := (e *m (row_submx A { eq Q on 'P(A, b) }))^T.
-  exists c; admit.
+- move/and3P => [Q_non_empty Q_base eqP_sub_eqQ].
+  move/hpoly_of_baseP: P_base ->.
+  move/hpoly_of_baseP: Q_base ->.
+  set I := ({eq P}) in eqP_sub_eqQ *.
+  set J := ({eq Q}) in eqP_sub_eqQ *.
+  pose u := (\col_i (match split i with
+                   | inl i => if i \in J then 1 else 0
+                   | inr i => 0
+                    end)): 'cV[R]_(m+#|I|).
+  have u_ge0 : u >=m 0.
+  + apply/gev0P => i; rewrite mxE; case: splitP => [i' _ | i' _]; last exact: lerr.
+    case: ifP => [_ | _]; by [exact: ler01 | exact: lerr].
+  pose AI := col_mx A (-(row_submx A I)).
+  pose bI := col_mx b (-(row_submx b I)).
+  pose c := AI^T *m u; exists c; split.
+  + rewrite lp_quotE; exact: HPrim.normal_cone_bounded.
+  + move => x; rewrite !mem_quotP lp_quotE; split.
+    * move => [x_in_PAbI].
+      move/eqP; rewrite eq_sym => /(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc.
+      rewrite hpolyEq_inE; apply/andP; split;
+        first by rewrite hpolyEq_inE in x_in_PAbI; move/andP: x_in_PAbI => [? _].
+      apply/forall_inP => i i_in_J.
+      set i' := lshift #|I| i.
+      suff /x_csc: u i' 0 > 0 by rewrite mul_col_mx !col_mxEu => ->.
+      - rewrite mxE; case: splitP' => [? /lshift_inj <- | ?].
+        + by rewrite ifT // ltr01.
+        + by move/eqP; rewrite -[i' == _]negbK lrshift_distinct.
+    * move => [x_in_PAbJ].
+      have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
+      split; first by done.
+      symmetry; apply/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i; rewrite mxE.
+      case: (splitP' i) => [i' -> |]; last by rewrite ltrr.
+      case: ifP => [i'_in_J _ | ?]; last by rewrite ltrr.
+      rewrite mul_col_mx !col_mxEu.
+      by move: x_in_PAbJ; rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i'_in_J)/eqP].
 - move/hpoly_of_baseP: P_base => P_repr.
   move => [c] [c_bounded c_opt'].
   apply/andP; split.
@@ -481,7 +512,7 @@ apply/(iffP idP).
         by rewrite PAbJ_eq_Q Q_eq_Q' mem_quotP.
       - move => x; apply/idP/idP => [x_in_PAbJ | x_in_Q].
         + have x_in_PAbI : x \in 'P^=(A, b; I).
-            admit. (* this should be a lemma in hpolyhedron.v *)
+            move: x_in_PAbJ; apply/hpolyEq_antimono; exact: subsetUl.
           apply/c_opt; split; first by done.
           * rewrite c_eq.
           * symmetry; apply/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i.
@@ -505,7 +536,7 @@ apply/(iffP idP).
           symmetry in x_opt; rewrite c_eq in x_opt.
           move/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI)/(_ _ u_j'_gt0): x_opt.
           by rewrite mul_col_mx !col_mxEu => ->.
-Admitted.
+Qed.
 
 End FaceP.
 

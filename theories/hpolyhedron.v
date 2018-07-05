@@ -419,6 +419,10 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
+Lemma hpolyEq_antimono (base: 'hpoly[R]_n) (I J : {set 'I_(#ineq base)}) :
+  I \subset J -> {subset 'P^=(base; J) <= 'P^=(base; I)}.
+Admitted.
+
 End HPolyEq.
 
 Arguments hpolyEq_of_set [R n].
