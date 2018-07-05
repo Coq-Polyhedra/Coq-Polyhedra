@@ -273,41 +273,20 @@ Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x 
       reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
               ('[c,x] == '[b, u]).
 Proof.
-Admitted.
-(*
-Proof.
 move => u_ge0 x_in_P /=.
-set c := A^T *m u.
-have c_bounded: bounded c 'P(A, b).
-- apply/normal_cone_bounded; try by done.
-  by apply/non_emptyP; exists x.
-have u_in_dual : u \in dual_polyhedron A c.
-- by rewrite inE eq_refl.
-set csc := forall i, _.
-have csc_equiv_gap : reflect csc (compl_slack_cond A b x u).
-- apply/(iffP idP).
+have u_in_dual : u \in dual_polyhedron A (A^T *m u)
+ by rewrite inE eq_refl.
+rewrite -subr_eq0 (compl_slack_cond_duality_gap_equiv x_in_P u_in_dual).
+apply/(iffP idP).
 (* stupid proof, because of the fact that compl_slack_cond has not the right formulation (and compl_slack_condP doesn't help) *)
-  + move => Hcsc i u_i_gt0.
-    move/forallP/(_ i): Hcsc; rewrite inE.
-    by move/lt0r_neq0/negbTE: u_i_gt0 => -> /= /eqP.
-  + move => Hcsc; apply/forallP => i; rewrite -[X in X || _]negbK.
-    have ->: (u i 0 != 0) = (u i 0 > 0).
+- move => Hcsc i u_i_gt0.
+  move/forallP/(_ i): Hcsc; rewrite inE.
+  by move/lt0r_neq0/negbTE: u_i_gt0 => -> /= /eqP.
+- move => Hcsc; apply/forallP => i; rewrite -[X in X || _]negbK.
+  have ->: (u i 0 != 0) = (u i 0 > 0)
       by rewrite lt0r; move/gev0P/(_ i): u_ge0 ->; rewrite andbT.
-    by rewrite -implybE; apply/implyP; rewrite inE; move/Hcsc ->.
-rewrite -(compl_slack_cond_duality_gap_equiv (c := c)) // in csc_equiv_gap.
-Search _ Simplex.bounded.
-
-suff <-: (duality_gap b c x u == 0) = (opt_value c 'P(A, b) == Some '[c,x]) by [].
-apply/eqP/eqP => [gap_eq0 |].
-- apply/opt_value_is_optimal; try by done.
-  exact: (duality_gap_eq0_optimality (u := u)).
-- Search _ duality_gap.
-  Search _ Simplex.opt_value.
-
-  Search _ duality_gap.
-
-
-Admitted.*)
+  by rewrite -implybE; apply/implyP; rewrite inE; move/Hcsc ->.
+Qed.
 
 Lemma unboundedP c P :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K)
@@ -474,9 +453,19 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
-Lemma hpolyEq_antimono (base: 'hpoly[R]_n) (I J : {set 'I_(#ineq base)}) :
-  I \subset J -> {subset 'P^=(base; J) <= 'P^=(base; I)}.
-Admitted.
+Lemma hpolyEq_antimono  (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (I J : {set 'I_m}) :
+  I \subset J -> {subset 'P^=(A, b; J) <= 'P^=(A, b; I)}.
+Proof.
+move => /subsetP I_subset_J x.
+rewrite 2!hpolyEq_inE.
+move/andP => [x_in_P /forallP sat_in_J].
+apply/andP; split.
+- exact: x_in_P.
+- apply/forallP => j.
+  apply/implyP => j_in_I.
+  apply: (implyP (sat_in_J j)).
+  exact: (I_subset_J _ j_in_I).
+Qed.
 
 End HPolyEq.
 
