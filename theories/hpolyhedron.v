@@ -227,25 +227,6 @@ suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b)
 by rewrite P_non_empty /=.
 Qed.
 
-Lemma bounded_normal_cone (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n) :
-  bounded c 'P(A,b) ->
-  exists u, [/\ u >=m 0, c = A^T *m u & opt_value c 'P(A, b) = Some '[b, u]].
-Admitted.
-(*Proof.
-rewrite /bounded -Simplex.boundedP_cert.
-set u := Simplex.dual_opt_point _ _ _.
-move/and3P => [_ u_dual _]; exists u.
-by rewrite inE in u_dual; move/andP: u_dual => [/eqP ? ?].
-Qed.*)
-
-Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
-  non_empty 'P(A, b) -> u >=m 0 -> bounded (A^T *m u) 'P(A,b).
-Proof.
-move => P_non_empty u_ge0; apply/bounded_certP; first by done.
-exists '[u, b]; move => z z_in_P.
-by rewrite -vdot_mulmx; apply: vdot_lev.
-Qed.
-
 Lemma opt_value_is_optimal c P x :
   (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->
     opt_value c P = Some '[c,x].
@@ -258,11 +239,40 @@ apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) (x: 'cV[R]_n) :
+Lemma bounded_normal_cone (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n) :
+  bounded c 'P(A,b) ->
+    exists u, [/\ u >=m 0, c = A^T *m u & opt_value c 'P(A, b) = Some '[b, u]].
+Proof. (* RK *)
+rewrite /bounded -Simplex.boundedP_cert.
+set u := Simplex.dual_opt_point _ _ _.
+move/and3P => [opt_point_in_P u_dual /eqP eq_value]; exists u.
+rewrite inE in u_dual.
+split.
+- exact: (proj2 (andP u_dual)).
+- by rewrite (eqP (proj1 (andP u_dual))).
+- rewrite -eq_value.
+  apply/opt_value_is_optimal.
+  + exact: opt_point_in_P.
+  + move => y y_in_P.
+    rewrite eq_value -duality_gap_ge0_def.
+    exact: (weak_duality y_in_P u_dual).
+Qed.
+
+Lemma normal_cone_bounded (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) :
+  non_empty 'P(A, b) -> u >=m 0 ->
+    bounded (A^T *m u) 'P(A,b).
+Proof.
+move => P_non_empty u_ge0; apply/bounded_certP; first by done.
+exists '[u, b]; move => z z_in_P.
+by rewrite -vdot_mulmx; apply: vdot_lev.
+Qed.
+
+Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :
   u >=m 0 -> x \in 'P(A,b) ->
-  let c := A^T *m u in
-  reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
-          ('[c,x] == '[b, u]).
+    let c := A^T *m u in
+      reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
+              ('[c,x] == '[b, u]).
+Proof.
 Admitted.
 (*
 Proof.
