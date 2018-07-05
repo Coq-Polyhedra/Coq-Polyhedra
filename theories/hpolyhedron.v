@@ -229,7 +229,12 @@ Qed.
 
 Lemma bounded_normal_cone (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n) :
   bounded c 'P(A,b) -> exists u, u >=m 0 /\ c = A^T *m u.
-Admitted.
+Proof.
+rewrite /bounded -Simplex.boundedP_cert.
+set u := Simplex.dual_opt_point _ _ _.
+move/and3P => [_ u_dual _]; exists u.
+by rewrite inE in u_dual; move/andP: u_dual => [/eqP ? ?].
+Qed.
 
 Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
   u >=m 0 -> bounded (A^T *m u) 'P(A,b).
