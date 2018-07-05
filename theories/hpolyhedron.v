@@ -228,13 +228,15 @@ by rewrite P_non_empty /=.
 Qed.
 
 Lemma bounded_normal_cone (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (c: 'cV[R]_n) :
-  bounded c 'P(A,b) -> exists u, u >=m 0 /\ c = A^T *m u.
-Proof.
+  bounded c 'P(A,b) ->
+  exists u, [/\ u >=m 0, c = A^T *m u & opt_value c 'P(A, b) = Some '[b, u]].
+Admitted.
+(*Proof.
 rewrite /bounded -Simplex.boundedP_cert.
 set u := Simplex.dual_opt_point _ _ _.
 move/and3P => [_ u_dual _]; exists u.
 by rewrite inE in u_dual; move/andP: u_dual => [/eqP ? ?].
-Qed.
+Qed.*)
 
 Lemma normal_cone_bounded (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
   non_empty 'P(A, b) -> u >=m 0 -> bounded (A^T *m u) 'P(A,b).
@@ -260,7 +262,9 @@ Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) (x: '
   u >=m 0 -> x \in 'P(A,b) ->
   let c := A^T *m u in
   reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
-          (opt_value c 'P(A,b) == Some '[c,x]).
+          ('[c,x] == '[b, u]).
+Admitted.
+(*
 Proof.
 move => u_ge0 x_in_P /=.
 set c := A^T *m u.
@@ -272,7 +276,7 @@ have u_in_dual : u \in dual_polyhedron A c.
 set csc := forall i, _.
 have csc_equiv_gap : reflect csc (compl_slack_cond A b x u).
 - apply/(iffP idP).
-(* stupid proof, because of the fact that compl_slack_cond has not the right formulation *)
+(* stupid proof, because of the fact that compl_slack_cond has not the right formulation (and compl_slack_condP doesn't help) *)
   + move => Hcsc i u_i_gt0.
     move/forallP/(_ i): Hcsc; rewrite inE.
     by move/lt0r_neq0/negbTE: u_i_gt0 => -> /= /eqP.
@@ -281,14 +285,19 @@ have csc_equiv_gap : reflect csc (compl_slack_cond A b x u).
       by rewrite lt0r; move/gev0P/(_ i): u_ge0 ->; rewrite andbT.
     by rewrite -implybE; apply/implyP; rewrite inE; move/Hcsc ->.
 rewrite -(compl_slack_cond_duality_gap_equiv (c := c)) // in csc_equiv_gap.
+Search _ Simplex.bounded.
+
 suff <-: (duality_gap b c x u == 0) = (opt_value c 'P(A, b) == Some '[c,x]) by [].
-Search _ duality_gap.
-Search _ Simplex.opt_value.
+apply/eqP/eqP => [gap_eq0 |].
+- apply/opt_value_is_optimal; try by done.
+  exact: (duality_gap_eq0_optimality (u := u)).
+- Search _ duality_gap.
+  Search _ Simplex.opt_value.
 
-Search _ compl_slack_cond.
+  Search _ duality_gap.
 
 
-Admitted.
+Admitted.*)
 
 Lemma unboundedP c P :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K)
