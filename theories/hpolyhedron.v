@@ -239,10 +239,6 @@ apply/ifT/boundedP.
 by exists x.
 Qed.
 
-Lemma normal_cone_lower_bound (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
-  u >=m 0 -> forall x, x \in 'P(A, b) -> '[A^T *m u,x] >= '[b,u].
-Admitted.
-
 Lemma bounded_normal_cone (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n) :
   bounded c 'P(A,b) ->
     exists u, [/\ u >=m 0, c = A^T *m u & opt_value c 'P(A, b) = Some '[b, u]].
@@ -262,13 +258,19 @@ split.
     exact: (weak_duality y_in_P u_dual).
 Qed.
 
+Lemma normal_cone_lower_bound (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
+  u >=m 0 -> forall x, x \in 'P(A, b) -> '[A^T *m u,x] >= '[b,u].
+Proof.
+move => u_ge0 x x_in_P.
+by rewrite -vdot_mulmx vdotC; apply: vdot_lev.
+Qed.
+
 Lemma normal_cone_bounded (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) :
   non_empty 'P(A, b) -> u >=m 0 ->
     bounded (A^T *m u) 'P(A,b).
 Proof.
 move => P_non_empty u_ge0; apply/bounded_certP; first by done.
-exists '[u, b]; move => z z_in_P.
-by rewrite -vdot_mulmx; apply: vdot_lev.
+exists '[b, u]; exact: normal_cone_lower_bound.
 Qed.
 
 Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :
