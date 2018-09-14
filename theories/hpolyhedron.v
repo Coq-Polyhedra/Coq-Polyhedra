@@ -16,6 +16,7 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Reserved Notation "{ 'on' P , x 'minimizes' c }" (at level 70, format "{ 'on'  P ,  x  'minimizes'  c }").
 Reserved Notation "''hpoly[' R ]_ n" (at level 8, n at level 2, format "''hpoly[' R ]_ n").
 Reserved Notation "''hpoly_' n" (at level 8, n at level 2).
 Reserved Notation "'#ineq' P" (at level 10, P at level 0, format "'#ineq'  P").
@@ -129,22 +130,22 @@ Definition unbounded c P :=
   let: 'P(A,b) := P in
     Simplex.unbounded A b c.
 
-Definition opt_point c P :=
-  if bounded c P then
-    let: 'P(A,b) := P in
-      Some (Simplex.opt_point A b c)
-  else None.
+Definition opt_point c P (_: bounded c P) :=
+  let: 'P(A,b) := P in
+  Simplex.opt_point A b c.
 
-Definition opt_value c P := omap (vdot c) (opt_point c P).
+Definition opt_value c P (H: bounded c P) := '[c, opt_point H].
 
-(*TODO: Simplify the lp_state statement and remove the option type*)
-CoInductive lp_state c P : option ('cV[R]_n) -> bool -> bool -> bool -> Type :=
-| Empty of P =i pred0 : lp_state c P None false false false
-| Bounded (z : 'cV_n) of (z \in P) * (forall x, x \in P -> '[c, z] <= '[c,x]) : lp_state c P (Some z) true true false
-| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state c P None true false true.
+Notation "{ 'on'  P , x  'minimizes'  c }" :=
+  (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))%R : ring_scope.
+
+CoInductive lp_state c P : bool -> bool -> bool -> Prop :=
+| Empty of P =i pred0 : lp_state c P false false false
+| Bounded of (exists x, { on P, x minimizes c }) : lp_state c P true true false
+| Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state c P true false true.
 
 Lemma lp_stateP c P :
-  lp_state c P (opt_point c P) (non_empty P) (bounded c P) (unbounded c P).
+  lp_state c P (non_empty P) (bounded c P) (unbounded c P).
 Proof.
 case: P => m A b.
 rewrite /opt_point /non_empty /bounded /unbounded.
@@ -180,8 +181,8 @@ case: (Simplex.simplexP A b c) =>
     by apply/dual_feasible_bounded.
   have /negbTE ->: ~~ (Simplex.unbounded A b c).
     by rewrite -(Simplex.bounded_is_not_unbounded c feasible_A_b).
-  rewrite feasible_A_b bounded_A_b_c.
-  constructor.
+    rewrite feasible_A_b bounded_A_b_c /=.
+  constructor; exists (Simplex.opt_point A b c).
   split.
   + exact: Simplex.opt_point_is_feasible.
   + exact: (proj2 (Simplex.boundedP _ _ _ bounded_A_b_c)).
@@ -195,7 +196,7 @@ exact: Simplex.feasibleP.
 Qed.
 
 Lemma boundedP c P :
-  reflect (exists x, (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))) (bounded c P).
+  reflect (exists x, { on P, x minimizes c }) (bounded c P).
 Proof.
 case: P => m A b.
 apply: (iffP idP).
@@ -215,7 +216,14 @@ apply: (iffP idP).
     exact: x_is_opt.
 Qed.
 
-Lemma bounded_certP c P :
+Lemma bounded_opt_value c P (H: bounded c P) :
+  (exists x, x \in P /\ '[c,x] = opt_value H) /\ (forall y, y \in P -> '[c,y] >= opt_value H).
+Proof.
+case: P H => m A b H; move: (H) => H0.
+by move: H; rewrite /bounded => /Simplex.boundedP.
+Qed.
+
+Lemma bounded_lower_bound c P :
   non_empty P ->
     reflect (exists K, (forall z, z \in P -> '[c,z] >= K))
             (bounded c P).
@@ -227,35 +235,23 @@ suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b)
 by rewrite P_non_empty /=.
 Qed.
 
-Lemma opt_value_is_optimal c P x :
-  (x \in P) -> (forall y, y \in P -> '[c,x] <= '[c,y]) ->
-    opt_value c P = Some '[c,x].
+Lemma opt_valueP c P (H: bounded c P) x :
+  reflect ({ on P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
 Proof.
-case: P => m A b.
-move => x_in_P x_is_opt.
-suff opt_point_P_c: opt_point c 'P(A, b) = Some (Simplex.opt_point A b c)
- by rewrite /opt_value opt_point_P_c (Simplex.opt_value_is_optimal x_in_P x_is_opt).
-apply/ifT/boundedP.
-by exists x.
+case: P H => m A b H; apply/(iffP andP) => [[x_in_P /eqP ->] |].
+- split; first by done.
+  by move/(Simplex.boundedP A b c): (H) => [_].
+- by move => [x_in_P] /(Simplex.opt_value_is_optimal x_in_P) ->.
 Qed.
 
-Lemma bounded_normal_cone (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n) :
-  bounded c 'P(A,b) ->
-    exists u, [/\ u >=m 0, c = A^T *m u & opt_value c 'P(A, b) = Some '[b, u]].
-Proof. (* RK *)
-rewrite /bounded -Simplex.boundedP_cert.
-set u := Simplex.dual_opt_point _ _ _.
-move/and3P => [opt_point_in_P u_dual /eqP eq_value]; exists u.
-rewrite inE in u_dual.
-split.
-- exact: (proj2 (andP u_dual)).
-- by rewrite (eqP (proj1 (andP u_dual))).
-- rewrite -eq_value.
-  apply/opt_value_is_optimal.
-  + exact: opt_point_in_P.
-  + move => y y_in_P.
-    rewrite eq_value -duality_gap_ge0_def.
-    exact: (weak_duality y_in_P u_dual).
+Lemma dual_opt_sol (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n)
+  (H: bounded c 'P(A,b)) :
+    exists u, [/\ u >=m 0, c = A^T *m u & '[b, u] = opt_value H].
+Proof.
+move: (H) => H0. (* duplicate assumption *)
+move: H; rewrite /bounded -Simplex.boundedP_cert.
+set u := Simplex.dual_opt_point _ _ _ .
+by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
 Qed.
 
 Lemma normal_cone_lower_bound (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
@@ -269,7 +265,7 @@ Lemma normal_cone_bounded (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]
   non_empty 'P(A, b) -> u >=m 0 ->
     bounded (A^T *m u) 'P(A,b).
 Proof.
-move => P_non_empty u_ge0; apply/bounded_certP; first by done.
+move => P_non_empty u_ge0; apply/bounded_lower_bound; first by done.
 exists '[b, u]; exact: normal_cone_lower_bound.
 Qed.
 
@@ -316,9 +312,10 @@ Arguments bounded [R n].
 Arguments unbounded [R n].
 Arguments non_emptyP [R n P].
 Arguments boundedP [R n c P].
-Arguments bounded_certP [R n c P].
+Arguments bounded_lower_bound [R n c P].
 Arguments unboundedP [R n c P].
-Prenex Implicits non_emptyP boundedP bounded_certP unboundedP.
+Arguments opt_valueP [R n c P H x].
+Prenex Implicits non_emptyP boundedP bounded_lower_bound unboundedP opt_valueP.
 
 Section Inclusion.
 
@@ -327,31 +324,26 @@ Variable n : nat.
 Variable P : 'hpoly[R]_n.
 
 Definition is_included_in_halfspace c d :=
-  (non_empty P) ==> match opt_value c P with
-                    | Some opt_val => opt_val >= d
-                    | None => false
-                    end.
+  non_empty P ==> (if (@idP (bounded c P)) is ReflectT H then opt_value H >= d else false).
 
 Lemma is_included_in_halfspaceP c d :
   reflect (forall x, x \in P -> '[c,x] >= d)
           (is_included_in_halfspace c d).
 Proof.
-rewrite /is_included_in_halfspace; apply: (iffP implyP).
-- rewrite /opt_value.
-  case: (lp_stateP c P) => /= [ P_is_empty _
-    | z [opt_in_P opt_is_opt] /=
-    | /= _ /(_ is_true_true)]; last by done.
-  + by move => x; rewrite P_is_empty.
-  + move/(_ is_true_true) => d_le_opt.
-    move => x x_in_P; move/(_ _ x_in_P): opt_is_opt.
-    exact: ler_trans.
-- move => inclusion.
-  rewrite /opt_value.
-  case: (lp_stateP c P) => [/= | opt [opt_in_P _] /= _ | /= ]; first by done.
-  + exact: inclusion.
-  + move/(_ d) => [x [x_in_P cx_lt_d] _].
-    move/(_ _ x_in_P): inclusion.
-    by rewrite lerNgt => /negP.
+rewrite /is_included_in_halfspace.
+case: {-}_/idP => [H | c_unbounded].
+- apply: (iffP implyP).
+  + move/bounded_opt_value : (H) => [[x] [x_in_P x_val] opt_val].
+    have P_non_empty: non_empty P by exact: (intro_existsT non_emptyP x_in_P).
+    move/(_ P_non_empty) => d_le_opt_value.
+    move => y y_in_P; apply: (ler_trans d_le_opt_value).
+    exact: opt_val.
+  + move => lb _.
+    move/bounded_opt_value: (H) => [[x] [x_in_P <-] _].
+    exact: lb.
+- case: (boolP (non_empty P)) => /= [P_non_empty | /negP P_empty]; constructor.
+  + by move/(intro_existsT (bounded_lower_bound P_non_empty)).
+  + by move => x /(intro_existsT non_emptyP).
 Qed.
 
 Definition is_included_in_hyperplane c d :=
@@ -424,6 +416,9 @@ End ExtensionalEquality.
 
 End HPrim.
 
+Notation "{ 'on'  P , x  'minimizes'  c }" :=
+  (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))%R : ring_scope.
+
 Canonical HPrim.hpoly_extEqType.
 
 Import HPrim.
@@ -457,6 +452,13 @@ apply/andP/andP.
 - move => [x_in_P /forall_inP eqJ]; split; try by done.
   apply/row_submx_levP => j j_in_J.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
+Qed.
+
+Lemma hpolyEq_inP (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
+  reflect (x \in 'P(A, b) /\ forall j, j \in J -> (A *m x) j 0 = b j 0) (x \in 'P^=(A, b; J)).
+Proof.
+by rewrite hpolyEq_inE; apply: (equivP andP);
+  split; move => [x_in_PAb /eqfun_inP x_sat].
 Qed.
 
 Lemma hpolyEq_antimono  (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (I J : {set 'I_m}) :
