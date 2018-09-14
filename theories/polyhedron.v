@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron simplex.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron simplex under.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -297,6 +297,12 @@ Lemma lp_quotE (hP : 'hpoly[R]_n) : (* TODO: fix the dependency in c issue *)
 Proof.
 by rewrite non_empty_quotP bounded_quotP unbounded_quotP.
 Qed.
+
+
+Lemma minimize_quotP (hP : 'hpoly[R]_n) x :
+  { on hP, x minimizes c } <-> { on '[hP], x minimizes c }.
+Proof.
+split; rewrite mem_quotP.
 
 End Lift.
 

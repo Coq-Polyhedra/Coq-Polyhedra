@@ -7,4 +7,5 @@ theories/row_submx.v
 theories/simplex.v
 theories/exteqtype.v
 theories/hpolyhedron.v
+theories/under.v
 theories/polyhedron.v
