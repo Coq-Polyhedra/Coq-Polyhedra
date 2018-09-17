@@ -499,8 +499,8 @@ apply/(iffP idP).
     move/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => x_csc.
     rewrite mem_quotP; apply/hpolyEq_inP.
     split; first exact: (hpolyEq_antimono0 x_in_PAbI).
-    * move => j; rewrite -u_i_gt0; move/x_csc.
-      by rewrite mul_col_mx !col_mxEu => ->.
+    move => j; rewrite -u_i_gt0; move/x_csc.
+    by rewrite mul_col_mx !col_mxEu => ->.
   + rewrite mem_quotP; move => x_in_PAbJ. (* TODO: the rewrite mem_quotP takes time, why? *)
     apply/minimize_quotP/(HPrim.opt_valueP c_bounded); rewrite opt_val.
     have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
