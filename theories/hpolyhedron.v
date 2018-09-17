@@ -314,7 +314,7 @@ Arguments non_emptyP [R n P].
 Arguments boundedP [R n c P].
 Arguments bounded_lower_bound [R n c P].
 Arguments unboundedP [R n c P].
-Arguments opt_valueP [R n c P H x].
+Arguments opt_valueP [R n c P].
 Prenex Implicits non_emptyP boundedP bounded_lower_bound unboundedP opt_valueP.
 
 Section Inclusion.
@@ -461,6 +461,12 @@ by rewrite hpolyEq_inE; apply: (equivP andP);
   split; move => [x_in_PAb /eqfun_inP x_sat].
 Qed.
 
+Lemma hpolyEq_act (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) j :
+  x \in 'P^=(A, b; J) -> j \in J -> (A *m x) j 0 = b j 0.
+Proof.
+move => /hpolyEq_inP [_ x_act] j_in_J; exact: x_act.
+Qed.
+
 Lemma hpolyEq_antimono  (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (I J : {set 'I_m}) :
   I \subset J -> {subset 'P^=(A, b; J) <= 'P^=(A, b; I)}.
 Proof.
@@ -473,6 +479,12 @@ apply/andP; split.
   apply/implyP => j_in_I.
   apply: (implyP (sat_in_J j)).
   exact: (I_subset_J _ j_in_I).
+Qed.
+
+Lemma hpolyEq_antimono0  (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (I : {set 'I_m}) :
+  {subset 'P^=(A, b; I) <= 'P(A, b) }.
+Proof.
+by move => x /hpolyEq_inP [].
 Qed.
 
 End HPolyEq.

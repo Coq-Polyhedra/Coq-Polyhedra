@@ -290,6 +290,12 @@ move => P_non_empty.
 exact: (equivP (HPrim.bounded_lower_bound _)).
 Qed.
 
+Lemma bounded_opt_value P (H: bounded P) :
+  (exists x, x \in P /\ '[c,x] = opt_value H) /\ (forall y, y \in P -> '[c,y] >= opt_value H).
+Proof.
+exact: HPrim.bounded_opt_value.
+Qed.
+
 Lemma lp_quotE (hP : 'hpoly[R]_n) : (* TODO: fix the dependency in c issue *)
   (non_empty '[hP] = HPrim.non_empty hP)
   * (bounded '[hP] = HPrim.bounded c hP)
@@ -298,11 +304,12 @@ Proof.
 by rewrite non_empty_quotP bounded_quotP unbounded_quotP.
 Qed.
 
-
 Lemma minimize_quotP (hP : 'hpoly[R]_n) x :
-  { on hP, x minimizes c } <-> { on '[hP], x minimizes c }.
+  { on '[hP], x minimizes c } <-> { on hP, x minimizes c }.
 Proof.
-split; rewrite mem_quotP.
+split; rewrite mem_quotP; move => [x_in_P x_opt]; split;
+  by [ done | move => y y_in_P; apply: x_opt; rewrite mem_quotP in y_in_P * ].
+Qed.
 
 End Lift.
 
@@ -484,60 +491,37 @@ apply/(iffP idP).
       - rewrite -vdot_mulmx mul_col_mx !vdot_col_mx vdot0l vdot0r !addr0.
         apply: eq_bigr => i _; rewrite mxE.
         case: ifP => [ i_in_J | _]; last by rewrite mulr0 mul0r.
-        rewrite mul1r mulr1.
-        by move: y_in_Q; rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i_in_J)/eqP].
+        rewrite mul1r mulr1; exact: (hpolyEq_act y_in_Q).
   split; first by rewrite lp_quotE.
   move => x; split.
-  + rewrite !mem_quotP. (* TODO: the rewrite mem_quotP takes time, why? *)
-    move => [/hpolyEq_inP [x_in_PAb x_sat] x_opt]; apply/hpolyEq_inP; split; first by done.
-    Search _ "opt_value_csc".
-
-
-    rewrite hpolyEq_inE; apply/andP; split.
-    * by rewrite hpolyEq_inE in x_in_PAbI; move/andP: x_in_PAbI => [? _].
-    *
-
-  rewrite !mem_quotP; split. (* TODO: the rewrite mem_quotP takes time, why? *)
-  + have c_bounded' : bounded c '['P^=(A, b; I)] by rewrite lp_quotE.
-    move/(_ _): opt_valueP.
-    admit.
-(*
-    case => /eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) x_csc.
-      rewrite hpolyEq_inE; apply/andP; split;
-        first by rewrite hpolyEq_inE in x_in_PAbI; move/andP: x_in_PAbI => [? _].
-      apply/forall_inP => i; rewrite -u_i_gt0.
-      move/x_csc; by rewrite mul_col_mx !col_mxEu => ->.
-
-
-    * move => [x_in_PAbJ].
-      have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
-      split; first by done.
-      apply/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i; rewrite mxE.
+  + move/minimize_quotP/(HPrim.opt_valueP c_bounded); rewrite opt_val.
+    move/andP => [x_in_PAbI].
+    move/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => x_csc.
+    rewrite mem_quotP; apply/hpolyEq_inP.
+    split; first exact: (hpolyEq_antimono0 x_in_PAbI).
+    * move => j; rewrite -u_i_gt0; move/x_csc.
+      by rewrite mul_col_mx !col_mxEu => ->.
+  + rewrite mem_quotP; move => x_in_PAbJ. (* TODO: the rewrite mem_quotP takes time, why? *)
+    apply/minimize_quotP/(HPrim.opt_valueP c_bounded); rewrite opt_val.
+    have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
+    apply/andP; split; first by done.
+    apply/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i; rewrite mxE.
       case: (splitP' i) => [i' -> |?]; rewrite mxE; last by rewrite ltrr.
       case: ifP => [i'_in_J _ | ?]; last by rewrite ltrr.
-      rewrite mul_col_mx !col_mxEu.
-      by move: x_in_PAbJ; rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i'_in_J)/eqP].*)
-    admit.
+      rewrite mul_col_mx !col_mxEu; exact: (hpolyEq_act x_in_PAbJ).
+
 - move/hpoly_of_baseP: P_base => P_repr.
-  move => [c] [c_bounded c_opt'].
+  move => [c] [c_bounded c_opt].
   apply/andP; split.
-  + move/boundedP: c_bounded => [x] [x_in_P x_opt].
-    apply/non_emptyP; exists x; apply/c_opt'; split; first by done. admit.
-(*    by symmetry; apply: opt_value_is_optimal.*)
+  + move/boundedP: c_bounded => [x /c_opt x_in_Q].
+    by apply/non_emptyP; exists x.
   + set I := ({eq P}) in P_repr *. (* TODO: parsing error if parenthesis are removed *)
     suff: exists (J: {set 'I_(#ineq 'P(A, b))}), (I \subset J /\ Q = '['P^=(A, b; J)]).
     * move => [J] [I_sub_J Q_eq_PabJ]; apply/andP; split.
       - by apply/has_baseP; exists J.
       - by move/activeP: Q_eq_PabJ; apply: subset_trans.
-    * rewrite P_repr non_empty_quotP !lp_quotE in P_non_empty c_bounded c_opt'.
-      (* the next 5 lines are required to rewrite under lambda *)
-      have c_opt : forall x : 'cV_n, (x \in 'P^=(A, b; I) /\ Some '[ c, x] = HPrim.opt_value c 'P^=(A, b; I)) <-> x \in Q.
-      - move => x; split; move => H.
-        + by apply/c_opt'; rewrite mem_quotP.
-        + by move/c_opt': H; rewrite mem_quotP.
-      rewrite {c_opt'}.
-      move/HPrim.bounded_normal_cone: c_bounded => [u] [u_ge0 c_eq c_optval].
-      (*rewrite {}c_optval in c_opt.*)
+    * rewrite P_repr non_empty_quotP !lp_quotE in P_non_empty c_bounded c_opt.
+      move/HPrim.dual_opt_sol: (c_bounded) => [u] [u_ge0 c_eq c_optval].
       pose J := I :|: [set i | (usubmx u) i 0 > 0].
       exists J; split; first exact: subsetUl.
       suff PAbJ_eq_Q : 'P^=(A, b; J) =i Q. (* we should introduce a lemma for that: P = '[Q] <-> P =i Q *)
@@ -546,30 +530,23 @@ apply/(iffP idP).
         by rewrite PAbJ_eq_Q Q_eq_Q' mem_quotP.
       - move => x; apply/idP/idP => [x_in_PAbJ | x_in_Q].
         + have x_in_PAbI : x \in 'P^=(A, b; I).
-            move: x_in_PAbJ; apply/hpolyEq_antimono; exact: subsetUl.
-          apply/c_opt; split; try by done.
-          * rewrite c_eq.
-            apply/congr1; apply/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i.
-            case: (splitP' i) => [j -> | j -> _].
+          move: x_in_PAbJ; apply/hpolyEq_antimono; exact: subsetUl.
+          apply/c_opt/minimize_quotP/HPrim.opt_valueP/andP; split; first by done.
+          rewrite -c_optval c_eq; apply/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i.
+          case: (splitP' i) => [j -> | j -> _].
             - rewrite -[u]vsubmxK mul_col_mx !col_mxEu => u_j_gt0.
               have j_in_J : (j \in J) by rewrite !inE; apply/orP; right.
-              rewrite hpolyEq_inE in x_in_PAbJ.
-              by move/andP: x_in_PAbJ => [_ /forall_inP/(_ _ j_in_J)/eqP].
+              exact: (hpolyEq_act x_in_PAbJ).
             - rewrite mul_col_mx !col_mxEd mulNmx -row_submx_mul.
               rewrite 2![in LHS]mxE 2![in RHS]mxE.
-              apply: congr1.
-              rewrite hpolyEq_inE in x_in_PAbI.
-              by move/andP: x_in_PAbI => [_ /forall_inP/(_ _ (enum_valP j))/eqP].
-        + move/c_opt: x_in_Q => [x_in_PAbI [cx_eq_bu]].
-          move: (x_in_PAbI); rewrite hpolyEq_inE => [/andP [x_in_P /forall_inP x_act]].
-          rewrite hpolyEq_inE; apply/andP; split; first by done.
-          apply/forall_inP => j; rewrite inE; case/orP; first by exact: x_act.
-          rewrite inE => u_j_gt0.
-          set j' := lshift #|I| j.
-          have u_j'_gt0: u j' 0 > 0 by rewrite -[u]vsubmxK col_mxEu.
-          rewrite c_eq in cx_eq_bu.
-          move/eqP/(HPrim.opt_value_csc u_ge0 x_in_PAbI)/(_ _ u_j'_gt0): cx_eq_bu.
-          by rewrite mul_col_mx !col_mxEu => ->.
+              apply: congr1; apply: (hpolyEq_act x_in_PAbI); exact: enum_valP.
+       + move/c_opt/minimize_quotP/(HPrim.opt_valueP c_bounded)/andP: x_in_Q => [x_in_PAbI].
+         rewrite {1}c_eq -c_optval; move/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => x_act.
+         apply/hpolyEq_inP; split; first exact: (hpolyEq_antimono0 x_in_PAbI).
+         move => j; rewrite inE; case/orP => [j_in_I | u_j_gt0].
+         * exact: (hpolyEq_act x_in_PAbI).
+         * rewrite inE mxE in u_j_gt0.
+           by move/(_ _ u_j_gt0): x_act; rewrite mul_col_mx !col_mxEu.
 Qed.
 
 End FaceP.
@@ -610,7 +587,7 @@ Arguments face_baseP [P Q _].
 Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
   reflect
-    (exists c, bounded c P /\ (forall x, (x \in P /\ Some '[c,x] = opt_value c P) <-> x \in Q))
+    (exists c, bounded c P /\ (forall x, { on P, x minimizes c } <-> x \in Q))
     (Q \in face P).
 Proof.
 move => P_non_empty.
