@@ -208,7 +208,7 @@ Definition opt_value (P : 'poly[R]_n) (H: bounded P) := HPrim.opt_value H.
 
 CoInductive lp_state (P : 'poly[R]_n) : bool -> bool -> bool -> Prop :=
 | Empty of P =i pred0 : lp_state P false false false
-| Bounded of (exists x, { on P, x minimizes c }) : lp_state P true true false
+| Bounded of (exists x, { over P, x minimizes c }) : lp_state P true true false
 | Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state P true false true.
 
 Lemma lp_stateP P :
@@ -221,7 +221,7 @@ case: (HPrim.lp_stateP c (hpoly P))
 Qed.
 
 Lemma boundedP (P : 'poly[R]_n) :
-  reflect (exists x, { on P, x minimizes c })
+  reflect (exists x, { over P, x minimizes c })
          (bounded P).
 Proof.
 exact: (equivP HPrim.boundedP).
@@ -239,7 +239,7 @@ by split; move => [x [x_in x_is_opt]]; exists x; split;
 Qed.
 
 Lemma opt_valueP (P : 'poly[R]_n) (H: bounded P) x :
-  reflect ({ on P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
+  reflect ({ over P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
 Proof.
 exact: HPrim.opt_valueP.
 Qed.
@@ -305,7 +305,7 @@ by rewrite non_empty_quotP bounded_quotP unbounded_quotP.
 Qed.
 
 Lemma minimize_quotP (hP : 'hpoly[R]_n) x :
-  { on '[hP], x minimizes c } <-> { on hP, x minimizes c }.
+  { over '[hP], x minimizes c } <-> { over hP, x minimizes c }.
 Proof.
 split; rewrite mem_quotP; move => [x_in_P x_opt]; split;
   by [ done | move => y y_in_P; apply: x_opt; rewrite mem_quotP in y_in_P * ].
@@ -454,7 +454,7 @@ Variable n : nat.
 Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base ] -> non_empty P ->
   reflect
-    (exists c, bounded c P /\ (forall x, { on P, x minimizes c } <-> x \in Q))
+    (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
     (Q \in (face base P)).
 Proof.
 case: base => [m A b] P_base P_non_empty.
@@ -587,7 +587,7 @@ Arguments face_baseP [P Q _].
 Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
   reflect
-    (exists c, bounded c P /\ (forall x, { on P, x minimizes c } <-> x \in Q))
+    (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
     (Q \in face P).
 Proof.
 move => P_non_empty.

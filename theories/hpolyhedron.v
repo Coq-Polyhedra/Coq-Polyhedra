@@ -16,7 +16,10 @@ Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-Reserved Notation "{ 'on' P , x 'minimizes' c }" (at level 70, format "{ 'on'  P ,  x  'minimizes'  c }").
+Local Open Scope ring_scope.
+Import GRing.Theory Num.Theory.
+
+Reserved Notation "{ 'over' P , x 'minimizes' c }" (at level 70, format "{ 'over'  P ,  x  'minimizes'  c }").
 Reserved Notation "''hpoly[' R ]_ n" (at level 8, n at level 2, format "''hpoly[' R ]_ n").
 Reserved Notation "''hpoly_' n" (at level 8, n at level 2).
 Reserved Notation "'#ineq' P" (at level 10, P at level 0, format "'#ineq'  P").
@@ -107,6 +110,8 @@ Notation "''hpoly_' n" := (hpoly _ n).
 Notation "'#ineq' P" := (nb_ineq P).
 Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b).
 Notation "''P' ( A , b )" := (Hpoly A b).
+Notation "{ 'over' P , x 'minimizes' c }" :=
+  (is_true (x \in P) /\ forall y, (is_true (y \in P) -> is_true ('[c,x] <= '[c,y])))%R : ring_scope.
 
 Module HPrim.
 
@@ -136,12 +141,9 @@ Definition opt_point c P (_: bounded c P) :=
 
 Definition opt_value c P (H: bounded c P) := '[c, opt_point H].
 
-Notation "{ 'on'  P , x  'minimizes'  c }" :=
-  (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))%R : ring_scope.
-
 CoInductive lp_state c P : bool -> bool -> bool -> Prop :=
 | Empty of P =i pred0 : lp_state c P false false false
-| Bounded of (exists x, { on P, x minimizes c }) : lp_state c P true true false
+| Bounded of (exists x, { over P, x minimizes c }) : lp_state c P true true false
 | Unbounded of (forall K, exists x, x \in P /\ '[c,x] < K) : lp_state c P true false true.
 
 Lemma lp_stateP c P :
@@ -196,7 +198,7 @@ exact: Simplex.feasibleP.
 Qed.
 
 Lemma boundedP c P :
-  reflect (exists x, { on P, x minimizes c }) (bounded c P).
+  reflect (exists x, { over P, x minimizes c }) (bounded c P).
 Proof.
 case: P => m A b.
 apply: (iffP idP).
@@ -236,7 +238,7 @@ by rewrite P_non_empty /=.
 Qed.
 
 Lemma opt_valueP c P (H: bounded c P) x :
-  reflect ({ on P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
+  reflect ({ over P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
 Proof.
 case: P H => m A b H; apply/(iffP andP) => [[x_in_P /eqP ->] |].
 - split; first by done.
@@ -416,8 +418,8 @@ End ExtensionalEquality.
 
 End HPrim.
 
-Notation "{ 'on'  P , x  'minimizes'  c }" :=
-  (x \in P /\ (forall y, y \in P -> '[c,x] <= '[c,y]))%R : ring_scope.
+
+
 
 Canonical HPrim.hpoly_extEqType.
 
