@@ -197,6 +197,14 @@ case: P => m A b.
 exact: Simplex.feasibleP.
 Qed.
 
+Lemma non_emptyPn P :
+  reflect (P =i pred0) (~~ (non_empty P)).
+Proof.
+apply: (iffP idP); case: (lp_stateP 0 P) => /=;
+  try by [ done
+         | do ?[move => /(_ 0)]; by [ move => [x [x_in_P _]] /(_ x); rewrite inE x_in_P] ].
+Qed.
+
 Lemma boundedP c P :
   reflect (exists x, { over P, x minimizes c }) (bounded c P).
 Proof.
@@ -313,6 +321,7 @@ Arguments non_empty [R n].
 Arguments bounded [R n].
 Arguments unbounded [R n].
 Arguments non_emptyP [R n P].
+Arguments non_emptyPn [R n P].
 Arguments boundedP [R n c P].
 Arguments bounded_lower_bound [R n c P].
 Arguments unboundedP [R n c P].
