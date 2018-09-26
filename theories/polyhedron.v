@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron simplex under.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron simplex.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -150,7 +150,15 @@ Definition non_empty (P : 'poly[R]_n) :=
 Lemma non_emptyP (P : 'poly[R]_n) :
   reflect (exists x, x \in P) (non_empty P).
 Proof.
-exact: (equivP HPrim.non_emptyP).
+exact: HPrim.non_emptyP.
+Qed.
+
+Arguments non_emptyP [P].
+
+Lemma non_emptyPn (P : 'poly[R]_n) :
+  reflect (P =i pred0) (~~ (non_empty P)).
+Proof.
+exact: HPrim.non_emptyPn.
 Qed.
 
 Arguments non_emptyP [P].
@@ -200,6 +208,38 @@ apply/(sameP is_included_inP)/(equivP (HPrim.is_included_inP hP hQ)).
 by split; move => Hsubset x; move/(_ x): Hsubset; rewrite PeqClasshP QeqClasshQ 2!quotE.
 Qed.
 
+Lemma contains_non_empty (P Q : 'poly[R]_n) :
+  non_empty P -> is_included_in P Q -> non_empty Q. (* RK *)
+Proof.
+move/non_emptyP => [x x_in_P].
+move/is_included_inP => P_is_included_in_Q.
+apply/non_emptyP.
+exists x.
+by apply/P_is_included_in_Q.
+Qed.
+
+Lemma empty_is_contained (P Q : 'poly[R]_n) :
+  ~~ non_empty P -> is_included_in P Q. (* RK *)
+Proof.
+move/non_emptyPn => P_empty.
+by apply/is_included_inP => x; rewrite P_empty inE.
+Qed.
+
+Lemma is_included_in_refl (P : 'poly[R]_n) :
+  is_included_in P P. (* RK *)
+Proof.
+by apply/is_included_inP.
+Qed.
+
+Lemma is_included_in_trans (P Q S : 'poly[R]_n) :
+  is_included_in P Q -> is_included_in Q S ->
+    is_included_in P S. (* RK *)
+Proof.
+move => /is_included_inP P_incl_Q /is_included_inP Q_incl_R.
+apply/is_included_inP => x.
+by move/P_incl_Q/Q_incl_R.
+Qed.
+
 Variable c : 'cV[R]_n.
 
 Definition bounded (P : 'poly[R]_n) := HPrim.bounded c (hpoly P).
@@ -244,28 +284,28 @@ Proof.
 exact: HPrim.opt_valueP.
 Qed.
 
+Lemma bounded_lower_bound P :
+  non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded P).
+Proof.
+move => P_non_empty.
+exact: HPrim.bounded_lower_bound.
+Qed.
+
+Lemma bounded_opt_value P (H: bounded P) :
+  (exists x, x \in P /\ '[c,x] = opt_value H) /\ (forall y, y \in P -> '[c,y] >= opt_value H).
+Proof.
+exact: HPrim.bounded_opt_value.
+Qed.
+
 Lemma opt_value_quotP (hP : 'hpoly[R]_n) (H: bounded '[hP]) (hH: HPrim.bounded c hP) :
   opt_value H = HPrim.opt_value hH.
-Admitted.
-(*
-(* RK: improve the proof? Rely on new results? *)
 Proof.
-case: (boolP (bounded '[hP])).
-- case: hP => m A b.
-  move => bounded_hP.
-  rewrite bounded_quotP in bounded_hP.
-  rewrite /HPrim.opt_value /HPrim.opt_point bounded_hP /=.
-  apply/opt_value_is_optimal; split.
-  + rewrite mem_quotP.
-    by apply/Simplex.opt_point_is_feasible.
-  + move => y; rewrite mem_quotP.
-    exact: ((proj2 (Simplex.boundedP _ _ _ bounded_hP)) y).
-- rewrite bounded_quotP.
-  move/negbTE => neg_bounded_hP.
-  rewrite /HPrim.opt_value /HPrim.opt_point neg_bounded_hP.
-  rewrite -bounded_quotP /bounded in neg_bounded_hP.
-  by rewrite /opt_value /HPrim.opt_value /HPrim.opt_point neg_bounded_hP.
-Qed.*)
+move: (bounded_opt_value H) => [[x [x_in_P <-]] x_is_opt].
+move: (HPrim.bounded_opt_value hH) => [[y [y_in_P <-]] y_is_opt].
+apply/eqP; rewrite eqr_le; apply/andP; split.
+- by apply: x_is_opt; rewrite mem_quotP.
+- by apply: y_is_opt; rewrite mem_quotP in x_in_P.
+Qed.
 
 Lemma unboundedP (P : 'poly[R]_n) :
   reflect (forall K, exists x, x \in P /\ '[c,x] < K) (unbounded P).
@@ -281,19 +321,6 @@ Proof.
 apply/(sameP unboundedP)/(equivP HPrim.unboundedP).
 by split; move => unbounded K; move: (unbounded K) => [x [x_in val_x]];
   exists x; [rewrite quotE | rewrite -quotE].
-Qed.
-
-Lemma bounded_lower_bound P :
-  non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded P).
-Proof.
-move => P_non_empty.
-exact: (equivP (HPrim.bounded_lower_bound _)).
-Qed.
-
-Lemma bounded_opt_value P (H: bounded P) :
-  (exists x, x \in P /\ '[c,x] = opt_value H) /\ (forall y, y \in P -> '[c,y] >= opt_value H).
-Proof.
-exact: HPrim.bounded_opt_value.
 Qed.
 
 Lemma lp_quotE (hP : 'hpoly[R]_n) : (* TODO: fix the dependency in c issue *)
