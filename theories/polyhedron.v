@@ -632,4 +632,62 @@ apply/(face_baseP (hpoly_base _)); split; try by done.
 by apply/(subset_trans _ eqQ_sub_eqQ').
 Qed.
 
+Fact self_face (P : 'poly[R]_n) :
+  non_empty P ->
+    P \in (face P). (* RK *)
+Proof.
+move => non_empty_P.
+rewrite inE.
+apply/andP; split.
+- exact: non_empty_P.
+- apply/andP; split.
+  + exact: hpoly_base.
+  + exact: subxx.
+Qed.
+
+Fact face_subset (P Q : 'poly[R]_n) :
+  Q \in (face P) ->
+    {subset Q <= P}. (* RK *)
+Proof.
+move/andP => [_ /andP [Q_has_base ?]].
+by apply: (inclusion_on_base (hpoly_base P) Q_has_base).
+Qed.
+
+Fact face_of_face_incl_rel (P F F' : 'poly[R]_n) :
+  F \in face P ->
+    ((F' \in face F) = ((F' \in face P) && (is_included_in F' F))). (* RK *)
+Proof.
+move => F_is_face_of_P.
+apply/idP/idP => [F'_is_face_of_F | /andP [F'_is_face_of_P /is_included_inP F'_is_included_in_F]].
+- apply/andP; split.
+  + by apply: (face_of_face F_is_face_of_P).
+  + apply/is_included_inP.
+    exact: (face_subset F'_is_face_of_F).
+- move/(face_baseP (hpoly_base P)): F_is_face_of_P => [non_empty_F F_base eq_P_subset_eq_F].
+  move/(face_baseP (hpoly_base P)): F'_is_face_of_P => [non_empty_F' F'_base eq_P_subset_eq_F'].
+  apply/(face_baseP F_base).
+  split.
+  + exact: non_empty_F'.
+  + exact: F'_base.
+  + by apply/(inclusion_on_base F_base F'_base).
+Qed.
+
+Fact has_face_imp_non_empty (P Q : 'poly[R]_n) :
+  Q \in (face P) ->
+    non_empty P. (* RK *)
+Proof.
+move => Q_is_face_of_P.
+apply: contraT => empty_P.
+by rewrite (face_empty empty_P) in Q_is_face_of_P.
+Qed.
+
+Fact face_is_non_empty (P Q : 'poly[R]_n) :
+  Q \in (face P) ->
+    non_empty Q. (* RK *)
+Proof.
+move => Q_is_face_of_P.
+by move: (face_baseP (hpoly_base P) Q_is_face_of_P) => [? _ _].
+Qed.
+
+
 End Face.
