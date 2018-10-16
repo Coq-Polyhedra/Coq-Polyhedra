@@ -389,21 +389,62 @@ Definition active (P : 'poly[R]_n) base :=
 Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
 
-Lemma active_inP (P : 'poly[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) i :
+Section ActiveInP.
+
+Variable P : 'poly[R]_n.
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Lemma active_inP i :
   reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
 Proof.
 rewrite inE; apply/(equivP is_included_in_hyperplaneP).
 by split; move => H x; move/(_ x): H; rewrite row_vdot.
 Qed.
 
+End ActiveInP.
+
 Arguments active_inP [P m A b].
 Prenex Implicits active_inP.
 
-Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
-  [P has \base base] -> [Q has \base base] ->
-  reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
-Proof. (* TODO: should follow from the relint point of P and/or Q *)
-Admitted.
+Section ActiveInPn.
+
+
+Variable P : 'poly[R]_n.
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Hypothesis P_base : [P has \base 'P(A,b)].
+
+Lemma active_inPn i :
+  reflect (exists x, x \in P /\ (A *m x) i 0 > b i 0) (i \notin { eq(P) on 'P(A,b) }).
+Proof.
+apply: (iffP idP); last first.
+- move => [x [x_in_P Ai_x_gt_bi]]; apply/negP; move/active_inP/(_ _ x_in_P) => Ai_x_eq_bi.
+  by move: Ai_x_gt_bi; rewrite Ai_x_eq_bi ltrr.
+- move => i_not_active; set Ai := (row i A)^T.
+  case: (lp_stateP (-Ai) P)
+  => [P_empty | [x [x_in_P x_opt]] | /(_ (- (b i 0))) [x [x_in_P Ai_x_gt_bi]]].
+  + suff: (i \in {eq P on 'P(A,b)}) by move/negP: i_not_active.
+    by apply/active_inP => x; rewrite P_empty inE.
+  + exists x; split; first by done.
+    move: i_not_active; apply: contraR.
+    rewrite -lerNgt => Ai_x_le_bi.
+    move/has_baseP: P_base => [I P_eq_PAbI].
+    apply/active_inP => y y_in_P.
+    apply/eqP; rewrite eqr_le; apply/andP; split; last first.
+    * by move: y_in_P; rewrite P_eq_PAbI mem_quotP => /hpolyEq_inP [/forallP].
+    * move: Ai_x_le_bi; move/(_ _ y_in_P): x_opt.
+      rewrite !vdotNl !row_vdot ler_opp2; exact: ler_trans.
+  + exists x; split; first by done.
+    by rewrite !vdotNl !row_vdot ltr_opp2 in Ai_x_gt_bi.
+Qed.
+
+End ActiveInPn.
+
+Section ActiveP.
 
 Variable P : 'poly[R]_n.
 Variable m : nat.
@@ -439,6 +480,29 @@ move => x; apply/idP/idP => [x_in |].
   suff: i \in { eq '[P'] on 'P(A, b) } by exact: act_eq.
   + by move/subsetP/(_ _ i_in_I): I_subset.
 Qed.
+
+End ActiveP.
+
+Section InclusionOnBase.
+
+Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
+  [P has \base base] -> [Q has \base base] ->
+  reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
+Proof.
+case: base => m A b P_base Q_base;
+  rewrite {1}(hpoly_of_baseP P_base) {1}(hpoly_of_baseP Q_base).
+apply: (iffP idP) => [eqQ_sub_eqP| incl].
+- suff incl: {subset 'P^=(A, b; {eq P}) <= 'P^=(A, b; {eq Q})}.
+  move => x; rewrite !mem_quotP; exact: incl. (* TODO: same here, takes a long time to rewrite *)
+  exact: hpolyEq_antimono.
+- apply/subsetP => i; apply: contraLR.
+  move/(active_inPn P_base) => [x [x_in_P Ai_x_gt_bi]].
+  apply/(active_inPn Q_base); exists x; split; last by done.
+  rewrite (hpoly_of_baseP Q_base); apply: incl.
+  by rewrite (hpoly_of_baseP P_base) in x_in_P.
+Qed.
+
+End InclusionOnBase.
 
 End Base.
 
