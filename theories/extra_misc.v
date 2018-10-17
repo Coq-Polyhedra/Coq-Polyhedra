@@ -15,11 +15,25 @@ Unset Printing Implicit Defensive.
 
 Section Basic.
 
+Lemma ord0_false (i: 'I_0) : False.
+Proof.
+by move: (ltn_ord i); rewrite ltn0.
+Qed.
+
 Lemma ord1_eq0 (i: 'I_1) : (i = ord0).
 Proof.
 apply/ord_inj => /=.
 by move: (ltn_ord i); rewrite ltnS leqn0 => /eqP.
 Qed.
+
+Lemma exists_andP (T : Type) (A : pred T) (B : pred T) :
+  (exists x, (A x /\ B x)) <-> (exists x, (A x && B x)).
+Proof.
+by split; move => [x H]; exists x; apply/andP.
+Qed.
+
+Arguments exists_andP [T A B].
+Prenex Implicits exists_andP.
 
 Lemma intro_existsT (T: Type) (P: T -> Prop) (b: bool) (H: reflect (exists x, P x) b) (x: T):
   P x -> b.
