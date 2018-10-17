@@ -1,17 +1,15 @@
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
-(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
+(* (c) Copyright 2018, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
 (*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
 (* All rights reserved.                                                  *)
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import
-  all_ssreflect ssralg ssrnum zmodp matrix mxalgebra bigop finset.
-Require Import
-  polyhedron simplex extra_misc extra_matrix inner_product vector_order row_submx.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron polyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -23,7 +21,99 @@ Import GRing.Theory Num.Theory.
 Section AffineHull.
 
 Variable R : realFieldType.
-Variables m n : nat.
+Variables n : nat.
+
+Variable P : 'poly[R]_n.
+
+Section RelintPointBase.
+
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+
+Hypothesis P_base : [ P has \base 'P(A,b) ].
+
+Definition relint_pt_ith i (H : i \notin { eq(P) on 'P(A,b) }) :=
+  xchoose ((@exists_andP _ _ _).1 (active_inPn P_base _ H)).
+
+Lemma relint_pt_ithP i (H : i \notin { eq(P) on 'P(A,b) }) :
+  let x := relint_pt_ith H in
+  (x \in P) /\ ((A *m x) i 0 > b i 0).
+Proof.
+rewrite /relint_pt_ith.
+set Q := ((exists_andP _ _).1 _).
+by move/andP: (xchooseP Q).
+Qed.
+
+Hypothesis P_non_empty : non_empty P.
+
+Lemma poly_is_convex (p : nat) (lambda : 'I_p -> R) (V : 'I_p -> 'cV[R]_n) :
+  (forall i, lambda i >= 0) -> (\sum_i (lambda i) = 1) -> (forall i, V i \in P) -> \sum_i (lambda i) *: (V i) \in P.
+Admitted.
+
+Definition relint_pt :=
+  let x0 := xchoose (non_emptyP P_non_empty) in
+  if (m > 0)%N then
+    (m%:R^-1) *: \sum_i (if (@idPn (i \in { eq(P) on 'P(A,b) })) is ReflectT H then relint_pt_ith H else x0)
+  else
+    x0.
+
+Lemma relint_ptP :
+  let x := relint_pt in
+  (x \in P) /\ (forall (i: 'I_m), i \notin { eq(P) on 'P(A,b) } -> (A *m x) i 0 > b i 0).
+Proof.
+rewrite /relint_pt; case: ifP => [ m_pos | /negbT m_eq0 ]; last first.
+- split; first exact: xchooseP.
+  move: m_eq0; rewrite -eqn0Ngt => /eqP m_eq0 i.
+  by move: (ord0_false (cast_ord m_eq0 i)).
+- have m_gt0 : m%:R > 0 :>R.
+  + by rewrite ltr0n.
+  split.
+  + rewrite scaler_sumr; apply: poly_is_convex.
+    * by move => _; apply: ltrW; rewrite invr_gt0.
+    * rewrite sumr_const card_ord -[LHS]mulr_natr mulVf //.
+      exact: lt0r_neq0.
+    * move => i; case: {-}_/idPn => [ i_not_in_eq | _]; last exact: xchooseP.
+      by move: (relint_pt_ithP i_not_in_eq) => [ ? _ ].
+  + move => i i_not_in.
+    rewrite -scalemxAr [X in _ < X]mxE ltr_pdivl_mull // [X in X < _]mulrC mulmx_sumr.
+    have ->: b i 0 * m%:R = \sum_(j : 'I_m) (b i 0).
+      by rewrite sumr_const card_ord -[RHS]mulr_natr.
+
+
+      rewrite mulmx_sumr.
+    Search _ (\sum__ _).
+
+    Search _ (_ < _^-1 * _).
+
+
+
+    Search _ (_ *m (_ *: _)).
+
+  Search _ (_ *: _) in ssralg.
+
+
+  by move: (ltn_ord i); rewrite {2}m_eq0 ltn0.
+
+
+
+  Search _ (_ < _)%N in fintype.
+
+  Search _ (Ordinal_fintype 0%N).
+
+  rewrite m_eq0 in i_lt0.
+  i_lt0].
+
+
+  Search _ (_ < _)%N in fintype.
+
+
+  rewrite -eqn0Ngt /eqP in m_eq0.
+  Search _ (~~ (0 < _)%N).
+
+
+  \sum_(i | i \notin { eq(P) on 'P(A,b) }) (choose (active_inPn P_base i) 0).
+
 
 (* P(A, b) definition of polyhedra *)
 Variable A : 'M[R]_(m, n).
@@ -169,7 +259,7 @@ Definition relint_candidate c := match simplex A b c with
   | _ => 0
   end.
 
-(* RK : I have moved the next lemma (which does not seem to be used here) to simplex.v, 
+(* RK : I have moved the next lemma (which does not seem to be used here) to simplex.v,
 under the name "opt_point_is_feasible", more generally applying it to any vector c
 (* The face of a bounded polyhedron, as computed by simplex,
    must belong to the polyhedron itself *)

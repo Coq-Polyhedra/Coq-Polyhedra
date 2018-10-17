@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron simplex.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -154,6 +154,7 @@ exact: HPrim.non_emptyP.
 Qed.
 
 Arguments non_emptyP [P].
+Prenex Implicits non_emptyP.
 
 Lemma non_emptyPn (P : 'poly[R]_n) :
   reflect (P =i pred0) (~~ (non_empty P)).
@@ -161,7 +162,7 @@ Proof.
 exact: HPrim.non_emptyPn.
 Qed.
 
-Arguments non_emptyP [P].
+Arguments non_emptyPn [P].
 
 Lemma non_empty_quotP (hP : 'hpoly[R]_n) :
   non_empty '[hP] = HPrim.non_empty hP.
@@ -447,25 +448,22 @@ End ActiveInPn.
 Section ActiveP.
 
 Variable P : 'poly[R]_n.
-Variable m : nat.
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
-Hypothesis P_base : [ P has \base 'P(A,b) ].
 
-Lemma activeP I :
-  P = '['P^=(A, b; I)] -> I \subset { eq P }.
+Lemma activeP (base : 'hpoly[R]_n) I :
+  P = '['P^=(base; I)] -> I \subset { eq P }.
 Proof.
-move => P_eq.
+case: base I => [m A b] I P_eq.
 apply/subsetP => i i_in_I; apply/active_inP => x.
 rewrite P_eq mem_quotP.
 by rewrite hpolyEq_inE => /andP [_ /forall_inP/(_ _ i_in_I)/eqP].
 Qed.
 
-Lemma hpoly_of_baseP :
-  P = '[ 'P^=(A, b; { eq P }) ].
+Lemma hpoly_of_baseP (base : 'hpoly[R]_n) :
+  [P has \base base] -> P = '[ 'P^=(base; { eq P }) ].
 Proof.
-move/has_baseP: P_base => [I P_eq_Pact].
-move/activeP: (P_eq_Pact); rewrite {}P_eq_Pact.
+case: base => [m A b] P_base.
+move/has_baseP : (P_base) => [I P_eq_Pact].
+move/activeP : (P_eq_Pact); rewrite {}P_eq_Pact.
 set P' := 'P^=(A, b; I).
 move => I_subset; apply/poly_eqP.
 move => x; apply/idP/idP => [x_in |].
@@ -483,14 +481,18 @@ Qed.
 
 End ActiveP.
 
-Section InclusionOnBase.
+Arguments activeP [P base I].
+Prenex Implicits activeP.
+Arguments hpoly_of_baseP [P base].
+Prenex Implicits hpoly_of_baseP.
 
-Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
+Section InclusionOnBase.
+  Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] -> [Q has \base base] ->
   reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
 Proof.
 case: base => m A b P_base Q_base;
-  rewrite {1}(hpoly_of_baseP P_base) {1}(hpoly_of_baseP Q_base).
+rewrite {1}(hpoly_of_baseP P_base) {1}(hpoly_of_baseP Q_base).
 apply: (iffP idP) => [eqQ_sub_eqP| incl].
 - suff incl: {subset 'P^=(A, b; {eq P}) <= 'P^=(A, b; {eq Q})}.
   move => x; rewrite !mem_quotP; exact: incl. (* TODO: same here, takes a long time to rewrite *)
@@ -714,7 +716,7 @@ Fact face_subset (P Q : 'poly[R]_n) :
     {subset Q <= P}. (* RK *)
 Proof.
 move/andP => [_ /andP [Q_has_base ?]].
-by apply: (inclusion_on_base (hpoly_base P) Q_has_base).
+by apply: (inclusion_on_base Q_has_base (hpoly_base P)).
 Qed.
 
 Fact face_of_face_incl_rel (P F F' : 'poly[R]_n) :
@@ -733,7 +735,7 @@ apply/idP/idP => [F'_is_face_of_F | /andP [F'_is_face_of_P /is_included_inP F'_i
   split.
   + exact: non_empty_F'.
   + exact: F'_base.
-  + by apply/(inclusion_on_base F_base F'_base).
+  + by apply/(inclusion_on_base F'_base F_base).
 Qed.
 
 Fact has_face_imp_non_empty (P Q : 'poly[R]_n) :
@@ -755,3 +757,5 @@ Qed.
 
 
 End Face.
+
+Arguments non_emptyP [R n P].
