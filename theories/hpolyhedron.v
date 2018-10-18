@@ -478,9 +478,10 @@ Proof.
 move => /hpolyEq_inP [_ x_act] j_in_J; exact: x_act.
 Qed.
 
-Lemma hpolyEq_antimono  (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (I J : {set 'I_m}) :
-  I \subset J -> {subset 'P^=(A, b; J) <= 'P^=(A, b; I)}.
+Lemma hpolyEq_antimono (base : 'hpoly[R]_n) (I J : {set 'I_(#ineq base)}) :
+  I \subset J -> {subset 'P^=(base; J) <= 'P^=(base; I)}.
 Proof.
+case: base I J => [m A b] I J.
 move => /subsetP I_subset_J x.
 rewrite 2!hpolyEq_inE.
 move/andP => [x_in_P /forallP sat_in_J].
@@ -492,9 +493,10 @@ apply/andP; split.
   exact: (I_subset_J _ j_in_I).
 Qed.
 
-Lemma hpolyEq_antimono0  (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (I : {set 'I_m}) :
-  {subset 'P^=(A, b; I) <= 'P(A, b) }.
+Lemma hpolyEq_antimono0 (base : 'hpoly[R]_n) I :
+  {subset 'P^=(base; I) <= base }.
 Proof.
+case : base I => [m A b] I.
 by move => x /hpolyEq_inP [].
 Qed.
 

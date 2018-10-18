@@ -155,6 +155,14 @@ apply: (big_ind (fun v => v <= 0)); first by done.
   by rewrite -!oppr_ge0 opprD; apply: addr_ge0.
 Qed.
 
+Lemma sumr_ltrP (I : finType) (F : I -> R) (G : I -> R) :
+  (forall i, F i <= G i) -> (exists i, F i < G i) -> \sum_i F i < \sum_i G i.
+Proof.
+move => F_le_G [i Fi_lt_Gi].
+rewrite [X in X < _](bigD1 i) //= [X in _ < X](bigD1 i) //=.
+by rewrite ltr_le_add // ler_sum.
+Qed.
+
 Fixpoint min_seq (S : seq R) (v : R) :=
   match S with
   | [::] => v

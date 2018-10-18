@@ -383,6 +383,13 @@ Proof.
 by apply/self_base; rewrite hpolyK.
 Qed.
 
+Lemma subset_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
+  [ P has \base base ] -> { subset P <= base }.
+Proof.
+move/has_baseP => [I ->] x.
+rewrite mem_quotP; exact: hpolyEq_antimono0.
+Qed.
+
 Definition active (P : 'poly[R]_n) base :=
   let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
     [ set i: 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
