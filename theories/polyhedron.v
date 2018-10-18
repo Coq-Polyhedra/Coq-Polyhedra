@@ -371,14 +371,14 @@ by apply/forall_inP => j; rewrite inE.
 Qed.
 
 Lemma self_base (P : 'poly[R]_n) (hP : 'hpoly[R]_n) :
-  P = '[hP] -> has_base P hP.
+  P = '[hP] -> [P has \base hP].
 Proof.
 move/repr_hpolyEq => P_eq.
 by apply/has_baseP; exists set0.
 Qed.
 
 Lemma hpoly_base (P : 'poly[R]_n) :
-  has_base P (hpoly P).
+  [P has \base (hpoly P)].
 Proof.
 by apply/self_base; rewrite hpolyK.
 Qed.
