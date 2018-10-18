@@ -66,8 +66,7 @@ rewrite /relint_pt; case: ifP => [ m_pos | /negbT m_eq0 ]; last first.
 - split; first exact: xchooseP.
   move: m_eq0; rewrite -eqn0Ngt => /eqP m_eq0 i.
   by move: (ord0_false (cast_ord m_eq0 i)).
-- have m_gt0 : m%:R > 0 :>R.
-  + by rewrite ltr0n.
+- have m_gt0 : m%:R > 0 :>R by rewrite ltr0n.
   split.
   + rewrite scaler_sumr; apply: poly_is_convex.
     * by move => _; apply: ltrW; rewrite invr_gt0.
@@ -75,45 +74,18 @@ rewrite /relint_pt; case: ifP => [ m_pos | /negbT m_eq0 ]; last first.
       exact: lt0r_neq0.
     * move => i; case: {-}_/idPn => [ i_not_in_eq | _]; last exact: xchooseP.
       by move: (relint_pt_ithP i_not_in_eq) => [ ? _ ].
-  + move => i i_not_in.
-    rewrite -scalemxAr [X in _ < X]mxE ltr_pdivl_mull // [X in X < _]mulrC mulmx_sumr.
-    have ->: b i 0 * m%:R = \sum_(j : 'I_m) (b i 0).
+  + move => i i_not_in_eq.
+    rewrite -scalemxAr [X in _ < X]mxE ltr_pdivl_mull // [X in X < _]mulrC mulmx_sumr summxE.
+    have ->: b i 0 * m%:R = \sum_(j : 'I_m) (b i 0)
       by rewrite sumr_const card_ord -[RHS]mulr_natr.
-
-
-      rewrite mulmx_sumr.
-    Search _ (\sum__ _).
-
-    Search _ (_ < _^-1 * _).
-
-
-
-    Search _ (_ *m (_ *: _)).
-
-  Search _ (_ *: _) in ssralg.
-
-
-  by move: (ltn_ord i); rewrite {2}m_eq0 ltn0.
-
-
-
-  Search _ (_ < _)%N in fintype.
-
-  Search _ (Ordinal_fintype 0%N).
-
-  rewrite m_eq0 in i_lt0.
-  i_lt0].
-
-
-  Search _ (_ < _)%N in fintype.
-
-
-  rewrite -eqn0Ngt /eqP in m_eq0.
-  Search _ (~~ (0 < _)%N).
-
-
-  \sum_(i | i \notin { eq(P) on 'P(A,b) }) (choose (active_inPn P_base i) 0).
-
+    apply: sumr_ltrP.
+    * move => j; set x := (X in _ <= (_ *m X) _ _).
+      suff: x \in P by  move/(subset_base P_base); rewrite inE => /forallP/(_ i).
+      rewrite /x; case : {-}_/idPn => [i_not_in_eq' | _]; last exact: xchooseP.
+      by move: (relint_pt_ithP i_not_in_eq') => [? _].
+    * exists i; case : {-}_/idPn => [i_not_in_eq' | i_in_eq ]; last by done.
+      by move: (relint_pt_ithP i_not_in_eq') => [_].
+Qed.
 
 (* P(A, b) definition of polyhedra *)
 Variable A : 'M[R]_(m, n).
