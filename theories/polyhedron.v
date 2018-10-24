@@ -405,7 +405,7 @@ Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
 Lemma active_inP i :
-  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
+reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
 Proof.
 rewrite inE; apply/(equivP is_included_in_hyperplaneP).
 by split; move => H x; move/(_ x): H; rewrite row_vdot.
@@ -417,7 +417,6 @@ Arguments active_inP [P m A b].
 Prenex Implicits active_inP.
 
 Section ActiveInPn.
-
 
 Variable P : 'poly[R]_n.
 Variable m : nat.

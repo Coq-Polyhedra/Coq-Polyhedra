@@ -101,6 +101,14 @@ Definition matrix_of (P : 'hpoly[R]_n) := (* TODO: not sure that these functions
 Definition vector_of (P : 'hpoly[R]_n) :=
   let: 'P(_,b) := P return 'cV[R]_(#ineq P) in b.
 
+CoInductive hpoly_split_spec (P : 'hpoly[R]_n) :=
+  HpolySplit m (A : 'M[R]_(m,n)) (b : 'cV[R]_m) of P = 'P(A,b) : hpoly_split_spec P.
+
+Lemma hpoly_splitP (P : 'hpoly[R]_n) : hpoly_split_spec P.
+Proof.
+by case: P => [m A b] /=; exists m A b.
+Qed.
+
 End HPolyStruct.
 
 End HPoly.
