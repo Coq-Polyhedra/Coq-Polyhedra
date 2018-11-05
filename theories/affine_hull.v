@@ -201,11 +201,6 @@ rewrite /hull; case: (hpoly_splitP (hpoly P)) (hpoly_base P) => [m0 A0 b0] -> /=
 exact: HullBase.hullP.
 Qed.
 
-Definition hull_dim := (\dim hull).
+Definition hull_dim := (n - \rank hull)%N.
 
 End Hull.
-
-Section Dimension.
-
-Variable R : realFieldType.
-Variable n : nat.
