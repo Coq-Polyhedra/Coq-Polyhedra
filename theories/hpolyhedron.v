@@ -36,6 +36,7 @@ Reserved Notation "''P^=' ( A , b ; J )" (at level 0, A at level 99, b at level 
 Reserved Notation "''hpolyNF(' base )" (at level 8, base at level 99, format "''hpolyNF(' base )").
 Reserved Notation "''hpolyNF[' R ]_ n" (at level 8, n at level 2, format "''hpolyNF[' R ]_ n").
 Reserved Notation "''hpolyNF_' n" (at level 8, n at level 2).
+Reserved Notation "[ 'hpoly' v ]" (at level 0, v at level 99, format "[ 'hpoly'  v ]").
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -473,6 +474,12 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
+
+Lemma hpolyEqT_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+  (x \in 'P^=(A, b; setT)) = (A *m x == b).
+Proof.
+Admitted.
+
 Lemma hpolyEq_inP (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
   reflect (x \in 'P(A, b) /\ forall j, j \in J -> (A *m x) j 0 = b j 0) (x \in 'P^=(A, b; J)).
 Proof.
@@ -508,13 +515,26 @@ case : base I => [m A b] I.
 by move => x /hpolyEq_inP [].
 Qed.
 
+Definition hpoly_point v := 'P^=(1%:M, v; setT).
+
+Notation "[ 'hpoly' v ]" := (hpoly_point v).
+
+Lemma hpoly_point_inE v x : (x \in [ hpoly v ]) = (x == v).
+Admitted.
+
+Lemma hpoly_point_inP v x :
+  reflect (x = v) (x \in [hpoly v]).
+Admitted.
+
 End HPolyEq.
 
 Arguments hpolyEq_of_set [R n].
 Prenex Implicits hpolyEq_of_set.
 Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
-Definition inE := (hpolyEq_inE, inE).
+Notation "[ 'hpoly' v ]" := (hpoly_point v).
+
+Definition inE := (hpoly_point_inE, hpolyEqT_inE, hpolyEq_inE, inE).
 
 (*
 
