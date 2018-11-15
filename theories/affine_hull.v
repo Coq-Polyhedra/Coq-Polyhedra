@@ -38,7 +38,7 @@ Definition relint_pt_ith i (H : i \notin { eq(P) on 'P(A,b) }) :=
 
 Lemma relint_pt_ithP i (H : i \notin { eq(P) on 'P(A,b) }) :
   let x := relint_pt_ith H in
-  (x \in P) /\ ((A *m x) i 0 > b i 0).
+    (x \in P) /\ ((A *m x) i 0 > b i 0).
 Proof.
 rewrite /relint_pt_ith.
 set Q := ((exists_andP _ _).1 _).
@@ -46,19 +46,31 @@ by move/andP: (xchooseP Q).
 Qed.
 
 Lemma poly_is_convex (I : finType) (lambda : I -> R) (V : I -> 'cV[R]_n) :
-  (forall i, lambda i >= 0) -> (\sum_i (lambda i) = 1) -> (forall i, V i \in P) -> \sum_i (lambda i) *: (V i) \in P.
-Admitted.
+  (forall i, lambda i >= 0) -> (\sum_i (lambda i) = 1) -> (forall i, V i \in P) ->
+    \sum_i (lambda i) *: (V i) \in P.
+Proof.
+case: P => [[m' A' b'] hP_eq].
+move => lge0 edotl_eq1 pcol.
+rewrite inE mulmx_sumr.
+have ->: b' = \sum_i lambda i *: b' by rewrite -scaler_suml edotl_eq1 scale1r.
+apply: lev_sum => i _.
+rewrite -scalemxAr.
+apply: lev_wpscalar.
+- exact: (lge0 i).
+- exact: (pcol i).
+Qed.
 
 Definition relint_pt :=
   let x0 := xchoose (non_emptyP P_non_empty) in
-  if (m > 0)%N then
-    (m%:R^-1) *: \sum_i (if (@idPn (i \in { eq(P) on 'P(A,b) })) is ReflectT H then relint_pt_ith H else x0)
-  else
-    x0.
+    if (m > 0)%N then
+      (m%:R^-1) *: \sum_i (if (@idPn (i \in { eq(P) on 'P(A,b) })) is ReflectT H then relint_pt_ith H else x0)
+    else
+      x0.
 
 Lemma relint_ptP :
   let x := relint_pt in
-  (x \in P) /\ (forall (i: 'I_m), i \notin { eq(P) on 'P(A,b) } -> (A *m x) i 0 > b i 0).
+    (x \in P) /\ (forall (i: 'I_m), i \notin { eq(P) on 'P(A,b) } ->
+      (A *m x) i 0 > b i 0).
 Proof.
 rewrite /relint_pt; case: ifP => [ m_pos | /negbT m_eq0 ]; last first.
 - split; first exact: xchooseP.
@@ -88,7 +100,9 @@ Qed.
 Definition hull :=
   (kermx (row_submx A { eq(P) on 'P(A, b)})^T).
 
-Lemma hull_inP (d : 'cV[R]_n) : reflect (forall j : 'I__, j \in { eq (P) on 'P(A, b)} -> (A *m d) j 0 = 0) (d^T <= hull)%MS.
+Lemma hull_inP (d : 'cV[R]_n) :
+  reflect (forall j : 'I__, j \in { eq (P) on 'P(A, b)} -> (A *m d) j 0 = 0)
+          (d^T <= hull)%MS.
 Proof.
 apply: (equivP sub_kermxP); rewrite -trmx_mul -{1}[0]trmx0; split.
 - by move/trmx_inj; rewrite -row_submx_mul => /row_submx_col0P.
@@ -98,7 +112,8 @@ Qed.
 Arguments hull_inP [d].
 
 Lemma hull_relintP (d : 'cV[R]_n) :
-  reflect (exists eps, eps > 0 /\ relint_pt + eps *: d \in P) ((d^T <= hull)%MS).
+  reflect (exists eps, eps > 0 /\ relint_pt + eps *: d \in P)
+          ((d^T <= hull)%MS).
 Proof.
 have P_eq: P =i 'P^=(A, b; {eq P}).
 - move => x; move/hpoly_of_baseP : P_base => {1}->.
@@ -149,7 +164,8 @@ Qed.
 Arguments hull_relintP [d].
 
 Lemma hullP (d : 'cV[R]_n) :
-  reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS]) (d^T <= hull)%MS.
+  reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS])
+          (d^T <= hull)%MS.
 Proof.
 have P_eq: P =i 'P^=(A, b; {eq P}).
 - move => x; move/hpoly_of_baseP : P_base => {1}->.
@@ -193,9 +209,9 @@ apply/(sameP (HullBase.hullP P_non_empty P_base0 d^T)).
 exact: HullBase.hullP.
 Qed.
 
-
 Lemma hullP (d : 'cV[R]_n) :
-   reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS]) (d^T <= hull)%MS.
+  reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS])
+          (d^T <= hull)%MS.
 Proof.
 rewrite /hull; case: (hpoly_splitP (hpoly P)) (hpoly_base P) => [m0 A0 b0] -> /= P_base0.
 exact: HullBase.hullP.
