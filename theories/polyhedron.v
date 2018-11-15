@@ -21,6 +21,7 @@ Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
 Reserved Notation "{ 'eq' P 'on' base }" (at level 0, format "{ 'eq' P  'on'  base }").
 Reserved Notation "{ 'eq' P }" (at level 0, format "{ 'eq'  P }").
 Reserved Notation "[ P 'has' '\base' base ]" (at level 0, format "[ P  'has'  '\base'  base ]").
+Reserved Notation "[ 'poly' v ]" (at level 0, v at level 99, format "[ 'poly'  v ]").
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -343,6 +344,38 @@ End Lift.
 
 Arguments is_included_in_hyperplaneP [R n P c d].
 Prenex Implicits is_included_in_hyperplaneP.
+Arguments non_emptyP [R n P].
+Prenex Implicits non_emptyP.
+
+Section PolyPoint.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition pick_point (P : 'poly[R]_n) :=
+  match (@non_emptyP _ _ P) with
+  | ReflectT P_non_empty => xchoose P_non_empty
+  | ReflectF _ => 0
+  end.
+
+Lemma pick_pointP P : non_empty P -> pick_point P \in P.
+Admitted.
+
+Definition poly_point (v : 'cV[R]_n) := '[ [hpoly v] ].
+
+Notation "[ 'poly' v ]" := (poly_point v).
+
+Lemma poly_point_inE (v x : 'cV[R]_n) :
+  (x \in [poly v]) = (x == v).
+Admitted.
+
+Lemma poly_point_inP (v x : 'cV[R]_n) :
+  reflect (x = v) (x \in [poly v]).
+Admitted.
+
+End PolyPoint.
+
+Notation "[ 'poly' v ]" := (poly_point v).
 
 Section Base.
 
@@ -763,5 +796,25 @@ Qed.
 
 
 End Face.
+
+Section Compactness.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Variable P : 'poly[R]_n.
+
+Definition compact := (non_empty P) || ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
+
+Lemma compactP_Linfty :
+  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) compact.
+Proof.
+Admitted.
+
+Lemma compactP :
+  reflect (forall c, bounded c P) compact.
+Admitted.
+
+End Compactness.
 
 Arguments non_emptyP [R n P].

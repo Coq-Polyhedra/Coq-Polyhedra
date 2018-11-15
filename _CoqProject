@@ -9,3 +9,5 @@ theories/exteqtype.v
 theories/hpolyhedron.v
 theories/under.v
 theories/polyhedron.v
+theories/affine_hull.v
+theories/convex_hull.v

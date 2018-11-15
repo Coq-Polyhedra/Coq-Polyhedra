@@ -204,3 +204,14 @@ Qed.
 Definition hull_dim := (n - \rank hull)%N.
 
 End Hull.
+
+Section DimProp.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Lemma hull_dim0P (P : 'poly[R]_n) :
+  (hull_dim P = 0)%N <-> (exists x, P = [poly x]).
+Admitted.
+
+End DimProp.
