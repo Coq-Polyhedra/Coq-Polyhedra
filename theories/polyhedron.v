@@ -8,7 +8,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron.
 
 Set Implicit Arguments.
@@ -393,6 +393,12 @@ Proof.
 exact: exists_eqP.
 Qed.
 
+Lemma hpolyEq_base (base: 'hpoly[R]_n) I :
+  [ '['P^=(base; I)] has \base base ].
+Proof.
+by apply/has_baseP; exists I.
+Qed.
+
 Lemma repr_hpolyEq (P : 'poly[R]_n) (hP : 'hpoly[R]_n) :
   P = '[hP] -> P = '['P^=(hP; set0)].
 Proof.
@@ -409,6 +415,7 @@ Proof.
 move/repr_hpolyEq => P_eq.
 by apply/has_baseP; exists set0.
 Qed.
+
 
 Lemma hpoly_base (P : 'poly[R]_n) :
   [P has \base (hpoly P)].
@@ -562,18 +569,18 @@ Variable base : 'hpoly[R]_n.
 Variable P : 'poly[R]_n.
 Hypothesis P_base : [P has \base base].
 
-Definition face :=
-  [ pred Q : 'poly[R]_n |
-    [ && non_empty Q, [ Q has \base base ]
-                      & { eq P on base } \subset { eq Q on base } ]].
+Definition face_set :=
+  ([fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & (({ eq P on base } \subset I) && non_empty '['P^=(base; I)])])%fset : {fset 'poly[R]_n}.
 
-Definition face_empty : ~~ (non_empty P) -> face =i pred0.
+Definition face_empty : ~~ (non_empty P) -> face_set = fset0.
 Proof.
-move => P_empty Q; rewrite !inE /= .
+move => P_empty; apply/fsetP => /= Q; rewrite in_fsetE /=.
 apply/negbTE; move: P_empty; apply: contra.
-move => /and3P [ /non_emptyP [x x_in_Q] Q_base ].
-move/(inclusion_on_base Q_base P_base) => Q_subset_P.
-by apply/non_emptyP; exists x; apply: Q_subset_P.
+move/imfsetP => /= [I] /andP [eqP_sub_I /non_emptyP [x x_in_Q]] _.
+suff Q_subset_P: {subset '['P^=(base; I)] <= P} by apply/non_emptyP; exists x; apply: Q_subset_P.
+apply/(inclusion_on_base (base := base)); try by done.
+- exact: hpolyEq_base.
+- by apply/(subset_trans eqP_sub_I)/activeP.
 Qed.
 
 End Def.
@@ -587,17 +594,15 @@ Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base ] -> non_empty P ->
   reflect
     (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-    (Q \in (face base P)).
+    (Q \in (face_set base P)).
 Proof.
 case: base => [m A b] P_base P_non_empty.
 apply/(iffP idP).
-- move/and3P => [Q_non_empty Q_base eqP_sub_eqQ].
+- move/imfsetP => [J] /and3P [_ eqP_sub_J Q_non_empty] Q_repr.
   move/hpoly_of_baseP: P_base => P_repr.
   rewrite {}P_repr non_empty_quotP in P_non_empty *.
-  move/hpoly_of_baseP: Q_base => Q_repr.
-  rewrite {}Q_repr non_empty_quotP in Q_non_empty *.
-  set I := ({eq P}) in eqP_sub_eqQ *.
-  set J := ({eq Q}) in eqP_sub_eqQ *.
+  rewrite non_empty_quotP in Q_non_empty *.
+  set I := ({eq P}) in eqP_sub_J *.
 
   pose u := col_mx (\col_i (if i \in J then 1 else 0)) 0: 'cV[R]_(m+#|I|).
   have u_ge0 : u >=m 0.
@@ -619,7 +624,7 @@ apply/(iffP idP).
     * exact: HPrim.normal_cone_lower_bound.
     * move/HPrim.non_emptyP: Q_non_empty => [y y_in_Q].
       suff <-: '[c,y] = '[bI,u].
-      - apply: x_opt; exact: (hpolyEq_antimono eqP_sub_eqQ).
+      - apply: x_opt; exact: (hpolyEq_antimono eqP_sub_J).
       - rewrite -vdot_mulmx mul_col_mx !vdot_col_mx vdot0l vdot0r !addr0.
         apply: eq_bigr => i _; rewrite mxE.
         case: ifP => [ i_in_J | _]; last by rewrite mulr0 mul0r.
@@ -629,13 +634,13 @@ apply/(iffP idP).
   + move/minimize_quotP/(HPrim.opt_valueP c_bounded); rewrite opt_val.
     move/andP => [x_in_PAbI].
     move/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => x_csc.
-    rewrite mem_quotP; apply/hpolyEq_inP.
+    rewrite Q_repr mem_quotP; apply/hpolyEq_inP.
     split; first exact: (hpolyEq_antimono0 x_in_PAbI).
     move => j; rewrite -u_i_gt0; move/x_csc.
     by rewrite mul_col_mx !col_mxEu => ->.
-  + rewrite mem_quotP; move => x_in_PAbJ. (* TODO: the rewrite mem_quotP takes time, why? *)
+  + rewrite Q_repr mem_quotP; move => x_in_PAbJ. (* TODO: the rewrite mem_quotP takes time, why? *)
     apply/minimize_quotP/(HPrim.opt_valueP c_bounded); rewrite opt_val.
-    have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_eqQ).
+    have x_in_PAbI : x \in 'P^=(A, b; I) by exact: (hpolyEq_antimono eqP_sub_J).
     apply/andP; split; first by done.
     apply/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i; rewrite mxE.
       case: (splitP' i) => [i' -> |?]; rewrite mxE; last by rewrite ltrr.
@@ -644,41 +649,42 @@ apply/(iffP idP).
 
 - move/hpoly_of_baseP: P_base => P_repr.
   move => [c] [c_bounded c_opt].
-  apply/andP; split.
-  + move/boundedP: c_bounded => [x /c_opt x_in_Q].
-    by apply/non_emptyP; exists x.
-  + set I := ({eq P}) in P_repr *. (* TODO: parsing error if parenthesis are removed *)
-    suff: exists (J: {set 'I_(#ineq 'P(A, b))}), (I \subset J /\ Q = '['P^=(A, b; J)]).
-    * move => [J] [I_sub_J Q_eq_PabJ]; apply/andP; split.
-      - by apply/has_baseP; exists J.
-      - by move/activeP: Q_eq_PabJ; apply: subset_trans.
-    * rewrite P_repr non_empty_quotP !lp_quotE in P_non_empty c_bounded c_opt.
-      move/HPrim.dual_opt_sol: (c_bounded) => [u] [u_ge0 c_eq c_optval].
-      pose J := I :|: [set i | (usubmx u) i 0 > 0].
-      exists J; split; first exact: subsetUl.
-      suff PAbJ_eq_Q : 'P^=(A, b; J) =i Q. (* we should introduce a lemma for that: P = '[Q] <-> P =i Q *)
-      - case: (hpolyP Q) => [Q' Q_eq_Q'].
-        rewrite Q_eq_Q'; apply/poly_eqP => x.
-        by rewrite PAbJ_eq_Q Q_eq_Q' mem_quotP.
-      - move => x; apply/idP/idP => [x_in_PAbJ | x_in_Q].
-        + have x_in_PAbI : x \in 'P^=(A, b; I).
-          move: x_in_PAbJ; apply/hpolyEq_antimono; exact: subsetUl.
-          apply/c_opt/minimize_quotP/HPrim.opt_valueP/andP; split; first by done.
-          rewrite -c_optval c_eq; apply/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i.
-          case: (splitP' i) => [j -> | j -> _].
-            - rewrite -[u]vsubmxK mul_col_mx !col_mxEu => u_j_gt0.
-              have j_in_J : (j \in J) by rewrite !inE; apply/orP; right.
-              exact: (hpolyEq_act x_in_PAbJ).
-            - rewrite mul_col_mx !col_mxEd mulNmx -row_submx_mul.
-              rewrite 2![in LHS]mxE 2![in RHS]mxE.
-              apply: congr1; apply: (hpolyEq_act x_in_PAbI); exact: enum_valP.
-       + move/c_opt/minimize_quotP/(HPrim.opt_valueP c_bounded)/andP: x_in_Q => [x_in_PAbI].
-         rewrite {1}c_eq -c_optval; move/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => x_act.
-         apply/hpolyEq_inP; split; first exact: (hpolyEq_antimono0 x_in_PAbI).
-         move => j; rewrite inE; case/orP => [j_in_I | u_j_gt0].
-         * exact: (hpolyEq_act x_in_PAbI).
-         * rewrite inE mxE in u_j_gt0.
-           by move/(_ _ u_j_gt0): x_act; rewrite mul_col_mx !col_mxEu.
+  (*apply/andP; split.
+  + *)
+  set I := ({eq P}) in P_repr *. (* TODO: parsing error if parenthesis are removed *)
+  suff: exists (J: {set 'I_(#ineq 'P(A, b))}), (I \subset J /\ Q = '['P^=(A, b; J)]).
+  + move => [J] [I_sub_J Q_eq_PabJ].
+    apply/imfsetP; exists J; last by done.
+    rewrite /= inE; apply/andP; split; first by done.
+    move/boundedP: c_bounded => [x /c_opt x_in_Q].
+    by rewrite -Q_eq_PabJ; apply/non_emptyP; exists x.
+  + rewrite P_repr non_empty_quotP !lp_quotE in P_non_empty c_bounded c_opt.
+    move/HPrim.dual_opt_sol: (c_bounded) => [u] [u_ge0 c_eq c_optval].
+    pose J := I :|: [set i | (usubmx u) i 0 > 0].
+    exists J; split; first exact: subsetUl.
+    suff PAbJ_eq_Q : 'P^=(A, b; J) =i Q. (* we should introduce a lemma for that: P = '[Q] <-> P =i Q *)
+    * case: (hpolyP Q) => [Q' Q_eq_Q'].
+      rewrite Q_eq_Q'; apply/poly_eqP => x.
+      by rewrite PAbJ_eq_Q Q_eq_Q' mem_quotP.
+    * move => x; apply/idP/idP => [x_in_PAbJ | x_in_Q].
+      - have x_in_PAbI : x \in 'P^=(A, b; I).
+        move: x_in_PAbJ; apply/hpolyEq_antimono; exact: subsetUl.
+        apply/c_opt/minimize_quotP/HPrim.opt_valueP/andP; split; first by done.
+        rewrite -c_optval c_eq; apply/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => i.
+        case: (splitP' i) => [j -> | j -> _].
+        + rewrite -[u]vsubmxK mul_col_mx !col_mxEu => u_j_gt0.
+          have j_in_J : (j \in J) by rewrite !inE; apply/orP; right.
+          exact: (hpolyEq_act x_in_PAbJ).
+        + rewrite mul_col_mx !col_mxEd mulNmx -row_submx_mul.
+          rewrite 2![in LHS]mxE 2![in RHS]mxE.
+          apply: congr1; apply: (hpolyEq_act x_in_PAbI); exact: enum_valP.
+      - move/c_opt/minimize_quotP/(HPrim.opt_valueP c_bounded)/andP: x_in_Q => [x_in_PAbI].
+        rewrite {1}c_eq -c_optval; move/(HPrim.opt_value_csc u_ge0 x_in_PAbI) => x_act.
+        apply/hpolyEq_inP; split; first exact: (hpolyEq_antimono0 x_in_PAbI).
+        move => j; rewrite inE; case/orP => [j_in_I | u_j_gt0].
+        + exact: (hpolyEq_act x_in_PAbI).
+        + rewrite inE mxE in u_j_gt0.
+          by move/(_ _ u_j_gt0): x_act; rewrite mul_col_mx !col_mxEu.
 Qed.
 
 End FaceP.
@@ -692,21 +698,27 @@ Section Face.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition face (P: 'poly[R]_n) := FaceBase.face (hpoly P) P.
+Definition face_set (P: 'poly[R]_n) := FaceBase.face_set (hpoly P) P.
 
-Lemma face_empty (P : 'poly[R]_n) : ~~ (non_empty P) -> (face P) =i pred0.
+Lemma face_empty (P : 'poly[R]_n) : ~~ (non_empty P) -> (face_set P) = fset0.
 Proof.
 apply: FaceBase.face_empty; exact: hpoly_base.
 Qed.
 
 Lemma face_baseP (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] ->
-  reflect ([/\ non_empty Q, has_base Q base &
-                           { eq P on base } \subset { eq Q on base } ])
-          (Q \in (face P)).
+  reflect ([/\ has_base Q base, { eq P on base } \subset { eq Q on base } & non_empty Q ])
+          (Q \in (face_set P)).
 Proof.
 move => P_base.
-suff ->: (Q \in face P) = (Q \in (FaceBase.face base P)) by exact: and3P.
+suff ->: (Q \in face_set P) = (Q \in (FaceBase.face_set base P)).
+- apply: (iffP idP).
+  + move/imfsetP => [J] /and3P [_ eqP_sub_J Q_non_empty] ->; split; last by done.
+    * exact: hpolyEq_base.
+    * by apply: (subset_trans eqP_sub_J); apply: activeP.
+  + move => [Q_base eqP_sub_eqQ Q_non_empty].
+    apply/imfsetP; exists {eq Q on base}; last exact: hpoly_of_baseP.
+    * by rewrite inE /=; apply/andP; split; last by rewrite -hpoly_of_baseP.
 case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
 - apply/(sameP (FaceBase.faceP (hpoly_base _) P_non_empty)); try by done.
   + exact: FaceBase.faceP.
@@ -720,66 +732,58 @@ Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
   reflect
     (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-    (Q \in face P).
+    (Q \in face_set P).
 Proof.
 move => P_non_empty.
 apply/FaceBase.faceP; by [done | exact: hpoly_base].
 Qed.
 
 Lemma face_of_face (P Q: 'poly[R]_n) :
-  Q \in (face P) -> {subset (face Q) <= (face P)}.
+  Q \in (face_set P) -> ((face_set Q) `<=` (face_set P))%fset.
 Proof.
 move/(face_baseP (hpoly_base _)).
 set base := (hpoly P).
-move => [_ Q_base eqP_sub_eqQ].
-move => Q' /(face_baseP Q_base) [Q'_non_empty Q'_base eqQ_sub_eqQ'].
+move => [Q_base eqP_sub_eqQ _].
+apply/fsubsetP => Q' /(face_baseP Q_base) [Q'_base eqQ_sub_eqQ' Q'_non_empty].
 apply/(face_baseP (hpoly_base _)); split; try by done.
 by apply/(subset_trans _ eqQ_sub_eqQ').
 Qed.
 
 Fact self_face (P : 'poly[R]_n) :
-  non_empty P ->
-    P \in (face P). (* RK *)
+  non_empty P -> P \in face_set P. (* RK *)
 Proof.
-move => non_empty_P.
-rewrite inE.
-apply/andP; split.
-- exact: non_empty_P.
-- apply/andP; split.
-  + exact: hpoly_base.
-  + exact: subxx.
+move => P_non_empty; apply/(face_baseP (hpoly_base P)); split;
+  by [ exact: hpoly_base | exact: subxx | done].
 Qed.
 
 Fact face_subset (P Q : 'poly[R]_n) :
-  Q \in (face P) ->
-    {subset Q <= P}. (* RK *)
+  Q \in face_set P -> {subset Q <= P}. (* RK *)
 Proof.
-move/andP => [_ /andP [Q_has_base ?]].
+move/(face_baseP (hpoly_base P)) => [[Q_has_base ?] _].
 by apply: (inclusion_on_base Q_has_base (hpoly_base P)).
 Qed.
 
 Fact face_of_face_incl_rel (P F F' : 'poly[R]_n) :
-  F \in face P ->
-    ((F' \in face F) = ((F' \in face P) && (is_included_in F' F))). (* RK *)
+  F \in face_set P ->
+    ((F' \in face_set F) = ((F' \in face_set P) && (is_included_in F' F))). (* RK *)
 Proof.
 move => F_is_face_of_P.
 apply/idP/idP => [F'_is_face_of_F | /andP [F'_is_face_of_P /is_included_inP F'_is_included_in_F]].
 - apply/andP; split.
-  + by apply: (face_of_face F_is_face_of_P).
+  + by move/fsubsetP/(_ _ F'_is_face_of_F): (face_of_face F_is_face_of_P).
   + apply/is_included_inP.
     exact: (face_subset F'_is_face_of_F).
-- move/(face_baseP (hpoly_base P)): F_is_face_of_P => [non_empty_F F_base eq_P_subset_eq_F].
-  move/(face_baseP (hpoly_base P)): F'_is_face_of_P => [non_empty_F' F'_base eq_P_subset_eq_F'].
+- move/(face_baseP (hpoly_base P)): F_is_face_of_P => [F_base eq_P_subset_eq_F F_non_empty].
+  move/(face_baseP (hpoly_base P)): F'_is_face_of_P => [F'_base eq_P_subset_eq_F' F'_non_empty].
   apply/(face_baseP F_base).
   split.
-  + exact: non_empty_F'.
   + exact: F'_base.
   + by apply/(inclusion_on_base F'_base F_base).
+  + exact: F'_non_empty.
 Qed.
 
 Fact has_face_imp_non_empty (P Q : 'poly[R]_n) :
-  Q \in (face P) ->
-    non_empty P. (* RK *)
+  Q \in (face_set P) -> non_empty P. (* RK *)
 Proof.
 move => Q_is_face_of_P.
 apply: contraT => empty_P.
@@ -787,13 +791,37 @@ by rewrite (face_empty empty_P) in Q_is_face_of_P.
 Qed.
 
 Fact face_is_non_empty (P Q : 'poly[R]_n) :
-  Q \in (face P) ->
+  Q \in (face_set P) ->
     non_empty Q. (* RK *)
 Proof.
 move => Q_is_face_of_P.
-by move: (face_baseP (hpoly_base P) Q_is_face_of_P) => [? _ _].
+by move: (face_baseP (hpoly_base P) Q_is_face_of_P) => [_ _ ?].
 Qed.
 
+Variable P : 'poly[R]_n.
+Variable c : 'cV[R]_n.
+Hypothesis c_bounded : bounded c P.
+
+Definition face_of_obj := (* this should be defined by using a proper intersection operation *)
+  let: 'P(A, b) := hpoly P in
+  let A' := col_mx c^T A in
+  let b' := col_mx ((opt_value c_bounded)%:M) b in
+  '[ 'P^=(A', b'; [set ord0]) ].
+
+Fact face_of_objP x :
+  reflect ({ over P, x minimizes c }) (x \in face_of_obj).
+Admitted.
+
+Arguments face_of_objP [x].
+
+Hypothesis P_non_empty : non_empty P.
+
+Lemma face_of_obj_face : face_of_obj \in (face_set P).
+Proof.
+apply/faceP; first by done.
+exists c; split; first by done.
+move => x; exact: (rwP face_of_objP).
+Qed.
 
 End Face.
 
