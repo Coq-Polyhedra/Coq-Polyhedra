@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype hpolyhedron.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype simplex hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -22,6 +22,7 @@ Reserved Notation "{ 'eq' P 'on' base }" (at level 0, format "{ 'eq' P  'on'  ba
 Reserved Notation "{ 'eq' P }" (at level 0, format "{ 'eq'  P }").
 Reserved Notation "[ P 'has' '\base' base ]" (at level 0, format "[ P  'has'  '\base'  base ]").
 Reserved Notation "[ 'poly' v ]" (at level 0, v at level 99, format "[ 'poly'  v ]").
+Reserved Notation "\face P " (at level 50, format "\face  P").
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -700,7 +701,9 @@ Variable n : nat.
 
 Definition face_set (P: 'poly[R]_n) := FaceBase.face_set (hpoly P) P.
 
-Lemma face_empty (P : 'poly[R]_n) : ~~ (non_empty P) -> (face_set P) = fset0.
+Notation "\face P" := (face_set P).
+
+Lemma face_empty (P : 'poly[R]_n) : ~~ (non_empty P) -> \face P = fset0.
 Proof.
 apply: FaceBase.face_empty; exact: hpoly_base.
 Qed.
@@ -708,10 +711,10 @@ Qed.
 Lemma face_baseP (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] ->
   reflect ([/\ has_base Q base, { eq P on base } \subset { eq Q on base } & non_empty Q ])
-          (Q \in (face_set P)).
+          (Q \in \face P).
 Proof.
 move => P_base.
-suff ->: (Q \in face_set P) = (Q \in (FaceBase.face_set base P)).
+suff ->: (Q \in \face P) = (Q \in (FaceBase.face_set base P)).
 - apply: (iffP idP).
   + move/imfsetP => [J] /and3P [_ eqP_sub_J Q_non_empty] ->; split; last by done.
     * exact: hpolyEq_base.
@@ -732,14 +735,14 @@ Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
   reflect
     (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-    (Q \in face_set P).
+    (Q \in \face P).
 Proof.
 move => P_non_empty.
 apply/FaceBase.faceP; by [done | exact: hpoly_base].
 Qed.
 
 Lemma face_of_face (P Q: 'poly[R]_n) :
-  Q \in (face_set P) -> ((face_set Q) `<=` (face_set P))%fset.
+  Q \in (\face P) -> (\face Q `<=` \face P)%fset.
 Proof.
 move/(face_baseP (hpoly_base _)).
 set base := (hpoly P).
@@ -750,22 +753,22 @@ by apply/(subset_trans _ eqQ_sub_eqQ').
 Qed.
 
 Fact self_face (P : 'poly[R]_n) :
-  non_empty P -> P \in face_set P. (* RK *)
+  non_empty P -> P \in \face P. (* RK *)
 Proof.
 move => P_non_empty; apply/(face_baseP (hpoly_base P)); split;
   by [ exact: hpoly_base | exact: subxx | done].
 Qed.
 
 Fact face_subset (P Q : 'poly[R]_n) :
-  Q \in face_set P -> {subset Q <= P}. (* RK *)
+  Q \in \face P -> {subset Q <= P}. (* RK *)
 Proof.
 move/(face_baseP (hpoly_base P)) => [[Q_has_base ?] _].
 by apply: (inclusion_on_base Q_has_base (hpoly_base P)).
 Qed.
 
 Fact face_of_face_incl_rel (P F F' : 'poly[R]_n) :
-  F \in face_set P ->
-    ((F' \in face_set F) = ((F' \in face_set P) && (is_included_in F' F))). (* RK *)
+  F \in \face P ->
+    ((F' \in \face F) = ((F' \in \face P) && (is_included_in F' F))). (* RK *)
 Proof.
 move => F_is_face_of_P.
 apply/idP/idP => [F'_is_face_of_F | /andP [F'_is_face_of_P /is_included_inP F'_is_included_in_F]].
@@ -783,7 +786,7 @@ apply/idP/idP => [F'_is_face_of_F | /andP [F'_is_face_of_P /is_included_inP F'_i
 Qed.
 
 Fact has_face_imp_non_empty (P Q : 'poly[R]_n) :
-  Q \in (face_set P) -> non_empty P. (* RK *)
+  Q \in \face P -> non_empty P. (* RK *)
 Proof.
 move => Q_is_face_of_P.
 apply: contraT => empty_P.
@@ -791,8 +794,7 @@ by rewrite (face_empty empty_P) in Q_is_face_of_P.
 Qed.
 
 Fact face_is_non_empty (P Q : 'poly[R]_n) :
-  Q \in (face_set P) ->
-    non_empty Q. (* RK *)
+  Q \in \face P -> non_empty Q. (* RK *)
 Proof.
 move => Q_is_face_of_P.
 by move: (face_baseP (hpoly_base P) Q_is_face_of_P) => [_ _ ?].
@@ -816,7 +818,7 @@ Arguments face_of_objP [x].
 
 Hypothesis P_non_empty : non_empty P.
 
-Lemma face_of_obj_face : face_of_obj \in (face_set P).
+Lemma face_of_obj_face : face_of_obj \in \face P.
 Proof.
 apply/faceP; first by done.
 exists c; split; first by done.
@@ -825,24 +827,49 @@ Qed.
 
 End Face.
 
+Notation "\face P" := (face_set P).
+
 Section Compactness.
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Variable P : 'poly[R]_n.
+Implicit Type P F : 'poly[R]_n.
 
-Definition compact := (non_empty P) || ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
+Definition compact P := (non_empty P) ==> ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
 
-Lemma compactP_Linfty :
-  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) compact.
+Lemma compactP_Linfty P :
+  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
 Proof.
 Admitted.
 
-Lemma compactP :
-  reflect (forall c, bounded c P) compact.
+Lemma compactP P :
+  reflect (forall c, bounded c P) (compact P).
+Admitted.
+
+Lemma compact_face P F :
+  compact P -> F \in \face P -> compact F.
 Admitted.
 
 End Compactness.
+
+Module PointednessBase.
+
+Section Pointedness.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Variable P : 'poly[R]_n.
+Variable base : 'hpoly[R]_n.
+
+Hypothesis P_base : [P has \base base].
+
+Definition feasible_dir (d: 'cV[R]_n) :=
+  let: 'P(A, _) := base in feasible_dir A d.
+
+Lemma feasible_dirP d :
+  reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d).
+
 
 Arguments non_emptyP [R n P].
