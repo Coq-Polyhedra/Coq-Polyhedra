@@ -324,6 +324,9 @@ case: P => m A b.
 by move/(Simplex.unbounded_is_not_bounded c)/esym/addbP.
 Qed.
 
+Definition pointed P :=
+  let 'P(A,b) := P in pointed
+
 End Basic.
 
 Arguments non_empty [R n].

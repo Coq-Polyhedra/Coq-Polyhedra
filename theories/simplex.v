@@ -19,6 +19,8 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
+Module Simplex.
+
 Section Polyhedron.
 
 Variable R : realFieldType.
@@ -325,8 +327,6 @@ Qed.
 End UsualVsLexPolyhedron.
 
 End LexPolyhedron.
-
-Module Simplex.
 
 Section LexSimplex.
 
