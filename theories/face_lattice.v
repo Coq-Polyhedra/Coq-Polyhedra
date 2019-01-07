@@ -43,8 +43,6 @@ Lemma vertex_face (F P : 'poly[R]_n) :
   F \in \face P -> (\vert F `<=` \vert P)%fset.
 Admitted.
 
-Definition
-
 End VertexSet.
 
 Notation "\vert P" := (vertex_set P).
@@ -71,10 +69,13 @@ move => x; apply/idP/idP.
       - suff: v0 \in \vert F.
         apply/fsubsetP; apply: vertex_face; exact: face_of_obj_face.
       - exact: xchooseP.
-      have v0_in_F : v0 \in F by apply: vertex_mem; exact: xchooseP.
+      have v0_in_F : v0 \in F by apply: vertex_inclusion; exact: xchooseP.
       apply/negP => x_in_P.
       move: (face_of_objP c_bounded _ v0_in_F) => [_] /(_ _ x_in_P).
       apply/negP; rewrite -ltrNge; exact: c_sep.
+
+
+
         + move: P_empty; apply: contraNN => [x_in_P].
     by apply/non_emptyP; exists x.
 
