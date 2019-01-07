@@ -865,11 +865,15 @@ Variable base : 'hpoly[R]_n.
 
 Hypothesis P_base : [P has \base base].
 
-Definition feasible_dir (d: 'cV[R]_n) :=
-  let: 'P(A, _) := base in feasible_dir A d.
+Definition feasible_dir (d: 'cV[R]_n) := false.
+(*  let: 'P(A, _) := base in HPrim.feasible_dir A d.*)
 
 Lemma feasible_dirP d :
   reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d).
+Admitted.
 
+End Pointedness.
+
+End PointednessBase.
 
 Arguments non_emptyP [R n P].

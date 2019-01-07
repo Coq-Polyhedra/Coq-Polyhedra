@@ -183,13 +183,13 @@ case: (Simplex.simplexP A b c) =>
   rewrite feasible_A_b unbounded_A_b_c.
   constructor.
   move => K.
-  exact: (unbounded_certificate K Hx Hd Hd').
+  exact: (Simplex.unbounded_certificate K Hx Hd Hd').
 - have feasible_A_b: Simplex.feasible A b.
     by apply/Simplex.feasibleP; exists x.
   have bounded_A_b_c: Simplex.bounded A b c.
     apply/Simplex.boundedP_lower_bound; first exact: feasible_A_b.
     exists '[ b, d].
-    by apply/dual_feasible_bounded.
+    by apply/Simplex.dual_feasible_bounded.
   have /negbTE ->: ~~ (Simplex.unbounded A b c).
     by rewrite -(Simplex.bounded_is_not_unbounded c feasible_A_b).
     rewrite feasible_A_b bounded_A_b_c /=.
@@ -295,9 +295,9 @@ Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x 
               ('[c,x] == '[b, u]).
 Proof.
 move => u_ge0 x_in_P /=.
-have u_in_dual : u \in dual_polyhedron A (A^T *m u)
+have u_in_dual : u \in Simplex.dual_polyhedron A (A^T *m u)
  by rewrite inE eq_refl.
-rewrite -subr_eq0 (compl_slack_cond_duality_gap_equiv x_in_P u_in_dual).
+rewrite -subr_eq0 (Simplex.compl_slack_cond_duality_gap_equiv x_in_P u_in_dual).
 apply/(iffP idP).
 (* stupid proof, because of the fact that compl_slack_cond has not the right formulation (and compl_slack_condP doesn't help) *)
 - move => Hcsc i u_i_gt0.
@@ -325,7 +325,7 @@ by move/(Simplex.unbounded_is_not_bounded c)/esym/addbP.
 Qed.
 
 Definition pointed P :=
-  let 'P(A,b) := P in pointed
+  let: 'P(A,_) := P in Simplex.pointed A.
 
 End Basic.
 
