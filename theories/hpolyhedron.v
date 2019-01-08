@@ -439,9 +439,6 @@ End ExtensionalEquality.
 
 End HPrim.
 
-
-
-
 Canonical HPrim.hpoly_extEqType.
 
 Import HPrim.
@@ -477,11 +474,20 @@ apply/andP/andP.
   by move/(_ _ j_in_J)/eqP: eqJ ->.
 Qed.
 
-
 Lemma hpolyEqT_inE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
   (x \in 'P^=(A, b; setT)) = (A *m x == b).
-Proof.
-Admitted.
+Proof. (* RK *)
+rewrite hpolyEq_inE.
+apply/idP/idP => [/andP [_ /forallP forall_cond] | /eqP A_x_eq_b].
+- apply/eqP/colP => j.
+  by apply/eqP/(implyP (forall_cond j)).
+- apply/andP; split.
+  + rewrite inE A_x_eq_b.
+    exact: lev_refl.
+  + apply/forallP => j.
+    apply/implyP => _.
+    by rewrite A_x_eq_b.
+Qed.
 
 Lemma hpolyEq_inP (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
   reflect (x \in 'P(A, b) /\ forall j, j \in J -> (A *m x) j 0 = b j 0) (x \in 'P^=(A, b; J)).
@@ -522,12 +528,18 @@ Definition hpoly_point v := 'P^=(1%:M, v; setT).
 
 Notation "[ 'hpoly' v ]" := (hpoly_point v).
 
-Lemma hpoly_point_inE v x : (x \in [ hpoly v ]) = (x == v).
-Admitted.
+Lemma hpoly_point_inE v x :
+  (x \in [ hpoly v ]) = (x == v).
+Proof. (* RK *)
+by rewrite hpolyEqT_inE mul1mx.
+Qed.
 
 Lemma hpoly_point_inP v x :
   reflect (x = v) (x \in [hpoly v]).
-Admitted.
+Proof. (* RK *)
+rewrite hpoly_point_inE.
+exact: eqP.
+Qed.
 
 End HPolyEq.
 
