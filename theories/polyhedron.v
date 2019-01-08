@@ -368,11 +368,16 @@ Notation "[ 'poly' v ]" := (poly_point v).
 
 Lemma poly_point_inE (v x : 'cV[R]_n) :
   (x \in [poly v]) = (x == v).
-Admitted.
+Proof. (* RK *)
+by rewrite mem_quotP hpoly_point_inE.
+Qed.
 
 Lemma poly_point_inP (v x : 'cV[R]_n) :
   reflect (x = v) (x \in [poly v]).
-Admitted.
+Proof. (* RK *)
+rewrite mem_quotP.
+exact: hpoly_point_inP.
+Qed.
 
 End PolyPoint.
 
@@ -416,7 +421,6 @@ Proof.
 move/repr_hpolyEq => P_eq.
 by apply/has_baseP; exists set0.
 Qed.
-
 
 Lemma hpoly_base (P : 'poly[R]_n) :
   [P has \base (hpoly P)].
@@ -534,9 +538,10 @@ Arguments hpoly_of_baseP [P base].
 Prenex Implicits hpoly_of_baseP.
 
 Section InclusionOnBase.
-  Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
+
+Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] -> [Q has \base base] ->
-  reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
+    reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
 Proof.
 case: base => m A b P_base Q_base;
 rewrite {1}(hpoly_of_baseP P_base) {1}(hpoly_of_baseP Q_base).
@@ -573,7 +578,8 @@ Hypothesis P_base : [P has \base base].
 Definition face_set :=
   ([fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & (({ eq P on base } \subset I) && non_empty '['P^=(base; I)])])%fset : {fset 'poly[R]_n}.
 
-Definition face_empty : ~~ (non_empty P) -> face_set = fset0.
+Definition face_empty :
+  ~~ (non_empty P) -> face_set = fset0.
 Proof.
 move => P_empty; apply/fsetP => /= Q; rewrite in_fsetE /=.
 apply/negbTE; move: P_empty; apply: contra.
@@ -593,9 +599,9 @@ Variable n : nat.
 
 Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base ] -> non_empty P ->
-  reflect
-    (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-    (Q \in (face_set base P)).
+    reflect
+      (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
+      (Q \in (face_set base P)).
 Proof.
 case: base => [m A b] P_base P_non_empty.
 apply/(iffP idP).
@@ -604,7 +610,7 @@ apply/(iffP idP).
   rewrite {}P_repr non_empty_quotP in P_non_empty *.
   rewrite non_empty_quotP in Q_non_empty *.
   set I := ({eq P}) in eqP_sub_J *.
-
+ 
   pose u := col_mx (\col_i (if i \in J then 1 else 0)) 0: 'cV[R]_(m+#|I|).
   have u_ge0 : u >=m 0.
   + rewrite col_mx_gev0 lev_refl andbT.
@@ -613,12 +619,12 @@ apply/(iffP idP).
   have u_i_gt0 : forall i, (u (lshift #|I| i) 0 > 0) = (i \in J).
   + move => i; rewrite col_mxEu mxE.
     case: ifP => [_|_]; [exact: ltr01 | exact: ltrr].
-
+ 
   pose AI := col_mx A (-(row_submx A I)).
   pose bI := col_mx b (-(row_submx b I)).
   pose c := AI^T *m u; exists c.
   have c_bounded : HPrim.bounded c 'P^=(A, b; I) by exact: HPrim.normal_cone_bounded.
-
+ 
   have opt_val: HPrim.opt_value c_bounded = '[bI, u].
   move/HPrim.bounded_opt_value: (c_bounded) => [[x [x_in_P <-]] x_opt].
   apply/eqP; rewrite eqr_le; apply/andP; split; last first.
@@ -647,7 +653,7 @@ apply/(iffP idP).
       case: (splitP' i) => [i' -> |?]; rewrite mxE; last by rewrite ltrr.
       case: ifP => [i'_in_J _ | ?]; last by rewrite ltrr.
       rewrite mul_col_mx !col_mxEu; exact: (hpolyEq_act x_in_PAbJ).
-
+ 
 - move/hpoly_of_baseP: P_base => P_repr.
   move => [c] [c_bounded c_opt].
   (*apply/andP; split.
@@ -710,8 +716,8 @@ Qed.
 
 Lemma face_baseP (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] ->
-  reflect ([/\ has_base Q base, { eq P on base } \subset { eq Q on base } & non_empty Q ])
-          (Q \in \face P).
+    reflect ([/\ has_base Q base, { eq P on base } \subset { eq Q on base } & non_empty Q ])
+            (Q \in \face P).
 Proof.
 move => P_base.
 suff ->: (Q \in \face P) = (Q \in (FaceBase.face_set base P)).
@@ -733,9 +739,9 @@ Arguments face_baseP [P Q _].
 
 Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
-  reflect
-    (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-    (Q \in \face P).
+    reflect
+      (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
+      (Q \in \face P).
 Proof.
 move => P_non_empty.
 apply/FaceBase.faceP; by [done | exact: hpoly_base].
@@ -756,13 +762,13 @@ Fact self_face (P : 'poly[R]_n) :
   non_empty P -> P \in \face P. (* RK *)
 Proof.
 move => P_non_empty; apply/(face_baseP (hpoly_base P)); split;
-  by [ exact: hpoly_base | exact: subxx | done].
+  by [exact: hpoly_base | exact: subxx | done].
 Qed.
 
 Fact face_subset (P Q : 'poly[R]_n) :
   Q \in \face P -> {subset Q <= P}. (* RK *)
 Proof.
-move/(face_baseP (hpoly_base P)) => [[Q_has_base ?] _].
+move/(face_baseP (hpoly_base P)) => [Q_has_base ? _].
 by apply: (inclusion_on_base Q_has_base (hpoly_base P)).
 Qed.
 
@@ -812,13 +818,15 @@ Definition face_of_obj := (* this should be defined by using a proper intersecti
 
 Fact face_of_objP x :
   reflect ({ over P, x minimizes c }) (x \in face_of_obj).
+Proof.
 Admitted.
 
 Arguments face_of_objP [x].
 
 Hypothesis P_non_empty : non_empty P.
 
-Lemma face_of_obj_face : face_of_obj \in \face P.
+Lemma face_of_obj_face :
+  face_of_obj \in \face P.
 Proof.
 apply/faceP; first by done.
 exists c; split; first by done.
@@ -836,7 +844,8 @@ Variable n : nat.
 
 Implicit Type P F : 'poly[R]_n.
 
-Definition compact P := (non_empty P) ==> ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
+Definition compact P :=
+  (non_empty P) ==> ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
 
 Lemma compactP_Linfty P :
   reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
@@ -845,11 +854,18 @@ Admitted.
 
 Lemma compactP P :
   reflect (forall c, bounded c P) (compact P).
+Proof.
 Admitted.
 
 Lemma compact_face P F :
   compact P -> F \in \face P -> compact F.
-Admitted.
+Proof. (* RK *)
+move/compactP_Linfty => [K bounded_on_P].
+move => F_is_face_of_P.
+apply/compactP_Linfty; exists K.
+move => x x_in_F i.
+exact: (((bounded_on_P x) ((face_subset F_is_face_of_P) _ x_in_F)) i).
+Qed.
 
 End Compactness.
 
