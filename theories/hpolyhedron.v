@@ -544,6 +544,7 @@ Qed.
 End HPolyEq.
 
 Arguments hpolyEq_of_set [R n].
+Arguments hpolyEq_inP [R n x m A b J].
 Prenex Implicits hpolyEq_of_set.
 Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
