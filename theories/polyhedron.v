@@ -1098,14 +1098,91 @@ Definition compact P :=
 
 Lemma compactP_Linfty P :
   reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
-Proof.
-apply: (iffP idP) => [H | H].
-Admitted.
+Proof. (* RK *)
+apply: (iffP idP) => [/implyP compact_P | [K P_contained_in_box]].
+- case: (boolP (non_empty P)) => [non_empty_P| empty_P].
+  + set bound_x_i := fun (i : 'I_n) =>
+      match (@idP (bounded (delta_mx i 0) P)) with
+      | ReflectT bounded_delta_mx_i_P => opt_value bounded_delta_mx_i_P
+      | ReflectF _ => 0
+      end.
+    set bound_minus_x_i := fun (i : 'I_n) =>
+      match (@idP (bounded (- delta_mx i 0) P)) with
+      | ReflectT bounded_minus_delta_mx_i_P => opt_value bounded_minus_delta_mx_i_P
+      | ReflectF _ => 0
+      end.
+    set K := Num.max (-(min_seq [seq bound_minus_x_i i | i :'I_n] 0)) (-(min_seq [seq bound_x_i i | i :'I_n] 0)).
+    exists K.
+    move => x x_in_P i.
+    rewrite ler_norml.
+    apply/andP; split.
+    * rewrite oppr_max ler_minl 2!opprK.
+      apply/orP; right.
+      suff l_bound_x_i: bound_x_i i <= x i 0
+        by apply/(ler_trans _ l_bound_x_i)/min_seq_ler/map_f; rewrite mem_enum.
+      rewrite /bound_x_i.
+      case: {-}_/idP  => [bounded_delta_mx_i_P| /negP not_bounded_delta_mx_i_P].
+      - rewrite -vdotl_delta_mx.
+        exact: ((proj2 (bounded_opt_value bounded_delta_mx_i_P)) x x_in_P).
+      - by rewrite (proj1 (andP (forallP (compact_P non_empty_P) i))) in not_bounded_delta_mx_i_P.
+    * rewrite ler_maxr.
+      apply/orP; left.
+      rewrite ler_oppr.
+      suff l_bound_minus_x_i: bound_minus_x_i i <= -x i 0
+        by apply/(ler_trans _ l_bound_minus_x_i)/min_seq_ler/map_f; rewrite mem_enum.
+      rewrite /bound_minus_x_i.
+      case: {-}_/idP  => [bounded_minus_delta_mx_i_P| /negP not_bounded_minus_delta_mx_i_P].
+      - rewrite -vdotl_delta_mx -vdotNl.
+        exact: ((proj2 (bounded_opt_value bounded_minus_delta_mx_i_P)) x x_in_P).
+      - by rewrite (proj2 (andP (forallP (compact_P non_empty_P) i))) in not_bounded_minus_delta_mx_i_P.
+  + exists 0.
+    move => x x_in_P.
+    have non_empty_P: non_empty P
+      by apply/non_emptyP; exists x.
+    by rewrite non_empty_P in empty_P.
+- apply/implyP => non_empty_P.
+  apply/forallP => i.
+  apply/andP; split; apply/bounded_lower_bound; try by done.
+  + exists (-K).
+    move => x x_in_P.
+    move: (((P_contained_in_box x) x_in_P) i) => x_i_bound.
+    rewrite ler_norml in x_i_bound.
+    rewrite vdotl_delta_mx.
+    exact: (proj1 (andP x_i_bound)).
+  + exists (-K).
+    move => x x_in_P.
+    move: (((P_contained_in_box x) x_in_P) i) => x_i_bound.
+    rewrite ler_norml in x_i_bound.
+    rewrite vdotNl vdotl_delta_mx ler_oppr opprK.
+    exact: (proj2(andP x_i_bound)).
+Qed.
 
 Lemma compactP P :
-  reflect (forall c, bounded c P) (compact P).
-Proof.
-Admitted.
+  reflect (non_empty P -> forall c, bounded c P) (compact P). (*RK: statement slightly modified: added the non_empty condition *)
+Proof. (* RK *)
+apply: (iffP idP) => [/compactP_Linfty [K K_bound] non_empty_P c | bounded_if_non_empty].
+- apply/(bounded_lower_bound c non_empty_P).
+  exists (\sum_i (-(`|c i 0| * K))).
+  move => x x_in_P.
+  rewrite -subr_le0 -sumrB.
+  apply: sumr_le0 => i _.
+  move/ler_normlP: (((K_bound x) x_in_P) i) => [? ?].
+  rewrite subr_le0 ler_oppl.
+  case: (boolP (0 <= c i 0)) => [c_i_geq_0 | c_i_lt_0].
+  + rewrite (ger0_norm c_i_geq_0) -mulrN -subr_ge0 -mulrBr.
+    apply: mulr_ge0; first exact: c_i_geq_0.
+    by rewrite subr_ge0.
+  + rewrite -ltrNge in c_i_lt_0.
+    rewrite -mulNr -(ltr0_norm c_i_lt_0) -subr_ge0 -mulrBr.
+    apply: mulr_ge0; first exact: (normr_ge0 (c i 0)).
+    by rewrite subr_ge0.
+- case: (boolP (non_empty P)) => [non_empty_P| empty_P].
+  + move: (bounded_if_non_empty non_empty_P) => bounded_forall.
+    apply/implyP => _; apply/forallP => i.
+    by apply/andP; split.
+  + apply/implyP => non_empty_P.
+    by rewrite non_empty_P in empty_P.
+Qed.
 
 Lemma compact_face P F :
   compact P -> F \in \face P -> compact F.
