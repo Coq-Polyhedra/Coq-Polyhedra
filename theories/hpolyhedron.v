@@ -146,7 +146,7 @@ Definition unbounded c P :=
 
 Definition opt_point c P (_: bounded c P) :=
   let: 'P(A,b) := P in
-  Simplex.opt_point A b c.
+    Simplex.opt_point A b c.
 
 Definition opt_value c P (H: bounded c P) := '[c, opt_point H].
 
@@ -254,7 +254,7 @@ suff ->: bounded c 'P(A,b) = ~~ (non_empty 'P(A,b)) || bounded c 'P(A,b)
 by rewrite P_non_empty /=.
 Qed.
 
-Lemma opt_valueP c P (H: bounded c P) x :
+Lemma opt_valueP c P (H : bounded c P) x :
   reflect ({ over P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
 Proof.
 case: P H => m A b H; apply/(iffP andP) => [[x_in_P /eqP ->] |].
@@ -263,8 +263,7 @@ case: P H => m A b H; apply/(iffP andP) => [[x_in_P /eqP ->] |].
 - by move => [x_in_P] /(Simplex.opt_value_is_optimal x_in_P) ->.
 Qed.
 
-Lemma dual_opt_sol (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n)
-  (H: bounded c 'P(A,b)) :
+Lemma dual_opt_sol (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n) (H : bounded c 'P(A,b)) :
     exists u, [/\ u >=m 0, c = A^T *m u & '[b, u] = opt_value H].
 Proof.
 move: (H) => H0. (* duplicate assumption *)
@@ -273,7 +272,7 @@ set u := Simplex.dual_opt_point _ _ _ .
 by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
 Qed.
 
-Lemma normal_cone_lower_bound (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (u: 'cV[R]_m) :
+Lemma normal_cone_lower_bound (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) :
   u >=m 0 -> forall x, x \in 'P(A, b) -> '[A^T *m u,x] >= '[b,u].
 Proof.
 move => u_ge0 x x_in_P.
@@ -539,6 +538,14 @@ Lemma hpoly_point_inP v x :
 Proof. (* RK *)
 rewrite hpoly_point_inE.
 exact: eqP.
+Qed.
+
+Definition hpoly_hyperplane (c : 'cV[R]_n) (d : 'cV[R]_1)  := 'P^=(c^T, d; setT). (* RK *)
+
+Lemma hpoly_hyperplane_inE c d x : (* RK *)
+  (x \in hpoly_hyperplane c d) = (c^T *m x == d).
+Proof.
+by rewrite hpolyEqT_inE.
 Qed.
 
 End HPolyEq.

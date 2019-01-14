@@ -247,7 +247,7 @@ Variable c : 'cV[R]_n.
 
 Definition bounded (P : 'poly[R]_n) := HPrim.bounded c (hpoly P).
 Definition unbounded (P : 'poly[R]_n) := HPrim.unbounded c (hpoly P).
-Definition opt_value (P : 'poly[R]_n) (H: bounded P) := HPrim.opt_value H.
+Definition opt_value (P : 'poly[R]_n) (H : bounded P) := HPrim.opt_value H.
 
 CoInductive lp_state (P : 'poly[R]_n) : bool -> bool -> bool -> Prop :=
 | Empty of P =i pred0 : lp_state P false false false
@@ -265,7 +265,7 @@ Qed.
 
 Lemma boundedP (P : 'poly[R]_n) :
   reflect (exists x, { over P, x minimizes c })
-         (bounded P).
+          (bounded P).
 Proof.
 exact: (equivP HPrim.boundedP).
 Qed.
@@ -281,26 +281,27 @@ by split; move => [x [x_in x_is_opt]]; exists x; split;
     rewrite -quotE | move => y; rewrite -quotE; exact: (x_is_opt y)].
 Qed.
 
-Lemma opt_valueP (P : 'poly[R]_n) (H: bounded P) x :
+Lemma opt_valueP (P : 'poly[R]_n) (H : bounded P) x :
   reflect ({ over P, x minimizes c }) ((x \in P) && ('[c,x] == opt_value H)).
 Proof.
 exact: HPrim.opt_valueP.
 Qed.
 
 Lemma bounded_lower_bound P :
-  non_empty P -> reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded P).
+  non_empty P ->
+    reflect (exists K, (forall z, z \in P -> '[c,z] >= K)) (bounded P).
 Proof.
 move => P_non_empty.
 exact: HPrim.bounded_lower_bound.
 Qed.
 
-Lemma bounded_opt_value P (H: bounded P) :
+Lemma bounded_opt_value P (H : bounded P) :
   (exists x, x \in P /\ '[c,x] = opt_value H) /\ (forall y, y \in P -> '[c,y] >= opt_value H).
 Proof.
 exact: HPrim.bounded_opt_value.
 Qed.
 
-Lemma opt_value_quotP (hP : 'hpoly[R]_n) (H: bounded '[hP]) (hH: HPrim.bounded c hP) :
+Lemma opt_value_quotP (hP : 'hpoly[R]_n) (H : bounded '[hP]) (hH : HPrim.bounded c hP) :
   opt_value H = HPrim.opt_value hH.
 Proof.
 move: (bounded_opt_value H) => [[x [x_in_P <-]] x_is_opt].
@@ -359,8 +360,13 @@ Definition pick_point (P : 'poly[R]_n) :=
   | ReflectF _ => 0
   end.
 
-Lemma pick_pointP P : non_empty P -> pick_point P \in P.
-Admitted.
+Lemma pick_pointP P :
+  non_empty P -> pick_point P \in P.
+Proof. (* RK *)
+rewrite /pick_point.
+case: non_emptyP => [? _ | _] //.
+exact: xchooseP.
+Qed.
 
 Definition poly_point (v : 'cV[R]_n) := '[ [hpoly v] ].
 
@@ -382,6 +388,21 @@ Qed.
 End PolyPoint.
 
 Notation "[ 'poly' v ]" := (poly_point v).
+
+Section PolyHyperplane. (* RK *)
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition poly_hyperplane (c : 'cV[R]_n)  (d : 'cV[R]_1) := '[ hpoly_hyperplane c d ].
+
+Lemma poly_hyperplane_inE c d x :
+  (x \in poly_hyperplane c d) = (c^T *m x == d).
+Proof.
+by rewrite mem_quotP hpolyEqT_inE.
+Qed.
+
+End PolyHyperplane.
 
 Section Base.
 
@@ -450,7 +471,7 @@ Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
 Lemma active_inP i :
-reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
+  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
 Proof.
 rewrite inE; apply/(equivP is_included_in_hyperplaneP).
 by split; move => H x; move/(_ x): H; rewrite row_vdot.
@@ -564,6 +585,209 @@ Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
 Notation "[ P 'has' '\base' base ]" := (has_base P base).
 
+Section Intersection. (* RK *)
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition polyI_of_hpoly (hP hQ : 'hpoly[R]_n) :=
+  let: 'P(AP,bP) := hP in
+  let: 'P(AQ,bQ) := hQ in
+    '['P((col_mx AP AQ), (col_mx bP bQ))].
+
+Fact in_polyI_of_hpoly (hP hQ : 'hpoly[R]_n) x :
+  (x \in polyI_of_hpoly hP hQ) = ((x \in hP) && (x \in hQ)).
+Proof.
+rewrite /polyI_of_hpoly.
+case: hP => mP AP bP; case: hQ => mQ AQ bQ.
+by rewrite !mem_quotP !inE mul_col_mx col_mx_lev.
+Qed.
+
+Definition polyI (P Q : 'poly[R]_n) :=
+  polyI_of_hpoly (hpoly P) (hpoly Q).
+
+Fact in_polyI (P Q : 'poly[R]_n) x :
+  (x \in polyI P Q) = ((x \in P) && (x \in Q)).
+Proof.
+by rewrite in_polyI_of_hpoly -2!mem_quotP.
+Qed.
+
+Lemma polyI_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
+  P = '[hP] -> Q = '[hQ] ->
+    polyI P Q = polyI_of_hpoly hP hQ.
+Proof.
+move => PeqClasshP QeqClasshQ.
+rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
+by rewrite in_polyI in_polyI_of_hpoly -2!mem_quotP PeqClasshP QeqClasshQ.
+Qed.
+
+Fact polyIC (P Q : 'poly[R]_n) :
+  polyI P Q = polyI Q P.
+Proof.
+rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
+by rewrite !in_polyI andbC.
+Qed.
+
+Fact polyIA (P Q S : 'poly[R]_n) :
+  polyI P (polyI Q S) = polyI (polyI P Q) S.
+Proof.
+rewrite -[polyI P _]hpolyK -[polyI _ S in RHS]hpolyK; apply/poly_eqP => x.
+by rewrite !in_polyI andbA.
+Qed.
+
+Fact polyIid (P : 'poly[R]_n) :
+  polyI P P = P.
+Proof.
+rewrite -[LHS]hpolyK -[P in RHS]hpolyK; apply/poly_eqP => x.
+rewrite in_polyI /=.
+by case: (x \in P).
+Qed.
+
+Fact includedIl (P Q : 'poly[R]_n) :
+  is_included_in (polyI P Q) P.
+Proof.
+apply/is_included_inP => x.
+rewrite in_polyI.
+by move/andP/proj1.
+Qed.
+
+Fact includedIr (P Q : 'poly[R]_n) :
+  is_included_in (polyI P Q) Q.
+Proof.
+apply/is_included_inP => x.
+rewrite in_polyI.
+by move/andP/proj2.
+Qed.
+
+Fact includedI (P Q S : 'poly[R]_n) :
+  (is_included_in S (polyI P Q)) = ((is_included_in S P) && (is_included_in S Q)).
+Proof.
+apply/idP/idP => [S_is_included_in_I | /andP [S_is_included_in_P S_is_included_in_Q]].
+- apply/andP; split.
+  + by apply/(is_included_in_trans _ (includedIl P Q)).
+  + by apply/(is_included_in_trans _ (includedIr P Q)).
+- apply/is_included_inP => x x_in_S.
+  rewrite in_polyI.
+  apply/andP; split.
+  + by apply/(is_included_inP _ _ S_is_included_in_P).
+  + by apply/(is_included_inP _ _ S_is_included_in_Q).
+Qed.
+
+Fact polyIidPl (P Q : 'poly[R]_n) :
+  reflect ((polyI P Q) = P) (is_included_in P Q).
+Proof.
+apply: (iffP idP) => [/is_included_inP P_subset_Q | polyI_P_Q_eq_P].
+- rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
+  rewrite in_polyI.
+  apply: andb_idr.
+  exact: (P_subset_Q x).
+- apply/is_included_inP => x.
+  rewrite -polyI_P_Q_eq_P.
+  exact: ((is_included_inP _ _ (includedIr P Q)) x).
+Qed.
+
+Fact polyIidPr (P Q : 'poly[R]_n) :
+  reflect ((polyI P Q) = Q) (is_included_in Q P).
+Proof.
+apply: (iffP idP) => [/is_included_inP Q_subset_P | polyI_P_Q_eq_Q].
+- rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
+  rewrite in_polyI.
+  apply: andb_idl.
+  exact: (Q_subset_P x).
+- apply/is_included_inP => x.
+  rewrite -polyI_P_Q_eq_Q.
+  exact: ((is_included_inP _ _ (includedIl P Q)) x).
+Qed.
+
+(*Fact in_face_affine_hull_rel (P Q : 'poly[R]_n) x :
+  Q \in face P ->
+    (x \in Q) = ((x \in P) && (x \in affine_hull_of_poly Q)).
+Proof.
+rewrite inE.
+move: (hpoly_base P).
+case: (hpoly P) => m A b.
+move => P_base /andP [non_empty_Q /andP [Q_base eq_set_incl]].
+apply/idP/idP => [x_in_Q | /andP [x_in_P x_in_aff_hull_Q]].
+- apply/andP; split.
+  + exact: (((inclusion_on_base P_base Q_base) eq_set_incl) _ x_in_Q).
+  + rewrite /affine_hull_of_poly.
+    exact: in_poly_imp_in_affine_hull_on_base.
+- rewrite (hpoly_of_baseP P_base) mem_quotP inE in x_in_P.
+  rewrite (hpoly_of_baseP Q_base) mem_quotP inE.
+  apply/andP; split.
+  + exact: (proj1 (andP x_in_P)).
+  + apply/forallP => i.
+    apply/implyP => i_in_eq_Q.
+    rewrite (affine_hullP Q_base) (in_affine_hull_on_base _ x non_empty_Q) in x_in_aff_hull_Q.
+    move/colP: (eqP x_in_aff_hull_Q) => eq_Q_sat.
+    move/eqP: (eq_Q_sat (enum_rank_in i_in_eq_Q i)).
+    by rewrite -row_submx_mul 2!row_submx_mxE enum_rankK_in.
+Qed.*)
+
+(*Lemma polyI_face_affine_hull (P F : 'poly[R]_n) :
+  F \in face P ->
+    F = polyI P (affine_hull_of_poly F). (* RK: Proposition 2.3 (iv) of Ziegler's book *)
+Proof.
+move => F_is_face_of_P.
+rewrite -[F]hpolyK -[polyI _ _]hpolyK; apply/poly_eqP => x.
+by rewrite in_polyI (in_face_affine_hull_rel _ F_is_face_of_P) hpolyK.
+Qed.*)
+
+Fact eqU_subset_eq_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
+  [P has \base base] -> [Q has \base base] ->
+    ({eq(P) on base} :|: {eq(Q) on base}) \subset {eq((polyI P Q)) on base}.
+Proof.
+case: base => m A b.
+move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
+apply/subsetP => j.
+rewrite in_setU.
+move/orP => [/active_inP cond_in_eq_P | /active_inP cond_in_eq_Q];
+  apply/active_inP => x x_in_polyI; rewrite in_polyI in x_in_polyI.
+- apply: (cond_in_eq_P x).
+  exact: (proj1 (andP x_in_polyI)).
+- apply: (cond_in_eq_Q x).
+  exact: (proj2 (andP x_in_polyI)).
+Qed.
+
+Fact has_base_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
+  [P has \base base] -> [Q has \base base] ->
+    [(polyI P Q) has \base base].
+Proof.
+case: base => m A b.
+move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
+apply/has_baseP.
+exists (IP :|: IQ).
+rewrite -[LHS]hpolyK.
+apply/poly_eqP => x.
+rewrite -mem_quotP hpolyK in_polyI P_eq Q_eq 2!mem_quotP !hpolyEq_inE.
+apply/idP/idP => [/andP [/andP [x_in_base sat_IP] /andP [_ sat_IQ]] | /andP [x_in_base sat_Int]].
+- apply/andP; split.
+  + exact: x_in_base.
+  + apply/forallP => j.
+    apply/implyP.
+    rewrite in_setU.
+    move/orP => [j_in_IP | j_in_IQ].
+    * exact: ((implyP ((forallP sat_IP) j)) j_in_IP).
+    * exact: ((implyP ((forallP sat_IQ) j)) j_in_IQ).
+- apply/andP; split.
+  + apply/andP; split.
+    * exact: x_in_base.
+    * apply/forallP => j.
+      apply/implyP => j_in_IP.
+      apply: (implyP ((forallP sat_Int) j)).
+      rewrite in_setU.
+      by apply/orP; left.
+  + apply/andP; split.
+    * exact: x_in_base.
+    * apply/forallP => j.
+      apply/implyP => j_in_IQ.
+      apply: (implyP ((forallP sat_Int) j)).
+      rewrite in_setU.
+      by apply/orP; right.
+Qed.
+
+End Intersection.
+
 Module FaceBase.
 
 Section Def.
@@ -599,9 +823,8 @@ Variable n : nat.
 
 Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base ] -> non_empty P ->
-    reflect
-      (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-      (Q \in (face_set base P)).
+    reflect (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
+            (Q \in (face_set base P)).
 Proof.
 case: base => [m A b] P_base P_non_empty.
 apply/(iffP idP).
@@ -705,7 +928,7 @@ Section Face.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition face_set (P: 'poly[R]_n) := FaceBase.face_set (hpoly P) P.
+Definition face_set (P : 'poly[R]_n) := FaceBase.face_set (hpoly P) P.
 
 Notation "\face P" := (face_set P).
 
@@ -739,9 +962,8 @@ Arguments face_baseP [P Q _].
 
 Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
-    reflect
-      (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
-      (Q \in \face P).
+    reflect (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
+            (Q \in \face P).
 Proof.
 move => P_non_empty.
 apply/FaceBase.faceP; by [done | exact: hpoly_base].
@@ -806,20 +1028,47 @@ move => Q_is_face_of_P.
 by move: (face_baseP (hpoly_base P) Q_is_face_of_P) => [_ _ ?].
 Qed.
 
+Lemma polyI_face_is_face (P F F' : 'poly[R]_n) :
+  (F \in \face P) -> (F' \in \face P) -> non_empty (polyI F F') ->
+    (polyI F F') \in \face P. (* RK: Proposition 2.3 (ii) of Ziegler's book *)
+Proof.
+move => /(face_baseP (hpoly_base P)) [F_base eq_P_subset_eq_F _].
+move => /(face_baseP (hpoly_base P)) [F'_base eq_P_subset_eq_F' _].
+move => non_empty_polyI.
+apply/(face_baseP (hpoly_base P)).
+split.
+- exact: (has_base_polyI F_base F'_base).
+- apply: (subset_trans _ (eqU_subset_eq_polyI F_base F'_base)).
+  rewrite -[{eq(P) on _}]setUid.
+  exact: (setUSS eq_P_subset_eq_F eq_P_subset_eq_F').
+- exact: non_empty_polyI.
+Qed.
+
 Variable P : 'poly[R]_n.
 Variable c : 'cV[R]_n.
 Hypothesis c_bounded : bounded c P.
 
-Definition face_of_obj := (* this should be defined by using a proper intersection operation *)
+(*Definition face_of_obj := (* this should be defined by using a proper intersection operation *)
   let: 'P(A, b) := hpoly P in
   let A' := col_mx c^T A in
   let b' := col_mx ((opt_value c_bounded)%:M) b in
-  '[ 'P^=(A', b'; [set ord0]) ].
+    '[ 'P^=(A', b'; [set ord0]) ].*)
+Definition face_of_obj := polyI P (poly_hyperplane c (opt_value c_bounded)%:M).
 
 Fact face_of_objP x :
   reflect ({ over P, x minimizes c }) (x \in face_of_obj).
-Proof.
-Admitted.
+Proof. (* RK *)
+rewrite in_polyI poly_hyperplane_inE.
+apply: (iffP idP) => [/andP [x_in_P x_optimal] | /opt_valueP H].
+- apply/opt_valueP/andP; split; first exact: x_in_P.
+  rewrite -vdot_def vdotC in x_optimal.
+  move/eqP/matrixP: x_optimal => x_optimal.
+  move/eqP: (x_optimal 0 0).
+  by rewrite !mxE /= 2!mulr1n.
+- move/andP: (H c_bounded) => [x_in_P /eqP x_optimal].
+  apply/andP; split; first exact: x_in_P.
+  by rewrite -vdot_def vdotC x_optimal.
+Qed.
 
 Arguments face_of_objP [x].
 
@@ -850,6 +1099,7 @@ Definition compact P :=
 Lemma compactP_Linfty P :
   reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
 Proof.
+apply: (iffP idP) => [H | H].
 Admitted.
 
 Lemma compactP P :
