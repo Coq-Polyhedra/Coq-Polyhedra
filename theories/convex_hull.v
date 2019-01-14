@@ -40,16 +40,36 @@ Hypothesis w_weight_over_V : [ w \weight over V ].
 Implicit Type v : 'cV[R]_n.
 
 Lemma weight_ge0 v : w v >= 0.
-Admitted.
+Proof.
+case: finsuppP; first done.
+move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl /forallP w_ge0 _].
+move/supp_incl => v_in_V.
+pose v' := [`v_in_V]%fset.
+have ->: v = val v' by done.
+exact: w_ge0.
+Qed.
 
 Lemma weight_eq0 v : v \notin V -> w v = 0.
-Admitted.
+Proof.
+move => v_notin_V; apply: fsfun_dflt.
+move: v_notin_V; apply: contra.
+move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl _ _].
+exact: supp_incl.
+Qed.
 
 Lemma weight_gt0 v : w v > 0 -> v \in V.
-Admitted.
+Proof.
+move => w_v_gt0.
+suff: v \in finsupp w.
+- move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl _ _]; exact: supp_incl.
+- rewrite mem_finsupp; exact: lt0r_neq0.
+Qed.
 
 Lemma weight_sum1 : \sum_(v <- V) w v = 1.
-Admitted.
+Proof.
+rewrite big_seq_fsetE /=.
+by move/and3P: (w_weight_over_V) => [_ _ /eqP].
+Qed.
 
 End CoreProp.
 
@@ -60,8 +80,18 @@ Implicit Type w : {fsfun 'cV[R]_n -> R for fun => 0%R}.
 
 Lemma weightP V w :
   reflect [/\ (forall v, w v >= 0), (forall v, v \notin V -> w v = 0) & (\sum_(v <- V) w v = 1)]
-    [w \weight over V].
-Admitted.
+          [w \weight over V].
+Proof.
+apply: (iffP idP).
+- move => w_weight; split;
+    [exact: (weight_ge0 w_weight) | exact: weight_eq0 | exact: weight_sum1].
+- move => [w_ge0 w_supp sum_w].
+  apply/and3P; split.
+  + apply/fsubsetP => v.
+    by apply: contraTT; move/w_supp/eqP; rewrite memNfinsupp.
+  + apply/forallP => v; apply: w_ge0.
+  + by apply/eqP; move: sum_w; rewrite big_seq_fsetE.
+Qed.
 
 Lemma weight_subset V V' w : (V `<=` V')%fset -> [w \weight over V] -> [w \weight over V'].
 Admitted.
@@ -69,6 +99,43 @@ Admitted.
 End OtherProp.
 
 Definition bary (V : {fset 'cV[R]_n}) w : 'cV[R]_n := \sum_(v <- V) (w v) *: v.
+
+Definition nth_fset (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) := val (enum_val i).
+
+Lemma nth_fsetP (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) :
+  nth_fset i \in V.
+Proof.
+rewrite /nth_fset; exact: fsvalP.
+Qed.
+
+Definition mat_fset (V : {fset 'cV[R]_n}) :=
+  (\matrix_(i < #|predT : pred V|) (nth_fset i)^T)^T.
+
+Fact col_mat_fset V i : col i (mat_fset V) = nth_fset i .
+Proof.
+by rewrite -tr_row rowK trmxK.
+Qed.
+
+Definition vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :=
+  \col_(i < #|predT : pred V|) (w (nth_fset i)).
+
+Lemma baryE V w : bary V w = (mat_fset V) *m (vect_fset V w).
+Proof.
+rewrite /bary mulmx_sum_col.
+rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
+- apply: eq_bigr => i _.
+  by rewrite col_mat_fset /vect_fset mxE.
+- apply: onW_bij; exact: enum_val_bij.
+Qed.
+
+Lemma sum_vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :
+  \sum_(v <- V) (w v) = '[const_mx 1, vect_fset V w].
+Proof.
+rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
+- apply: eq_bigr => i _.
+  by rewrite !mxE mul1r.
+- apply: onW_bij; exact: enum_val_bij.
+Qed.
 
 End Barycenter.
 
@@ -81,18 +148,60 @@ Variable R : realFieldType.
 Variable n : nat.
 Variable V : {fset 'cV[R]_n}.
 
-Let p := #|`V|.
-Let V_mat := \matrix_(i < n, j < #|`V|) ((nth 0 V j) i 0).
-
+Let p := #|predT : pred V|.
 Definition e := (const_mx 1):'cV[R]_p.
 
-Definition A :=
-  (col_mx (col_mx (col_mx V_mat (-V_mat)) (col_mx e^T (-e^T))) 1%:M).
+Definition A := col_mx (col_mx (mat_fset V) e^T) 1%:M.
 
 Definition b (x: 'cV[R]_n) :=
-  col_mx (col_mx (col_mx x (-x)) (col_mx 1 (-1))) (0:'cV_p).
+  col_mx (col_mx x 1) (0:'cV_p).
 
-Definition is_in_convex_hull x := HPrim.non_empty 'P(A, b x).
+Definition is_in_convex_hull := [pred x | HPrim.non_empty 'P^=(A, b x; (lshift p) @: [set: 'I_(n+1)]) ].
+
+Section ConvexHullPolyProp.
+
+Variable x : 'cV[R]_n.
+Let I := (lshift p) @: [set: 'I_(n+1)].
+Let P := 'P^=(A, b x; I).
+Let V_mat := mat_fset V.
+
+Fact sum_w w : e^T *m w = 1 <-> '[const_mx 1, w] = 1.
+Proof.
+rewrite -vdot_def vdotC.
+split; last by move ->.
+by move/matrixP/(_ 0 0); rewrite !mxE /= mulr1n.
+Qed.
+
+Fact poly_cvx_hull_inP w :
+  reflect [/\ V_mat *m w = x, '[const_mx 1, w] = 1 & w >=m 0] (w \in P).
+Proof.
+apply/(iffP hpolyEq_inP).
+- move => [w_ineq w_eq].
+  have : (col_mx V_mat e^T) *m w = col_mx x 1.
+  + apply/colP => i; pose i' := lshift p i.
+    have i'_in_I : i' \in I by exact: mem_imset.
+    move/(_ _ i'_in_I): w_eq.
+    by rewrite mul_col_mx !col_mxEu.
+  rewrite mul_col_mx; move/eq_col_mx => [? ?].
+  split; try by [done | apply/sum_w].
+  apply/gev0P => i.
+  pose i' := rshift (n+1) i.
+  rewrite inE in w_ineq.
+  move/forallP/(_ i'): w_ineq.
+  by rewrite !mul_col_mx !col_mxEd mul1mx mxE.
+- move => [V_mat_eq sum_eq1 ge0].
+  suff w_eq : forall j, j \in I -> (A *m w) j 0 = (b x) j 0.
+  + split; last by done.
+    rewrite inE !mul_col_mx mul1mx.
+    rewrite col_mx_lev; apply/andP; split; last by done.
+    apply/forallP => i; pose i' := lshift p i.
+    have i'_in_I : i' \in I by exact: mem_imset.
+    by move/(_ _ i'_in_I): w_eq; rewrite 2!mul_col_mx !col_mxEu => ->.
+  + move => ? /imsetP [i _ ->]; rewrite !mul_col_mx !col_mxEu V_mat_eq.
+    by move/sum_w: sum_eq1 ->.
+Qed.
+
+End ConvexHullPolyProp.
 
 End ConvexHullDef.
 
@@ -109,7 +218,26 @@ Implicit Type x : 'cV[R]_n.
 Lemma convP V x :
   reflect (exists w, [w \weight over V] /\ x = \bary[w] V) (x \in \conv V).
 Proof.
-Admitted.
+rewrite inE; apply: (iffP HPrim.non_emptyP) => [ [w] | [w] ].
+- move/poly_cvx_hull_inP => [V_w_eq_x e_w_eq1 w_ge0].
+  pose w' := [fsfun v : V => w (enum_rank v) 0 | 0].
+  have w_eq_w' : w = (vect_fset V w').
+  + apply/colP => i; rewrite mxE fsfun_ffun insubT => [ | ? /=];
+      first exact: nth_fsetP; last by rewrite fsetsubE enum_valK.
+  exists w'; split; last first.
+  + by rewrite baryE -V_w_eq_x; apply: congr1.
+  + apply/weightP; split.
+    * move => v; rewrite fsfun_ffun; case: insubP => [? _ _ /= | /=];
+        try by [ move/gev0P: w_ge0 | done ].
+    * move => v v_notin_V; rewrite fsfun_ffun insubF //; exact: negbTE.
+    * by rewrite sum_vect_fset -w_eq_w'.
+- move => [/weightP [w_ge0 w_supp sum_w_eq1] x_bary].
+  pose w' := vect_fset V w.
+  exists w'; apply/poly_cvx_hull_inP; split.
+  + by rewrite -baryE x_bary.
+  + by rewrite -sum_vect_fset.
+  + apply/gev0P => i; rewrite mxE; exact: w_ge0.
+Qed.
 
 Lemma convP1 v x :
   reflect (x = v) (x \in \conv [fset v]%fset).
@@ -142,6 +270,8 @@ Variable n : nat.
 
 Lemma convPn (V : {fset 'cV[R]_n}) x :
   reflect (exists c, forall v, v \in V -> '[c,x] < '[c,v]) (x \notin \conv V).
+Proof.
+
 Admitted.
 
 End Separation.
