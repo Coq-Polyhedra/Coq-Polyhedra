@@ -366,7 +366,17 @@ Qed.
 
 Lemma lshift_set_compl :
   ~: ((@lshift m n) @: [set :'I_m]) = ((@rshift m n) @: [set :'I_n]).
-Admitted.
+Proof.
+set L := (X in ~: X = _).
+set R := (X in _ = X).
+apply/setP => i; rewrite inE.
+case: (splitP' i) => [j -> | j ->].
+- have -> /=: (lshift n j \in L) by apply/imsetP; exists j.
+  symmetry; apply: negbTE; apply/negP.
+  by move/imsetP => [k _]; apply/eqP; rewrite lrshift_distinct.
+- have -> /=: (rshift m j \in R) by apply/imsetP; exists j.
+  by apply/negP; move/imsetP => [k _] /esym; apply/eqP; rewrite lrshift_distinct.
+Qed.
 
 End SplitExtra.
 
