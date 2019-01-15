@@ -214,6 +214,11 @@ apply: (iffP idP); case: (lp_stateP 0 P) => /=;
          | do ?[move => /(_ 0)]; by [ move => [x [x_in_P _]] /(_ x); rewrite inE x_in_P] ].
 Qed.
 
+Lemma non_emptyPn_cert (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+  reflect (exists u, [/\ u >=m 0, A^T *m u = 0 & '[b, u] > 0]) (~~ (non_empty 'P(A,b))).
+Proof.
+Admitted.
+
 Lemma boundedP c P :
   reflect (exists x, { over P, x minimizes c }) (bounded c P).
 Proof.
@@ -523,6 +528,11 @@ case : base I => [m A b] I.
 by move => x /hpolyEq_inP [].
 Qed.
 
+Lemma hpolyEq_non_emptyPn_cert (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) :
+  reflect (exists (u: 'cV[R]_m), [/\ (forall j, j \notin J -> u j 0 >= 0), A^T *m u = 0 & '[b, u] > 0]) (~~ (non_empty 'P^=(A,b; J))).
+Proof.
+Admitted.
+
 Definition hpoly_point v := 'P^=(1%:M, v; setT).
 
 Notation "[ 'hpoly' v ]" := (hpoly_point v).
@@ -551,8 +561,9 @@ Qed.
 End HPolyEq.
 
 Arguments hpolyEq_of_set [R n].
-Arguments hpolyEq_inP [R n x m A b J].
 Prenex Implicits hpolyEq_of_set.
+Arguments hpolyEq_inP [R n x m A b J].
+Arguments hpolyEq_non_emptyPn_cert [R n m A b J].
 Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
 Notation "[ 'hpoly' v ]" := (hpoly_point v).
