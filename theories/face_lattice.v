@@ -58,40 +58,21 @@ Hypothesis P_compact : compact P.
 Theorem conv_vert : P =i \conv (\vert(P)).
 Proof.
 move => x; apply/idP/idP.
-- case: (boolP (non_empty P)) => [P_non_empty | P_empty].
-  + apply: contraLR => /convPn [c /= c_sep].
-    * have c_bounded : bounded c P by apply/compactP.
-      pose F := face_of_obj c_bounded.
-      have vert_F : (exists v, v \in \vert F).
-      - admit.
-      pose v0 := xchoose vert_F.
-      have v0_vert_P : v0 \in \vert P.
-      - suff: v0 \in \vert F.
-        apply/fsubsetP; apply: vertex_face; exact: face_of_obj_face.
-      - exact: xchooseP.
-      have v0_in_F : v0 \in F by apply: vertex_inclusion; exact: xchooseP.
-      apply/negP => x_in_P.
-      move: (face_of_objP c_bounded _ v0_in_F) => [_] /(_ _ x_in_P).
-      apply/negP; rewrite -ltrNge; exact: c_sep.
-
-
-
-        + move: P_empty; apply: contraNN => [x_in_P].
-    by apply/non_emptyP; exists x.
-
-    Search _ (~~ (_ <= _)).
-
-    move/(_ _ v0_vert_P): c_sep.
-    move: ltr_le_trans.
-    Search _ (_ < _) (_ <= _).
-    Search _ "pick".
-
-      have x_in_F : x \in F.
-
-  move/convPn.
-  => [x_in_P | x_in_conv].
-
-
+- case: (boolP (non_empty P)) => [P_non_empty | /non_emptyPn -> //=].
+  apply: contraLR => /convPn [c /separationP c_sep].
+  have c_bounded : bounded c P by apply/compactP.
+  pose F := face_of_obj c_bounded.
+  have vert_F : (exists v, v \in \vert F).
+  + admit.
+  pose v0 := xchoose vert_F.
+  have v0_vert_P : v0 \in \vert P.
+  + have: v0 \in \vert F by exact: xchooseP.
+    by apply/fsubsetP; apply: vertex_face; exact: face_of_obj_face.
+  have v0_in_F : v0 \in F by apply: vertex_inclusion; exact: xchooseP.
+  apply/negP => x_in_P.
+  move: (face_of_objP c_bounded _ v0_in_F) => [_] /(_ _ x_in_P).
+  apply/negP; rewrite -ltrNge; exact: c_sep.
+- admit. (* follow from convexity *)
 Admitted.
 
 
