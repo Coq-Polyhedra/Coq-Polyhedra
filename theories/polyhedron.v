@@ -1160,13 +1160,13 @@ Qed.
 Lemma compactP P :
   reflect (non_empty P -> forall c, bounded c P) (compact P). (*RK: statement slightly modified: added the non_empty condition *)
 Proof. (* RK *)
-apply: (iffP idP) => [/compactP_Linfty [K K_bound] non_empty_P c | bounded_if_non_empty].
+apply: (iffP idP) => [/compactP_Linfty [K P_contained_in_box] non_empty_P c | bounded_if_non_empty].
 - apply/(bounded_lower_bound c non_empty_P).
   exists (\sum_i (-(`|c i 0| * K))).
   move => x x_in_P.
   rewrite -subr_le0 -sumrB.
   apply: sumr_le0 => i _.
-  move/ler_normlP: (((K_bound x) x_in_P) i) => [? ?].
+  move/ler_normlP: (((P_contained_in_box x) x_in_P) i) => [? ?].
   rewrite subr_le0 ler_oppl.
   case: (boolP (0 <= c i 0)) => [c_i_geq_0 | c_i_lt_0].
   + rewrite (ger0_norm c_i_geq_0) -mulrN -subr_ge0 -mulrBr.
@@ -1177,9 +1177,8 @@ apply: (iffP idP) => [/compactP_Linfty [K K_bound] non_empty_P c | bounded_if_no
     apply: mulr_ge0; first exact: (normr_ge0 (c i 0)).
     by rewrite subr_ge0.
 - case: (boolP (non_empty P)) => [non_empty_P| empty_P].
-  + move: (bounded_if_non_empty non_empty_P) => bounded_forall.
-    apply/implyP => _; apply/forallP => i.
-    by apply/andP; split.
+  + apply/implyP => _; apply/forallP => i.
+    by apply/andP; split; exact: (bounded_if_non_empty non_empty_P).
   + apply/implyP => non_empty_P.
     by rewrite non_empty_P in empty_P.
 Qed.
