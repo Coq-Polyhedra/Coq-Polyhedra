@@ -35,14 +35,32 @@ rewrite [C in LHS]mx11_scalar -scalemx1 scalemx_eq0.
 by move/negbTE: (matrix_nonzero1 R 0) ->; rewrite orbF.
 Qed.
 
+Lemma row_cV (R : realFieldType) (n: nat) (u: 'cV[R]_n) (i: 'I_n) : row i u = (u i 0)%:M.
+Proof.
+apply/colP => j; rewrite !mxE.
+by rewrite [j]ord1_eq0 /= mulr1n.
+Qed.
+
+Lemma const_mx11 (R : realFieldType) (a: R) : const_mx a = a%:M :> 'M_1.
+Proof.
+by apply/matrixP => i j; rewrite !mxE [i]ord1_eq0 [j]ord1_eq0 mulr1n.
+Qed.
+
+Lemma scalar_mx_inj (R : realFieldType) (n: nat) : (n > 0)%N -> injective (@scalar_mx R n).
+Proof.
+move => n_gt0 x y.
+pose i' := Ordinal n_gt0.
+by move/matrixP/(_ i' i'); rewrite !mxE /= 2!mulr1n.
+Qed.
+
 Lemma mulmx_row_cV_rV (R : realFieldType) (n p: nat) (x: 'cV[R]_n) (y: 'rV[R]_p) (j : 'I_n) : (row j x) *m y = (x j 0) *: y.
 Proof.
 rewrite -mul_scalar_mx; apply: (congr1 (mulmx^~ _)).
 rewrite [row _ _]mx11_scalar; apply: congr1.
 by rewrite mxE.
-Qed.  
-  
-Lemma non_trivial_ker (R : realFieldType) (n p : nat) (A' : 'M[R]_(p,n)) (x : 'cV_n) : 
+Qed.
+
+Lemma non_trivial_ker (R : realFieldType) (n p : nat) (A' : 'M[R]_(p,n)) (x : 'cV_n) :
   x != 0 -> A' *m x = 0 -> (\rank A' <= n.-1)%N.
 Proof.
 move => Hx HAx.
@@ -258,7 +276,7 @@ Proof.
 apply/row_matrixP => i; rewrite -[i]splitK; set i' := unsplit _.
 have ->: row i' (\sum_i0 col_mx (M i0) (N i0)) = \sum_i0 row i' (col_mx (M i0) (N i0))
   by apply: big_morph; by [apply: raddfD | apply: row0].
-rewrite /i' /unsplit; case: splitP => [j _ | j _]. 
+rewrite /i' /unsplit; case: splitP => [j _ | j _].
 - rewrite rowKu.
   have ->: \sum_i0 row (lshift m2 j) (col_mx (M i0) (N i0)) = \sum_i0 (row j (M i0)).
     by apply: eq_bigr => k _; rewrite rowKu.
@@ -313,14 +331,14 @@ rewrite castmx_mul castmx_id.
 rewrite -[X in X *m _](castmx_id (erefl _, erefl _)) -castmx_mul.
 rewrite mulmxV; last exact: qinvmx_unitmx.
 apply/matrixP => i j.
-- rewrite 2!castmxE /= 2!cast_ord_id esymK 2!mxE. 
+- rewrite 2!castmxE /= 2!cast_ord_id esymK 2!mxE.
   do 2![apply: congr1]; apply/eqP/eqP => [-> | <-];
   by rewrite ?cast_ordK ?cast_ordKV.
-Qed.  
+Qed.
 
 Lemma qmulVmx : qinvmx *m M = 1%:M.
 Proof.
-rewrite -[X in _ *m X](castmx_id (erefl _, erefl _)) -mulmx_cast. 
+rewrite -[X in _ *m X](castmx_id (erefl _, erefl _)) -mulmx_cast.
 by rewrite mulVmx; last exact: qinvmx_unitmx.
 Qed.
 
@@ -337,12 +355,12 @@ Qed.
 Lemma qmulmxK (p: nat) (x: 'M_(p,m)): (x *m M) *m qinvmx = x.
 Proof.
 by rewrite -mulmxA qmulmxV mulmx1.
-Qed.  
+Qed.
 
 Lemma qmulmxKV (p: nat) (x: 'M_(p,n)): (x *m qinvmx) *m M = x.
 Proof.
 by rewrite -mulmxA qmulVmx mulmx1.
-Qed.  
+Qed.
 
 End Core.
 
@@ -367,7 +385,7 @@ suff: M' *m M = 1%:M.
   rewrite trmx1 trmx_mul trmxK.
   apply: qmulmxV.
   by rewrite -row_leq_rank mxrank_tr  -[X in (X <= _)%N]emn row_leq_rank.
-Qed.  
+Qed.
 
 End Extra.
 End QuasiInverse.
@@ -424,7 +442,7 @@ rewrite /pick_in_ker.
 case: pickP => [i|].
 - set v := row i _.
   move => v_neq0.
-  suff /(congr1 trmx): v *m A^T = 0. 
+  suff /(congr1 trmx): v *m A^T = 0.
   + by rewrite trmx_mul trmxK trmx0.
   + by move/sub_kermxP: (row_sub i (kermx A^T)).
 - by rewrite mulmx0.

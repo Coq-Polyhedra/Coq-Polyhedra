@@ -364,6 +364,9 @@ move/eqP; apply/negP.
 exact: lrshift_distinct.
 Qed.
 
+Lemma lshift_set_compl :
+  ~: ((@lshift m n) @: [set :'I_m]) = ((@rshift m n) @: [set :'I_n]).
+Admitted.
 
 End SplitExtra.
 

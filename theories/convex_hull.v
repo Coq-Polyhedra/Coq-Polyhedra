@@ -20,6 +20,7 @@ Import GRing.Theory Num.Theory.
 Reserved Notation "[ w '\weight' 'over' V ]" (at level 0, format "[ w  '\weight'  'over'  V ]").
 Reserved Notation "\bary[ w ] V " (at level 70, format "\bary[ w ]  V").
 Reserved Notation "\conv V " (at level 50, format "\conv  V").
+Reserved Notation "[ c '\separates' x '\from' V ]" (at level 0, format "[ c  '\separates'  x  '\from'  V ]").
 
 Section Barycenter.
 
@@ -268,101 +269,104 @@ Section Separation.
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma convPn (V : {fset 'cV[R]_n}) x :
-  reflect (exists c, forall v, v \in V -> '[c,x] < '[c,v]) (x \notin \conv V).
-Proof.
+Definition separate (V : {fset 'cV[R]_n}) c x := exists z, ('[c,x] < z /\ forall (v: 'cV_n), v \in V -> '[c,v] >= z).
+Notation "[ c '\separates' x '\from' V ]" := (separate V c x).
 
-Admitted.
+Variable V : {fset 'cV[R]_n}.
+
+Lemma separationP c x :
+  [ c \separates x \from V ] <-> (forall (v: 'cV_n), v \in V -> '[c, x] < '[c, v]).
+Proof.
+split.
+- move => [z [c_x_lt_z c_V_ge_z]] v v_in_V.
+  move/(_ _ v_in_V): c_V_ge_z.
+  exact: ltr_le_trans.
+- move => c_x_lt_c_V.
+  pose S := [seq '[c,v] | v <- V].
+  pose z := min_seq S ('[c,x] + 1).
+  exists z; split.
+  + case: (boolP (S == [::] :> seq _)).
+    * rewrite /z; move/eqP => -> /=.
+      by rewrite ltr_addl ltr01.
+    * rewrite /z.
+      move/(min_seq_eq ('[c,x]+1))/hasP => [? /mapP [v v_in_V ->]] /eqP ->.
+      exact: c_x_lt_c_V.
+  + move => v v_in_V.
+    by rewrite /z; apply: min_seq_ler; apply: map_f.
+Qed.
+
+Lemma separationP_proper c x :
+  [ c \separates x \from V ] <-> exists z, ('[c,x] < z /\ forall (v: 'cV_n), v \in V -> '[c,v] > z).
+Proof.
+split.
+- move => [z [c_x_lt_z c_V_ge_z]].
+  pose z' := ('[c,x]+z) / 2%:R; exists z'; split.
+  + by rewrite midf_lt.
+  + move => v /c_V_ge_z; apply: ltr_le_trans.
+    by rewrite midf_lt.
+- move => [z [c_x_lt_z c_V_gt_z]].
+  exists z; split; first by done.
+  move => v /c_V_gt_z; exact: ltrW.
+Qed.
+
+Fact mul_A_tr_u c z w i :
+  let u := col_mx (col_mx c z%:M) w in
+  let v := @nth_fset _ _ V i in
+  row i ((A V)^T *m u) = ('[c, v] + z + w i 0)%:M.
+Proof.
+move => u v.
+rewrite row_mul -tr_col 2!col_col_mx.
+rewrite col_mat_fset.
+rewrite trmx_const col_const.
+rewrite 2!tr_col_mx trmx_const tr_col trmx1 row1.
+rewrite 2!mul_row_col -vdot_def -rowE.
+by rewrite const_mx11 -scalar_mxM mul1r row_cV -2!raddfD /=.
+Qed.
+
+Lemma convPn x :
+  reflect (exists c, [ c \separates x \from V ]) (x \notin \conv V).
+Proof.
+apply: (iffP hpolyEq_non_emptyPn_cert).
+- move => [u [u_ge0 A_u_eq0 b_u_lt0]].
+  pose c := -usubmx (usubmx u).
+  pose z := dsubmx (usubmx u) 0 0.
+  pose w := dsubmx u.
+  have split_u : u = col_mx (col_mx (-c) z%:M) w.
+  + by rewrite opprK -mx11_scalar 2!vsubmxK.
+  have w_ge0 : w >=m 0.
+  + apply/gev0P => i; rewrite mxE.
+    apply: u_ge0; apply/memPn => ? /imsetP [j _] ->; exact: lrshift_distinct.
+  exists c; exists z; split.
+  + move: b_u_lt0; rewrite split_u 2!vdot_col_mx vdot0l addr0.
+    rewrite vdotNr vdotC addrC subr_gt0.
+    suff ->: '[1,z%:M] = z by done.
+    * have ->: '[1,z%:M] = \sum_(i < 1) z.
+        by apply/eq_bigr => i _; rewrite !mxE [i]ord1_eq0 /= mul1r mulr1n.
+    * by rewrite big_const cardT size_enum_ord /= addr0.
+  + move => v v_in_V.
+    move/row_matrixP/(_ (enum_rank [`v_in_V]%fset)): A_u_eq0.
+    rewrite split_u mul_A_tr_u /= row0.
+    rewrite /nth_fset enum_rankK /=.
+    move/eqP; rewrite  scalar_mx_eq0 mxE /= mulr1n -addrA addrC vdotNl subr_eq0 => /eqP <-.
+    rewrite ler_addl; by move/gev0P: w_ge0.
+- move => [c [z [c_x_lt_z c_V_gt_z]]].
+  pose w := \col_i ('[c, nth_fset i] - z) :'cV_(#|predT : pred V|).
+  pose u := col_mx (col_mx (-c) z%:M) w.
+  exists u; split.
+  + move => j; rewrite -in_setC lshift_set_compl => /imsetP [k] _ ->.
+    by rewrite col_mxEd mxE subr_ge0; apply: c_V_gt_z; exact: nth_fsetP.
+  + apply/row_matrixP => i. rewrite mul_A_tr_u row0 mxE.
+    by rewrite vdotNl addrACA addrN addNr addr0 -const_mx11.
+  + rewrite 2!vdot_col_mx vdot0l addr0 vdotC vdotNl addrC subr_gt0.
+    suff ->: '[1,z%:M] = z by done.
+    * have ->: '[1,z%:M] = \sum_(i < 1) z.
+        by apply/eq_bigr => i _; rewrite !mxE [i]ord1_eq0 /= mul1r mulr1n.
+    * by rewrite big_const cardT size_enum_ord /= addr0.
+Qed.
 
 End Separation.
 
-(*apply: (iffP HPrim.non_emptyP) => [[l] |[l [Hlpos Hlsum Hl]]].
-- rewrite inE !mul_col_mx !col_mx_lev.
-  move => /andP [/andP [Hl Hlsum] Hlpos].
-  rewrite mul1mx in Hlpos.
-  have Hlsum': '[e,l] = 1.
-  + move: Hlsum; rewrite mulNmx -!vdot_def.
-    rewrite lev_opp2; move/lev_antisym.
-    by rewrite vdotC; move/colP/(_ 0); rewrite !mxE /= !mulr1n.
-  have Hl' : x = V *m l.
-  + by move: Hl; rewrite mulNmx lev_opp2; move/lev_antisym.
-  by exists l; split.
-- exists l; rewrite inE !mul_col_mx !col_mx_lev.
-  rewrite Hl mulNmx !lev_refl /=.
-  rewrite mul1mx Hlpos andbT.
-  by rewrite mulNmx -vdot_def vdotC Hlsum !lev_refl.
-Qed.*)
-
-
 (*
-
-Lemma separation (x: 'cV_n) :
-  ~~ (is_in_convex_hull x) -> exists c, [forall i, '[c, col i V] > '[c, x]].
-Proof.
-move/infeasibleP => [d [/andP [HdA Hdpos] Hdb]].
-- set d1 := usubmx (usubmx d).
-  set d2 := dsubmx (usubmx d).
-  set d3 := dsubmx d.
-  set c := (usubmx d1) - (dsubmx d1).
-  set y := ((usubmx d2) - (dsubmx d2)) 0 0.
-  have Hineq1: ((V^T *m c) + (const_mx y)) <=m 0.
-  + move: HdA.
-    rewrite !tr_col_mx !linearN /= trmxK trmx1.
-    rewrite -[d]vsubmxK mul_row_col mul1mx.
-    move: Hdpos; rewrite -{1}[d]vsubmxK; rewrite col_mx_gev0 => /andP [_].
-    rewrite -lev_opp2 oppr0 => Hdpos.
-    rewrite addr_eq0 => /eqP => HdA.
-    move: Hdpos; rewrite -HdA.
-    set d' := usubmx d.
-    rewrite -[d']vsubmxK mul_row_col -/d1 -/d2.
-    rewrite -[d1]vsubmxK mul_row_col mulNmx -mulmxN -mulmxDr -/c.
-    rewrite -[d2]vsubmxK mul_row_col mulNmx -mulmxN -mulmxDr.
-      by rewrite [_ - _]mx11_scalar mul_mx_scalar scalemx_const mulr1.
-  have Hineq2: '[c, x] + y > 0.
-  + move: Hdb.
-    rewrite -[d]vsubmxK vdot_col_mx vdot0l addr0.
-    set d' := usubmx d.
-    rewrite -[d']vsubmxK vdot_col_mx -/d1 -/d2.
-    rewrite -[d1]vsubmxK vdot_col_mx vdotNl -vdotNr -vdotDr -/c.
-    rewrite -[d2]vsubmxK vdot_col_mx vdotNl -vdotNr -vdotDr.
-    rewrite [_ - _]mx11_scalar -/y.
-    suff: y%:M = (('[ 1, y%:M])%:M : 'cV_1).
-    * by move/colP/(_ 0); rewrite 2!mxE /= 2!mulr1n => <-; rewrite vdotC.
-    * by rewrite vdot_def tr_scalar_mx mulmx1.
-  + exists (-c); apply/forallP => i.
-    rewrite !vdotNl ltr_opp2.
-    have: (row i ((V^T *m c + const_mx y))) <=m 0.
-    * move/forallP/(_ i): Hineq1.
-      rewrite [X in _ <= X]mxE => Hineq1.
-      by apply/forallP => ?; rewrite mxE [X in _ <= X]mxE.
-    rewrite linearD /= row_mul -tr_col -vdot_def row_const.
-    move/forallP/(_ 0); rewrite !mxE /= mulr1n => Hineq1'.
-    move: (ler_lt_trans Hineq1' Hineq2).
-    by rewrite ltr_add2r.
-Qed.
-
-End Def.
-
-Section Minkowski.
-
-Variable R : realFieldType.
-Variable m n: nat.
-
-Variable A: 'M[R]_(m,n).
-Variable b: 'cV[R]_m.
-
-Definition bases := [set: feasible_basis A b].
-Notation p := #|bases|.
-
-Definition matrix_of_vertices :=
-  \matrix_(i < n, j < p) (point_of_basis b (enum_val j)) i 0.
-
-Lemma col_matrix_of_vertices j :
-  col j matrix_of_vertices = point_of_basis b (enum_val j).
-Proof.
-by apply/colP => i; rewrite !mxE.
-Qed.
-
 Lemma minkowski :
   bounded_polyhedron A b -> (polyhedron A b) =i (is_in_convex_hull matrix_of_vertices).
 Proof.
