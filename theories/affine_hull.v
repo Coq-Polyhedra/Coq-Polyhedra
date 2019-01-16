@@ -60,6 +60,7 @@ apply: lev_wpscalar.
 - exact: (pcol i).
 Qed.
 
+(* TODO: this should be rewritten in terms of barycenter *)
 Definition relint_pt :=
   let x0 := xchoose (non_emptyP P_non_empty) in
     if (m > 0)%N then
