@@ -8,7 +8,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron polyhedron.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -261,6 +261,19 @@ Lemma convU1 v V' x :
    reflect (exists a v', [/\ 0 <= a <= 1, v' \in \conv V' & x = a *: v + (1-a) *: v'])
            (x \in \conv(v |` V')%fset).
 Admitted.
+
+Lemma hpoly_convex (V : {fset 'cV[R]_n}) (P : 'hpoly[R]_n) :
+  {subset V <= P} -> {subset \conv V <= P}.
+Proof.
+case: P => m A b.
+move => V_sub_P x /convP [w [w_weight ->]].
+rewrite inE; apply/forallP => i.
+have ->: b i 0 = \sum_(v <- V) ((w v) * (b i 0)).
+  by rewrite -mulr_suml weight_sum1 // mul1r.
+rewrite mulmx_sumr summxE 2!big_seq; apply: ler_sum => /= v v_in_V.
+rewrite -scalemxAr mxE; apply: ler_wpmul2l; first exact: (weight_ge0 w_weight).
+by move/(_ _ v_in_V)/forallP: V_sub_P.
+Qed.
 
 End ConvexHullProp.
 
