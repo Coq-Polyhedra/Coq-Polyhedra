@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype simplex hpolyhedron.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx exteqtype simplex hpolyhedron convex_hull.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -348,6 +348,19 @@ Arguments is_included_in_hyperplaneP [R n P c d].
 Prenex Implicits is_included_in_hyperplaneP.
 Arguments non_emptyP [R n P].
 Prenex Implicits non_emptyP.
+
+Section PolyProp.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Lemma poly_convex (V : {fset 'cV[R]_n}) (P : 'poly[R]_n) :
+  {subset V <= P} -> {subset \conv V <= P}.
+Proof.
+exact: hpoly_convex.
+Qed.
+
+End PolyProp.
 
 Section PolyPoint.
 
@@ -833,7 +846,7 @@ apply/(iffP idP).
   rewrite {}P_repr non_empty_quotP in P_non_empty *.
   rewrite non_empty_quotP in Q_non_empty *.
   set I := ({eq P}) in eqP_sub_J *.
- 
+
   pose u := col_mx (\col_i (if i \in J then 1 else 0)) 0: 'cV[R]_(m+#|I|).
   have u_ge0 : u >=m 0.
   + rewrite col_mx_gev0 lev_refl andbT.
@@ -842,12 +855,12 @@ apply/(iffP idP).
   have u_i_gt0 : forall i, (u (lshift #|I| i) 0 > 0) = (i \in J).
   + move => i; rewrite col_mxEu mxE.
     case: ifP => [_|_]; [exact: ltr01 | exact: ltrr].
- 
+
   pose AI := col_mx A (-(row_submx A I)).
   pose bI := col_mx b (-(row_submx b I)).
   pose c := AI^T *m u; exists c.
   have c_bounded : HPrim.bounded c 'P^=(A, b; I) by exact: HPrim.normal_cone_bounded.
- 
+
   have opt_val: HPrim.opt_value c_bounded = '[bI, u].
   move/HPrim.bounded_opt_value: (c_bounded) => [[x [x_in_P <-]] x_opt].
   apply/eqP; rewrite eqr_le; apply/andP; split; last first.
@@ -876,7 +889,7 @@ apply/(iffP idP).
       case: (splitP' i) => [i' -> |?]; rewrite mxE; last by rewrite ltrr.
       case: ifP => [i'_in_J _ | ?]; last by rewrite ltrr.
       rewrite mul_col_mx !col_mxEu; exact: (hpolyEq_act x_in_PAbJ).
- 
+
 - move/hpoly_of_baseP: P_base => P_repr.
   move => [c] [c_bounded c_opt].
   (*apply/andP; split.

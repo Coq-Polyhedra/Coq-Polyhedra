@@ -72,8 +72,7 @@ move => x; apply/idP/idP.
   apply/negP => x_in_P.
   move: (face_of_objP c_bounded _ v0_in_F) => [_] /(_ _ x_in_P).
   apply/negP; rewrite -ltrNge; exact: c_sep.
-- admit. (* follow from convexity *)
+- apply: poly_convex; exact: vertex_inclusion.
 Admitted.
-
 
 End Minkowski.
