@@ -33,15 +33,30 @@ Notation "\vert P" := (vertex_set P).
 Lemma vertex_setP P v :
   reflect ([poly v] \in \face P) (v \in \vert P).
 Proof.
-Admitted.
+apply: (iffP idP).
+- move/imfsetP => [F /andP [/= F_face_P /eqP/hull_dim0P [w F_poly_eq_w]]].
+  rewrite {}F_poly_eq_w in F_face_P *.
+  by rewrite pick_point_poly_point => ->.
+- move => poly_v_face_P.
+  apply/imfsetP => /=; exists [poly v]; last by rewrite pick_point_poly_point.
+  rewrite inE; apply/andP; split; first by done.
+  by apply/eqP/hull_dim0P; exists v.
+Qed.
 
 Lemma vertex_inclusion P :
   {subset \vert P <= P }.
-Admitted.
+Proof.
+move => v /vertex_setP/face_subset poly_v_sub_P.
+by apply: poly_v_sub_P; apply/poly_point_inP.
+Qed.
 
 Lemma vertex_face (F P : 'poly[R]_n) :
   F \in \face P -> (\vert F `<=` \vert P)%fset.
-Admitted.
+Proof.
+move => F_face_P; apply/fsubsetP => v /vertex_setP v_face_F.
+move/fsubsetP/(_ _ v_face_F): (face_of_face F_face_P).
+by move/vertex_setP.
+Qed.
 
 End VertexSet.
 

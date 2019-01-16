@@ -398,6 +398,18 @@ rewrite mem_quotP.
 exact: hpoly_point_inP.
 Qed.
 
+Lemma poly_point_non_empty (v: 'cV[R]_n) :
+  non_empty [poly v].
+Proof.
+by apply/non_emptyP; exists v; apply/poly_point_inP.
+Qed.
+
+Lemma pick_point_poly_point (v: 'cV[R]_n) : pick_point [poly v] = v.
+Proof.
+move/pick_pointP: (poly_point_non_empty v).
+by apply/poly_point_inP.
+Qed.
+
 End PolyPoint.
 
 Notation "[ 'poly' v ]" := (poly_point v).
