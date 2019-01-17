@@ -248,6 +248,8 @@ Variable c : 'cV[R]_n.
 Definition bounded (P : 'poly[R]_n) := HPrim.bounded c (hpoly P).
 Definition unbounded (P : 'poly[R]_n) := HPrim.unbounded c (hpoly P).
 Definition opt_value (P : 'poly[R]_n) (H : bounded P) := HPrim.opt_value H.
+Definition pointed (P : 'poly[R]_n) := HPrim.pointed (hpoly P). (* RK *)
+Definition feasible_dir (d : 'cV[R]_n) (P : 'poly[R]_n) := HPrim.feasible_dir d (hpoly P). (* RK *)
 
 CoInductive lp_state (P : 'poly[R]_n) : bool -> bool -> bool -> Prop :=
 | Empty of P =i pred0 : lp_state P false false false
@@ -340,6 +342,51 @@ Lemma minimize_quotP (hP : 'hpoly[R]_n) x :
 Proof.
 split; rewrite mem_quotP; move => [x_in_P x_opt]; split;
   by [ done | move => y y_in_P; apply: x_opt; rewrite mem_quotP in y_in_P * ].
+Qed.
+
+Lemma feasible_dirP d (P : 'poly[R]_n) :
+  non_empty P ->
+    reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d P). (* RK *)
+Proof.
+exact: HPrim.feasible_dirP.
+Qed.
+
+Arguments feasible_dirP [d P].
+
+Lemma feasible_dir_quotP (d : 'cV[R]_n) (hP : 'hpoly[R]_n) :
+  HPrim.non_empty hP ->
+    feasible_dir d '[hP] = HPrim.feasible_dir d hP. (* RK *)
+Proof.
+move => non_empty_hP.
+have non_empty_hpoly_P: HPrim.non_empty (hpoly '[hP]).
+  by rewrite -non_empty_quotP in non_empty_hP.
+apply/idP/idP.
+- move/(HPrim.feasible_dirP _ non_empty_hpoly_P) => ray_incl.
+  apply/(HPrim.feasible_dirP _ non_empty_hP) => x λ x_in_hP λ_eq_0.
+  rewrite -mem_quotP; rewrite -mem_quotP in x_in_hP.
+  exact: (ray_incl x λ x_in_hP λ_eq_0).
+- move/(HPrim.feasible_dirP _ non_empty_hP) => ray_incl.
+  apply/(HPrim.feasible_dirP _ non_empty_hpoly_P) => x λ x_in_hP λ_eq_0.
+  rewrite mem_quotP; rewrite mem_quotP in x_in_hP.
+  exact: (ray_incl x λ x_in_hP λ_eq_0).
+Qed.
+
+Lemma pointedPn (P : 'poly[R]_n) :
+  reflect (exists d, [/\ d != 0, feasible_dir d P & feasible_dir (-d) P]) (~~pointed P). (* RK *)
+Proof.
+exact: HPrim.pointedPn.
+Qed.
+
+Arguments pointedPn [P].
+
+Lemma pointed_quotP (hP : 'hpoly[R]_n) :
+  HPrim.non_empty hP ->
+    pointed '[hP] = HPrim.pointed hP. (* RK *)
+Proof.
+move => non_empty_hP.
+by apply/idP/idP; apply/contraTT; move/HPrim.pointedPn => [d [d_neq_0 feasible_dir_d feasible_dir_minus_d]]; 
+  [apply/pointedPn | apply/HPrim.pointedPn]; exists d; split; rewrite ?feasible_dir_quotP //;
+    rewrite -feasible_dir_quotP.
 Qed.
 
 End Lift.
