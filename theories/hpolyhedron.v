@@ -383,8 +383,48 @@ case: P => m A b.
 by move/(Simplex.unbounded_is_not_bounded c)/esym/addbP.
 Qed.
 
+Definition feasible_dir d P :=
+  let: 'P(A, _) := P in Simplex.feasible_dir A d. (* RK *)
+
+Lemma feasible_dirP d P :
+  non_empty P ->
+    reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d P). (* RK *)
+Proof.
+case: P => m A b.
+move => non_empty_P.
+apply/(iffP idP) => [feasible_dir_d x λ x_in_P λ_ge_0 | d_recession_dir].
+- rewrite inE mulmxDr -scalemxAr -[b]addr0.
+  apply/lev_add; first exact: x_in_P.
+  have ->: 0 = λ *: (0 : 'cV[R]_m) by rewrite scaler0.
+  by apply/lev_wpscalar.
+- apply/contraT.
+  rewrite negb_forall.
+  move/existsP => [i A_d_i_neq].
+  rewrite mxE in A_d_i_neq.
+  move/non_emptyP: non_empty_P => [x x_in_P].
+  set λ := ((A *m d) i 0 + b i 0 - (A *m x) i 0) * ((A *m d) i 0)^-1.
+  have λ_ge_0: 0 <= λ.
+    rewrite ler_ndivl_mulr; last by rewrite -ltrNge in A_d_i_neq.
+    rewrite mul0r ler_subl_addr.
+    apply: ler_add; last exact: ((forallP x_in_P) i).
+    apply: ltrW.
+    by rewrite -ltrNge in A_d_i_neq.
+  move: (forallP (d_recession_dir _ _ x_in_P λ_ge_0) i) => H.
+  rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in H; 
+    last by apply: ltr0_neq0; rewrite -ltrNge in A_d_i_neq.
+  rewrite mulr1 [(A *m x) i 0 + _]addrC -3!ler_subl_addr opprK -addrA -opprB addNr in H.
+  by rewrite H in A_d_i_neq.
+Qed.
+
 Definition pointed P :=
   let: 'P(A,_) := P in Simplex.pointed A.
+
+Lemma pointedPn P :
+  reflect (exists d, [/\ d != 0, feasible_dir d P & feasible_dir (-d) P]) (~~pointed P). (* RK *)
+Proof.
+case: P => m A b.
+exact: Simplex.pointedPn.
+Qed.
 
 End Basic.
 
