@@ -360,13 +360,11 @@ Proof.
 move => non_empty_hP.
 have non_empty_hpoly_P: HPrim.non_empty (hpoly '[hP]).
   by rewrite -non_empty_quotP in non_empty_hP.
-apply/idP/idP.
-- move/(HPrim.feasible_dirP _ non_empty_hpoly_P) => ray_incl.
-  apply/(HPrim.feasible_dirP _ non_empty_hP) => x λ x_in_hP λ_eq_0.
+apply/idP/idP => [/(HPrim.feasible_dirP _ non_empty_hpoly_P) ray_incl | /(HPrim.feasible_dirP _ non_empty_hP) ray_incl].
+- apply/(HPrim.feasible_dirP _ non_empty_hP) => x λ x_in_hP λ_eq_0.
   rewrite -mem_quotP; rewrite -mem_quotP in x_in_hP.
   exact: (ray_incl x λ x_in_hP λ_eq_0).
-- move/(HPrim.feasible_dirP _ non_empty_hP) => ray_incl.
-  apply/(HPrim.feasible_dirP _ non_empty_hpoly_P) => x λ x_in_hP λ_eq_0.
+- apply/(HPrim.feasible_dirP _ non_empty_hpoly_P) => x λ x_in_hP λ_eq_0.
   rewrite mem_quotP; rewrite mem_quotP in x_in_hP.
   exact: (ray_incl x λ x_in_hP λ_eq_0).
 Qed.
