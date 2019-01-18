@@ -398,6 +398,11 @@ rewrite mem_quotP.
 exact: hpoly_point_inP.
 Qed.
 
+Lemma poly_point_self_in (v: 'cV[R]_n) : v \in [poly v].
+Proof.
+by apply/poly_point_inP.
+Qed.
+
 Lemma poly_point_non_empty (v: 'cV[R]_n) :
   non_empty [poly v].
 Proof.
@@ -848,7 +853,7 @@ Variable n : nat.
 
 Lemma faceP (base: 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base ] -> non_empty P ->
-    reflect (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
+    reflect (exists c, bounded c P /\ { over P, Q argmin c })
             (Q \in (face_set base P)).
 Proof.
 case: base => [m A b] P_base P_non_empty.
@@ -987,7 +992,7 @@ Arguments face_baseP [P Q _].
 
 Lemma faceP (P Q : 'poly[R]_n) :
   non_empty P ->
-    reflect (exists c, bounded c P /\ (forall x, { over P, x minimizes c } <-> x \in Q))
+    reflect (exists c, bounded c P /\ { over P, Q argmin c })
             (Q \in \face P).
 Proof.
 move => P_non_empty.
@@ -1244,3 +1249,4 @@ End Pointedness.
 End PointednessBase.
 
 Arguments non_emptyP [R n P].
+Arguments faceP [R n P Q].
