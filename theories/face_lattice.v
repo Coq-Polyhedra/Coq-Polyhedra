@@ -43,6 +43,8 @@ apply: (iffP idP).
   by apply/eqP/hull_dim0P; exists v.
 Qed.
 
+Arguments vertex_setP [P v].
+
 Lemma vertex_inclusion P :
   {subset \vert P <= P }.
 Proof.
@@ -56,6 +58,31 @@ Proof.
 move => F_face_P; apply/fsubsetP => v /vertex_setP v_face_F.
 move/fsubsetP/(_ _ v_face_F): (face_of_face F_face_P).
 by move/vertex_setP.
+Qed.
+
+Lemma vertex_objP (P : 'poly[R]_n) (v : 'cV[R]_n) :
+  reflect (v \in P /\ exists c, (forall x, x \in P -> x != v -> '[c,v] < '[c,x])) (v \in \vert P).
+Proof.
+apply: (iffP idP) => [v_vert | [v_in_P [c v_proper_min]]].
+- split; first exact: vertex_inclusion.
+  have P_non_empty : non_empty P by apply/non_emptyP; exists v; apply: vertex_inclusion.
+  move/vertex_setP/(faceP P_non_empty) : v_vert => [c [_ c_face]].
+  exists c.
+  have c_v_min: forall x, x \in P -> '[ c, v] <= '[ c, x]
+    by move/c_face: (poly_point_self_in v) => [_].
+  move => x x_in_P x_neq_v.
+  apply: (argmin_inN_lt c_face); by [ done | rewrite poly_point_inE ].
+- have P_non_empty : non_empty P by apply/non_emptyP; exists v.
+  have v_min : {over P, v minimizes c}.
+  + split; first by done.
+  + move => x x_in_P.
+    case: (boolP (x == v)); first by move/eqP ->.
+    move/(v_proper_min _  x_in_P); exact: ltrW.
+  apply/vertex_setP/(faceP P_non_empty).
+  exists c; split; first by apply/boundedP; exists v.
+  move => x; split; last by move/poly_point_inP ->.
+  move => [x_in_P /(_ _ v_in_P)].
+  apply: contraTT; rewrite -ltrNge poly_point_inE; exact: v_proper_min.
 Qed.
 
 End VertexSet.
@@ -91,3 +118,18 @@ move => x; apply/idP/idP.
 Admitted.
 
 End Minkowski.
+
+Section VertexFigure.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Variable P : 'poly[R]_n.
+Hypothesis P_compact : compact P.
+
+Variable v: 'cV[R]_n.
+Hypothesis v_vert : v \in \vert P.
+
+Let c := \obj
+
+End VertexFigure.

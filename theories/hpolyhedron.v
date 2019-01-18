@@ -20,6 +20,7 @@ Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
 Reserved Notation "{ 'over' P , x 'minimizes' c }" (at level 70, format "{ 'over'  P ,  x  'minimizes'  c }").
+Reserved Notation "{ 'over' P , F 'argmin' c }" (at level 70, format "{ 'over'  P ,  F  'argmin'  c }").
 Reserved Notation "''hpoly[' R ]_ n" (at level 8, n at level 2, format "''hpoly[' R ]_ n").
 Reserved Notation "''hpoly_' n" (at level 8, n at level 2).
 Reserved Notation "'#ineq' P" (at level 10, P at level 0, format "'#ineq'  P").
@@ -120,7 +121,61 @@ Notation "'#ineq' P" := (nb_ineq P).
 Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b).
 Notation "''P' ( A , b )" := (Hpoly A b).
 Notation "{ 'over' P , x 'minimizes' c }" :=
-  (is_true (x \in P) /\ forall y, (is_true (y \in P) -> is_true ('[c,x] <= '[c,y])))%R : ring_scope.
+  (is_true (x%R \in P) /\ forall y, (is_true (y%R \in P) -> is_true ('[c,x] <= '[c,y]))) : ring_scope.
+Notation "{ 'over' P , F 'argmin' c }" :=
+  (forall y, ({over P, y minimizes c} <-> (y \in F))) : ring_scope.
+
+Section MinProp.
+
+Variable R: realFieldType.
+Variable n : nat.
+
+Variable P F : pred 'cV[R]_n.
+Variable c : 'cV[R]_n.
+
+Lemma minimize_eq v x :
+  { over P , v minimizes c } -> ({ over P , x minimizes c } <-> (x \in P) /\ '[c,x] = '[c,v]).
+Proof.
+move => [v_in_P c_v_min]; split.
+- move => [x_in_P c_x_min]; split; first by done.
+  apply/eqP; rewrite -lter_anti; apply/andP; split; [exact: c_x_min | exact: c_v_min].
+- move => [x_in_P c_x_eq_c_v]; split; first by done.
+  by rewrite c_x_eq_c_v.
+Qed.
+
+Arguments minimize_eq [v x].
+
+Lemma argmin_eq_in v x : {over P, F argmin c} -> v \in F -> x \in P -> '[c,x] = '[c,v] -> x \in F.
+Proof.
+move => F_argmin v_in_F x_in_P c_x_eq_c_v.
+move/F_argmin: v_in_F => v_min.
+apply/F_argmin; apply/(minimize_eq v_min); split; done.
+Qed.
+
+Arguments argmin_eq_in [v x].
+
+Lemma argmin_le_in v x : {over P, F argmin c} -> v \in F -> x \in P -> '[c,x] <= '[c,v] -> x \in F.
+Proof.
+move => F_argmin v_in_F x_in_P c_x_le_c_v.
+suff: '[c,x] = '[c,v] by apply: argmin_eq_in.
+apply/ler_anti/andP; split; first by done.
+by move/F_argmin: v_in_F => [_ /(_ _ x_in_P)].
+Qed.
+
+Arguments argmin_le_in [v x].
+
+Lemma argmin_inN_lt v x : { over P , F argmin c } -> v \in F -> x \in P -> x \notin F -> '[c,v] < '[c,x].
+Proof.
+move => F_argmin v_in_F x_in_P x_not_in_F.
+have [_ c_v_min] : {over P, v minimizes c} by apply/F_argmin.
+rewrite ltr_def; apply/andP; split; last by exact: c_v_min.
+move: x_not_in_F; apply: contraNneq => c_x_eq_c_v.
+apply/F_argmin; split; by [done | rewrite c_x_eq_c_v].
+Qed.
+
+Arguments argmin_inN_lt [v x].
+
+End MinProp.
 
 Module HPrim.
 
