@@ -245,7 +245,7 @@ Lemma convP1 v x :
 Admitted.
 
 Lemma convP2 v v' x :
-  reflect (exists a, 0 <= a <= 1 /\ x = a *: v + (1-a) *: v) (x \in \conv ([fset v] `|` [fset v'])%fset).
+  reflect (exists a, 0 <= a <= 1 /\ x = a *: v + (1-a) *: v) (x \in \conv ([fset v; v'])%fset).
 Admitted.
 
 Lemma conv_mono V V' x : (V `<=` V')%fset -> x \in \conv V -> x \in \conv V'.
