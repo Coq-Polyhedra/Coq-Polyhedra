@@ -29,6 +29,22 @@ split => H.
   by rewrite mxE.
 Qed.
 
+Lemma col_neq_0 (R: comRingType) (m: nat) (u: 'cV[R]_m) : (u != 0) = [exists i, u i 0 != 0].
+Proof.
+apply/idP/idP.
+- apply/contraR.
+  rewrite negb_exists.
+  move/forallP => null_entries.
+  apply/eqP/col0P => i.
+  move: (null_entries i).
+  rewrite negbK.
+  by apply/eqP.
+- apply/contraTneq => u_eq_0.
+  rewrite negb_exists.
+  apply/forallP => i.
+  by rewrite negbK u_eq_0 mxE.
+Qed.
+
 Lemma scalar_mx_eq0 (R : realFieldType) (C : 'M[R]_1) : (C == 0) = (C 0 0 == 0).
 Proof.
 rewrite [C in LHS]mx11_scalar -scalemx1 scalemx_eq0.
