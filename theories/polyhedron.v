@@ -203,12 +203,26 @@ Qed.
 
 Arguments is_included_inP [P Q].
 
+
 Lemma is_included_in_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
   P = '[hP] -> Q = '[hQ] -> is_included_in P Q = HPrim.is_included_in hP hQ.
 Proof.
 move => PeqClasshP QeqClasshQ.
 apply/(sameP is_included_inP)/(equivP (HPrim.is_included_inP hP hQ)).
 by split; move => Hsubset x; move/(_ x): Hsubset; rewrite PeqClasshP QeqClasshQ 2!quotE.
+Qed.
+
+Definition is_properly_included_in (P Q : 'poly[R]_n) :=
+  (is_included_in P Q) && (~~ (is_included_in Q P)).
+
+Lemma is_properly_included_inP (P Q : 'poly[R]_n) :
+  reflect (is_included_in P Q /\ (exists2 x, x \in Q & x \notin P)) (is_properly_included_in P Q).
+Admitted.
+
+Lemma is_prop_included_inP (P Q : 'poly[R]_n) :
+  reflect {subset P <= Q} (is_included_in P Q).
+Proof.
+exact: (equivP (HPrim.is_included_inP (hpoly P) (hpoly Q))).
 Qed.
 
 Lemma contains_non_empty (P Q : 'poly[R]_n) :
@@ -389,6 +403,8 @@ Qed.
 
 End Lift.
 
+Arguments is_included_inP [R n P Q].
+Prenex Implicits is_included_inP.
 Arguments is_included_in_hyperplaneP [R n P c d].
 Prenex Implicits is_included_in_hyperplaneP.
 Arguments non_emptyP [R n P].
@@ -458,6 +474,14 @@ Lemma pick_point_poly_point (v: 'cV[R]_n) : pick_point [poly v] = v.
 Proof.
 move/pick_pointP: (poly_point_non_empty v).
 by apply/poly_point_inP.
+Qed.
+
+Lemma poly_point_incl (v : 'cV[R]_n) (P : 'poly[R]_n) :
+  is_included_in [poly v] P = (v \in P).
+Proof.
+apply: (sameP is_included_inP); apply: (iffP idP).
+- by move => v_in_P x /poly_point_inP ->.
+- by move/(_ _  (poly_point_self_in _)).
 Qed.
 
 End PolyPoint.
@@ -687,6 +711,10 @@ Proof.
 by rewrite in_polyI_of_hpoly -2!mem_quotP.
 Qed.
 
+Fact in_polyIP (P Q : 'poly[R]_n) x :
+  reflect (x \in P /\ x \in Q) (x \in polyI P Q).
+Admitted.
+
 Lemma polyI_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
   P = '[hP] -> Q = '[hQ] ->
     polyI P Q = polyI_of_hpoly hP hQ.
@@ -744,8 +772,8 @@ apply/idP/idP => [S_is_included_in_I | /andP [S_is_included_in_P S_is_included_i
 - apply/is_included_inP => x x_in_S.
   rewrite in_polyI.
   apply/andP; split.
-  + by apply/(is_included_inP _ _ S_is_included_in_P).
-  + by apply/(is_included_inP _ _ S_is_included_in_Q).
+  + by apply/(is_included_inP S_is_included_in_P).
+  + by apply/(is_included_inP S_is_included_in_Q).
 Qed.
 
 Fact polyIidPl (P Q : 'poly[R]_n) :
@@ -758,7 +786,7 @@ apply: (iffP idP) => [/is_included_inP P_subset_Q | polyI_P_Q_eq_P].
   exact: (P_subset_Q x).
 - apply/is_included_inP => x.
   rewrite -polyI_P_Q_eq_P.
-  exact: ((is_included_inP _ _ (includedIr P Q)) x).
+  exact: ((is_included_inP (includedIr P Q)) x).
 Qed.
 
 Fact polyIidPr (P Q : 'poly[R]_n) :
@@ -771,7 +799,7 @@ apply: (iffP idP) => [/is_included_inP Q_subset_P | polyI_P_Q_eq_Q].
   exact: (Q_subset_P x).
 - apply/is_included_inP => x.
   rewrite -polyI_P_Q_eq_Q.
-  exact: ((is_included_inP _ _ (includedIl P Q)) x).
+  exact: ((is_included_inP (includedIl P Q)) x).
 Qed.
 
 (*Fact in_face_affine_hull_rel (P Q : 'poly[R]_n) x :
@@ -1069,20 +1097,19 @@ move/(face_baseP (hpoly_base P)) => [Q_has_base ? _].
 by apply: (inclusion_on_base Q_has_base (hpoly_base P)).
 Qed.
 
-Fact face_of_face_incl_rel (P F F' : 'poly[R]_n) :
-  F \in \face P ->
-    ((F' \in \face F) = ((F' \in \face P) && (is_included_in F' F))). (* RK *)
+Fact face_of_face_incl_rel (P F : 'poly[R]_n) :
+  F \in \face P -> \face F = [fset F' in \face P | is_included_in F' F]%fset.
 Proof.
-move => F_is_face_of_P.
-apply/idP/idP => [F'_is_face_of_F | /andP [F'_is_face_of_P /is_included_inP F'_is_included_in_F]].
-- apply/andP; split.
-  + by move/fsubsetP/(_ _ F'_is_face_of_F): (face_of_face F_is_face_of_P).
-  + apply/is_included_inP.
-    exact: (face_subset F'_is_face_of_F).
-- move/(face_baseP (hpoly_base P)): F_is_face_of_P => [F_base eq_P_subset_eq_F F_non_empty].
-  move/(face_baseP (hpoly_base P)): F'_is_face_of_P => [F'_base eq_P_subset_eq_F' F'_non_empty].
-  apply/(face_baseP F_base).
-  split.
+move => F_face_P.
+apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
+- move => F' F'_face_F.
+  rewrite in_fsetE inE; apply/andP; split.
+  + by move/fsubsetP/(_ _ F'_face_F): (face_of_face F_face_P).
+  + apply/is_included_inP; exact: face_subset.
+- move => F'; rewrite in_fsetE inE => /andP [F'_face_P /is_included_inP F'_sub_F].
+  move/(face_baseP (hpoly_base P)): F_face_P => [F_base eqP_sub_eqF F_non_empty].
+  move/(face_baseP (hpoly_base P)): F'_face_P => [F'_base eq_P_sub_eq_F' F'_non_empty].
+  apply/(face_baseP F_base); split.
   + exact: F'_base.
   + by apply/(inclusion_on_base F'_base F_base).
   + exact: F'_non_empty.
