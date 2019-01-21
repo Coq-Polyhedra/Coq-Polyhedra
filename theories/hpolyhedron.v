@@ -410,7 +410,7 @@ apply/(iffP idP) => [feasible_dir_d x λ x_in_P λ_ge_0 | d_recession_dir].
     apply: ltrW.
     by rewrite -ltrNge in A_d_i_neq.
   move: (forallP (d_recession_dir _ _ x_in_P λ_ge_0) i) => H.
-  rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in H; 
+  rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in H;
     last by apply: ltr0_neq0; rewrite -ltrNge in A_d_i_neq.
   rewrite mulr1 [(A *m x) i 0 + _]addrC -3!ler_subl_addr opprK -addrA -opprB addNr in H.
   by rewrite H in A_d_i_neq.
@@ -645,12 +645,13 @@ rewrite hpoly_point_inE.
 exact: eqP.
 Qed.
 
-Definition hpoly_hyperplane (c : 'cV[R]_n) (d : 'cV[R]_1)  := 'P^=(c^T, d; setT). (* RK *)
+Definition hpoly_hyperplane (c : 'cV[R]_n) (d : R)  := 'P^=(c^T, d%:M; setT). (* RK *)
 
 Lemma hpoly_hyperplane_inE c d x : (* RK *)
-  (x \in hpoly_hyperplane c d) = (c^T *m x == d).
+  (x \in hpoly_hyperplane c d) = ('[c,x] == d).
 Proof.
-by rewrite hpolyEqT_inE.
+rewrite hpolyEqT_inE -vdot_def vdotC.
+apply: inj_eq; exact: scalar_mx_inj.
 Qed.
 
 End HPolyEq.
