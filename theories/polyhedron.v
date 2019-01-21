@@ -1299,8 +1299,8 @@ Section Pointedness.
 Variable R : realFieldType.
 Variable n : nat.
 
-Variable P : 'poly[R]_n.
-Variable base : 'hpoly[R]_n.
+Implicit Type P : 'poly[R]_n.
+(*Variable base : 'hpoly[R]_n.
 
 Hypothesis P_base : [P has \base base].
 
@@ -1309,7 +1309,54 @@ Definition feasible_dir (d: 'cV[R]_n) := false.
 
 Lemma feasible_dirP d :
   reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d).
+Admitted.*)
+
+Lemma feasible_dir_pos_unbounded P d i :
+  non_empty P -> feasible_dir d P -> d i 0 > 0 ->
+    ~~ bounded (-delta_mx i 0) P.
+Proof.
+move => non_empty_P /(feasible_dirP _ non_empty_P) feasible_dir_d_P d_i_gt_0.
+apply/contraT; rewrite negbK.
+move/(bounded_lower_bound _ non_empty_P) => [K K_lower_bound].
+move/non_emptyP: non_empty_P => [x x_in_P].
+set λ := (1 - K - x i 0) * (d i 0)^-1.
+have λ_gt_0: 0 < λ.
+  apply: divr_gt0; last exact: d_i_gt_0.
+  rewrite subr_gt0 ltr_subr_addr.
+  apply: (ler_lt_trans _ ltr01).
+  move: (K_lower_bound _ x_in_P).
+  by rewrite vdotNl vdotl_delta_mx -[- x i 0]add0r ler_subr_addr addrC.
+move: (K_lower_bound _ (feasible_dir_d_P _ _ x_in_P (ltrW λ_gt_0))).
+rewrite vdotNl vdotl_delta_mx 2!mxE -mulrA mulVf;
+  last by apply: lt0r_neq0.
+by rewrite mulr1 ler_oppr -addrA addrC -2!ler_subr_addr subrr lerNgt ltr01.
+Qed.
+
+Lemma feasible_dir_neg_unbounded P d i :
+  non_empty P -> feasible_dir (-d) P -> d i 0 < 0 ->
+    ~~ bounded (delta_mx i 0) P.
+Proof.
 Admitted.
+
+Lemma compact_pointed P :
+  non_empty P -> compact P -> pointed P.
+Proof.
+move => non_empty_P.
+apply/contraTT.
+move/pointedPn => [d [d_neq_0 d_feas_dir minus_d_feas_dir]].
+rewrite negb_imply.
+apply/andP; split; first exact: non_empty_P.
+rewrite negb_forall; apply/existsP.
+rewrite col_neq_0 in d_neq_0.
+move/existsP: d_neq_0 => [i d_i_neq_0].
+exists i.
+rewrite negb_and; apply/orP.
+rewrite neqr_lt in d_i_neq_0.
+move/orP: d_i_neq_0 => d_i_neq_0.
+case: d_i_neq_0 => [d_i_lt_0 | d_i_bt_0].
+- by left; apply: (feasible_dir_neg_unbounded _ minus_d_feas_dir _).
+- by right; apply: (feasible_dir_pos_unbounded _ d_feas_dir _).
+Qed.
 
 End Pointedness.
 
