@@ -85,6 +85,19 @@ apply: (iffP idP) => [v_vert | [v_in_P [c v_proper_min]]].
   apply: contraTT; rewrite -ltrNge poly_point_inE; exact: v_proper_min.
 Qed.
 
+Lemma vertex_set_sep (P : 'poly[R]_n) (v : 'cV[R]_n) :
+  v \in \vert P -> exists c, [forall (w : (\vert P) | val w != v), '[c, val w] > '[c, v]].
+Proof.
+Admitted.
+
+Definition obj_of_vertex (P : 'poly[R]_n) (v : 'cV[R]_n) (v_vert : v \in \vert P) := xchoose (vertex_set_sep v_vert).
+
+Lemma obj_of_vertexP (P : 'poly[R]_n) (v : 'cV[R]_n) (v_vert : v \in \vert P) :
+  let c := obj_of_vertex v_vert in
+  forall w, w \in \vert P -> w != v -> '[c, w] > '[c, v].
+Proof.
+Admitted.
+
 End VertexSet.
 
 Notation "\vert P" := (vertex_set P).
@@ -125,11 +138,27 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Variable P : 'poly[R]_n.
+Hypothesis P_non_empty : non_empty P.
 Hypothesis P_compact : compact P.
 
-Variable v: 'cV[R]_n.
+Variable v : 'cV[R]_n.
 Hypothesis v_vert : v \in \vert P.
+Variable c : 'cV[R]_n.
+Variable alpha : R.
+Hypothesis c_sep_v : '[c,v] < alpha /\ forall w, w \in \vert P -> w != v -> '[c,w] >= alpha.
 
-Let c := \obj
+Section Fun.
+
+Variable F : 'poly[R]_n.
+Hypothesis v_in_F : v \in F.
+Hypothesis F_face_P : F \in \face P.
+
+Let H := poly_hyperplane c alpha.
+Let F' := polyI F H.
+Let P' := polyI P H.
+
+Fact F'_face_P' : F' \in \face P'.
+Admitted.
+
 
 End VertexFigure.

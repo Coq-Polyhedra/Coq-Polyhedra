@@ -382,7 +382,7 @@ Lemma pointed_quotP (hP : 'hpoly[R]_n) :
     pointed '[hP] = HPrim.pointed hP. (* RK *)
 Proof.
 move => non_empty_hP.
-by apply/idP/idP; apply/contraTT; move/HPrim.pointedPn => [d [d_neq_0 feasible_dir_d feasible_dir_minus_d]]; 
+by apply/idP/idP; apply/contraTT; move/HPrim.pointedPn => [d [d_neq_0 feasible_dir_d feasible_dir_minus_d]];
   [apply/pointedPn | apply/HPrim.pointedPn]; exists d; split; rewrite ?feasible_dir_quotP //;
     rewrite -feasible_dir_quotP.
 Qed.
@@ -469,12 +469,12 @@ Section PolyHyperplane. (* RK *)
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition poly_hyperplane (c : 'cV[R]_n)  (d : 'cV[R]_1) := '[ hpoly_hyperplane c d ].
+Definition poly_hyperplane (c : 'cV[R]_n)  (d : R) := '[ hpoly_hyperplane c d ].
 
 Lemma poly_hyperplane_inE c d x :
-  (x \in poly_hyperplane c d) = (c^T *m x == d).
+  (x \in poly_hyperplane c d) = ('[c,x] == d).
 Proof.
-by rewrite mem_quotP hpolyEqT_inE.
+by rewrite mem_quotP hpoly_hyperplane_inE.
 Qed.
 
 End PolyHyperplane.
@@ -1128,21 +1128,16 @@ Hypothesis c_bounded : bounded c P.
   let A' := col_mx c^T A in
   let b' := col_mx ((opt_value c_bounded)%:M) b in
     '[ 'P^=(A', b'; [set ord0]) ].*)
-Definition face_of_obj := polyI P (poly_hyperplane c (opt_value c_bounded)%:M).
+Definition face_of_obj := polyI P (poly_hyperplane c (opt_value c_bounded)).
 
 Fact face_of_objP x :
   reflect ({ over P, x minimizes c }) (x \in face_of_obj).
 Proof. (* RK *)
 rewrite in_polyI poly_hyperplane_inE.
 apply: (iffP idP) => [/andP [x_in_P x_optimal] | /opt_valueP H].
-- apply/opt_valueP/andP; split; first exact: x_in_P.
-  rewrite -vdot_def vdotC in x_optimal.
-  move/eqP/matrixP: x_optimal => x_optimal.
-  move/eqP: (x_optimal 0 0).
-  by rewrite !mxE /= 2!mulr1n.
-- move/andP: (H c_bounded) => [x_in_P /eqP x_optimal].
-  apply/andP; split; first exact: x_in_P.
-  by rewrite -vdot_def vdotC x_optimal.
+- by apply/opt_valueP/andP; split.
+- move/andP: (H c_bounded) => [x_in_P x_optimal].
+  by apply/andP; split.
 Qed.
 
 Arguments face_of_objP [x].
