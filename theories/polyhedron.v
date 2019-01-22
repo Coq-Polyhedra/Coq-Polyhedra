@@ -836,6 +836,27 @@ rewrite -[F]hpolyK -[polyI _ _]hpolyK; apply/poly_eqP => x.
 by rewrite in_polyI (in_face_affine_hull_rel _ F_is_face_of_P) hpolyK.
 Qed.*)
 
+
+Fact same_base_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
+  [P has \base base] -> [Q has \base base] ->
+    [(polyI P Q) has \base base].
+Proof.
+case: base => m A b.
+move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
+apply/has_baseP; exists (IP :|: IQ).
+rewrite -[LHS]hpolyK; apply/poly_eqP => x.
+rewrite -mem_quotP hpolyK in_polyI P_eq Q_eq 2!mem_quotP !hpolyEq_inE.
+apply/idP/idP =>
+  [ /andP [/andP [x_in_base /forall_inP sat_IP] /andP [_ /forall_inP sat_IQ]]
+  | /andP [x_in_base /forall_inP sat_Int]].
+- apply/andP; split; try by done.
+  apply/forall_inP => j; rewrite in_setU => /orP [j_in_IP | j_in_IQ];
+    [exact: sat_IP | exact: sat_IQ].
+- apply/andP; split; apply/andP; split; try by [ done |
+  apply/forall_inP => j j_in_IP; apply: sat_Int;
+  apply/setUP; by [left | right]].
+Qed.
+
 Fact eqU_subset_eq_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base] -> [Q has \base base] ->
     ({eq(P) on base} :|: {eq(Q) on base}) \subset {eq((polyI P Q)) on base}.
@@ -850,43 +871,6 @@ move/orP => [/active_inP cond_in_eq_P | /active_inP cond_in_eq_Q];
   exact: (proj1 (andP x_in_polyI)).
 - apply: (cond_in_eq_Q x).
   exact: (proj2 (andP x_in_polyI)).
-Qed.
-
-Fact has_base_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
-  [P has \base base] -> [Q has \base base] ->
-    [(polyI P Q) has \base base].
-Proof.
-case: base => m A b.
-move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
-apply/has_baseP.
-exists (IP :|: IQ).
-rewrite -[LHS]hpolyK.
-apply/poly_eqP => x.
-rewrite -mem_quotP hpolyK in_polyI P_eq Q_eq 2!mem_quotP !hpolyEq_inE.
-apply/idP/idP => [/andP [/andP [x_in_base sat_IP] /andP [_ sat_IQ]] | /andP [x_in_base sat_Int]].
-- apply/andP; split.
-  + exact: x_in_base.
-  + apply/forallP => j.
-    apply/implyP.
-    rewrite in_setU.
-    move/orP => [j_in_IP | j_in_IQ].
-    * exact: ((implyP ((forallP sat_IP) j)) j_in_IP).
-    * exact: ((implyP ((forallP sat_IQ) j)) j_in_IQ).
-- apply/andP; split.
-  + apply/andP; split.
-    * exact: x_in_base.
-    * apply/forallP => j.
-      apply/implyP => j_in_IP.
-      apply: (implyP ((forallP sat_Int) j)).
-      rewrite in_setU.
-      by apply/orP; left.
-  + apply/andP; split.
-    * exact: x_in_base.
-    * apply/forallP => j.
-      apply/implyP => j_in_IQ.
-      apply: (implyP ((forallP sat_Int) j)).
-      rewrite in_setU.
-      by apply/orP; right.
 Qed.
 
 End Intersection.
@@ -1139,7 +1123,7 @@ move => /(face_baseP (hpoly_base P)) [F'_base eq_P_subset_eq_F' _].
 move => non_empty_polyI.
 apply/(face_baseP (hpoly_base P)).
 split.
-- exact: (has_base_polyI F_base F'_base).
+- exact: (same_base_polyI F_base F'_base).
 - apply: (subset_trans _ (eqU_subset_eq_polyI F_base F'_base)).
   rewrite -[{eq(P) on _}]setUid.
   exact: (setUSS eq_P_subset_eq_F eq_P_subset_eq_F').
