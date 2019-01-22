@@ -156,26 +156,17 @@ Hypothesis c_other_gt_alpha : forall w, w \in \vert P -> w != v -> '[c,w] > alph
 Section Fun.
 
 Let H := poly_hyperplane c alpha.
+Let H_base := 'P(c^T, alpha%:M).
+Fact H_has_base : [H has \base H_base].
+  by exact: poly_hyperplane_base.
 
 Definition vf_fun (Q : 'poly[R]_n) := polyI Q H.
 
-Fact vf_fun_base (Q : 'poly[R]_n) (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) :
-  let A' := col_mx A c^T in
-  let b' := col_mx b (alpha%:M) in
-  [Q has \base 'P(A,b)] -> [vf_fun Q has \base 'P(A',b')].
-Admitted.
-
-Fact vf_fun_eq_mono (Q : 'poly[R]_n) (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) :
-  let A' := col_mx A c^T in
-  let b' := col_mx b (alpha%:M) in
-  [Q has \base 'P(A,b)] -> (lshift 1) @: {eq Q on 'P(A,b)} \subset {eq (vf_fun Q) on 'P(A',b')}.
-Admitted.
-
-Fact vf_fun_eq_hyper (Q : 'poly[R]_n) (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) :
-  let A' := col_mx A c^T in
-  let b' := col_mx b (alpha%:M) in
-  [Q has \base 'P(A,b)] -> (rshift m ord0) \in {eq (vf_fun Q) on 'P(A',b')}.
-Admitted.
+Fact vf_fun_base (Q : 'poly[R]_n) (base: 'hpoly[R]_n) :
+  [Q has \base base] -> [vf_fun Q has \base (hpolyI base H_base)].
+Proof.
+move => Q_base; apply: concat_base_polyI; by [done | exact: poly_hyperplane_base].
+Qed.
 
 Fact vf_fun_non_empty (Q : 'poly[R]_n) :
   Q \in \face P -> is_properly_included_in [poly v] Q -> non_empty (vf_fun Q).
@@ -199,14 +190,48 @@ admit.
 have x_in_Q : x \in Q.
 - rewrite conv_vert; last exact: (compact_face P_compact).
   by move: x_in_v_w; apply: conv_mono; apply/fsubsetP => y; move/fset2P; case => ->.
-apply/non_emptyP; exists x; rewrite in_polyI poly_hyperplane_inE.
+apply/non_emptyP; exists x; rewrite polyI_inE poly_hyperplane_inE.
 by apply/andP; split; last apply/eqP.
 Admitted.
 
-Fact vf_fun_face (Q : 'poly[R]_n) :
+Variable m : nat.
+Variable A : 'M[R]_(m,n).
+Variable b : 'cV[R]_m.
+Let base := 'P(A,b).
+Hypothesis P_has_base : [P has \base base].
+
+Fact vf_fun_eq (Q : 'poly[R]_n) :
+  Q \in \face P -> is_properly_included_in [poly v] Q ->
+    {eq (vf_fun Q) on (hpolyI base H_base)} = (rshift m ord0) |: (lshift 1) @: {eq Q on 'P(A,b) } .
+Proof.
+move => Q_face /andP [v_in_Q Q_not_sub_v].
+apply/eqP; rewrite eq_sym eqEproper; apply/andP; split.
+- rewrite setUC.
+  suff ->: [set rshift m ord0] = (@rshift m 1) @: {eq H on H_base} by exact: concat_base_eq_polyI.
+  by rewrite poly_hyperplane_eq imset_set1.
+- apply/negP; move/properP => [_ [j]].
+  case: (splitP' j); last first.
+  + by move => j' -> _; move: (ord1_eq0 j') ->; rewrite setU11.
+  + move => j' -> j'_in_eq_vf.
+    rewrite in_setU1 negb_or lrshift_distinct andTb.
+    move => j'_not_in_lset.
+    have j'_not_in_eqQ : j' \notin {eq Q on 'P(A,b)}.
+      by move: j'_not_in_lset; apply: contraNN => [j'_in_eqQ]; apply/imsetP; exists j'.
+Admitted.
+
+
+(*Fact vf_fun_face (Q : 'poly[R]_n) :
   Q \in \face P -> vf_fun Q \in \face (vf_fun P).
 Proof.
-
+case: (hpolyP P) => [[m A b] P_eq_PAb] Q_face.
+have P_base := (self_base P_eq_PAb).
+have H_base : [H has \base 'P(c^T, alpha%:M)] by exact: poly_hyperplane_base.
+have vf_P_base := (concat_base_polyI P_base H_base).
+move/(face_baseP (self_base P_eq_PAb)): (Q_face) => [Q_base eqP_sub_eq_Q _].
+apply/(face_baseP vf_P_base); split.
+- exact: concat_base_polyI.
+- apply: (subset_trans _ concat_base_eq_polyI).
+Admitted.*)
 
 
 End VertexFigure.

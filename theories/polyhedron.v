@@ -488,21 +488,6 @@ End PolyPoint.
 
 Notation "[ 'poly' v ]" := (poly_point v).
 
-Section PolyHyperplane. (* RK *)
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Definition poly_hyperplane (c : 'cV[R]_n)  (d : R) := '[ hpoly_hyperplane c d ].
-
-Lemma poly_hyperplane_inE c d x :
-  (x \in poly_hyperplane c d) = ('[c,x] == d).
-Proof.
-by rewrite mem_quotP hpoly_hyperplane_inE.
-Qed.
-
-End PolyHyperplane.
-
 Section Base.
 
 Variable R : realFieldType.
@@ -684,65 +669,76 @@ Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
 Notation "[ P 'has' '\base' base ]" := (has_base P base).
 
+
+Section PolyHyperplane. (* RK *)
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition poly_hyperplane (c : 'cV[R]_n)  (d : R) := '[ hpoly_hyperplane c d ].
+
+Lemma poly_hyperplane_inE c d x :
+  (x \in poly_hyperplane c d) = ('[c,x] == d).
+Proof.
+by rewrite mem_quotP hpoly_hyperplane_inE.
+Qed.
+
+Lemma poly_hyperplane_base c d : [(poly_hyperplane c d) has \base 'P(c^T, d%:M)].
+Admitted.
+
+Lemma poly_hyperplane_eq c d : {eq (poly_hyperplane c d) on 'P(c^T, d%:M)} = [set ord0].
+Admitted.
+
+End PolyHyperplane.
+
+
 Section Intersection. (* RK *)
 
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition polyI_of_hpoly (hP hQ : 'hpoly[R]_n) :=
-  let: 'P(AP,bP) := hP in
-  let: 'P(AQ,bQ) := hQ in
-    '['P((col_mx AP AQ), (col_mx bP bQ))].
-
-Fact in_polyI_of_hpoly (hP hQ : 'hpoly[R]_n) x :
-  (x \in polyI_of_hpoly hP hQ) = ((x \in hP) && (x \in hQ)).
-Proof.
-rewrite /polyI_of_hpoly.
-case: hP => mP AP bP; case: hQ => mQ AQ bQ.
-by rewrite !mem_quotP !inE mul_col_mx col_mx_lev.
-Qed.
-
 Definition polyI (P Q : 'poly[R]_n) :=
-  polyI_of_hpoly (hpoly P) (hpoly Q).
+  '[ hpolyI (hpoly P) (hpoly Q) ].
 
-Fact in_polyI (P Q : 'poly[R]_n) x :
+Fact polyI_inE (P Q : 'poly[R]_n) x :
   (x \in polyI P Q) = ((x \in P) && (x \in Q)).
 Proof.
-by rewrite in_polyI_of_hpoly -2!mem_quotP.
+by rewrite -hpolyI_inE mem_quotP.
 Qed.
 
-Fact in_polyIP (P Q : 'poly[R]_n) x :
+Fact polyI_inP (P Q : 'poly[R]_n) x :
   reflect (x \in P /\ x \in Q) (x \in polyI P Q).
-Admitted.
+Proof.
+rewrite polyI_inE; exact: andP.
+Qed.
 
 Lemma polyI_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
   P = '[hP] -> Q = '[hQ] ->
-    polyI P Q = polyI_of_hpoly hP hQ.
+    polyI P Q = '[hpolyI hP hQ].
 Proof.
-move => PeqClasshP QeqClasshQ.
-rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
-by rewrite in_polyI in_polyI_of_hpoly -2!mem_quotP PeqClasshP QeqClasshQ.
+move => -> ->.
+by apply/poly_eqP => x; rewrite 2!hpolyI_inE 2!mem_quotP.
 Qed.
 
 Fact polyIC (P Q : 'poly[R]_n) :
   polyI P Q = polyI Q P.
 Proof.
 rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
-by rewrite !in_polyI andbC.
+by rewrite !polyI_inE andbC.
 Qed.
 
 Fact polyIA (P Q S : 'poly[R]_n) :
   polyI P (polyI Q S) = polyI (polyI P Q) S.
 Proof.
 rewrite -[polyI P _]hpolyK -[polyI _ S in RHS]hpolyK; apply/poly_eqP => x.
-by rewrite !in_polyI andbA.
+by rewrite !polyI_inE andbA.
 Qed.
 
 Fact polyIid (P : 'poly[R]_n) :
   polyI P P = P.
 Proof.
 rewrite -[LHS]hpolyK -[P in RHS]hpolyK; apply/poly_eqP => x.
-rewrite in_polyI /=.
+rewrite polyI_inE /=.
 by case: (x \in P).
 Qed.
 
@@ -750,7 +746,7 @@ Fact includedIl (P Q : 'poly[R]_n) :
   is_included_in (polyI P Q) P.
 Proof.
 apply/is_included_inP => x.
-rewrite in_polyI.
+rewrite polyI_inE.
 by move/andP/proj1.
 Qed.
 
@@ -758,7 +754,7 @@ Fact includedIr (P Q : 'poly[R]_n) :
   is_included_in (polyI P Q) Q.
 Proof.
 apply/is_included_inP => x.
-rewrite in_polyI.
+rewrite polyI_inE.
 by move/andP/proj2.
 Qed.
 
@@ -770,7 +766,7 @@ apply/idP/idP => [S_is_included_in_I | /andP [S_is_included_in_P S_is_included_i
   + by apply/(is_included_in_trans _ (includedIl P Q)).
   + by apply/(is_included_in_trans _ (includedIr P Q)).
 - apply/is_included_inP => x x_in_S.
-  rewrite in_polyI.
+  rewrite polyI_inE.
   apply/andP; split.
   + by apply/(is_included_inP S_is_included_in_P).
   + by apply/(is_included_inP S_is_included_in_Q).
@@ -781,7 +777,7 @@ Fact polyIidPl (P Q : 'poly[R]_n) :
 Proof.
 apply: (iffP idP) => [/is_included_inP P_subset_Q | polyI_P_Q_eq_P].
 - rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
-  rewrite in_polyI.
+  rewrite polyI_inE.
   apply: andb_idr.
   exact: (P_subset_Q x).
 - apply/is_included_inP => x.
@@ -794,7 +790,7 @@ Fact polyIidPr (P Q : 'poly[R]_n) :
 Proof.
 apply: (iffP idP) => [/is_included_inP Q_subset_P | polyI_P_Q_eq_Q].
 - rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
-  rewrite in_polyI.
+  rewrite polyI_inE.
   apply: andb_idl.
   exact: (Q_subset_P x).
 - apply/is_included_inP => x.
@@ -833,7 +829,7 @@ Qed.*)
 Proof.
 move => F_is_face_of_P.
 rewrite -[F]hpolyK -[polyI _ _]hpolyK; apply/poly_eqP => x.
-by rewrite in_polyI (in_face_affine_hull_rel _ F_is_face_of_P) hpolyK.
+by rewrite polyI_inE (in_face_affine_hull_rel _ F_is_face_of_P) hpolyK.
 Qed.*)
 
 
@@ -845,7 +841,7 @@ case: base => m A b.
 move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
 apply/has_baseP; exists (IP :|: IQ).
 rewrite -[LHS]hpolyK; apply/poly_eqP => x.
-rewrite -mem_quotP hpolyK in_polyI P_eq Q_eq 2!mem_quotP !hpolyEq_inE.
+rewrite -mem_quotP hpolyK polyI_inE P_eq Q_eq 2!mem_quotP !hpolyEq_inE.
 apply/idP/idP =>
   [ /andP [/andP [x_in_base /forall_inP sat_IP] /andP [_ /forall_inP sat_IQ]]
   | /andP [x_in_base /forall_inP sat_Int]].
@@ -858,19 +854,50 @@ apply/idP/idP =>
 Qed.
 
 Fact eqU_subset_eq_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
-  [P has \base base] -> [Q has \base base] ->
-    ({eq(P) on base} :|: {eq(Q) on base}) \subset {eq((polyI P Q)) on base}.
+  ({eq(P) on base} :|: {eq(Q) on base}) \subset {eq((polyI P Q)) on base}.
 Proof.
 case: base => m A b.
-move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
 apply/subsetP => j /setUP [/active_inP cond_in_eq | /active_inP cond_in_eq];
-  apply/active_inP => x; rewrite in_polyI => /andP [x_in_P x_in_Q];
+  apply/active_inP => x; rewrite polyI_inE => /andP [x_in_P x_in_Q];
   by apply: cond_in_eq.
 Qed.
 
+Fact concat_base_polyI (P Q : 'poly[R]_n) (base_P base_Q : 'hpoly[R]_n) :
+  [P has \base base_P] -> [Q has \base base_Q] -> [polyI P Q has \base (hpolyI base_P base_Q)].
+Proof.
+case: base_P base_Q => [m A b] [m' A' b'].
+move => /has_baseP /= [I P_eq] /has_baseP /= [I' Q_eq].
+rewrite (polyI_quotP P_eq Q_eq) {P_eq Q_eq}; apply/has_baseP.
+pose I'' := ((@lshift m m')@:I) :|: ((@rshift m m')@:I').
+exists I''; apply/poly_eqP => x.
+rewrite !hpolyI_inE 3!hpolyEq_inE.
+rewrite andbACA; apply: congr2; first by rewrite -hpolyI_inE.
+apply/andP/forall_inP.
+- move => [ /forall_inP eq_P /forall_inP eq_Q ] i /setUP;
+    case; move/imsetP => [j j_in ->]; rewrite mul_col_mx ?col_mxEu ?col_mxEd;
+  by [apply: eq_P | apply: eq_Q].
+- move => eq''; split; apply/forall_inP => i i_in.
+  + move/(_ (lshift m' i)): eq''.
+    by rewrite in_setU mem_imset //= mul_col_mx 2!col_mxEu => /(_ isT).
+  + move/(_ (rshift m i)): eq''.
+    by rewrite in_setU mem_imset // orbT mul_col_mx 2!col_mxEd => /(_ isT).
+Qed.
 
+Fact concat_base_eq_polyI (P Q : 'poly[R]_n) (m m': nat) (A: 'M[R]_(m,n)) (A' : 'M[R]_(m',n))
+  (b: 'cV[R]_m) (b' : 'cV[R]_m') :
+  ((@lshift m m') @: {eq P on 'P(A,b)}) :|: ((@rshift m m') @: {eq Q on 'P(A',b')})
+                                        \subset {eq (polyI P Q) on (hpolyI 'P(A,b) 'P(A',b'))}.
+Proof.
+apply/subsetP => i /setUP
+  [/imsetP [i' /active_inP cond_in_eq ->] | /imsetP [i' /active_inP cond_in_eq ->]];
+apply/active_inP => x; rewrite mul_col_mx 2?col_mxEu 2?col_mxEd;
+move/polyI_inP => [x_in_P x_in_Q]; exact: cond_in_eq.
+Qed.
 
 End Intersection.
+
+Arguments eqU_subset_eq_polyI [R n base P Q].
+Arguments concat_base_eq_polyI [R n P Q m m' A A' b b'].
 
 Module FaceBase.
 
@@ -1121,7 +1148,7 @@ move => non_empty_polyI.
 apply/(face_baseP (hpoly_base P)).
 split.
 - exact: (same_base_polyI F_base F'_base).
-- apply: (subset_trans _ (eqU_subset_eq_polyI F_base F'_base)).
+- apply: (subset_trans _ eqU_subset_eq_polyI).
   rewrite -[{eq(P) on _}]setUid.
   exact: (setUSS eq_P_subset_eq_F eq_P_subset_eq_F').
 - exact: non_empty_polyI.
@@ -1141,7 +1168,7 @@ Definition face_of_obj := polyI P (poly_hyperplane c (opt_value c_bounded)).
 Fact face_of_objP x :
   reflect ({ over P, x minimizes c }) (x \in face_of_obj).
 Proof. (* RK *)
-rewrite in_polyI poly_hyperplane_inE.
+rewrite polyI_inE poly_hyperplane_inE.
 apply: (iffP idP) => [/andP [x_in_P x_optimal] | /opt_valueP H].
 - by apply/opt_valueP/andP; split.
 - move/andP: (H c_bounded) => [x_in_P x_optimal].
@@ -1161,6 +1188,8 @@ move => x; exact: (rwP face_of_objP).
 Qed.
 
 End Face.
+
+Arguments face_baseP [R n P Q base].
 
 Notation "\face P" := (face_set P).
 
