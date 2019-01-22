@@ -203,4 +203,10 @@ apply/non_emptyP; exists x; rewrite in_polyI poly_hyperplane_inE.
 by apply/andP; split; last apply/eqP.
 Admitted.
 
+Fact vf_fun_face (Q : 'poly[R]_n) :
+  Q \in \face P -> vf_fun Q \in \face (vf_fun P).
+Proof.
+
+
+
 End VertexFigure.
