@@ -863,15 +863,12 @@ Fact eqU_subset_eq_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
 Proof.
 case: base => m A b.
 move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
-apply/subsetP => j.
-rewrite in_setU.
-move/orP => [/active_inP cond_in_eq_P | /active_inP cond_in_eq_Q];
-  apply/active_inP => x x_in_polyI; rewrite in_polyI in x_in_polyI.
-- apply: (cond_in_eq_P x).
-  exact: (proj1 (andP x_in_polyI)).
-- apply: (cond_in_eq_Q x).
-  exact: (proj2 (andP x_in_polyI)).
+apply/subsetP => j /setUP [/active_inP cond_in_eq | /active_inP cond_in_eq];
+  apply/active_inP => x; rewrite in_polyI => /andP [x_in_P x_in_Q];
+  by apply: cond_in_eq.
 Qed.
+
+
 
 End Intersection.
 
