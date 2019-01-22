@@ -656,6 +656,31 @@ Qed.
 
 End HPolyEq.
 
+Section HPolyI.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition hpolyI (P Q : 'hpoly[R]_n) :=
+  let: 'P(AP,bP) := P in
+  let: 'P(AQ,bQ) := Q in
+  'P((col_mx AP AQ), (col_mx bP bQ)).
+
+Lemma hpolyI_inE (P Q : 'hpoly[R]_n) x :
+  (x \in hpolyI P Q) = ((x \in P) && (x \in Q)).
+Proof.
+case: P => mP AP bP; case: Q => mQ AQ bQ.
+by rewrite !inE mul_col_mx col_mx_lev.
+Qed.
+
+Lemma hpolyI_inP (P Q : 'hpoly[R]_n) x :
+  reflect (x \in P /\ x \in Q) (x \in hpolyI P Q).
+Proof.
+rewrite hpolyI_inE; exact: andP.
+Qed.
+
+End HPolyI.
+
 Arguments hpolyEq_of_set [R n].
 Prenex Implicits hpolyEq_of_set.
 Arguments hpolyEq_inP [R n x m A b J].
