@@ -832,7 +832,6 @@ rewrite -[F]hpolyK -[polyI _ _]hpolyK; apply/poly_eqP => x.
 by rewrite polyI_inE (in_face_affine_hull_rel _ F_is_face_of_P) hpolyK.
 Qed.*)
 
-
 Fact same_base_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base] -> [Q has \base base] ->
     [(polyI P Q) has \base base].
@@ -1321,35 +1320,29 @@ Lemma feasible_dirP d :
   reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d).
 Admitted.*)
 
-Lemma feasible_dir_pos_unbounded P d i :
-  non_empty P -> feasible_dir d P -> d i 0 > 0 ->
-    ~~ bounded (-delta_mx i 0) P.
+Lemma feasible_dir_unbounded P c d :
+  non_empty P -> feasible_dir d P -> '[c, d] < 0 ->
+    ~~ bounded c P. (* RK *)
 Proof.
-move => non_empty_P /(feasible_dirP _ non_empty_P) feasible_dir_d_P d_i_gt_0.
+move => non_empty_P /(feasible_dirP _ non_empty_P) feasible_dir_d_P d_decr_dir.
 apply/contraT; rewrite negbK.
 move/(bounded_lower_bound _ non_empty_P) => [K K_lower_bound].
 move/non_emptyP: non_empty_P => [x x_in_P].
-set λ := (1 - K - x i 0) * (d i 0)^-1.
+set λ := (K - '[ c, x] - 1) * ('[ c, d])^-1.
 have λ_gt_0: 0 < λ.
-  apply: divr_gt0; last exact: d_i_gt_0.
-  rewrite subr_gt0 ltr_subr_addr.
+  rewrite (ltr_ndivl_mulr _ _ d_decr_dir) mul0r subr_lt0.
   apply: (ler_lt_trans _ ltr01).
-  move: (K_lower_bound _ x_in_P).
-  by rewrite vdotNl vdotl_delta_mx -[- x i 0]add0r ler_subr_addr addrC.
+  rewrite subr_le0.
+  exact: (K_lower_bound _ x_in_P).
 move: (K_lower_bound _ (feasible_dir_d_P _ _ x_in_P (ltrW λ_gt_0))).
-rewrite vdotNl vdotl_delta_mx 2!mxE -mulrA mulVf;
-  last by apply: lt0r_neq0.
-by rewrite mulr1 ler_oppr -addrA addrC -2!ler_subr_addr subrr lerNgt ltr01.
+rewrite vdotDr vdotZr -mulrA mulVf;
+  last by apply: ltr0_neq0.
+by rewrite mulr1 -2!ler_subl_addl subrr oppr_ge0 lerNgt ltr01.
 Qed.
 
-Lemma feasible_dir_neg_unbounded P d i :
-  non_empty P -> feasible_dir (-d) P -> d i 0 < 0 ->
-    ~~ bounded (delta_mx i 0) P.
-Proof.
-Admitted.
-
 Lemma compact_pointed P :
-  non_empty P -> compact P -> pointed P.
+  non_empty P -> compact P ->
+    pointed P. (* RK *)
 Proof.
 move => non_empty_P.
 apply/contraTT.
@@ -1360,12 +1353,14 @@ rewrite negb_forall; apply/existsP.
 rewrite col_neq_0 in d_neq_0.
 move/existsP: d_neq_0 => [i d_i_neq_0].
 exists i.
-rewrite negb_and; apply/orP.
+rewrite negb_and; apply/orP; left.
 rewrite neqr_lt in d_i_neq_0.
 move/orP: d_i_neq_0 => d_i_neq_0.
-case: d_i_neq_0 => [d_i_lt_0 | d_i_bt_0].
-- by left; apply: (feasible_dir_neg_unbounded _ minus_d_feas_dir _).
-- by right; apply: (feasible_dir_pos_unbounded _ d_feas_dir _).
+case: d_i_neq_0 => [d_i_lt_0 | d_i_gt_0].
+- apply: (feasible_dir_unbounded non_empty_P d_feas_dir _).
+  by rewrite vdotl_delta_mx.
+- apply: (feasible_dir_unbounded non_empty_P minus_d_feas_dir _).
+  by rewrite vdotNr vdotl_delta_mx oppr_lt0.
 Qed.
 
 End Pointedness.
