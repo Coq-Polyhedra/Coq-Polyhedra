@@ -20,8 +20,11 @@ Reserved Notation "''poly_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
 Reserved Notation "{ 'eq' P 'on' base }" (at level 0, format "{ 'eq' P  'on'  base }").
 Reserved Notation "{ 'eq' P }" (at level 0, format "{ 'eq'  P }").
+Reserved Notation "{ 'eq_pt' P 'on' base }" (at level 0, format "{ 'eq_pt' P  'on'  base }").
+Reserved Notation "{ 'eq_pt' P }" (at level 0, format "{ 'eq_pt'  P }").
 Reserved Notation "[ P 'has' '\base' base ]" (at level 0, format "[ P  'has'  '\base'  base ]").
 Reserved Notation "[ 'poly' v ]" (at level 0, v at level 99, format "[ 'poly'  v ]").
+Reserved Notation "[ 'poly' v ; w ]" (at level 0, v at level 99, format "[ 'poly'  v ;  w ]").
 Reserved Notation "\face P " (at level 50, format "\face  P").
 
 Local Open Scope ring_scope.
@@ -219,11 +222,13 @@ Lemma is_properly_included_inP (P Q : 'poly[R]_n) :
   reflect (is_included_in P Q /\ (exists2 x, x \in Q & x \notin P)) (is_properly_included_in P Q).
 Admitted.
 
-Lemma is_prop_included_inP (P Q : 'poly[R]_n) :
-  reflect {subset P <= Q} (is_included_in P Q).
-Proof.
-exact: (equivP (HPrim.is_included_inP (hpoly P) (hpoly Q))).
-Qed.
+Lemma proper_subset_trans (P Q Q' : 'poly[R]_n) :
+  is_properly_included_in P Q -> is_included_in Q Q' -> is_properly_included_in P Q'.
+Admitted.
+
+Lemma subset_proper_trans (P Q Q' : 'poly[R]_n) :
+  is_included_in P Q -> is_properly_included_in Q Q' -> is_properly_included_in P Q'.
+Admitted.
 
 Lemma contains_non_empty (P Q : 'poly[R]_n) :
   non_empty P -> is_included_in P Q -> non_empty Q. (* RK *)
@@ -488,6 +493,52 @@ End PolyPoint.
 
 Notation "[ 'poly' v ]" := (poly_point v).
 
+Section Segments.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition poly_segment (v w: 'cV[R]_n) := '[ [hpoly v; w] ].
+
+Notation "[ 'poly' v ; w ]" := (poly_segment v w).
+
+Lemma poly_segment_inP (v w x : 'cV[R]_n) :
+  reflect (exists2 a, 0 <= a <= 1 & x = (1-a) *: v + a *: v) (x \in [poly v; w]).
+Proof.
+rewrite mem_quotP; exact: hpoly_segment_inP.
+Qed.
+
+Lemma poly_segment_point v : [poly v; v] = [poly v].
+Proof.
+by apply/poly_eqP; rewrite (hpoly_segment_point v).
+Qed.
+
+Lemma poly_segment_eq_conv v w :
+  [poly v; w] =i \conv([fset v; w]%fset).
+Admitted.
+
+Definition osegm v w := [pred x | x \in [poly v; w] & ((x != v) && (x != w))].
+
+Lemma osegm_inP (v w x: 'cV[R]_n) :
+  reflect (exists2 a, 0 < a < 1 & x = (1-a) *: v + a *: v) (x \in [poly v; w]).
+Admitted.
+
+Lemma osegm_subset v w :
+  {subset (osegm v w) <= [poly v; w]}.
+Admitted.
+
+Lemma linear_ivt (c v w : 'cV[R]_n) a :
+  '[c,v] < a -> '[c,w] > a -> exists2 x, x \in osegm v w & '[c,x] = a.
+Admitted.
+
+Lemma segm_subset (P: 'poly[R]_n) (v w: 'cV[R]_n) :
+  v \in P -> w \in P -> is_included_in [poly v; w] P.
+Admitted.
+
+End Segments.
+
+Notation "[ 'poly' v ; w ]" := (poly_segment v w).
+
 Section Base.
 
 Variable R : realFieldType.
@@ -555,7 +606,7 @@ Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
 Lemma active_inP i :
-  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq(P) on 'P(A,b) }).
+  reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq P on 'P(A,b) }).
 Proof.
 rewrite inE; apply/(equivP is_included_in_hyperplaneP).
 by split; move => H x; move/(_ x): H; rewrite row_vdot.
@@ -598,6 +649,12 @@ apply: (iffP idP); last first.
   + exists x; split; first by done.
     by rewrite !vdotNl !row_vdot ltr_opp2 in Ai_x_gt_bi.
 Qed.
+
+Lemma active_osegm v w x i :
+  v \in P -> w \in P -> x \in osegm v w ->
+    (((A *m x) i 0 > b i 0) = ((A *m v) i 0 > b i 0) || ((A *m w) i 0 > b i 0))
+  * (((A *m x) i 0 == b i 0) = ((A *m v) i 0 == b i 0) && ((A *m w) i 0 == b i 0)).
+Admitted.
 
 End ActiveInPn.
 
@@ -668,7 +725,6 @@ End Base.
 Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
 Notation "[ P 'has' '\base' base ]" := (has_base P base).
-
 
 Section PolyHyperplane. (* RK *)
 

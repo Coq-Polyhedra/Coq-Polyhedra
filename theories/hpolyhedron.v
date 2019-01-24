@@ -38,6 +38,7 @@ Reserved Notation "''hpolyNF(' base )" (at level 8, base at level 99, format "''
 Reserved Notation "''hpolyNF[' R ]_ n" (at level 8, n at level 2, format "''hpolyNF[' R ]_ n").
 Reserved Notation "''hpolyNF_' n" (at level 8, n at level 2).
 Reserved Notation "[ 'hpoly' v ]" (at level 0, v at level 99, format "[ 'hpoly'  v ]").
+Reserved Notation "[ 'hpoly' v ; w ]" (at level 0, v at level 99, format "[ 'hpoly'  v ;  w ]").
 
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
@@ -681,6 +682,30 @@ Qed.
 
 End HPolyI.
 
+Notation "[ 'hpoly' v ]" := (hpoly_point v).
+
+Section Segments.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Fact segment_key : unit. by []. Qed.
+
+Definition hpoly_segment (v w : 'cV[R]_n) :=
+  locked_with segment_key ('P(1%:M, 0)): 'hpoly[R]_n.
+(* XA: to be changed by the correct definition, which is not trivial *)
+
+Notation "[ 'hpoly' v ; w ]" := (hpoly_segment v w).
+
+Lemma hpoly_segment_inP (v w x: 'cV[R]_n) :
+  reflect (exists2 a, 0 <= a <= 1 & x = (1-a) *: v + a *: v) (x \in [hpoly v; w]).
+Admitted.
+
+Lemma hpoly_segment_point v : [hpoly v; v] = [hpoly v].
+Admitted.
+
+End Segments.
+
 Arguments hpolyEq_of_set [R n].
 Prenex Implicits hpolyEq_of_set.
 Arguments hpolyEq_inP [R n x m A b J].
@@ -688,6 +713,7 @@ Arguments hpolyEq_non_emptyPn_cert [R n m A b J].
 Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
 Notation "[ 'hpoly' v ]" := (hpoly_point v).
+Notation "[ 'hpoly' v ; w ]" := (hpoly_segment v w).
 
 Definition inE := (hpoly_point_inE, hpolyEqT_inE, hpolyEq_inE, inE).
 

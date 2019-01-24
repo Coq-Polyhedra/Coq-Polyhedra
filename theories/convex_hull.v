@@ -277,6 +277,12 @@ Qed.
 
 End ConvexHullProp.
 
+Section Segments. (* XA: ideally, segments should be defined as hpolyhedra (and then polyhedra)
+                   * however, the H-representation is not easy to deal with                    *)
+
+
+End Segments.
+
 Section Separation.
 
 Variable R : realFieldType.
@@ -378,3 +384,24 @@ apply: (iffP hpolyEq_non_emptyPn_cert).
 Qed.
 
 End Separation.
+
+(*
+Section Convexity.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition convex (P: pred 'cV[R]_n) :=
+  forall v w, P v -> P w -> (forall x, x \in \conv([fset v; w]%fset) -> P x).
+
+Lemma convexP (P: pred 'cV[R]_n) (V : {fset 'cV[R]_n}) :
+  (forall v, v \in V -> P v) -> forall x, (x \in \conv V -> P x).
+Admitted.
+
+Lemma convex_poly (P : 'hpoly[R]_n) : convex (mem P).
+Admitted.
+
+Lemma convex_linear_fun (c: 'cV[R]_n) (d: R) : convex (fun x => '[c,x] >= d).
+Admitted.
+
+End Convexity.*)
