@@ -177,7 +177,7 @@ move => Q_base; apply: concat_base_polyI; by [done | exact: poly_hyperplane_base
 Qed.
 
 Fact vf_fun_vert (Q : 'poly[R]_n) :
-  Q \in \face P -> is_properly_included_in [poly v] Q -> ([fset v] `<` \vert Q)%fset.
+  Q \in \face P -> ([poly v] < Q)%PH -> ([fset v] `<` \vert Q)%fset.
 Proof.
 move => Q_face /andP [v_in_Q Q_not_sub_v].
 rewrite poly_point_incl in v_in_Q.
@@ -188,12 +188,12 @@ move: Q_not_sub_v; apply: contraNN; rewrite fsubset1 => /orP.
 case; last by move/eqP => vertQ_eq_fset0; rewrite vertQ_eq_fset0 in_fsetE in v_vtx.
 move/eqP => vertQ_eq_v; move: (conv_vert (compact_face P_compact Q_face)).
 rewrite vertQ_eq_v => Q_eq_v.
-apply/is_included_inP; move => x; rewrite Q_eq_v => /convP1 ->.
+apply/poly_subsetP; move => x; rewrite Q_eq_v => /convP1 ->.
 exact: poly_point_self_in.
 Qed.
 
 Fact vf_fun_non_empty (Q : 'poly[R]_n) :
-  Q \in \face P -> is_properly_included_in [poly v] Q -> non_empty (vf_fun Q).
+  Q \in \face P -> ([poly v] < Q)%PH -> non_empty (vf_fun Q).
 Proof.
 move => Q_face v_proper_Q.
 move: (vf_fun_vert Q_face v_proper_Q) => /andP [v_vtx /fsubsetPn [w w_vtx w_neq_v]].
@@ -204,7 +204,7 @@ have c_w_gt_alpha : '[c,w] > alpha.
   by apply/(fsubsetP (vertex_face_inclusion Q_face)).
 move: (linear_ivt c_v_lt_alpha c_w_gt_alpha) => [x /osegm_subset x_in_v_w c_x_eq_alpha].
 have x_in_Q : x \in Q.
-- apply/(is_included_inP (segm_subset _ _))/x_in_v_w; exact: vertex_inclusion.
+- apply/(poly_subsetP (segm_subset _ _))/x_in_v_w; exact: vertex_inclusion.
 apply/non_emptyP; exists x; rewrite polyI_inE poly_hyperplane_inE.
 by apply/andP; split; last apply/eqP.
 Qed.
@@ -216,7 +216,7 @@ Let base := 'P(A,b).
 Hypothesis P_has_base : [P has \base base].
 
 Fact vf_fun_eq (Q : 'poly[R]_n) :
-  Q \in \face P -> is_properly_included_in [poly v] Q ->
+  Q \in \face P -> ([poly v] < Q)%PH ->
     {eq (vf_fun Q) on (hpolyI base H_base)} = (rshift m ord0) |: (lshift 1) @: {eq Q on 'P(A,b) } .
 Proof.
 move => Q_face v_proper_Q.
@@ -251,7 +251,7 @@ apply/eqP; rewrite eq_sym eqEsubset; apply/andP; split.
       apply: (fsubsetP (fsetSD _ _) _ w_vtx); exact: vertex_face_inclusion.
     move: (linear_ivt c_v_lt_alpha c_w_gt_alpha) => [x x_in_v_w c_x_eq_alpha].
     have x_in_Q : x \in Q.
-    * by apply/(is_included_inP (segm_subset _ _)): (osegm_subset x_in_v_w).
+    * by apply/(poly_subsetP (segm_subset _ _)): (osegm_subset x_in_v_w).
     apply/active_inPn; first exact: vf_fun_base; exists x; split.
     * apply/polyI_inP; split; by [ done | rewrite poly_hyperplane_inE; apply/eqP ].
     * rewrite mul_col_mx 2!col_mxEu.
@@ -260,7 +260,7 @@ Qed.
 
 
 Fact vf_fun_face (Q : 'poly[R]_n) :
-  Q \in \face P -> is_properly_included_in [poly v] Q -> vf_fun Q \in \face (vf_fun P).
+  Q \in \face P -> ([poly v] < Q)%PH -> vf_fun Q \in \face (vf_fun P).
 Proof.
 move => Q_face v_proper_Q.
 move/(face_baseP P_has_base): (Q_face) => [Q_base eqP_sub_eq_Q _].
@@ -269,10 +269,13 @@ apply/(face_baseP (vf_fun_base P_has_base)); split.
 - rewrite 2?vf_fun_eq; try by done.
   + by apply: setUS; apply: imsetS.
   + exact: self_face.
-  + apply: (proper_subset_trans v_proper_Q).
-    apply/is_included_inP; exact: face_subset.
+  + apply: (poly_proper_subset v_proper_Q).
+    apply/poly_subsetP; exact: face_subset.
   + exact: vf_fun_non_empty.
 Qed.
 
+Fact vf_fun_inj : {on (\face P), injective vf_fun}.
+Proof.
+move => Q Q'.
 
 End VertexFigure.

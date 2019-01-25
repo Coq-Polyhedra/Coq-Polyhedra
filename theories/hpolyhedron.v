@@ -440,20 +440,20 @@ Arguments unboundedP [R n c P].
 Arguments opt_valueP [R n c P].
 Prenex Implicits non_emptyP boundedP bounded_lower_bound unboundedP opt_valueP.
 
-Section Inclusion.
+Section Subset.
 
 Variable R : realFieldType.
 Variable n : nat.
 Variable P : 'hpoly[R]_n.
 
-Definition is_included_in_halfspace c d :=
+Definition hpoly_subset_halfspace c d :=
   non_empty P ==> (if (@idP (bounded c P)) is ReflectT H then opt_value H >= d else false).
 
-Lemma is_included_in_halfspaceP c d :
+Lemma hpoly_subset_halfspaceP c d :
   reflect (forall x, x \in P -> '[c,x] >= d)
-          (is_included_in_halfspace c d).
+          (hpoly_subset_halfspace c d).
 Proof.
-rewrite /is_included_in_halfspace.
+rewrite /hpoly_subset_halfspace.
 case: {-}_/idP => [H | c_unbounded].
 - apply: (iffP implyP).
   + move/bounded_opt_value : (H) => [[x] [x_in_P x_val] opt_val].
@@ -469,50 +469,50 @@ case: {-}_/idP => [H | c_unbounded].
   + by move => x /(intro_existsT non_emptyP).
 Qed.
 
-Definition is_included_in_hyperplane c d :=
-  (is_included_in_halfspace c d) && (is_included_in_halfspace (-c) (-d)).
+Definition hpoly_subset_hyperplane c d :=
+  (hpoly_subset_halfspace c d) && (hpoly_subset_halfspace (-c) (-d)).
 
-Lemma is_included_in_hyperplaneP c d :
+Lemma hpoly_subset_hyperplaneP c d :
   reflect (forall x, x \in P -> '[c,x] = d)
-          (is_included_in_hyperplane c d).
+          (hpoly_subset_hyperplane c d).
 Proof.
 apply: (iffP idP) => [/andP [is_included is_included_opp] x x_in_P | sat_eq].
 - apply/eqP; rewrite eqr_le.
   apply/andP; split.
-  + move: ((is_included_in_halfspaceP _ _ is_included_opp) x x_in_P).
+  + move: ((hpoly_subset_halfspaceP _ _ is_included_opp) x x_in_P).
     by rewrite vdotNl ler_opp2.
-  + exact: ((is_included_in_halfspaceP _ _ is_included) x x_in_P).
-- apply/andP; split; apply/is_included_in_halfspaceP => x x_in_P.
+  + exact: ((hpoly_subset_halfspaceP _ _ is_included) x x_in_P).
+- apply/andP; split; apply/hpoly_subset_halfspaceP => x x_in_P.
   + by rewrite (sat_eq _ x_in_P).
   + by rewrite -(sat_eq _ x_in_P) vdotNl.
 Qed.
 
-Definition is_included_in Q :=
+Definition hpoly_subset Q :=
   let: 'P(A,b) := Q in
-    [forall i, is_included_in_halfspace (row i A)^T (b i 0)].
+    [forall i, hpoly_subset_halfspace (row i A)^T (b i 0)].
 
-Lemma is_included_inP Q :
-  reflect {subset P <= Q} (is_included_in Q).
+Lemma hpoly_subsetP Q :
+  reflect {subset P <= Q} (hpoly_subset Q).
 Proof.
 case: Q => m A b.
 apply: (iffP idP).
 - move => /forallP H x Hx.
   apply/forallP => i.
-  move/is_included_in_halfspaceP: (H i) => Hi.
+  move/hpoly_subset_halfspaceP: (H i) => Hi.
   move: (Hi x Hx).
   by rewrite -[(A *m x) i 0]vdotl_delta_mx vdot_mulmx rowE trmx_mul trmx_delta.
 - move => H.
   apply/forallP => i.
-  apply/is_included_in_halfspaceP => x Hx.
+  apply/hpoly_subset_halfspaceP => x Hx.
   move/forallP: (H x Hx) => Hx'.
   move: (Hx' i).
   by rewrite -[(A *m x) i 0]vdotl_delta_mx vdot_mulmx rowE trmx_mul trmx_delta.
 Qed.
 
-End Inclusion.
+End Subset.
 
-Arguments is_included_in_hyperplaneP [R n P c d].
-Prenex Implicits is_included_in_hyperplaneP.
+Arguments hpoly_subset_hyperplaneP [R n P c d].
+Prenex Implicits hpoly_subset_hyperplaneP.
 
 Section ExtensionalEquality.
 
@@ -520,16 +520,16 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition hpoly_ext_eq : rel 'hpoly[R]_n :=
-    fun P Q => (is_included_in P Q) && (is_included_in Q P).
+    fun P Q => (hpoly_subset P Q) && (hpoly_subset Q P).
 
 Definition hpoly_ext_eqP P Q :
   reflect (P =i Q) (hpoly_ext_eq P Q).
 Proof.
 apply: (iffP idP).
-- move/andP => [/is_included_inP H1 /is_included_inP H2] x.
+- move/andP => [/hpoly_subsetP H1 /hpoly_subsetP H2] x.
   apply/idP/idP; [exact: (H1 x) | exact: (H2 x)].
 - move => H.
-  by apply/andP; split; apply/is_included_inP => x; rewrite (H x).
+  by apply/andP; split; apply/hpoly_subsetP => x; rewrite (H x).
 Qed.
 
 Definition hpolyExtEqMixin := ExtEqMixin hpoly_ext_eqP.
@@ -766,7 +766,7 @@ Qed.
 
 Definition active_set (base : 'hpoly[R]_n) (Q : 'hpolyEq(base)) :=
   let: 'P(A,b) as P' := base return {set 'I_(#ineq P')} in
-    [ set i : 'I_(#ineq P') | is_included_in_hyperplane Q (row i A)^T (b i 0) ].
+    [ set i : 'I_(#ineq P') | hpoly_subset_hyperplane Q (row i A)^T (b i 0) ].
 
 Notation "\active Q" := (active_set Q).
 
@@ -777,9 +777,9 @@ Proof.
 apply: (iffP idP) => [i_in_implicit_eq_set x x_in_P | ineq_i_is_sat].
 - rewrite inE in i_in_implicit_eq_set.
   rewrite -row_vdot.
-  exact: ((is_included_in_hyperplaneP _ _  _ i_in_implicit_eq_set) x x_in_P).
+  exact: ((hpoly_subset_hyperplaneP _ _  _ i_in_implicit_eq_set) x x_in_P).
 - rewrite inE.
-  apply/is_included_in_hyperplaneP => x x_in_P.
+  apply/hpoly_subset_hyperplaneP => x x_in_P.
   rewrite row_vdot.
   by apply: ineq_i_is_sat.
 Qed.
