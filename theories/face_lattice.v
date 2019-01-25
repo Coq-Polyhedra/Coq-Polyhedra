@@ -156,6 +156,7 @@ Hypothesis P_compact : compact P.
 
 Variable v : 'cV[R]_n.
 Hypothesis v_vert : v \in \vert P.
+Hypothesis v_proper_P : ([poly v] < P)%PH.
 Variable c : 'cV[R]_n.
 Variable alpha : R.
 Hypothesis c_v_lt_alpha : '[c,v] < alpha.
@@ -168,7 +169,7 @@ Let H_base := 'P(c^T, alpha%:M).
 Fact H_has_base : [H has \base H_base].
   by exact: poly_hyperplane_base.
 
-Definition vf_fun (Q : 'poly[R]_n) := polyI Q H.
+Definition vf_fun (Q : 'poly[R]_n) := (Q && H)%PH.
 
 Fact vf_fun_base (Q : 'poly[R]_n) (base: 'hpoly[R]_n) :
   [Q has \base base] -> [vf_fun Q has \base (hpolyI base H_base)].
@@ -176,11 +177,11 @@ Proof.
 move => Q_base; apply: concat_base_polyI; by [done | exact: poly_hyperplane_base].
 Qed.
 
-Fact vf_fun_vert (Q : 'poly[R]_n) :
+Fact vf_fun_vert (Q : 'poly[R]_n) : (* TODO: to be rewritten in terms of more general faces *)
   Q \in \face P -> ([poly v] < Q)%PH -> ([fset v] `<` \vert Q)%fset.
 Proof.
 move => Q_face /andP [v_in_Q Q_not_sub_v].
-rewrite poly_point_incl in v_in_Q.
+rewrite poly_point_subset in v_in_Q.
 have v_vtx : v \in \vert Q
   by rewrite (vertex_set_face Q_face) in_fsetE /=; apply/andP; split.
 apply/andP; split; first by rewrite fsub1set.
@@ -220,7 +221,7 @@ Fact vf_fun_eq (Q : 'poly[R]_n) :
     {eq (vf_fun Q) on (hpolyI base H_base)} = (rshift m ord0) |: (lshift 1) @: {eq Q on 'P(A,b) } .
 Proof.
 move => Q_face v_proper_Q.
-move: (Q_face) => /(face_baseP P_has_base) [Q_base _ _].
+move/(face_has_base P_has_base): (Q_face) => Q_base.
 apply/eqP; rewrite eq_sym eqEsubset; apply/andP; split.
 - rewrite setUC.
   suff ->: [set rshift m ord0] = (@rshift m 1) @: {eq H on H_base} by exact: concat_base_eq_polyI.
@@ -269,13 +270,51 @@ apply/(face_baseP (vf_fun_base P_has_base)); split.
 - rewrite 2?vf_fun_eq; try by done.
   + by apply: setUS; apply: imsetS.
   + exact: self_face.
-  + apply: (poly_proper_subset v_proper_Q).
-    apply/poly_subsetP; exact: face_subset.
   + exact: vf_fun_non_empty.
 Qed.
 
-Fact vf_fun_inj : {on (\face P), injective vf_fun}.
+Fact vf_fun_inj (Q Q' : 'poly[R]_n) :
+  Q \in \face P -> ([poly v] < Q)%PH ->
+        Q' \in \face P -> ([poly v] < Q')%PH -> vf_fun Q = vf_fun Q' -> Q = Q'.
 Proof.
-move => Q Q'.
+move => Q_face v_proper_Q Q'_face v_proper_Q' vf_Q_eq_vf_Q'.
+move/(face_has_base P_has_base): (Q_face) => Q_base.
+move/(face_has_base P_has_base): (Q'_face) => Q'_base.
+apply/(eq_on_base_inj Q_base Q'_base).
+move: (vf_fun_eq Q_face v_proper_Q) => eq_vf_Q.
+move: (vf_fun_eq Q'_face v_proper_Q'); rewrite -vf_Q_eq_vf_Q' eq_vf_Q.
+set ord_m := rshift _ _.
+move/(congr1 (fun S => S :\ ord_m)); rewrite 2?setU1K;
+  try by apply/negP; move/imsetP => [j _];
+         apply/eqP; rewrite eq_sym; apply: lrshift_distinct.
+by move/(imset_inj (@lshift_inj m 1)).
+Qed.
+
+Fact vf_fun_onto (Q : 'poly[R]_n) :
+  Q \in \face (vf_fun P) -> exists Q', [/\ Q' \in \face P, ([poly v] < Q)%PH & vf_fun Q = Q'].
+Proof.
+move: (vf_fun_base P_has_base) => vf_P_base.
+move/(face_baseP vf_P_base) => [Q_base eq_sub Q_non_empty].
+rewrite vf_fun_eq // in eq_sub; last exact: self_face.
+set I := (@lshift m 1) @^-1: {eq Q on (hpolyI base H_base)}.
+pose Q' := '['P^=(base; I)]; exists Q'; split.
+- apply/(face_baseP P_has_base); split.
+  + by apply/has_baseP; exists I.
+  + suff eq_P_sub_I : {eq P on base} \subset I
+      by apply: (subset_trans eq_P_sub_I); exact: activeP.
+    rewrite -sub_imset_pre.
+    apply: (subset_trans _ eq_sub); exact: subsetUr.
+  + suff: (Q <= Q')%PH by exact: non_empty_subset.
+    apply/poly_subsetP => x.
+    move: (hpoly_of_baseP Q_base) ->; rewrite 2!mem_quotP.
+    move/hpolyEq_inP => [x_in_base x_eq].
+    apply/hpolyEq_inP; split.
+    * suff /hpolyI_inP [? _]: x \in hpolyI base H_base by done.
+      exact: x_in_base.
+    * move => i; rewrite inE => /x_eq.
+      by rewrite mul_col_mx 2!col_mxEu.
+- admit.
+- apply:.
+
 
 End VertexFigure.
