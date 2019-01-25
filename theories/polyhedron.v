@@ -30,6 +30,8 @@ Reserved Notation "\face P " (at level 50, format "\face  P").
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
+Delimit Scope poly_scope with PH.
+
 Section QuotDef.
 
 Variable R : realFieldType.
@@ -176,91 +178,93 @@ apply/(sameP non_emptyP)/(equivP HPrim.non_emptyP).
 by split; move => [x x_in]; exists x; rewrite ?quotE in x_in *.
 Qed.
 
-Definition is_included_in_hyperplane (P : 'poly[R]_n) c d :=
-  HPrim.is_included_in_hyperplane (hpoly P) c d.
+Definition poly_subset_hyperplane (P : 'poly[R]_n) c d :=
+  HPrim.hpoly_subset_hyperplane (hpoly P) c d.
 
-Lemma is_included_in_hyperplaneP (P : 'poly[R]_n) c d :
+Lemma poly_subset_hyperplaneP (P : 'poly[R]_n) c d :
   reflect (forall x : 'cV_n, x \in P -> '[ c, x] = d)
-          (is_included_in_hyperplane P c d).
+          (poly_subset_hyperplane P c d).
 Proof.
-exact: (equivP HPrim.is_included_in_hyperplaneP).
+exact: (equivP HPrim.hpoly_subset_hyperplaneP).
 Qed.
 
-Arguments is_included_in_hyperplaneP [P c d].
+Arguments poly_subset_hyperplaneP [P c d].
 
-Lemma is_included_in_hyperplane_quotP (hP : 'hpoly[R]_n) c d :
-  is_included_in_hyperplane '[hP] c d = HPrim.is_included_in_hyperplane hP c d.
+Lemma poly_subset_hyperplane_quotP (hP : 'hpoly[R]_n) c d :
+  poly_subset_hyperplane '[hP] c d = HPrim.hpoly_subset_hyperplane hP c d.
 Proof.
-apply/(sameP is_included_in_hyperplaneP)/(equivP HPrim.is_included_in_hyperplaneP).
+apply/(sameP poly_subset_hyperplaneP)/(equivP HPrim.hpoly_subset_hyperplaneP).
 by split; move => Hsubset x; move/(_ x): Hsubset; rewrite quotE.
 Qed.
 
-Definition is_included_in (P Q : 'poly[R]_n) :=
-  HPrim.is_included_in (hpoly P) (hpoly Q).
+Definition poly_subset (P Q : 'poly[R]_n) :=
+  HPrim.hpoly_subset (hpoly P) (hpoly Q).
 
-Lemma is_included_inP (P Q : 'poly[R]_n) :
-  reflect {subset P <= Q} (is_included_in P Q).
+Notation "P <= Q" := (poly_subset P Q) : poly_scope.
+
+Lemma poly_subsetP (P Q : 'poly[R]_n) :
+  reflect {subset P <= Q} (P <= Q)%PH.
 Proof.
-exact: (equivP (HPrim.is_included_inP (hpoly P) (hpoly Q))).
+exact: (equivP (HPrim.hpoly_subsetP (hpoly P) (hpoly Q))).
 Qed.
 
-Arguments is_included_inP [P Q].
+Arguments poly_subsetP [P Q].
 
-
-Lemma is_included_in_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
-  P = '[hP] -> Q = '[hQ] -> is_included_in P Q = HPrim.is_included_in hP hQ.
+Lemma poly_subset_quotP (P Q : 'poly[R]_n) (hP hQ : 'hpoly[R]_n) :
+  P = '[hP] -> Q = '[hQ] -> poly_subset P Q = HPrim.hpoly_subset hP hQ.
 Proof.
 move => PeqClasshP QeqClasshQ.
-apply/(sameP is_included_inP)/(equivP (HPrim.is_included_inP hP hQ)).
+apply/(sameP poly_subsetP)/(equivP (HPrim.hpoly_subsetP hP hQ)).
 by split; move => Hsubset x; move/(_ x): Hsubset; rewrite PeqClasshP QeqClasshQ 2!quotE.
 Qed.
 
-Definition is_properly_included_in (P Q : 'poly[R]_n) :=
-  (is_included_in P Q) && (~~ (is_included_in Q P)).
-
-Lemma is_properly_included_inP (P Q : 'poly[R]_n) :
-  reflect (is_included_in P Q /\ (exists2 x, x \in Q & x \notin P)) (is_properly_included_in P Q).
+Lemma poly_subset_trans (P1 P2 P3 : 'poly[R]_n) :
+  (P1 <= P2)%PH -> (P2 <= P3)%PH -> (P1 <= P3)%PH.
 Admitted.
-
-Lemma proper_subset_trans (P Q Q' : 'poly[R]_n) :
-  is_properly_included_in P Q -> is_included_in Q Q' -> is_properly_included_in P Q'.
-Admitted.
-
-Lemma subset_proper_trans (P Q Q' : 'poly[R]_n) :
-  is_included_in P Q -> is_properly_included_in Q Q' -> is_properly_included_in P Q'.
-Admitted.
-
-Lemma contains_non_empty (P Q : 'poly[R]_n) :
-  non_empty P -> is_included_in P Q -> non_empty Q. (* RK *)
-Proof.
-move/non_emptyP => [x x_in_P].
-move/is_included_inP => P_is_included_in_Q.
-apply/non_emptyP.
-exists x.
-by apply/P_is_included_in_Q.
-Qed.
 
 Lemma empty_is_contained (P Q : 'poly[R]_n) :
-  ~~ non_empty P -> is_included_in P Q. (* RK *)
+  ~~ non_empty P -> (P <= Q)%PH. (* RK *)
 Proof.
 move/non_emptyPn => P_empty.
-by apply/is_included_inP => x; rewrite P_empty inE.
+by apply/poly_subsetP => x; rewrite P_empty inE.
 Qed.
 
-Lemma is_included_in_refl (P : 'poly[R]_n) :
-  is_included_in P P. (* RK *)
+Lemma poly_subset_refl (P : 'poly[R]_n) :
+  (P <= P)%PH. (* RK *)
 Proof.
-by apply/is_included_inP.
+by apply/poly_subsetP.
 Qed.
 
-Lemma is_included_in_trans (P Q S : 'poly[R]_n) :
-  is_included_in P Q -> is_included_in Q S ->
-    is_included_in P S. (* RK *)
+Lemma non_empty_subset (P Q : 'poly[R]_n) :
+  non_empty P -> (P <= Q)%PH -> non_empty Q. (* RK *)
 Proof.
-move => /is_included_inP P_incl_Q /is_included_inP Q_incl_R.
-apply/is_included_inP => x.
-by move/P_incl_Q/Q_incl_R.
+move/non_emptyP => [x x_in_P].
+move/poly_subsetP => P_poly_subset_Q.
+apply/non_emptyP.
+exists x.
+by apply/P_poly_subset_Q.
 Qed.
+
+Definition poly_proper (P Q : 'poly[R]_n) :=
+  ((P <= Q) && ~~ (Q <= P))%PH.
+
+Notation "P < Q" := (poly_proper P Q) : poly_scope.
+
+Lemma poly_properP (P Q : 'poly[R]_n) :
+  reflect ((P <= Q)%PH /\ (exists2 x, x \in Q & x \notin P)) (P < Q)%PH.
+Admitted.
+
+Lemma poly_proper_subset (P1 P2 P3 : 'poly[R]_n) :
+  (P1 < P2)%PH -> (P2 <= P3)%PH -> (P1 < P3)%PH.
+Admitted.
+
+Lemma poly_subset_proper (P1 P2 P3 : 'poly[R]_n) :
+  (P1 <= P2)%PH -> (P2 < P3)%PH -> (P1 < P3)%PH.
+Admitted.
+
+Lemma poly_proper_trans (P1 P2 P3 : 'poly[R]_n) :
+  (P1 < P2)%PH -> (P2 < P3)%PH -> (P1 < P3)%PH.
+Admitted.
 
 Variable c : 'cV[R]_n.
 
@@ -408,12 +412,15 @@ Qed.
 
 End Lift.
 
-Arguments is_included_inP [R n P Q].
-Prenex Implicits is_included_inP.
-Arguments is_included_in_hyperplaneP [R n P c d].
-Prenex Implicits is_included_in_hyperplaneP.
+Arguments poly_subsetP [R n P Q].
+Prenex Implicits poly_subsetP.
+Arguments poly_subset_hyperplaneP [R n P c d].
+Prenex Implicits poly_subset_hyperplaneP.
 Arguments non_emptyP [R n P].
 Prenex Implicits non_emptyP.
+
+Notation "P <= Q" := (poly_subset P Q) : poly_scope.
+Notation "P < Q" := (poly_proper P Q) : poly_scope.
 
 Section PolyProp.
 
@@ -481,10 +488,10 @@ move/pick_pointP: (poly_point_non_empty v).
 by apply/poly_point_inP.
 Qed.
 
-Lemma poly_point_incl (v : 'cV[R]_n) (P : 'poly[R]_n) :
-  is_included_in [poly v] P = (v \in P).
+Lemma poly_point_subset (v : 'cV[R]_n) (P : 'poly[R]_n) :
+  ([poly v] <= P)%PH = (v \in P).
 Proof.
-apply: (sameP is_included_inP); apply: (iffP idP).
+apply: (sameP poly_subsetP); apply: (iffP idP).
 - by move => v_in_P x /poly_point_inP ->.
 - by move/(_ _  (poly_point_self_in _)).
 Qed.
@@ -532,7 +539,7 @@ Lemma linear_ivt (c v w : 'cV[R]_n) a :
 Admitted.
 
 Lemma segm_subset (P: 'poly[R]_n) (v w: 'cV[R]_n) :
-  v \in P -> w \in P -> is_included_in [poly v; w] P.
+  v \in P -> w \in P -> ([poly v; w] <= P)%PH.
 Admitted.
 
 End Segments.
@@ -593,7 +600,7 @@ Qed.
 
 Definition active (P : 'poly[R]_n) base :=
   let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
-    [ set i: 'I_(#ineq base) | is_included_in_hyperplane P (row i A)^T (b i 0) ].
+    [ set i: 'I_(#ineq base) | poly_subset_hyperplane P (row i A)^T (b i 0) ].
 
 Notation "{ 'eq' P 'on' base }" := (active P base).
 Notation "{ 'eq' P }" := (active P _).
@@ -608,7 +615,7 @@ Variable b : 'cV[R]_m.
 Lemma active_inP i :
   reflect (forall x, x \in P -> (A *m x) i 0 = b i 0) (i \in { eq P on 'P(A,b) }).
 Proof.
-rewrite inE; apply/(equivP is_included_in_hyperplaneP).
+rewrite inE; apply/(equivP poly_subset_hyperplaneP).
 by split; move => H x; move/(_ x): H; rewrite row_vdot.
 Qed.
 
@@ -699,9 +706,9 @@ Prenex Implicits activeP.
 Arguments hpoly_of_baseP [P base].
 Prenex Implicits hpoly_of_baseP.
 
-Section InclusionOnBase.
+Section SubsetOnBase.
 
-Lemma inclusion_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
+Lemma subset_on_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] -> [Q has \base base] ->
     reflect {subset P <= Q} ({ eq Q on base } \subset { eq P on base }).
 Proof.
@@ -718,7 +725,7 @@ apply: (iffP idP) => [eqQ_sub_eqP| incl].
   by rewrite (hpoly_of_baseP P_base) in x_in_P.
 Qed.
 
-End InclusionOnBase.
+End SubsetOnBase.
 
 End Base.
 
@@ -799,59 +806,59 @@ by case: (x \in P).
 Qed.
 
 Fact includedIl (P Q : 'poly[R]_n) :
-  is_included_in (polyI P Q) P.
+  ((polyI P Q) <= P)%PH.
 Proof.
-apply/is_included_inP => x.
+apply/poly_subsetP => x.
 rewrite polyI_inE.
 by move/andP/proj1.
 Qed.
 
 Fact includedIr (P Q : 'poly[R]_n) :
-  is_included_in (polyI P Q) Q.
+  ((polyI P Q) <= Q)%PH.
 Proof.
-apply/is_included_inP => x.
+apply/poly_subsetP => x.
 rewrite polyI_inE.
 by move/andP/proj2.
 Qed.
 
 Fact includedI (P Q S : 'poly[R]_n) :
-  (is_included_in S (polyI P Q)) = ((is_included_in S P) && (is_included_in S Q)).
+  ((S <= (polyI P Q)) = (S <= P) && (S <= Q))%PH.
 Proof.
-apply/idP/idP => [S_is_included_in_I | /andP [S_is_included_in_P S_is_included_in_Q]].
+apply/idP/idP => [S_poly_subset_I | /andP [S_poly_subset_P S_poly_subset_Q]].
 - apply/andP; split.
-  + by apply/(is_included_in_trans _ (includedIl P Q)).
-  + by apply/(is_included_in_trans _ (includedIr P Q)).
-- apply/is_included_inP => x x_in_S.
+  + by apply/(poly_subset_trans _ (includedIl P Q)).
+  + by apply/(poly_subset_trans _ (includedIr P Q)).
+- apply/poly_subsetP => x x_in_S.
   rewrite polyI_inE.
   apply/andP; split.
-  + by apply/(is_included_inP S_is_included_in_P).
-  + by apply/(is_included_inP S_is_included_in_Q).
+  + by apply/(poly_subsetP S_poly_subset_P).
+  + by apply/(poly_subsetP S_poly_subset_Q).
 Qed.
 
 Fact polyIidPl (P Q : 'poly[R]_n) :
-  reflect ((polyI P Q) = P) (is_included_in P Q).
+  reflect ((polyI P Q) = P) (P <= Q)%PH.
 Proof.
-apply: (iffP idP) => [/is_included_inP P_subset_Q | polyI_P_Q_eq_P].
+apply: (iffP idP) => [/poly_subsetP P_subset_Q | polyI_P_Q_eq_P].
 - rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
   rewrite polyI_inE.
   apply: andb_idr.
   exact: (P_subset_Q x).
-- apply/is_included_inP => x.
+- apply/poly_subsetP => x.
   rewrite -polyI_P_Q_eq_P.
-  exact: ((is_included_inP (includedIr P Q)) x).
+  exact: ((poly_subsetP (includedIr P Q)) x).
 Qed.
 
 Fact polyIidPr (P Q : 'poly[R]_n) :
-  reflect ((polyI P Q) = Q) (is_included_in Q P).
+  reflect ((polyI P Q) = Q) (Q <= P)%PH.
 Proof.
-apply: (iffP idP) => [/is_included_inP Q_subset_P | polyI_P_Q_eq_Q].
+apply: (iffP idP) => [/poly_subsetP Q_subset_P | polyI_P_Q_eq_Q].
 - rewrite -[LHS]hpolyK -[RHS]hpolyK; apply/poly_eqP => x.
   rewrite polyI_inE.
   apply: andb_idl.
   exact: (Q_subset_P x).
-- apply/is_included_inP => x.
+- apply/poly_subsetP => x.
   rewrite -polyI_P_Q_eq_Q.
-  exact: ((is_included_inP (includedIl P Q)) x).
+  exact: ((poly_subsetP (includedIl P Q)) x).
 Qed.
 
 (*Fact in_face_affine_hull_rel (P Q : 'poly[R]_n) x :
@@ -864,7 +871,7 @@ case: (hpoly P) => m A b.
 move => P_base /andP [non_empty_Q /andP [Q_base eq_set_incl]].
 apply/idP/idP => [x_in_Q | /andP [x_in_P x_in_aff_hull_Q]].
 - apply/andP; split.
-  + exact: (((inclusion_on_base P_base Q_base) eq_set_incl) _ x_in_Q).
+  + exact: (((subset_on_base P_base Q_base) eq_set_incl) _ x_in_Q).
   + rewrite /affine_hull_of_poly.
     exact: in_poly_imp_in_affine_hull_on_base.
 - rewrite (hpoly_of_baseP P_base) mem_quotP inE in x_in_P.
@@ -975,7 +982,7 @@ move => P_empty; apply/fsetP => /= Q; rewrite in_fsetE /=.
 apply/negbTE; move: P_empty; apply: contra.
 move/imfsetP => /= [I] /andP [eqP_sub_I /non_emptyP [x x_in_Q]] _.
 suff Q_subset_P: {subset '['P^=(base; I)] <= P} by apply/non_emptyP; exists x; apply: Q_subset_P.
-apply/(inclusion_on_base (base := base)); try by done.
+apply/(subset_on_base (base := base)); try by done.
 - exact: hpolyEq_base.
 - by apply/(subset_trans eqP_sub_I)/activeP.
 Qed.
@@ -1157,24 +1164,24 @@ Fact face_subset (P Q : 'poly[R]_n) :
   Q \in \face P -> {subset Q <= P}. (* RK *)
 Proof.
 move/(face_baseP (hpoly_base P)) => [Q_has_base ? _].
-by apply: (inclusion_on_base Q_has_base (hpoly_base P)).
+by apply: (subset_on_base Q_has_base (hpoly_base P)).
 Qed.
 
 Fact face_of_face_incl_rel (P F : 'poly[R]_n) :
-  F \in \face P -> \face F = [fset F' in \face P | is_included_in F' F]%fset.
+  F \in \face P -> \face F = [fset F' in \face P | (F' <= F)%PH]%fset.
 Proof.
 move => F_face_P.
 apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
 - move => F' F'_face_F.
   rewrite in_fsetE inE; apply/andP; split.
   + by move/fsubsetP/(_ _ F'_face_F): (face_of_face F_face_P).
-  + apply/is_included_inP; exact: face_subset.
-- move => F'; rewrite in_fsetE inE => /andP [F'_face_P /is_included_inP F'_sub_F].
+  + apply/poly_subsetP; exact: face_subset.
+- move => F'; rewrite in_fsetE inE => /andP [F'_face_P /poly_subsetP F'_sub_F].
   move/(face_baseP (hpoly_base P)): F_face_P => [F_base eqP_sub_eqF F_non_empty].
   move/(face_baseP (hpoly_base P)): F'_face_P => [F'_base eq_P_sub_eq_F' F'_non_empty].
   apply/(face_baseP F_base); split.
   + exact: F'_base.
-  + by apply/(inclusion_on_base F'_base F_base).
+  + by apply/(subset_on_base F'_base F_base).
   + exact: F'_non_empty.
 Qed.
 
