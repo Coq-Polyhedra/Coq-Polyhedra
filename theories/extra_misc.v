@@ -226,3 +226,17 @@ by move => eq x; symmetry.
 Qed.
 
 End ExtraBool.
+
+Section ExtraFinset.
+
+Variable T T' : finType.
+
+Lemma imset_inj (f : T -> T') (S S' : {set T}) : injective f -> f @: S = f @: S' -> S = S'.
+Proof.
+move => f_inj f_S_eq_f_S'.
+apply/setP => i; apply/idP/idP; move/(mem_imset f).
+- by rewrite f_S_eq_f_S' => /imsetP [j j_in_S']; move/f_inj => ->.
+- by rewrite -f_S_eq_f_S' => /imsetP [j j_in_S]; move/f_inj => ->.
+Qed.
+
+End ExtraFinset.
