@@ -505,7 +505,7 @@ Section Segments.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition poly_segment (v w: 'cV[R]_n) := '[ [hpoly v; w] ].
+Definition poly_segment (v w : 'cV[R]_n) := '[ [hpoly v; w] ].
 
 Notation "[ 'poly' v ; w ]" := (poly_segment v w).
 
@@ -1231,6 +1231,13 @@ split.
   exact: (setUSS eq_P_subset_eq_F eq_P_subset_eq_F').
 - exact: non_empty_polyI.
 Qed.
+
+Lemma feasible_basic_point_vertex (hP : 'hpoly[R]_n) (v : 'cV[R]_n) :
+  (is_feasible_basic_point hP v) = ([poly v] \in \face '[hP]). (* RK *)
+Proof.
+apply/idP/idP => [H | H]; last first.
+- move/(faceP _ (has_face_imp_non_empty H)): H => [c Hc].
+Admitted.
 
 Variable P : 'poly[R]_n.
 Variable c : 'cV[R]_n.

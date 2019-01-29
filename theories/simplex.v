@@ -840,7 +840,7 @@ apply/is_basisP_rank.
 by move/build_basic_point_rank/row_base_correctness: x => [_ _].
 Qed.
 
-Let build_basis_basis := Basis build_basis_prebasisP.
+Definition build_basis_basis := Basis build_basis_prebasisP.
 
 Fact build_basis_basisP : is_feasible b build_basis_basis.
 Proof.
@@ -1855,6 +1855,7 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
 - by move/(intro_existsT (dual_infeasibleP _ _))/negbTE: (conj Hd Hd').
 Qed.
 
+(* RK: I needed this result in the slightly different form below 
 Lemma exists_feasible_basis :
   ([set: (feasible_basis A b)] != set0) = (feasible A b) && (pointed A).
 Proof.
@@ -1868,6 +1869,22 @@ apply/set0Pn/andP => [[bas] _ | [/feasibleP [x x_feas] Hpointed]].
     apply: mxrankS; exact: row_submx_submx.
 - rewrite (polyhedron_equiv_lex_polyhedron A b x) in x_feas.
   by exists (build_feasible_basis Hpointed x_feas).
+Qed.*)
+Lemma exists_feasible_basis :
+  ([set bas : basis A | is_feasible b bas] != set0) = (feasible A b) && (pointed A).
+Proof.
+apply/set0Pn/andP => [[bas] bas_is_feasible | [/feasibleP [x x_feas] Hpointed]].
+- split.
+  + apply/feasibleP; exists (point_of_basis b bas).
+    rewrite (polyhedron_equiv_lex_polyhedron A b (point_of_basis b bas)).
+    by rewrite in_set in bas_is_feasible.
+  + move/is_basisP_rank: (basis_is_basis bas).
+    rewrite /pointed => {1}<-.
+    apply: mxrankS; exact: row_submx_submx.
+- rewrite (polyhedron_equiv_lex_polyhedron A b x) in x_feas.
+  exists (build_basis_basis b Hpointed x).
+  rewrite in_set.
+  exact: build_basis_basisP.
 Qed.
 
 Hypothesis Hpointed : pointed A.
