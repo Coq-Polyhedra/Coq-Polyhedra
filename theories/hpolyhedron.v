@@ -296,7 +296,7 @@ apply: (iffP idP).
     exact: x_is_opt.
 Qed.
 
-Lemma bounded_opt_value c P (H: bounded c P) :
+Lemma bounded_opt_value c P (H : bounded c P) :
   (exists x, x \in P /\ '[c,x] = opt_value H) /\ (forall y, y \in P -> '[c,y] >= opt_value H).
 Proof.
 case: P H => m A b H; move: (H) => H0.
@@ -716,6 +716,58 @@ Notation "[ 'hpoly' v ]" := (hpoly_point v).
 Notation "[ 'hpoly' v ; w ]" := (hpoly_segment v w).
 
 Definition inE := (hpoly_point_inE, hpolyEqT_inE, hpolyEq_inE, inE).
+
+Section FeasibleBasicPoints. (* RK *)
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition is_feasible_basic_point (hP : 'hpoly[R]_n) (x : 'cV_n) :=
+  let: 'P(A,b) := hP in
+    (x \in 'P(A,b)) && (\rank (row_submx A (Simplex.active_ineq A b x)) >= n)%N.
+
+Lemma is_feasible_basic_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (x : 'cV_n) :
+  reflect (exists bas : Simplex.basis A, ((Simplex.is_feasible b) bas) /\ x = Simplex.point_of_basis b bas)
+          (is_feasible_basic_point 'P(A,b) x).
+Proof.
+apply: (iffP idP) => [/andP [x_in rank_ineq] | [bas [bas_is_feasible ->]]].
+- move: (row_base_correctness rank_ineq) => [H1 /eqP H2 H3].
+  have is_basis: Simplex.is_basis A (Simplex.Prebasis H2) by apply/Simplex.is_basisP_rank.
+  exists (Simplex.Basis is_basis).
+  suff x_eq: x = Simplex.point_of_basis b (Simplex.Basis is_basis).
+    by split; [rewrite /Simplex.is_feasible -Simplex.polyhedron_equiv_lex_polyhedron -x_eq | done].
+  apply: Simplex.basis_subset_active_ineq_eq.
+  by rewrite -Simplex.active_ineq_equal_active_lex_ineq.
+- apply/andP; split.
+  + rewrite Simplex.polyhedron_equiv_lex_polyhedron.
+    exact: (Simplex.feasible_basis_is_feasible (Simplex.FeasibleBasis bas_is_feasible)).
+  + apply: (@leq_trans (\rank (row_submx A (Simplex.set_of_prebasis (Simplex.prebasis_of_basis bas)))) _ _).
+    * by rewrite (Simplex.is_basisP_rank A (Simplex.prebasis_of_basis bas) (Simplex.basis_is_basis bas)).
+    * apply: mxrank_leqif_sup.
+      apply: row_submx_subset_submx.
+      rewrite Simplex.active_ineq_equal_active_lex_ineq.
+      exact: (Simplex.basis_subset_of_active_ineq b bas).
+Qed.
+
+Lemma is_feasible_basic_point_pointedP (hP : 'hpoly[R]_n) :
+  reflect (exists x, is_feasible_basic_point hP x) ((non_empty hP) && (pointed hP)).
+Proof.
+case: hP => m A b.
+apply: (iffP idP) => [feasible_and_pointed | [x /andP [x_in_hP rank_ineq]]].
+- rewrite -Simplex.exists_feasible_basis in feasible_and_pointed.
+  move/set0Pn: feasible_and_pointed => [bas bas_is_feasible].
+  exists (Simplex.point_of_basis b bas).
+  apply/is_feasible_basic_pointP.
+  exists bas.
+  by split; [rewrite in_set in bas_is_feasible | done].
+- apply/andP; split.
+  + by apply/non_emptyP; exists x.
+  + apply: (@leq_trans (\rank (row_submx A (Simplex.active_ineq A b x))) _ _); first exact: rank_ineq.
+    apply: mxrank_leqif_sup.
+    exact: (row_submx_submx A (Simplex.active_ineq A b x)).
+Qed.
+
+End FeasibleBasicPoints.
 
 (*
 
