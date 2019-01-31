@@ -1114,6 +1114,51 @@ End Certificates.
 
 End Cost.
 
+Section ObjOfBasis. (* RK *)
+
+Variable b : 'cV[R]_m.
+
+Definition obj_of_basis (bas : feasible_basis b) :=
+  let: e := (const_mx 1) : 'cV_#|bas| in
+    (row_submx A bas)^T *m e.
+
+Fact obj_of_basis_reduced_cost (bas : feasible_basis b) :
+  let: c := obj_of_basis bas in
+    (reduced_cost_of_basis c bas) >=m 0.
+Proof.
+rewrite /reduced_cost_of_basis /obj_of_basis.
+rewrite trmx_qinv; last exact: basis_is_basis.
+rewrite qmulKmx; last exact: basis_trmx_row_free.
+apply/gev0P => i; by rewrite mxE ler01.
+Qed.
+
+Fact obj_of_basisP (bas: feasible_basis b) :
+  let: c := obj_of_basis bas in
+  let: x := point_of_basis b bas in
+    forall y, y \in polyhedron A b -> '[c,y] <= '[c,x] -> y = x.
+Proof.
+set c := obj_of_basis bas.
+set x := point_of_basis b bas.
+move => y Hy Hc.
+pose z := (row_submx A bas *m y) - row_submx b bas.
+suff Hz: z = 0.
+  apply: is_point_of_basis.
+  exact: subr0_eq.
+  apply: (vdot_lev_eq0 (x := const_mx 1)).
+  - by apply/forallP => i; rewrite mxE ltr01.
+  - rewrite subv_ge0 -row_submx_mul.
+    exact: row_submx_lev.
+  - rewrite vdotBr -[row_submx b bas]row_submx_point_of_basis 2!vdot_mulmx.
+    apply/eqP; rewrite subr_eq0 eqr_le.
+    apply/andP; split; first by done.
+    apply: (optimal_cert_on_basis (bas := bas)); last by done.
+    + rewrite polyhedron_equiv_lex_polyhedron.
+      exact: (feasible_basis_is_feasible bas).
+    + exact: obj_of_basis_reduced_cost.
+Qed.
+
+End ObjOfBasis.
+
 Variable b : 'cV[R]_m.
 
 Definition b_pert := row_mx b (-(1%:M)).
