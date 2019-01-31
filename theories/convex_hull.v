@@ -240,6 +240,13 @@ rewrite inE; apply: (iffP HPrim.non_emptyP) => [ [w] | [w] ].
   + apply/gev0P => i; rewrite mxE; exact: w_ge0.
 Qed.
 
+Lemma convP0 : \conv(fset0 : {fset 'cV[R]_n}) =i pred0.
+Proof.
+move => x; rewrite [RHS]inE.
+apply/negP; move/convP => [w [/weight_sum1]].
+by rewrite big_seq_fset0 => /eqP; rewrite eq_sym oner_eq0.
+Qed.
+
 Lemma convP1 v x :
   reflect (x = v) (x \in \conv [fset v]%fset).
 Admitted.
@@ -261,19 +268,6 @@ Lemma convU1 v V' x :
    reflect (exists a v', [/\ 0 <= a <= 1, v' \in \conv V' & x = a *: v + (1-a) *: v'])
            (x \in \conv(v |` V')%fset).
 Admitted.
-
-Lemma hpoly_convex (V : {fset 'cV[R]_n}) (P : 'hpoly[R]_n) :
-  {subset V <= P} -> {subset \conv V <= P}.
-Proof.
-case: P => m A b.
-move => V_sub_P x /convP [w [w_weight ->]].
-rewrite inE; apply/forallP => i.
-have ->: b i 0 = \sum_(v <- V) ((w v) * (b i 0)).
-  by rewrite -mulr_suml weight_sum1 // mul1r.
-rewrite mulmx_sumr summxE 2!big_seq; apply: ler_sum => /= v v_in_V.
-rewrite -scalemxAr mxE; apply: ler_wpmul2l; first exact: (weight_ge0 w_weight).
-by move/(_ _ v_in_V)/forallP: V_sub_P.
-Qed.
 
 End ConvexHullProp.
 
@@ -385,7 +379,7 @@ Qed.
 
 End Separation.
 
-(*
+
 Section Convexity.
 
 Variable R : realFieldType.
@@ -395,13 +389,32 @@ Definition convex (P: pred 'cV[R]_n) :=
   forall v w, P v -> P w -> (forall x, x \in \conv([fset v; w]%fset) -> P x).
 
 Lemma convexP (P: pred 'cV[R]_n) (V : {fset 'cV[R]_n}) :
-  (forall v, v \in V -> P v) -> forall x, (x \in \conv V -> P x).
+  convex P -> {subset V <= P} -> {subset (\conv V) <= P}.
 Admitted.
 
-Lemma convex_poly (P : 'hpoly[R]_n) : convex (mem P).
+Lemma hpoly_convex (P : 'hpoly[R]_n) : convex (mem P).
+Proof.
+Admitted.
+(*  case: P => m A b.
+move => V_sub_P x /convP [w [w_weight ->]].
+rewrite inE; apply/forallP => i.
+have ->: b i 0 = \sum_(v <- V) ((w v) * (b i 0)).
+  by rewrite -mulr_suml weight_sum1 // mul1r.
+rewrite mulmx_sumr summxE 2!big_seq; apply: ler_sum => /= v v_in_V.
+rewrite -scalemxAr mxE; apply: ler_wpmul2l; first exact: (weight_ge0 w_weight).
+by move/(_ _ v_in_V)/forallP: V_sub_P.
+Qed.*)
+
+Lemma halfspace_leq_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] <= d].
 Admitted.
 
-Lemma convex_linear_fun (c: 'cV[R]_n) (d: R) : convex (fun x => '[c,x] >= d).
+Lemma halfspace_lt_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] < d].
 Admitted.
 
-End Convexity.*)
+Lemma halfspace_geq_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] >= d].
+Admitted.
+
+Lemma halfspace_gt_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] > d].
+Admitted.
+
+End Convexity.

@@ -133,9 +133,9 @@ Qed.
 
 End QuotStruct.
 
+Coercion mem_poly : poly >-> pred_class.
 Arguments hpolyP [R n].
 Prenex Implicits hpolyP.
-Coercion mem_poly : poly >-> pred_class.
 
 Section Lift.
 
@@ -150,6 +150,13 @@ by case/hpolyP: '[hP] => hQ /poly_eqP.
 Qed.
 
 Let quotE := mem_quotP.
+
+Lemma mem_eq (P Q : 'poly[R]_n) :
+  P =i Q -> P = Q.
+Proof.
+case: (hpolyP P) (hpolyP Q) => [hP ->] [hQ ->] P_eqi_Q.
+apply/poly_eqP => x; move/(_ x): P_eqi_Q; by rewrite !mem_quotP.
+Qed.
 
 Definition non_empty (P : 'poly[R]_n) :=
   (HPrim.non_empty (hpoly P)).
@@ -427,8 +434,8 @@ Section PolyProp.
 Variable R : realFieldType.
 Variable n : nat.
 
-Lemma poly_convex (V : {fset 'cV[R]_n}) (P : 'poly[R]_n) :
-  {subset V <= P} -> {subset \conv V <= P}.
+Lemma poly_convex (P : 'poly[R]_n) :
+  convex (mem P).
 Proof.
 exact: hpoly_convex.
 Qed.
@@ -904,27 +911,18 @@ rewrite -[F]hpolyK -[polyI _ _]hpolyK; apply/poly_eqP => x.
 by rewrite polyI_inE (in_face_affine_hull_rel _ F_is_face_of_P) hpolyK.
 Qed.*)
 
-Fact same_base_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
+Fact polyI_same_base (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   [P has \base base] -> [Q has \base base] ->
     [(P && Q)%PH has \base base].
 Proof.
 case: base => m A b.
 move => /has_baseP [IP P_eq] /has_baseP [IQ Q_eq].
 apply/has_baseP; exists (IP :|: IQ).
-rewrite -[LHS]hpolyK; apply/poly_eqP => x.
-rewrite -mem_quotP hpolyK polyI_inE P_eq Q_eq 2!mem_quotP !hpolyEq_inE.
-apply/idP/idP =>
-  [ /andP [/andP [x_in_base /forall_inP sat_IP] /andP [_ /forall_inP sat_IQ]]
-  | /andP [x_in_base /forall_inP sat_Int]].
-- apply/andP; split; try by done.
-  apply/forall_inP => j; rewrite in_setU => /orP [j_in_IP | j_in_IQ];
-    [exact: sat_IP | exact: sat_IQ].
-- apply/andP; split; apply/andP; split; try by [ done |
-  apply/forall_inP => j j_in_IP; apply: sat_Int;
-  apply/setUP; by [left | right]].
+rewrite (polyI_quotP P_eq Q_eq).
+apply/poly_eqP; exact: hpolyEqI_same_base.
 Qed.
 
-Fact eqU_subset_eq_polyI (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
+Fact polyI_eq_same_base (base : 'hpoly[R]_n) (P Q : 'poly[R]_n) :
   ({eq(P) on base} :|: {eq(Q) on base}) \subset {eq((P && Q)%PH) on base}.
 Proof.
 case: base => m A b.
@@ -933,28 +931,17 @@ apply/subsetP => j /setUP [/active_inP cond_in_eq | /active_inP cond_in_eq];
   by apply: cond_in_eq.
 Qed.
 
-Fact concat_base_polyI (P Q : 'poly[R]_n) (base_P base_Q : 'hpoly[R]_n) :
+Fact polyI_concat_base (P Q : 'poly[R]_n) (base_P base_Q : 'hpoly[R]_n) :
   [P has \base base_P] -> [Q has \base base_Q] -> [(P && Q)%PH has \base (hpolyI base_P base_Q)].
 Proof.
 case: base_P base_Q => [m A b] [m' A' b'].
-move => /has_baseP /= [I P_eq] /has_baseP /= [I' Q_eq].
+move => /has_baseP [I P_eq] /has_baseP [I' Q_eq].
 rewrite (polyI_quotP P_eq Q_eq) {P_eq Q_eq}; apply/has_baseP.
-pose I'' := ((@lshift m m')@:I) :|: ((@rshift m m')@:I').
-exists I''; apply/poly_eqP => x.
-rewrite !hpolyI_inE 3!hpolyEq_inE.
-rewrite andbACA; apply: congr2; first by rewrite -hpolyI_inE.
-apply/andP/forall_inP.
-- move => [ /forall_inP eq_P /forall_inP eq_Q ] i /setUP;
-    case; move/imsetP => [j j_in ->]; rewrite mul_col_mx ?col_mxEu ?col_mxEd;
-  by [apply: eq_P | apply: eq_Q].
-- move => eq''; split; apply/forall_inP => i i_in.
-  + move/(_ (lshift m' i)): eq''.
-    by rewrite in_setU mem_imset //= mul_col_mx 2!col_mxEu => /(_ isT).
-  + move/(_ (rshift m i)): eq''.
-    by rewrite in_setU mem_imset // orbT mul_col_mx 2!col_mxEd => /(_ isT).
+pose J := ((@lshift m m')@:I) :|: ((@rshift m m')@:I').
+exists J; apply/poly_eqP; exact: hpolyEqI_concat_base.
 Qed.
 
-Fact concat_base_eq_polyI (P Q : 'poly[R]_n) (m m': nat) (A: 'M[R]_(m,n)) (A' : 'M[R]_(m',n))
+Fact polyI_eq_concat_base (P Q : 'poly[R]_n) (m m': nat) (A: 'M[R]_(m,n)) (A' : 'M[R]_(m',n))
   (b: 'cV[R]_m) (b' : 'cV[R]_m') :
   ((@lshift m m') @: {eq P on 'P(A,b)}) :|: ((@rshift m m') @: {eq Q on 'P(A',b')})
                                         \subset {eq (P && Q)%PH on (hpolyI 'P(A,b) 'P(A',b'))}.
@@ -967,8 +954,8 @@ Qed.
 
 End Intersection.
 
-Arguments eqU_subset_eq_polyI [R n base P Q].
-Arguments concat_base_eq_polyI [R n P Q m m' A A' b b'].
+Arguments polyI_eq_same_base [R n base P Q].
+Arguments polyI_eq_concat_base [R n P Q m m' A A' b b'].
 Notation "P && Q" := (polyI P Q) : poly_scope.
 
 Module FaceBase.
@@ -1141,6 +1128,16 @@ case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
   by move/FaceBase.face_empty: P_empty ->.
 Qed.
 
+Lemma face_hpolyEqP (base : 'hpoly[R]_n) I J :
+  let P := '['P^=(base; I)] in
+  let Q := '['P^=(base; J)] in
+  (Q \in \face P) = (J \subset I).
+Admitted.
+
+Lemma face_hpolyEq0P (base : 'hpoly[R]_n) J :
+  '[ 'P^=(base; J) ] \in \face('[base]).
+Admitted.
+
 Arguments face_baseP [P Q base].
 
 Lemma face_has_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
@@ -1225,8 +1222,8 @@ move => /(face_baseP (hpoly_base P)) [F'_base eq_P_subset_eq_F' _].
 move => non_empty_polyI.
 apply/(face_baseP (hpoly_base P)).
 split.
-- exact: (same_base_polyI F_base F'_base).
-- apply: (subset_trans _ eqU_subset_eq_polyI).
+- exact: (polyI_same_base F_base F'_base).
+- apply: (subset_trans _ polyI_eq_same_base).
   rewrite -[{eq(P) on _}]setUid.
   exact: (setUSS eq_P_subset_eq_F eq_P_subset_eq_F').
 - exact: non_empty_polyI.

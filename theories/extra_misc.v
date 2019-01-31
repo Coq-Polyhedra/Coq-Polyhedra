@@ -26,6 +26,12 @@ apply/ord_inj => /=.
 by move: (ltn_ord i); rewrite ltnS leqn0 => /eqP.
 Qed.
 
+Lemma ord1_setT : setT = [set ord0] :> {set 'I_1}.
+Proof.
+apply/setP => i; rewrite !inE.
+by rewrite [i]ord1_eq0.
+Qed.
+
 Lemma exists_andP (T : Type) (A : pred T) (B : pred T) :
   (exists x, (A x /\ B x)) <-> (exists x, (A x && B x)).
 Proof.
