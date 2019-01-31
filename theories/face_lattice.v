@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron polyhedron affine_hull convex_hull.
+Require Import simplex extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron polyhedron affine_hull convex_hull.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -119,17 +119,39 @@ Definition obj_of_vertex P v (v_vert : v \in \vert P) := xchoose (vertex_set_sep
 
 Lemma obj_of_vertexP P v (v_vert : v \in \vert P) :
   let c := obj_of_vertex v_vert in
-  forall w, w \in \vert P -> w != v -> '[c, w] > '[c, v].
+    forall w, w \in \vert P -> w != v -> '[c, w] > '[c, v].
 Proof.
 Admitted.
-
 Lemma vertex1 v : \vert [poly v] = [fset v]%fset.
 Proof.
 Admitted.
 
+
 Lemma vertex2 v w : \vert [poly v; w] = [fset v; w]%fset.
 Proof.
 Admitted.
+
+
+Lemma vertex_pointedP (P : 'poly[R]_n) :
+  reflect (exists v, v \in \vert P) ((non_empty P) && (pointed P)). (* RK *)
+Proof.
+apply: (iffP idP) => [/is_feasible_basic_point_pointedP [v v_is_basic_point] | [v /vertex_setP v_is_vertex]].
+- exists v.
+  rewrite feasible_basic_point_vertex hpolyK in v_is_basic_point.
+  by apply/vertex_setP.
+- apply/is_feasible_basic_point_pointedP.
+  exists v.
+  by rewrite feasible_basic_point_vertex hpolyK.
+Qed.
+
+(*Lemma vertex_feasible_point (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+  \vert '['P(A,b)] = [fset (Simplex.point_of_basis b bas) | bas in Simplex.lex_feasible_basis A b]%fset.*)
+
+End VertexSet.
+
+Notation "\vert P" := (vertex_set P).
+
+Section Minkowski.
 
 Theorem conv_vert P : compact P -> P =i \conv (\vert(P)).
 Proof.

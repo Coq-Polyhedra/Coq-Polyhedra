@@ -512,7 +512,7 @@ Section Segments.
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition poly_segment (v w: 'cV[R]_n) := '[ [hpoly v; w] ].
+Definition poly_segment (v w : 'cV[R]_n) := '[ [hpoly v; w] ].
 
 Notation "[ 'poly' v ; w ]" := (poly_segment v w).
 
@@ -1228,6 +1228,51 @@ split.
   exact: (setUSS eq_P_subset_eq_F eq_P_subset_eq_F').
 - exact: non_empty_polyI.
 Qed.
+
+Lemma feasible_basic_point_vertex (hP : 'hpoly[R]_n) (v : 'cV[R]_n) :
+  (is_feasible_basic_point hP v) = ([poly v] \in \face '[hP]). (* RK *)
+Proof.
+case: hP => m A b.
+apply/idP/idP => [v_is_feasible_basic_point | poly_v_is_face].
+- have non_empty_hP: non_empty '['P(A, b)].
+    apply/non_emptyP; exists v; rewrite mem_quotP.
+    exact: (proj1 (andP v_is_feasible_basic_point)).
+  move/is_feasible_basic_pointP: v_is_feasible_basic_point => [bas [bas_is_feasible v_eq]].
+  apply/(faceP _ non_empty_hP).
+  exists (Simplex.obj_of_basis (Simplex.FeasibleBasis bas_is_feasible)).
+  split.
+  + apply/bounded_lower_bound; first exact: non_empty_hP.
+    exists '[Simplex.obj_of_basis (Simplex.FeasibleBasis bas_is_feasible), Simplex.point_of_basis b bas].
+    move => y y_in_hP.
+    apply/contraT.
+    rewrite -ltrNge => s_ineq.
+    rewrite mem_quotP in y_in_hP.
+    move: (Simplex.obj_of_basisP y_in_hP (ltrW s_ineq)) => y_eq.
+    by rewrite y_eq ltrr in s_ineq.
+  + have v_in_hP: Simplex.point_of_basis b bas \in '['P(A, b)].
+      rewrite mem_quotP Simplex.polyhedron_equiv_lex_polyhedron.
+      exact: (Simplex.feasible_basis_is_feasible (Simplex.FeasibleBasis bas_is_feasible)).
+    move => y; rewrite v_eq.
+    split.
+    * rewrite {1}mem_quotP.
+      move => [y_in_hP y_min].
+      apply/poly_point_inP.
+      by apply/(Simplex.obj_of_basisP y_in_hP ((y_min (Simplex.point_of_basis b bas)) v_in_hP)).
+    * move/poly_point_inP => ->.
+      split; first exact: v_in_hP.
+      move => w w_in_hP.
+      apply/contraT.
+      rewrite -ltrNge => s_ineq.
+      rewrite mem_quotP in w_in_hP.
+      move: (Simplex.obj_of_basisP w_in_hP (ltrW s_ineq)) => w_eq.
+      by rewrite w_eq ltrr in s_ineq.
+- move/(faceP _ (has_face_imp_non_empty poly_v_is_face)): poly_v_is_face => [c [bounded_c_hP v_min]].
+  apply/andP; split.
+  + rewrite -mem_quotP.
+    suff: {over '['P(A, b)], v minimizes c} by move/proj1.
+    by apply/(v_min v)/poly_point_inP.
+  + 
+Admitted.
 
 Variable P : 'poly[R]_n.
 Variable c : 'cV[R]_n.
