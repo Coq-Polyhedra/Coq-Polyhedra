@@ -657,6 +657,14 @@ Qed.
 
 End HPolyEq.
 
+Arguments hpolyEq_of_set [R n].
+Prenex Implicits hpolyEq_of_set.
+Arguments hpolyEq_inP [R n x m A b J].
+Arguments hpolyEq_non_emptyPn_cert [R n m A b J].
+Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
+Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
+Notation "[ 'hpoly' v ]" := (hpoly_point v).
+
 Section HPolyI.
 
 Variable R : realFieldType.
@@ -680,9 +688,42 @@ Proof.
 rewrite hpolyI_inE; exact: andP.
 Qed.
 
-End HPolyI.
+Lemma hpolyEqI_same_base (m: nat) (A: 'M[R]_(m,n)) (b: 'cV[R]_m) (I I' : {set 'I_m}) :
+  hpolyI 'P^=(A, b; I) 'P^=(A, b; I') =i 'P^=(A, b; I :|: I').
+Proof.
+move => x.
+rewrite hpolyI_inE !hpolyEq_inE.
+apply/idP/idP =>
+  [ /andP [/andP [x_in_base /forall_inP sat_IP] /andP [_ /forall_inP sat_IQ]]
+  | /andP [x_in_base /forall_inP sat_Int]].
+- apply/andP; split; try by done.
+  apply/forall_inP => j; rewrite in_setU => /orP [j_in_IP | j_in_IQ];
+    [exact: sat_IP | exact: sat_IQ].
+- apply/andP; split; apply/andP; split; try by [ done |
+  apply/forall_inP => j j_in_IP; apply: sat_Int;
+  apply/setUP; by [left | right]].
+Qed.
 
-Notation "[ 'hpoly' v ]" := (hpoly_point v).
+Lemma hpolyEqI_concat_base  (m m': nat) (A: 'M[R]_(m,n)) (A' : 'M[R]_(m',n))
+      (b: 'cV[R]_m) (b' : 'cV[R]_m') (I : {set 'I_m}) (I' : {set 'I_m'}) :
+  let J := (@lshift m m') @: I :|: (@rshift m m') @: I' in
+  hpolyI 'P^=(A, b; I) 'P^=(A', b'; I') =i 'P^=(hpolyI 'P(A,b) 'P(A',b'); J).
+Proof.
+move => J x.
+rewrite !hpolyI_inE 3!hpolyEq_inE.
+rewrite andbACA; apply: congr2; first by rewrite -hpolyI_inE.
+apply/andP/forall_inP.
+- move => [ /forall_inP eq_P /forall_inP eq_Q ] i /setUP;
+    case; move/imsetP => [j j_in ->]; rewrite mul_col_mx ?col_mxEu ?col_mxEd;
+  by [apply: eq_P | apply: eq_Q].
+- move => eq''; split; apply/forall_inP => i i_in.
+  + move/(_ (lshift m' i)): eq''.
+    by rewrite in_setU mem_imset //= mul_col_mx 2!col_mxEu => /(_ isT).
+  + move/(_ (rshift m i)): eq''.
+    by rewrite in_setU mem_imset // orbT mul_col_mx 2!col_mxEd => /(_ isT).
+Qed.
+
+End HPolyI.
 
 Section Segments.
 
@@ -706,13 +747,6 @@ Admitted.
 
 End Segments.
 
-Arguments hpolyEq_of_set [R n].
-Prenex Implicits hpolyEq_of_set.
-Arguments hpolyEq_inP [R n x m A b J].
-Arguments hpolyEq_non_emptyPn_cert [R n m A b J].
-Notation "''P^=' ( P ; J )" := (hpolyEq_of_set P J).
-Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
-Notation "[ 'hpoly' v ]" := (hpoly_point v).
 Notation "[ 'hpoly' v ; w ]" := (hpoly_segment v w).
 
 Definition inE := (hpoly_point_inE, hpolyEqT_inE, hpolyEq_inE, inE).
