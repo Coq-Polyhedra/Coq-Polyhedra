@@ -1230,14 +1230,14 @@ split.
 Qed.
 
 Lemma feasible_basic_point_vertex (hP : 'hpoly[R]_n) (v : 'cV[R]_n) :
-  (is_feasible_basic_point hP v) = ([poly v] \in \face '[hP]). (* RK *)
+  (feasible_basic_point hP v) = ([poly v] \in \face '[hP]). (* RK *)
 Proof.
 case: hP => m A b.
 apply/idP/idP => [v_is_feasible_basic_point | poly_v_is_face].
 - have non_empty_hP: non_empty '['P(A, b)].
     apply/non_emptyP; exists v; rewrite mem_quotP.
     exact: (proj1 (andP v_is_feasible_basic_point)).
-  move/is_feasible_basic_pointP: v_is_feasible_basic_point => [bas [bas_is_feasible v_eq]].
+  move/feasible_basic_pointP: v_is_feasible_basic_point => [bas [bas_is_feasible v_eq]].
   apply/(faceP _ non_empty_hP).
   exists (Simplex.obj_of_basis (Simplex.FeasibleBasis bas_is_feasible)).
   split.
@@ -1290,18 +1290,18 @@ apply/idP/idP => [v_is_feasible_basic_point | poly_v_is_face].
       i <- enum 'I_m & i \notin (Simplex.active_ineq A b v)].
     pose epsilon := if nilp gap_seq then 1 else (min_seq gap_seq 1).
   have epsilon_gt_0 : epsilon > 0.
-    rewrite /epsilon; case: ifP => [ _ | /nilP H]; first by apply: ltr01.
+    rewrite /epsilon; case: ifP => [ _ | /nilP ?]; first by apply: ltr01.
     rewrite min_seq_positive; last by right; apply: ltr01.
     apply/allP => epsilon'.
-    rewrite /gap_seq; move/mapP => [i]; rewrite mem_filter; move/andP => [Hi Hi'].
-    case: ifP => [_ -> | /negbT H' ->]; first by apply: ltr01.
+    rewrite /gap_seq; move/mapP => [i]; rewrite mem_filter; move/andP => [i_not_in_active _].
+    case: ifP => [_ -> | /negbT ? ->]; first by apply: ltr01.
       apply: divr_gt0; last by rewrite normr_gt0.
       rewrite subr_gt0 ltr_def.
       apply/andP; split; last by move/forallP: v_in_hP => Hv; move/(_ i): Hv.
-      by rewrite in_set in Hi.
-  have Hintermediate:
+      by rewrite in_set in i_not_in_active.
+  have not_in_active_ineq:
     (forall i, i \notin (Simplex.active_ineq A b v) -> (A *m v) i 0 - epsilon *  `| (A *m w^T) i 0 | >= b i 0).
-    move => i Hi.
+    move => i ?.
     have Hgap_seq: (~~ nilp gap_seq).
       rewrite /gap_seq /nilp size_map; apply/nilP/eqP.
       rewrite -has_filter.
@@ -1319,20 +1319,20 @@ apply/idP/idP => [v_is_feasible_basic_point | poly_v_is_face].
   pose z := v - epsilon *: w^T.
   have y_in_hP: y \in 'P(A, b).
     apply/forallP => i; rewrite /y mulmxDr -scalemxAr mxE [X in _ + X]mxE.
-    case: (boolP (i \in (Simplex.active_ineq A b v))) => [Hi | Hi].
-    * move/colP/(_ (enum_rank_in Hi i)): Hw; rewrite [RHS]mxE -row_submx_mul row_submx_mxE enum_rankK_in //; move ->.
+    case: (boolP (i \in (Simplex.active_ineq A b v))) => [i_in_active | i_not_in_active].
+    * move/colP/(_ (enum_rank_in i_in_active i)): Hw; rewrite [RHS]mxE -row_submx_mul row_submx_mxE enum_rankK_in //; move ->.
       by rewrite mulr0 addr0; move/forallP: v_in_hP.
-    * have H'': (A *m v) i 0 + epsilon * (A *m w^T) i 0 >= (A *m v) i 0 - epsilon * `|(A *m w^T) i 0|
+    * have ineq: (A *m v) i 0 + epsilon * (A *m w^T) i 0 >= (A *m v) i 0 - epsilon * `|(A *m w^T) i 0|
         by rewrite (ler_add2l ((A *m v) i 0)) -[X in X * `|_|]gtr0_norm // -normrM ler_oppl -normrN; apply: ler_norm.
-      by move: (Hintermediate i Hi) H''; apply: ler_trans.
+      by move: (not_in_active_ineq i i_not_in_active) ineq; apply: ler_trans.
   have z_in_hP: z \in 'P(A, b).
     apply/forallP => i; rewrite /z mulmxDr -scaleNr -scalemxAr scaleNr mxE [X in _ + X]mxE [X in _ - X]mxE.
-    case: (boolP (i \in (Simplex.active_ineq A b v))) => [Hi | Hi].
-    * move/colP/(_ (enum_rank_in Hi i)): Hw; rewrite [RHS]mxE -row_submx_mul row_submx_mxE enum_rankK_in //; move ->.
+    case: (boolP (i \in (Simplex.active_ineq A b v))) => [i_in_active | i_not_in_active].
+    * move/colP/(_ (enum_rank_in i_in_active i)): Hw; rewrite [RHS]mxE -row_submx_mul row_submx_mxE enum_rankK_in //; move ->.
       by rewrite mulr0 subr0; move/forallP: v_in_hP.
-    * have H'': (A *m v) i 0 - epsilon * (A *m w^T) i 0 >= (A *m v) i 0 - epsilon * `|(A *m w^T) i 0|
+    * have ineq: (A *m v) i 0 - epsilon * (A *m w^T) i 0 >= (A *m v) i 0 - epsilon * `|(A *m w^T) i 0|
         by rewrite (ler_add2l ((A *m v) i 0)) -[X in X * `|_|]gtr0_norm // -normrM ler_opp2; apply: ler_norm.
-      by move: (Hintermediate i Hi) H''; apply: ler_trans.
+      by move: (not_in_active_ineq i i_not_in_active) ineq; apply: ler_trans.
   case: (boolP ('[c ,w^T]==0)) => [/eqP eq_0 | neq_0].
   * have: z == v.
       apply/eqP/poly_point_inP/(v_min z)/opt_valueP/andP; split; first by rewrite mem_quotP.
