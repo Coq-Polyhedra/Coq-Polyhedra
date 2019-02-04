@@ -756,19 +756,19 @@ Section FeasibleBasicPoints. (* RK *)
 Variable R : realFieldType.
 Variable n : nat.
 
-Definition is_feasible_basic_point (hP : 'hpoly[R]_n) (x : 'cV_n) :=
+Definition feasible_basic_point (hP : 'hpoly[R]_n) (x : 'cV_n) :=
   let: 'P(A,b) := hP in
     (x \in 'P(A,b)) && (\rank (row_submx A (Simplex.active_ineq A b x)) >= n)%N.
 
-Lemma is_feasible_basic_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (x : 'cV_n) :
+Lemma feasible_basic_pointP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (x : 'cV_n) :
   reflect (exists bas : Simplex.basis A, ((Simplex.is_feasible b) bas) /\ x = Simplex.point_of_basis b bas)
-          (is_feasible_basic_point 'P(A,b) x).
+          (feasible_basic_point 'P(A,b) x).
 Proof.
 apply: (iffP idP) => [/andP [x_in rank_ineq] | [bas [bas_is_feasible ->]]].
 - move: (row_base_correctness rank_ineq) => [H1 /eqP H2 H3].
   have is_basis: Simplex.is_basis A (Simplex.Prebasis H2) by apply/Simplex.is_basisP_rank.
   exists (Simplex.Basis is_basis).
-  suff x_eq: x = Simplex.point_of_basis b (Simplex.Basis is_basis).
+  suff x_eq: x = Simplex.point_of_basis b (Simplex.Basis is_basis)
     by split; [rewrite /Simplex.is_feasible -Simplex.polyhedron_equiv_lex_polyhedron -x_eq | done].
   apply: Simplex.basis_subset_active_ineq_eq.
   by rewrite -Simplex.active_ineq_equal_active_lex_ineq.
@@ -783,15 +783,15 @@ apply: (iffP idP) => [/andP [x_in rank_ineq] | [bas [bas_is_feasible ->]]].
       exact: (Simplex.basis_subset_of_active_ineq b bas).
 Qed.
 
-Lemma is_feasible_basic_point_pointedP (hP : 'hpoly[R]_n) :
-  reflect (exists x, is_feasible_basic_point hP x) ((non_empty hP) && (pointed hP)).
+Lemma feasible_basic_point_pointedP (hP : 'hpoly[R]_n) :
+  reflect (exists x, feasible_basic_point hP x) ((non_empty hP) && (pointed hP)).
 Proof.
 case: hP => m A b.
 apply: (iffP idP) => [feasible_and_pointed | [x /andP [x_in_hP rank_ineq]]].
 - rewrite -Simplex.exists_feasible_basis in feasible_and_pointed.
   move/set0Pn: feasible_and_pointed => [bas bas_is_feasible].
   exists (Simplex.point_of_basis b bas).
-  apply/is_feasible_basic_pointP.
+  apply/feasible_basic_pointP.
   exists bas.
   by split; [rewrite in_set in bas_is_feasible | done].
 - apply/andP; split.

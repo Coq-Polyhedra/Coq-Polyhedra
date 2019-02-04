@@ -135,11 +135,11 @@ Admitted.
 Lemma vertex_pointedP (P : 'poly[R]_n) :
   reflect (exists v, v \in \vert P) ((non_empty P) && (pointed P)). (* RK *)
 Proof.
-apply: (iffP idP) => [/is_feasible_basic_point_pointedP [v v_is_basic_point] | [v /vertex_setP v_is_vertex]].
+apply: (iffP idP) => [/feasible_basic_point_pointedP [v v_is_basic_point] | [v /vertex_setP v_is_vertex]].
 - exists v.
   rewrite feasible_basic_point_vertex hpolyK in v_is_basic_point.
   by apply/vertex_setP.
-- apply/is_feasible_basic_point_pointedP.
+- apply/feasible_basic_point_pointedP.
   exists v.
   by rewrite feasible_basic_point_vertex hpolyK.
 Qed.
@@ -147,7 +147,6 @@ Qed.
 (*Lemma vertex_feasible_point (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
   \vert '['P(A,b)] = [fset (Simplex.point_of_basis b bas) | bas in Simplex.lex_feasible_basis A b]%fset.*)
 
-End VertexSet.
 
 Notation "\vert P" := (vertex_set P).
 
@@ -198,6 +197,8 @@ have fst_part: forall F F', F \in \face P -> F' \in \face P ->
 - move => F F' F_face F'_face; split; first exact: fst_part.
   by rewrite /poly_proper 2?fst_part.
 Qed.
+
+End Minkowski.
 
 End VertexSet.
 
