@@ -427,6 +427,35 @@ case: P => m A b.
 exact: Simplex.pointedPn.
 Qed.
 
+Definition compact P :=
+  let: 'P(A,b) := P in Simplex.bounded_polyhedron A b. (* RK *)
+
+Lemma compactP_Linfty P :
+  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P). (* RK *)
+Proof.
+case: P => m A b.
+exact: Simplex.bounded_polyhedronP_Linfty.
+Qed.
+
+Lemma compactP P :
+  reflect (non_empty P -> forall c, bounded c P) (compact P). (* RK *)
+Proof.
+rewrite /compact /Simplex.bounded_polyhedron.
+case: P => m A b.
+apply: (iffP idP) => [? ? | bounded_if_non_empty].
+- by apply/Simplex.bounded_polyhedronP_obj.
+- by case: (boolP (Simplex.feasible A b)) => [non_empty_P| empty_P];
+    [apply/forallP => i; apply/andP; split; exact: (bounded_if_non_empty non_empty_P) | apply/implyP].
+Qed.
+
+Lemma compact_pointed P :
+  non_empty P -> compact P ->
+    pointed P. (* RK *)
+Proof.
+case: P => m A b.
+exact: Simplex.feasible_bounded_polyhedron_is_pointed.
+Qed.
+
 End Basic.
 
 Arguments non_empty [R n].
@@ -438,7 +467,12 @@ Arguments boundedP [R n c P].
 Arguments bounded_lower_bound [R n c P].
 Arguments unboundedP [R n c P].
 Arguments opt_valueP [R n c P].
-Prenex Implicits non_emptyP boundedP bounded_lower_bound unboundedP opt_valueP.
+Arguments feasible_dirP [R n d P]. (* RK *)
+Arguments pointedPn [R n P]. (* RK *)
+Arguments compactP_Linfty [R n P]. (* RK *)
+Arguments compactP [R n P]. (* RK *)
+Arguments compact_pointed [R n P]. (* RK *)
+Prenex Implicits non_emptyP boundedP bounded_lower_bound unboundedP opt_valueP feasible_dirP pointedPn compactP_Linfty compactP compact_pointed.
 
 Section Subset.
 

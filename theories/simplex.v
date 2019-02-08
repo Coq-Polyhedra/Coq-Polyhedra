@@ -2003,23 +2003,16 @@ Variable m n : nat.
 Variable A : 'M[R]_(m,n).
 Variable b : 'cV[R]_m.
 
-Definition bounded_polyhedron := (~~ feasible A b) || ([forall i, bounded A b (delta_mx i 0)] && [forall i, bounded A b (-(delta_mx i 0))]).
+Definition bounded_polyhedron :=
+  (feasible A b) ==> [forall i, (bounded A b (delta_mx i 0)) && (bounded A b (-(delta_mx i 0)))].
 
 Lemma bounded_polyhedronP_Linfty :
   reflect (exists K, forall x, x \in polyhedron A b -> forall i, `|x i 0| <= K)
-    bounded_polyhedron.
+          bounded_polyhedron.
 Proof.
-rewrite /bounded_polyhedron.
-case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas]; last first.
-- constructor; exists 0; move => x.
-  by move/(intro_existsT (feasibleP _ _)).
-- apply: (iffP andP) => [[/forallP Hpos /forallP Hneg]| [K H]]; last first.
-  + split; apply/forallP => i; [pose v := (delta_mx i 0):'cV[R]_n | pose v := -(delta_mx i 0):'cV[R]_n];
-      suff Hi: forall x, x \in polyhedron A b -> '[v, x] >= -K;
-      by [ move/(intro_existsT (infeasible_or_boundedP _ _ _)): Hi;
-           rewrite Hfeas
-         | move => x Hx; rewrite ?vdotNl vdotl_delta_mx ?ler_opp2;
-           move/(_ _ Hx i): H; rewrite ler_norml; move/andP => [? ?]].
+rewrite /bounded_polyhedron implybE.
+case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas].
+- apply: (iffP idP) => [/forallP Hpos_Hneg | [K H]].
   + set K := -(min_seq [
       seq Num.min (opt_value A b (delta_mx i 0))
       (opt_value A b (-(delta_mx i 0))) | i :'I_n] 0).
@@ -2028,12 +2021,20 @@ case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas]; last first.
     * rewrite vdotNl vdotl_delta_mx ler_opp2 => /andP.
       by rewrite ler_norml.
     * split; rewrite opprK;
-      [ move/(_ i)/(boundedP _ _ _): Hpos => [_] | move/(_ i)/(boundedP _ _ _): Hneg => [_]];
+      [ move/(_ i)/andP/proj1/(boundedP _ _ _): Hpos_Hneg => [_] | move/(_ i)/andP/proj2/(boundedP _ _ _): Hpos_Hneg => [_]];
       [ pose v := opt_value A b (delta_mx i 0) | pose v := opt_value A b (-(delta_mx i 0))];
       move/(_ _ Hx); apply: ler_trans;
       suff: Num.min (opt_value A b (delta_mx i 0)) (opt_value A b (-(delta_mx i 0))) <= v;
       by [ apply: ler_trans; apply: min_seq_ler; apply: map_f; rewrite mem_enum
          | rewrite ler_minl lerr ?orbT].
+  + apply/forallP => i; apply/andP; split; [pose v := (delta_mx i 0):'cV[R]_n | pose v := -(delta_mx i 0):'cV[R]_n];
+      suff Hi: forall x, x \in polyhedron A b -> '[v, x] >= -K;
+      by [ move/(intro_existsT (infeasible_or_boundedP _ _ _)): Hi;
+           rewrite Hfeas
+         | move => x Hx; rewrite ?vdotNl vdotl_delta_mx ?ler_opp2;
+           move/(_ _ Hx i): H; rewrite ler_norml; move/andP => [? ?]].
+- constructor; exists 0; move => x.
+  by move/(intro_existsT (feasibleP _ _)).
 Qed.
 
 Hypothesis Hfeas: feasible A b.
@@ -2041,9 +2042,7 @@ Hypothesis Hfeas: feasible A b.
 Lemma bounded_polyhedronP_obj :
   reflect (forall c, bounded A b c) bounded_polyhedron.
 Proof.
-apply: (iffP idP) => [/bounded_polyhedronP_Linfty [K H] c | H]; last first.
-- rewrite /bounded_polyhedron Hfeas /=.
-  apply/andP; split; apply/forallP => i; exact: H.
+apply: (iffP idP) => [/bounded_polyhedronP_Linfty [K H] c | H].
 - suff: forall x, x \in polyhedron A b -> '[c, x] >= - \sum_i `|c i 0| * K
     by move/(intro_existsT (infeasible_or_boundedP _ _ _)); rewrite Hfeas.
   move => x Hx.
@@ -2054,6 +2053,8 @@ apply: (iffP idP) => [/bounded_polyhedronP_Linfty [K H] c | H]; last first.
     apply: ler_sum => i _; rewrite normrM.
     apply: ler_wpmul2l; [ exact: normr_ge0 | exact: H ].
   by rewrite ler_norml => /andP [? _].
+- rewrite /bounded_polyhedron Hfeas /=.
+  apply/forallP => i; apply/andP; split; exact: H.
 Qed.
 
 Lemma bounded_polyhedronP_feasible_dir :
