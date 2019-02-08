@@ -17,6 +17,8 @@ Unset Printing Implicit Defensive.
 
 Reserved Notation "''poly[' R ]_ n" (at level 8, n at level 2, format "''poly[' R ]_ n").
 Reserved Notation "''poly_' n" (at level 8, n at level 2).
+Reserved Notation "''polyt[' R ]_ n" (at level 8, n at level 2, format "''polyt[' R ]_ n").
+Reserved Notation "''polyt_' n" (at level 8, n at level 2).
 Reserved Notation "''[' P ]" (at level 0, format "''[' P ]").
 Reserved Notation "{ 'eq' P 'on' base }" (at level 0, format "{ 'eq' P  'on'  base }").
 Reserved Notation "{ 'eq' P }" (at level 0, format "{ 'eq'  P }").
@@ -958,6 +960,210 @@ Arguments polyI_eq_same_base [R n base P Q].
 Arguments polyI_eq_concat_base [R n P Q m m' A A' b b'].
 Notation "P && Q" := (polyI P Q) : poly_scope.
 
+Section Compactness.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Implicit Type P F : 'poly[R]_n.
+
+Definition compact P :=
+  (non_empty P) ==> ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
+
+Lemma compactP_Linfty P :
+  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
+Proof. (* RK *)
+apply: (iffP idP) => [/implyP compact_P | [K P_contained_in_box]].
+- case: (boolP (non_empty P)) => [non_empty_P| empty_P].
+  + set bound_x_i := fun (i : 'I_n) =>
+      match (@idP (bounded (delta_mx i 0) P)) with
+      | ReflectT bounded_delta_mx_i_P => opt_value bounded_delta_mx_i_P
+      | ReflectF _ => 0
+      end.
+    set bound_minus_x_i := fun (i : 'I_n) =>
+      match (@idP (bounded (- delta_mx i 0) P)) with
+      | ReflectT bounded_minus_delta_mx_i_P => opt_value bounded_minus_delta_mx_i_P
+      | ReflectF _ => 0
+      end.
+    set K := Num.max (-(min_seq [seq bound_minus_x_i i | i :'I_n] 0)) (-(min_seq [seq bound_x_i i | i :'I_n] 0)).
+    exists K.
+    move => x x_in_P i.
+    rewrite ler_norml.
+    apply/andP; split.
+    * rewrite oppr_max ler_minl 2!opprK.
+      apply/orP; right.
+      suff l_bound_x_i: bound_x_i i <= x i 0
+        by apply/(ler_trans _ l_bound_x_i)/min_seq_ler/map_f; rewrite mem_enum.
+      rewrite /bound_x_i.
+      case: {-}_/idP  => [bounded_delta_mx_i_P| /negP not_bounded_delta_mx_i_P].
+      - rewrite -vdotl_delta_mx.
+        exact: ((proj2 (bounded_opt_value bounded_delta_mx_i_P)) x x_in_P).
+      - by rewrite (proj1 (andP (forallP (compact_P non_empty_P) i))) in not_bounded_delta_mx_i_P.
+    * rewrite ler_maxr.
+      apply/orP; left.
+      rewrite ler_oppr.
+      suff l_bound_minus_x_i: bound_minus_x_i i <= -x i 0
+        by apply/(ler_trans _ l_bound_minus_x_i)/min_seq_ler/map_f; rewrite mem_enum.
+      rewrite /bound_minus_x_i.
+      case: {-}_/idP  => [bounded_minus_delta_mx_i_P| /negP not_bounded_minus_delta_mx_i_P].
+      - rewrite -vdotl_delta_mx -vdotNl.
+        exact: ((proj2 (bounded_opt_value bounded_minus_delta_mx_i_P)) x x_in_P).
+      - by rewrite (proj2 (andP (forallP (compact_P non_empty_P) i))) in not_bounded_minus_delta_mx_i_P.
+  + exists 0.
+    move => x x_in_P.
+    have non_empty_P: non_empty P
+      by apply/non_emptyP; exists x.
+    by rewrite non_empty_P in empty_P.
+- apply/implyP => non_empty_P.
+  apply/forallP => i.
+  apply/andP; split; apply/bounded_lower_bound; try by done.
+  + exists (-K).
+    move => x x_in_P.
+    move: (((P_contained_in_box x) x_in_P) i) => x_i_bound.
+    rewrite ler_norml in x_i_bound.
+    rewrite vdotl_delta_mx.
+    exact: (proj1 (andP x_i_bound)).
+  + exists (-K).
+    move => x x_in_P.
+    move: (((P_contained_in_box x) x_in_P) i) => x_i_bound.
+    rewrite ler_norml in x_i_bound.
+    rewrite vdotNl vdotl_delta_mx ler_oppr opprK.
+    exact: (proj2(andP x_i_bound)).
+Qed.
+
+Lemma compactP P :
+  reflect (non_empty P -> forall c, bounded c P) (compact P). (*RK: statement slightly modified: added the non_empty condition *)
+Proof. (* RK *)
+apply: (iffP idP) => [/compactP_Linfty [K P_contained_in_box] non_empty_P c | bounded_if_non_empty].
+- apply/(bounded_lower_bound c non_empty_P).
+  exists (\sum_i (-(`|c i 0| * K))).
+  move => x x_in_P.
+  rewrite -subr_le0 -sumrB.
+  apply: sumr_le0 => i _.
+  move/ler_normlP: (((P_contained_in_box x) x_in_P) i) => [? ?].
+  rewrite subr_le0 ler_oppl.
+  case: (boolP (0 <= c i 0)) => [c_i_geq_0 | c_i_lt_0].
+  + rewrite (ger0_norm c_i_geq_0) -mulrN -subr_ge0 -mulrBr.
+    apply: mulr_ge0; first exact: c_i_geq_0.
+    by rewrite subr_ge0.
+  + rewrite -ltrNge in c_i_lt_0.
+    rewrite -mulNr -(ltr0_norm c_i_lt_0) -subr_ge0 -mulrBr.
+    apply: mulr_ge0; first exact: (normr_ge0 (c i 0)).
+    by rewrite subr_ge0.
+- case: (boolP (non_empty P)) => [non_empty_P| empty_P].
+  + apply/implyP => _; apply/forallP => i.
+    by apply/andP; split; exact: (bounded_if_non_empty non_empty_P).
+  + apply/implyP => non_empty_P.
+    by rewrite non_empty_P in empty_P.
+Qed.
+
+End Compactness.
+
+Module PointednessBase.
+
+Section Pointedness.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Implicit Type P : 'poly[R]_n.
+(*Variable base : 'hpoly[R]_n.
+
+Hypothesis P_base : [P has \base base].
+
+Definition feasible_dir (d: 'cV[R]_n) := false.
+(*  let: 'P(A, _) := base in HPrim.feasible_dir A d.*)
+
+Lemma feasible_dirP d :
+  reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d).
+Admitted.*)
+
+Lemma feasible_dir_unbounded P c d :
+  non_empty P -> feasible_dir d P -> '[c, d] < 0 ->
+    ~~ bounded c P. (* RK *)
+Proof.
+move => non_empty_P /(feasible_dirP _ non_empty_P) feasible_dir_d_P d_decr_dir.
+apply/contraT; rewrite negbK.
+move/(bounded_lower_bound _ non_empty_P) => [K K_lower_bound].
+move/non_emptyP: non_empty_P => [x x_in_P].
+set λ := (K - '[ c, x] - 1) * ('[ c, d])^-1.
+have λ_gt_0: 0 < λ.
+  rewrite (ltr_ndivl_mulr _ _ d_decr_dir) mul0r subr_lt0.
+  apply: (ler_lt_trans _ ltr01).
+  rewrite subr_le0.
+  exact: (K_lower_bound _ x_in_P).
+move: (K_lower_bound _ (feasible_dir_d_P _ _ x_in_P (ltrW λ_gt_0))).
+rewrite vdotDr vdotZr -mulrA mulVf;
+  last by apply: ltr0_neq0.
+by rewrite mulr1 -2!ler_subl_addl subrr oppr_ge0 lerNgt ltr01.
+Qed.
+
+Lemma compact_pointed P :
+  non_empty P -> compact P ->
+    pointed P. (* RK *)
+Proof.
+move => non_empty_P.
+apply/contraTT.
+move/pointedPn => [d [d_neq_0 d_feas_dir minus_d_feas_dir]].
+rewrite negb_imply.
+apply/andP; split; first exact: non_empty_P.
+rewrite negb_forall; apply/existsP.
+rewrite col_neq_0 in d_neq_0.
+move/existsP: d_neq_0 => [i d_i_neq_0].
+exists i.
+rewrite negb_and; apply/orP; left.
+rewrite neqr_lt in d_i_neq_0.
+move/orP: d_i_neq_0 => d_i_neq_0.
+case: d_i_neq_0 => [d_i_lt_0 | d_i_gt_0].
+- apply: (feasible_dir_unbounded non_empty_P d_feas_dir _).
+  by rewrite vdotl_delta_mx.
+- apply: (feasible_dir_unbounded non_empty_P minus_d_feas_dir _).
+  by rewrite vdotNr vdotl_delta_mx oppr_lt0.
+Qed.
+
+End Pointedness.
+
+End PointednessBase.
+
+
+
+Module Polytope.
+
+Section Def.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Inductive polytope := Polytope (P : 'poly[R]_n) of (compact P).
+Coercion poly_of_polytope P := let: Polytope P' _ := P in P'.
+Canonical polytope_subType := [subType for poly_of_polytope].
+Definition polytope_eqMixin := Eval hnf in [eqMixin of polytope by <:].
+Canonical polytope_eqType := Eval hnf in EqType polytope polytope_eqMixin.
+Definition polytope_choiceMixin := [choiceMixin of polytope by <:].
+Canonical polytope_choiceType := Eval hnf in ChoiceType polytope polytope_choiceMixin.
+
+End Def.
+
+Notation "''polyt[' R ]_ n" := (@polytope R n).
+Notation "''polyt_' n" := ('polyt[_]_n).
+
+Section BasicProp.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Lemma polytope_compact (P : 'polyt[R]_n) : compact P.
+Proof.
+exact: valP.
+Qed.
+
+
+End BasicProp.
+
+End Polytope.
+
+
+
 Module FaceBase.
 
 Section Def.
@@ -1128,6 +1334,8 @@ case: (boolP (non_empty P)) => [ P_non_empty | P_empty ].
   by move/FaceBase.face_empty: P_empty ->.
 Qed.
 
+Arguments face_baseP [P Q base].
+
 Lemma face_hpolyEqP (base : 'hpoly[R]_n) I J :
   let P := '['P^=(base; I)] in
   let Q := '['P^=(base; J)] in
@@ -1138,7 +1346,6 @@ Lemma face_hpolyEq0P (base : 'hpoly[R]_n) J :
   '[ 'P^=(base; J) ] \in \face('[base]).
 Admitted.
 
-Arguments face_baseP [P Q base].
 
 Lemma face_has_base (P Q : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [P has \base base] -> Q \in \face P -> [Q has \base base].
@@ -1179,6 +1386,18 @@ Proof.
 move/(face_baseP (hpoly_base P)) => [Q_has_base ? _].
 by apply: (subset_on_base Q_has_base (hpoly_base P)).
 Qed.
+
+
+Lemma compact_face P F :
+  compact P -> F \in \face P -> compact F.
+Proof. (* RK *)
+move/compactP_Linfty => [K bounded_on_P].
+move => F_is_face_of_P.
+apply/compactP_Linfty; exists K.
+move => x x_in_F i.
+exact: (((bounded_on_P x) ((face_subset F_is_face_of_P) _ x_in_F)) i).
+Qed.
+
 
 Fact face_of_face_incl_rel (P F : 'poly[R]_n) :
   F \in \face P -> \face F = [fset F' in \face P | (F' <= F)%PH]%fset.
@@ -1398,181 +1617,5 @@ End Face.
 Arguments face_baseP [R n P Q base].
 
 Notation "\face P" := (face_set P).
-
-Section Compactness.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Implicit Type P F : 'poly[R]_n.
-
-Definition compact P :=
-  (non_empty P) ==> ([forall i, bounded (delta_mx i 0) P && bounded (-(delta_mx i 0)) P]).
-
-Lemma compactP_Linfty P :
-  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
-Proof. (* RK *)
-apply: (iffP idP) => [/implyP compact_P | [K P_contained_in_box]].
-- case: (boolP (non_empty P)) => [non_empty_P| empty_P].
-  + set bound_x_i := fun (i : 'I_n) =>
-      match (@idP (bounded (delta_mx i 0) P)) with
-      | ReflectT bounded_delta_mx_i_P => opt_value bounded_delta_mx_i_P
-      | ReflectF _ => 0
-      end.
-    set bound_minus_x_i := fun (i : 'I_n) =>
-      match (@idP (bounded (- delta_mx i 0) P)) with
-      | ReflectT bounded_minus_delta_mx_i_P => opt_value bounded_minus_delta_mx_i_P
-      | ReflectF _ => 0
-      end.
-    set K := Num.max (-(min_seq [seq bound_minus_x_i i | i :'I_n] 0)) (-(min_seq [seq bound_x_i i | i :'I_n] 0)).
-    exists K.
-    move => x x_in_P i.
-    rewrite ler_norml.
-    apply/andP; split.
-    * rewrite oppr_max ler_minl 2!opprK.
-      apply/orP; right.
-      suff l_bound_x_i: bound_x_i i <= x i 0
-        by apply/(ler_trans _ l_bound_x_i)/min_seq_ler/map_f; rewrite mem_enum.
-      rewrite /bound_x_i.
-      case: {-}_/idP  => [bounded_delta_mx_i_P| /negP not_bounded_delta_mx_i_P].
-      - rewrite -vdotl_delta_mx.
-        exact: ((proj2 (bounded_opt_value bounded_delta_mx_i_P)) x x_in_P).
-      - by rewrite (proj1 (andP (forallP (compact_P non_empty_P) i))) in not_bounded_delta_mx_i_P.
-    * rewrite ler_maxr.
-      apply/orP; left.
-      rewrite ler_oppr.
-      suff l_bound_minus_x_i: bound_minus_x_i i <= -x i 0
-        by apply/(ler_trans _ l_bound_minus_x_i)/min_seq_ler/map_f; rewrite mem_enum.
-      rewrite /bound_minus_x_i.
-      case: {-}_/idP  => [bounded_minus_delta_mx_i_P| /negP not_bounded_minus_delta_mx_i_P].
-      - rewrite -vdotl_delta_mx -vdotNl.
-        exact: ((proj2 (bounded_opt_value bounded_minus_delta_mx_i_P)) x x_in_P).
-      - by rewrite (proj2 (andP (forallP (compact_P non_empty_P) i))) in not_bounded_minus_delta_mx_i_P.
-  + exists 0.
-    move => x x_in_P.
-    have non_empty_P: non_empty P
-      by apply/non_emptyP; exists x.
-    by rewrite non_empty_P in empty_P.
-- apply/implyP => non_empty_P.
-  apply/forallP => i.
-  apply/andP; split; apply/bounded_lower_bound; try by done.
-  + exists (-K).
-    move => x x_in_P.
-    move: (((P_contained_in_box x) x_in_P) i) => x_i_bound.
-    rewrite ler_norml in x_i_bound.
-    rewrite vdotl_delta_mx.
-    exact: (proj1 (andP x_i_bound)).
-  + exists (-K).
-    move => x x_in_P.
-    move: (((P_contained_in_box x) x_in_P) i) => x_i_bound.
-    rewrite ler_norml in x_i_bound.
-    rewrite vdotNl vdotl_delta_mx ler_oppr opprK.
-    exact: (proj2(andP x_i_bound)).
-Qed.
-
-Lemma compactP P :
-  reflect (non_empty P -> forall c, bounded c P) (compact P). (*RK: statement slightly modified: added the non_empty condition *)
-Proof. (* RK *)
-apply: (iffP idP) => [/compactP_Linfty [K P_contained_in_box] non_empty_P c | bounded_if_non_empty].
-- apply/(bounded_lower_bound c non_empty_P).
-  exists (\sum_i (-(`|c i 0| * K))).
-  move => x x_in_P.
-  rewrite -subr_le0 -sumrB.
-  apply: sumr_le0 => i _.
-  move/ler_normlP: (((P_contained_in_box x) x_in_P) i) => [? ?].
-  rewrite subr_le0 ler_oppl.
-  case: (boolP (0 <= c i 0)) => [c_i_geq_0 | c_i_lt_0].
-  + rewrite (ger0_norm c_i_geq_0) -mulrN -subr_ge0 -mulrBr.
-    apply: mulr_ge0; first exact: c_i_geq_0.
-    by rewrite subr_ge0.
-  + rewrite -ltrNge in c_i_lt_0.
-    rewrite -mulNr -(ltr0_norm c_i_lt_0) -subr_ge0 -mulrBr.
-    apply: mulr_ge0; first exact: (normr_ge0 (c i 0)).
-    by rewrite subr_ge0.
-- case: (boolP (non_empty P)) => [non_empty_P| empty_P].
-  + apply/implyP => _; apply/forallP => i.
-    by apply/andP; split; exact: (bounded_if_non_empty non_empty_P).
-  + apply/implyP => non_empty_P.
-    by rewrite non_empty_P in empty_P.
-Qed.
-
-Lemma compact_face P F :
-  compact P -> F \in \face P -> compact F.
-Proof. (* RK *)
-move/compactP_Linfty => [K bounded_on_P].
-move => F_is_face_of_P.
-apply/compactP_Linfty; exists K.
-move => x x_in_F i.
-exact: (((bounded_on_P x) ((face_subset F_is_face_of_P) _ x_in_F)) i).
-Qed.
-
-End Compactness.
-
-Module PointednessBase.
-
-Section Pointedness.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Implicit Type P : 'poly[R]_n.
-(*Variable base : 'hpoly[R]_n.
-
-Hypothesis P_base : [P has \base base].
-
-Definition feasible_dir (d: 'cV[R]_n) := false.
-(*  let: 'P(A, _) := base in HPrim.feasible_dir A d.*)
-
-Lemma feasible_dirP d :
-  reflect (forall x, forall λ, x \in P -> λ >= 0 -> x + λ *: d \in P) (feasible_dir d).
-Admitted.*)
-
-Lemma feasible_dir_unbounded P c d :
-  non_empty P -> feasible_dir d P -> '[c, d] < 0 ->
-    ~~ bounded c P. (* RK *)
-Proof.
-move => non_empty_P /(feasible_dirP _ non_empty_P) feasible_dir_d_P d_decr_dir.
-apply/contraT; rewrite negbK.
-move/(bounded_lower_bound _ non_empty_P) => [K K_lower_bound].
-move/non_emptyP: non_empty_P => [x x_in_P].
-set λ := (K - '[ c, x] - 1) * ('[ c, d])^-1.
-have λ_gt_0: 0 < λ.
-  rewrite (ltr_ndivl_mulr _ _ d_decr_dir) mul0r subr_lt0.
-  apply: (ler_lt_trans _ ltr01).
-  rewrite subr_le0.
-  exact: (K_lower_bound _ x_in_P).
-move: (K_lower_bound _ (feasible_dir_d_P _ _ x_in_P (ltrW λ_gt_0))).
-rewrite vdotDr vdotZr -mulrA mulVf;
-  last by apply: ltr0_neq0.
-by rewrite mulr1 -2!ler_subl_addl subrr oppr_ge0 lerNgt ltr01.
-Qed.
-
-Lemma compact_pointed P :
-  non_empty P -> compact P ->
-    pointed P. (* RK *)
-Proof.
-move => non_empty_P.
-apply/contraTT.
-move/pointedPn => [d [d_neq_0 d_feas_dir minus_d_feas_dir]].
-rewrite negb_imply.
-apply/andP; split; first exact: non_empty_P.
-rewrite negb_forall; apply/existsP.
-rewrite col_neq_0 in d_neq_0.
-move/existsP: d_neq_0 => [i d_i_neq_0].
-exists i.
-rewrite negb_and; apply/orP; left.
-rewrite neqr_lt in d_i_neq_0.
-move/orP: d_i_neq_0 => d_i_neq_0.
-case: d_i_neq_0 => [d_i_lt_0 | d_i_gt_0].
-- apply: (feasible_dir_unbounded non_empty_P d_feas_dir _).
-  by rewrite vdotl_delta_mx.
-- apply: (feasible_dir_unbounded non_empty_P minus_d_feas_dir _).
-  by rewrite vdotNr vdotl_delta_mx oppr_lt0.
-Qed.
-
-End Pointedness.
-
-End PointednessBase.
-
 Arguments non_emptyP [R n P].
 Arguments faceP [R n P Q].
