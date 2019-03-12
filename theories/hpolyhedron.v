@@ -1,7 +1,7 @@
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
-(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
+(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
 (*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
 (* All rights reserved.                                                  *)
@@ -10,7 +10,7 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
-Require Import simplex exteqtype.
+Require Import simplex polypred.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -19,7 +19,164 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Reserved Notation "{ 'over' P , x 'minimizes' c }" (at level 70, format "{ 'over'  P ,  x  'minimizes'  c }").
+Module HPolyhedron.
+
+Section Def.
+
+Variable (R : realFieldType) (n : nat).
+
+Record hpoly := HPoly {
+  nb_ineq : nat ;
+  _ : 'M[R]_(nb_ineq,n) ;
+  _ : 'cV[R]_nb_ineq
+}.
+
+End Def.
+
+Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
+Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
+Notation "'#ineq' P" := (nb_ineq P) (at level 0).
+Notation "''P' ( m , A , b )" := (@HPoly _ _ m A b) (at level 0).
+Notation "''P' ( A , b )" := 'P(_, A, b) (at level 0).
+
+Section ChoicePred.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Definition mem_hpoly (P : 'hpoly[R]_n) :=
+  let: 'P(A,b) := P in [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
+
+Canonical hpoly_predType := mkPredType mem_hpoly.
+
+Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
+  let: 'P(A,b) := P in
+    Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
+
+Definition hpoly_from_matrix (M : {m : nat & 'M[R]_(m, n+1)}) :=
+  let Ab := tagged M in
+    HPoly (lsubmx Ab) (rsubmx Ab).
+
+Lemma matrix_from_hpolyK :
+  cancel matrix_from_hpoly hpoly_from_matrix.
+Proof.
+by move => [m A b]; rewrite /matrix_from_hpoly /hpoly_from_matrix row_mxKl row_mxKr.
+Qed.
+
+Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
+Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
+Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
+Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
+Canonical hpoly_choicePredType := ChoicePredType _ 'hpoly[R]_n.
+
+End ChoicePred.
+
+Section PolyPred.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+Implicit Type (P : 'hpoly[R]_n).
+
+Definition mk_hs c d : 'hpoly[R]_n := 'P(c^T, d%:M).
+
+Lemma in_hs c d x : x \in (mk_hs c d) = ('[c,x] >= d).
+Admitted.
+
+Definition poly0 := mk_hs 0 1.
+
+Lemma in_poly0 : poly0 =i pred0.
+Admitted.
+
+Definition polyT : 'hpoly[R]_n := 'P(0, const_mx 0, 0).
+
+Lemma in_polyT : polyT =i predT.
+Admitted.
+
+Definition polyI P Q :=
+  let: 'P(A, b) := P in
+  let: 'P(A', b') := Q in
+  'P(col_mx A A', col_mx b b').
+
+Lemma in_polyI P Q :
+  (polyI P Q) =i [predI P & Q].
+Proof.
+move => x.
+case: P => mP AP bP; case: Q => mQ AQ bQ.
+by rewrite !inE mul_col_mx col_mx_lev.
+Qed.
+
+Definition bounded P c :=
+  let: 'P(A, b) := P in
+  Simplex.bounded A b c.
+
+Definition opt_value P c :=
+  let: 'P(A, b) := P in
+  Simplex.opt_value A b c.
+
+Definition poly_subset P Q :=
+  let: 'P(A, b) := P in
+  let: 'P(A', b') := Q in
+  Simplex.feasible A b ||
+    [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
+
+Lemma poly_subsetP P Q : reflect {subset P <= Q} (poly_subset P Q).
+Admitted.
+
+Lemma poly_subsetPn P Q : reflect (exists x, (x \in P) && (x \notin Q)) (~~ (poly_subset P Q)).
+Admitted.
+
+Lemma boundedP P c : reflect (exists x, (x \in P) && poly_subset P (mk_hs c '[c,x])) (bounded P c).
+Admitted.
+
+Lemma boundedPn P c :
+  ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
+Admitted.
+
+Definition pointed P :=
+  let: 'P(A, _) := P in
+  Simplex.pointed A.
+
+Lemma pointedPn P :
+  reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in P)) (~~ pointed P).
+Admitted.
+
+Definition hpoly_polyPredMixin :=
+  PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
+                 in_hs boundedP boundedPn pointedPn.
+Canonical hpoly_polyPredType := PolyPredType R n hpoly_polyPredMixin.
+End PolyPred.
+
+Module Import Exports.
+Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
+Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
+Notation "'#ineq' P" := (nb_ineq P) (at level 0).
+Notation "''P' ( m , A , b )" := (@HPoly _ _ m A b) (at level 0).
+Notation "''P' ( A , b )" := 'P(_, A, b) (at level 0).
+Canonical hpoly_eqType.
+Canonical hpoly_choiceType.
+Canonical hpoly_choicePredType.
+Canonical hpoly_polyPredType.
+End Exports.
+End HPolyhedron.
+
+Export HPolyhedron.Exports.
+
+Section Test.
+
+Variable (R : realFieldType) (n : nat) (P : {quot 'hpoly[R]_n}%PH) (c x : 'cV[R]_n).
+
+Hypothesis H : bounded P c.
+Check (opt_point H).
+Check (`[line c & x] : 'hpoly[R]_n)%PH.
+Check (repr P) : 'hpoly[R]_n.
+
+Goal P = '[repr P]%PH.
+Proof.
+by rewrite /class_of Quotient.reprK.
+Qed.
+
+(*Reserved Notation "{ 'over' P , x 'minimizes' c }" (at level 70, format "{ 'over'  P ,  x  'minimizes'  c }").
 Reserved Notation "{ 'over' P , F 'argmin' c }" (at level 70, format "{ 'over'  P ,  F  'argmin'  c }").
 Reserved Notation "''hpoly[' R ]_ n" (at level 8, n at level 2, format "''hpoly[' R ]_ n").
 Reserved Notation "''hpoly_' n" (at level 8, n at level 2).
@@ -50,53 +207,7 @@ Section Def. (* TODO: reorganize this section so that we can introduce the notat
 Variable R : realFieldType.
 Variable n : nat.
 
-Record hpoly := Hpoly {
-  nb_ineq : nat ;
-  _ : 'M[R]_(nb_ineq,n) ;
-  _ : 'cV[R]_nb_ineq
-}.
 
-End Def.
-
-Notation "''hpoly[' R ]_ n" := (hpoly R n).
-Notation "''hpoly_' n" := (hpoly _ n).
-Notation "'#ineq' P" := (nb_ineq P).
-Notation "''P' ( m , A , b )" := (@Hpoly _ _ m A b).
-Notation "''P' ( A , b )" := (Hpoly A b).
-
-Section HPolyStruct.
-
-Definition mem_hpoly (R : realFieldType) (n : nat) (P : 'hpoly[R]_n) :=
-  let: 'P(A,b) := P in
-    [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
-
-Coercion mem_hpoly : hpoly >-> pred_class.
-
-Variable R : realFieldType.
-Variable n : nat.
-Canonical hpoly_predType := @mkPredType _ 'hpoly[R]_n (@mem_hpoly R n).
-Canonical mem_hpoly_PredType := mkPredType (@mem_hpoly R n). (* RK: It seems that this is not used and it causes a warning *)
-
-Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
-  let: 'P(A,b) := P in
-    Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
-
-Definition hpoly_from_matrix (M : {m : nat & 'M[R]_(m, n+1)}) :=
-  let Ab := tagged M in
-    Hpoly (lsubmx Ab) (rsubmx Ab).
-
-Lemma matrix_from_hpolyK :
-  cancel matrix_from_hpoly hpoly_from_matrix.
-Proof.
-move => hP; destruct hP.
-by rewrite /matrix_from_hpoly /hpoly_from_matrix row_mxKl row_mxKr.
-Qed.
-
-Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
-Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
-
-Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
-Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
 
 Definition matrix_of (P : 'hpoly[R]_n) := (* TODO: not sure that these functions are so useful *)
   let: 'P(A,_) := P return 'M[R]_(#ineq P, n) in A.
