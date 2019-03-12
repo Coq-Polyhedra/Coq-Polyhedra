@@ -45,7 +45,7 @@ Proof.
 case: finsuppP; first done.
 move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl /forallP w_ge0 _].
 move/supp_incl => v_in_V.
-pose v' := [`v_in_V]%fset.
+bpose v' := [`v_in_V]%fset.
 have ->: v = val v' by done.
 exact: w_ge0.
 Qed.

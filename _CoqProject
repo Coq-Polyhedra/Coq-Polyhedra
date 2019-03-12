@@ -5,10 +5,4 @@ theories/extra_matrix.v
 theories/inner_product.v
 theories/row_submx.v
 theories/simplex.v
-theories/exteqtype.v
-theories/hpolyhedron.v
-theories/under.v
-theories/polyhedron.v
-theories/affine_hull.v
-theories/convex_hull.v
-theories/order.v
+theories/polypred.v
