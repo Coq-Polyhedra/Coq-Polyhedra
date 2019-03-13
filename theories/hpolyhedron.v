@@ -161,8 +161,8 @@ Canonical hpoly_choicePredType.
 Canonical hpoly_polyPredType.
 Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
-(*Notation "''poly[' R ]_ n" := {quot 'hpoly[R]_n}%PH (at level 8).
-Notation "''poly_' n" := {quot 'hpoly_n}%PH (at level 8).*)
+Notation "''poly[' R ]_ n" := {quot 'hpoly[R]_n}%PH (at level 8).
+Notation "''poly_' n" := {quot 'hpoly_n}%PH (at level 8).
 Notation "'#ineq' P" := (nb_ineq P) (at level 0).
 Notation "''P' ( m , A , b )" := (@HPoly _ _ m A b) (at level 0).
 Notation "''P' ( A , b )" := 'P(_, A, b) (at level 0).
