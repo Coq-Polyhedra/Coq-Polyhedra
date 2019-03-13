@@ -600,32 +600,44 @@ Notation "\polyI_ ( i 'in' A ) F" :=
 Hint Resolve poly_equiv_refl : core.
 
 Module Quotient.
-Section QuotientDef.
 
 Local Open Scope poly_scope.
 
-Variable (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Section Def.
+
+Context {R : realFieldType} {n : nat} {T : polyPredType R n}.
+Implicit Types (phT : phant T).
 
 Definition canon (P : T) :=
   choose (poly_equiv P) P.
 
-Record quot := Poly {
+Structure quot phT := Poly {
   repr : T;
   _ : canon repr == repr;
 }.
 
-Canonical quot_subType := [subType for repr].
-Definition quot_eqMixin := Eval hnf in [eqMixin of quot by <:].
-Canonical quot_eqType := Eval hnf in EqType quot quot_eqMixin.
-Definition quot_choiceMixin := Eval hnf in [choiceMixin of quot by <:].
-Canonical quot_choiceType := Eval hnf in ChoiceType quot quot_choiceMixin.
+End Def.
 
-Lemma repr_inj : injective repr.
+Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0) : poly_scope.
+Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0) : poly_scope.
+
+Section BasicProperties.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Canonical quot_subType := [subType for (@repr _ _ _ (Phant T))].
+Definition quot_eqMixin := Eval hnf in [eqMixin of {quot T} by <:].
+Canonical quot_eqType := Eval hnf in EqType {quot T} quot_eqMixin.
+Definition quot_choiceMixin := Eval hnf in [choiceMixin of {quot T} by <:].
+Canonical quot_choiceType := Eval hnf in ChoiceType {quot T} quot_choiceMixin.
+
+Lemma repr_inj : injective (\repr : {quot T} -> T).
 Proof.
 exact: val_inj.
 Qed.
 
-Lemma canon_id P :
+Lemma canon_id (P : T) :
   canon (canon P) == canon P.
 Proof.
 rewrite /canon; set Q := choose (poly_equiv P) P.
@@ -636,27 +648,26 @@ move => x.
 by apply/idP/idP; apply: poly_equiv_trans; last by rewrite poly_equiv_sym.
 Qed.
 
-Definition class_of P := Poly (canon_id P).
-
+Definition class_of P := Poly (Phant T) (canon_id P).
 Notation "''[' P  ]" := (class_of P) : poly_scope.
 
-Lemma reprK (P : quot) :
-  '[repr P] = P.
+Lemma reprK (P : {quot T}) :
+  '[\repr P] = P.
 Proof.
 case: P => [P P_eq]; apply: repr_inj; exact: eqP.
 Qed.
 
-Lemma repr_equiv (P : T) : repr '[P] =i P.
+Lemma repr_equiv (P : T) : \repr '[P] =i P.
 Proof.
 move: (chooseP (poly_equiv_refl P)); rewrite poly_equiv_sym.
 exact: poly_equivP.
 Qed.
 
-Definition mem (P : quot) := mem (repr P) : pred 'cV[R]_n.
+Definition mem (P : {quot T}) := mem (\repr P) : pred 'cV[R]_n.
 Canonical quot_predType := mkPredType mem.
-Canonical quot_choicePredType := ChoicePredType 'cV[R]_n quot.
+Canonical quot_choicePredType := ChoicePredType 'cV[R]_n {quot T}.
 
-Lemma quot_eqP (P Q : quot) : (P =i Q) -> (P = Q).
+Lemma quot_eqP (P Q : {quot T}) : (P =i Q) -> (P = Q).
 Proof.
 rewrite -[P]reprK -[Q]reprK.
 set P' := repr P; set Q' := repr Q; move => P_equiv_Q.
@@ -669,13 +680,23 @@ apply: repr_inj.
 by rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ'); apply: choose_id; try exact: poly_equiv_refl.
 Qed.
 
-Definition poly0 := '[ `[poly0] ].
-Definition polyT := '[ `[polyT] ].
-Definition polyI P Q := '[ (repr P) `&` (repr Q) ].
-Definition poly_subset P Q := (repr P) `<=` (repr Q).
-Definition mk_hs c d := '[ `[hs c & d] ].
-Definition bounded P c := bounded (repr P) c.
-Definition pointed P := pointed (repr P).
+End BasicProperties.
+
+Notation "''[' P  ]" := (class_of P) : poly_scope.
+
+Section PolyPredStructure.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Implicit Types P : {quot T}.
+
+Definition poly0 : {quot T} := '[ `[poly0] ].
+Definition polyT : {quot T} := '[ `[polyT] ].
+Definition polyI P Q : {quot T} := '[ (\repr P) `&` (\repr Q) ].
+Definition poly_subset (P Q : {quot T}) := (\repr P) `<=` (\repr Q).
+Definition mk_hs c d : {quot T} := '[ `[hs c & d] ].
+Definition bounded P c := bounded (\repr P) c.
+Definition pointed P := pointed (\repr P).
 
 Let inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hs, inE).
 
@@ -715,7 +736,7 @@ Lemma boundedP P c :
 Proof.
 apply: (iffP boundedP) => [[x] H | [x] H]; exists x; move: H;
 suff ->: poly_subset P (mk_hs c '[ c, x]) = (repr P `<=` (`[ hs c & '[ c, x] ]));
-try by rewrite ?inE; try by apply: (sameP (poly_subsetP _ _));
+by rewrite ?inE; try by apply: (sameP (poly_subsetP _ _));
   apply: (iffP (PolyPred.poly_subsetP _ _ _)) => H z; move/(_ z): H; rewrite !inE.
 Qed.
 
@@ -727,7 +748,7 @@ Lemma pointedPn P :
   reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in (mem P))) (~~ pointed P).
 Proof.
 apply: (iffP pointedPn) => [[c [Ω]] H| [c [Ω]] H]; exists c; exists Ω.
-- by move => μ; apply/(PolyPred.poly_subsetP _ _ _ H); apply/in_lineP; exists μ.
+- by move => μ; apply/(PolyPred.poly_subsetP _ _ _ H) ; apply/in_lineP; exists μ.
 - by apply/(PolyPred.poly_subsetP _ _ _) => x /in_lineP [μ ->].
 Qed.
 
@@ -736,36 +757,30 @@ Definition quot_polyPredMixin :=
                  in_hs boundedP boundedPn pointedPn.
 Canonical quot_polyPredType := PolyPredType R n quot_polyPredMixin.
 
-End QuotientDef.
+End PolyPredStructure.
 
-Module Exports.
-Section Exports.
-Variable (R : realFieldType) (n : nat).
-Definition quot (T : polyPredType R n) & phant T := (quot T).
-Definition class_of (T : polyPredType R n) & phant T := (@class_of _ _ T).
-Definition repr (T : polyPredType R n) & phant T := (@repr _ _ T).
+Module Import Exports.
 Canonical quot_subType.
 Canonical quot_eqType.
 Canonical quot_choiceType.
 Canonical quot_predType.
 Canonical quot_choicePredType.
 Canonical quot_polyPredType.
-End Exports.
+Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0) : poly_scope.
+Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0) : poly_scope.
+Notation "''[' P  ]" := (class_of P) : poly_scope.
+Notation reprK := reprK.
+Notation repr_inj := repr_inj.
+Notation repr_equiv := repr_equiv.
+Notation quot_eqP := quot_eqP.
 End Exports.
 End Quotient.
 
-Notation reprK := reprK.
-Notation repr_equiv := Quotient.repr_equiv.
-Notation quot_eqP := Quotient.quot_eqP.
-Definition inE := (Quotient.repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hs, inE).
-
 Export Quotient.Exports.
 
-Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0) : poly_scope.
-Notation "''[' P  ]" := (@class_of _ _ _ (Phant _) P) : poly_scope.
-Notation repr P := (@repr _ _ _ (Phant _) P).
+Definition inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hs, inE).
 
-Section QuotientProp.
+Section QuotientProperties.
 
 Local Open Scope poly_scope.
 
@@ -814,4 +829,4 @@ by apply: (sameP pointedPn); apply: (iffP pointedPn) => [[c [Ω]] H | [c [Ω]] H
   exists c; exists Ω; rewrite line_mono poly_subset_mono in H *.
 Qed.
 
-End QuotientProp.
+End QuotientProperties.

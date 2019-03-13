@@ -164,17 +164,21 @@ Export HPolyhedron.Exports.
 
 Section Test.
 
-Variable (R : realFieldType) (n : nat) (P : {quot 'hpoly[R]_n}%PH) (c x : 'cV[R]_n).
+Local Open Scope poly_scope.
+
+Variable (R : realFieldType) (n : nat) (P : {quot 'hpoly[R]_n}) (c x : 'cV[R]_n).
 
 Hypothesis H : bounded P c.
 Check (opt_point H).
-Check (`[line c & x] : 'hpoly[R]_n)%PH.
-Check (repr P) : 'hpoly[R]_n.
+Check (`[line c & x] : 'hpoly[R]_n).
+Check (\repr P) : 'hpoly[R]_n.
 
-Goal P = '[repr P]%PH.
+Goal P = '[\repr P].
 Proof.
-by rewrite /class_of Quotient.reprK.
+by rewrite reprK.
 Qed.
+
+End Test.
 
 (*Reserved Notation "{ 'over' P , x 'minimizes' c }" (at level 70, format "{ 'over'  P ,  x  'minimizes'  c }").
 Reserved Notation "{ 'over' P , F 'argmin' c }" (at level 70, format "{ 'over'  P ,  F  'argmin'  c }").
