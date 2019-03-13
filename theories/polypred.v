@@ -104,6 +104,8 @@ Coercion pred_of_type : type >-> predType.
 Canonical pred_of_type.
 Notation choicePredType V := (type V).
 Notation ChoicePredType V T := (@pack V T _ id _ _ id _ _ id).
+Notation "[ 'choicePredType' 'of' T ]" := (@clone _ T _ _ id)
+  (at level 0, format "[ 'choicePredType'  'of'  T ]") : form_scope.
 End Exports.
 End ChoicePred.
 
@@ -174,6 +176,8 @@ Canonical choicePredType.
 Notation polyPredType R n := (@type _ n (Phant R)).
 Notation polyPredMixin := mixin_of.
 Notation PolyPredType R n m := (@pack _ n (Phant R) _ _ m _ _ id _ id).
+Notation "[ 'polyPredType' 'of' T ]" := (@clone _ _ _ T _ _ id)
+  (at level 0, format "[ 'polyPredType'  'of'  T ]") : form_scope.
 End Exports.
 End PolyPred.
 
@@ -571,6 +575,7 @@ Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope
 Notation "'`[' 'pt'  Ω  ']'" := (mk_line 0 Ω) (at level 70) : poly_scope.
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'segm'  Ω & Ω'  ']'" := (mk_segm Ω Ω') (at level 70) : poly_scope.
+Notation "{ 'over' P , x 'minimizes' c }" := ((x%R \in P) && (P `<=` `[hs c & '[c, x]]))%PH : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -619,8 +624,8 @@ Structure quot phT := Poly {
 
 End Def.
 
-Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0) : poly_scope.
-Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0) : poly_scope.
+Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0).
+Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0).
 
 Section BasicProperties.
 
@@ -649,7 +654,7 @@ by apply/idP/idP; apply: poly_equiv_trans; last by rewrite poly_equiv_sym.
 Qed.
 
 Definition class_of P := Poly (Phant T) (canon_id P).
-Notation "''[' P  ]" := (class_of P) : poly_scope.
+Notation "''[' P  ]" := (class_of P) (at level 0).
 
 Lemma reprK (P : {quot T}) :
   '[\repr P] = P.
@@ -766,9 +771,9 @@ Canonical quot_choiceType.
 Canonical quot_predType.
 Canonical quot_choicePredType.
 Canonical quot_polyPredType.
-Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0) : poly_scope.
-Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0) : poly_scope.
-Notation "''[' P  ]" := (class_of P) : poly_scope.
+Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0).
+Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0).
+Notation "''[' P  ]" := (class_of P) (at level 0).
 Notation reprK := reprK.
 Notation repr_inj := repr_inj.
 Notation repr_equiv := repr_equiv.
