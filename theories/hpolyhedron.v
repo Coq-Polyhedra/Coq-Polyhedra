@@ -81,17 +81,24 @@ Implicit Type (P : 'hpoly[R]_n).
 Definition mk_hs c d : 'hpoly[R]_n := 'P(c^T, d%:M).
 
 Lemma in_hs c d x : x \in (mk_hs c d) = ('[c,x] >= d).
-Admitted.
+Proof.
+rewrite inE vdotC -vdot_def.
+by apply/forallP/idP => [ /(_ 0) | H i]; rewrite ?[i]ord1_eq0 !mxE /= !mulr1n.
+Qed.
 
 Definition poly0 := mk_hs 0 1.
 
 Lemma in_poly0 : poly0 =i pred0.
-Admitted.
+Proof.
+by move => x; rewrite in_hs vdot0l inE ler10.
+Qed.
 
 Definition polyT : 'hpoly[R]_n := 'P(0, const_mx 0, 0).
 
 Lemma in_polyT : polyT =i predT.
-Admitted.
+Proof.
+by move => x; rewrite !inE mul0mx lev_refl.
+Qed.
 
 Definition polyI P Q :=
   let: 'P(A, b) := P in
