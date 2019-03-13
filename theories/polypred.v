@@ -202,7 +202,7 @@ Local Open Scope poly_scope.
 
 Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
 Notation "'`[' 'polyT' ']'" := polyT (at level 70) : poly_scope.
-Notation "P `&` Q" := (polyI P Q) (at level 50) : poly_scope.
+Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
 Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity) : poly_scope.
 Notation "P `>=` Q" := (Q `<=` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
 Notation "P `=~` Q" := (poly_equiv P Q) (at level 70, no associativity) : poly_scope.
@@ -390,27 +390,26 @@ Admitted.
 Lemma poly_proper_trans : transitive poly_proper.
 Admitted.
 
-Notation "{ 'over' P , x 'minimizes' c }" := ((x%R \in P) && (P `<=` `[hs c & '[c, x]])) : poly_scope.
+Definition argmin P c := [pred x | (x \in P) && (P `<=` `[hs c & '[c, x]])].
 
 Lemma minimize_in {P : T} {x} c :
-  {over P, x minimizes c} -> x \in P.
+  x \in argmin P c -> x \in P.
 Proof.
 by move/andP => [?].
 Qed.
 
 Lemma minimize_lower_bound {c x y} (P : T) :
-  {over P, x minimizes c} -> y \in P -> '[c,x] <= '[c,y].
+  x \in argmin P c -> y \in P -> '[c,x] <= '[c,y].
 Proof.
 by move/andP => [_ /poly_subset_hsP/(_ y)].
 Qed.
 
 Lemma minimize_eq {P : T} {c v x} :
-  {over P, v minimizes c} ->
-  reflect (x \in P /\ '[c,x] = '[c,v]) {over P, x minimizes c}.
+  v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
 Admitted.
 
 Lemma boundedP {P : T} {c} :
-  reflect (exists x, {over P, x minimizes c}) (bounded P c).
+  reflect (exists x, x \in argmin P c) (bounded P c).
 Proof.
 exact: (PolyPred.boundedP (PolyPred.class T)).
 Qed.
@@ -446,7 +445,7 @@ apply: (minimize_lower_bound (P := P)); [exact: (xchooseP (@boundedP _ _ _)) | d
 Qed.
 
 Lemma minimize_opt_value (P : T) c x (b : bounded P c) :
-  {over P, x minimizes c} = (x \in P) && ('[c,x] == opt_value b).
+  (x \in argmin P c) = (x \in P) && ('[c,x] == opt_value b).
 Proof.
 Admitted.
 
@@ -562,7 +561,7 @@ End PolyPredProperties.
 
 Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
 Notation "'`[' 'polyT' ']'" := polyT (at level 70) : poly_scope.
-Notation "P `&` Q" := (polyI P Q) (at level 50) : poly_scope.
+Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
 Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity) : poly_scope.
 Notation "P `>=` Q" := (Q `<=` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
 Notation "P `=~` Q" := (poly_equiv P Q) (at level 70, no associativity) : poly_scope.
