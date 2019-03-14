@@ -34,8 +34,11 @@ Hypothesis P_non_empty : (P `>` `[poly0]).
 Lemma face_set_self : P \in face_set.
 Admitted.
 
-Lemma face_setP (Q : 'poly[R]_n) :
-  reflect (exists2 c, bounded P c & Q =i argmin P c) (Q \in face_set).
+Lemma argmin_in_face_set c :
+  bounded P c -> argmin P c \in face_set.
+Admitted.
+
+Lemma face_is_argmin Q : Q \in face_set -> exists2 c, Q = argmin P c & bounded P c.
 Admitted.
 
 
