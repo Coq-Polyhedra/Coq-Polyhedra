@@ -42,9 +42,25 @@ Lemma faceP {Q} :
   reflect (exists2 c, Q = argmin P c & bounded P c) (Q \in face_set).
 Admitted.
 
-(*
-Lemma face_non_empty
- *)
+Lemma face_proper0 Q : Q \in face_set -> Q `>` `[poly0].
+Proof.
+by move/imfsetP => /= [I]; rewrite inE => ? ->.
+Qed.
+
+Lemma face_polyEq Q : Q \in face_set -> exists I, Q = '['P^=(base; I)].
+Proof.
+by move/imfsetP => /= [I]; rewrite inE => _ ->; exists I.
+Qed.
+
+Lemma in_face_set I : ('P^=(base; I) `>` `[poly0]) -> '['P^=(base; I)] \in face_set.
+Proof.
+move => non_empty; apply/imfsetP; exists I; rewrite ?inE //=.
+
+
+rewrite inE.
+
+Lemma face_set_inP Q :
+  reflect (Q
 
 End FaceBase.
 End FaceBase.
