@@ -196,7 +196,7 @@ Definition bounded := PolyPred.bounded (PolyPred.class T).
 Definition pointed := PolyPred.pointed (PolyPred.class T).
 
 Definition poly_equiv (P Q : T) := (poly_subset P Q) && (poly_subset Q P).
-Definition poly_proper (P Q : T) := (poly_subset P Q) && (~~ (poly_subset Q P)).
+Definition poly_proper (P Q : T) := ((poly_subset P Q) && (~~ (poly_subset Q P))).
 
 Local Open Scope poly_scope.
 
@@ -342,6 +342,9 @@ Qed.
 Lemma proper0N_equiv (P : T): ~~ (P `>` `[poly0]) = (P `=~` `[poly0]).
 Admitted.
 
+Lemma subset0N_proper (P : T): ~~ (P `<=` `[poly0]) = (P `>` `[poly0]).
+Admitted.
+
 Lemma equiv0N_proper (P : T) : (P `!=~` `[poly0]) = (P `>` `[poly0]).
 Admitted.
 
@@ -353,12 +356,19 @@ CoInductive empty_spec (P : T) : bool -> bool -> bool -> Set :=
 | NonEmpty of (P `>` `[poly0]) : empty_spec P true false false.
 
 Lemma emptyP (P : T) : empty_spec P (P  `>` `[poly0]) (P `=~` `[poly0]) (P `<=` `[poly0]).
-Admitted.
+Proof.
+case: (boolP (P  `>` `[poly0])) => [P_non_empty | P_empty].
+- rewrite -subset0N_proper in P_non_empty; move: (P_non_empty) => /negbTE ->.
+  rewrite subset0_equiv in P_non_empty; move: (P_non_empty) => /negbTE ->.
+  by constructor; rewrite equiv0N_proper in P_non_empty.
+- rewrite proper0N_equiv in P_empty; rewrite subset0_equiv P_empty.
+  by constructor; apply/poly_equivP.
+Qed.
 
 Lemma proper0P {P : T} :
   reflect (exists x, x \in P) (P `>` `[poly0]).
 Proof.
-rewrite -subset0n_proper.
+rewrite -[_ `<` _]negbK proper0N_equiv -subset0_equiv.
 by apply/(iffP poly_subsetPn) => [[x H] | [x H]]; exists x; rewrite inE andbT in H *.
 Qed.
 
@@ -408,7 +418,7 @@ Qed.
 Lemma boundedPn {P : T} {c} :
   (P `>` `[poly0]) -> reflect (forall K, exists2 x, x \in P & '[c,x] < K) (~~ bounded P c).
 Proof.
-rewrite -subset0n_proper; move => P_non_empty.
+rewrite -subset0N_proper; move => P_non_empty.
 apply: (iffP (PolyPred.boundedPn _ P_non_empty)) => [H K | H K]; move/(_ K): H.
 - move/poly_subsetPn => [x /andP [x_in_P x_not_in_hs]].
   exists x; by rewrite notin_hs in x_not_in_hs.
@@ -482,12 +492,12 @@ apply: (minimize_lower_bound (P := P)); [exact: (xchooseP (@boundedP _ _ _)) | d
 Qed.*)
 
 Lemma bounded_lower_bound (P : T) c :
-  (P `>` `[poly0]) -> reflect (exists d, (forall x, x \in P -> '[c,x] >= d)) (bounded P c).
+  (P `>` `[poly0]) -> reflect (exists d, P `<=` `[hs c & d]) (bounded P c).
 Proof.
 move => P_non_empty; apply: introP => [ c_bounded | /(boundedPn P_non_empty) c_unbouded ].
 - exists (opt_value c_bounded); exact: opt_value_lower_bound.
 - move => [d c_bounded]; move/(_ d): c_unbouded => [x x_in_P c_x_lt_K].
-  by move/(_ _ x_in_P): c_bounded; rewrite lerNgt => /negP.
+  by move/poly_subsetP/(_ _ x_in_P): c_bounded; rewrite in_hs lerNgt => /negP.
 Qed.
 
 Definition mk_line (c Ω : 'cV[R]_n) : T :=

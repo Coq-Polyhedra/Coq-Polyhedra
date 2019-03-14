@@ -22,25 +22,74 @@ Import GRing.Theory Num.Theory.
 Module FaceBase.
 Section FaceBase.
 
-Variable (R : realFieldType) (n : nat) (P : 'poly[R]_n) (base : 'hpoly[R]_n).
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Let P := '[base].
 
 Definition face_set : {fset 'poly[R]_n} := [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
 
-Lemma face_set0 : (P = `[poly0]) -> face_set = fset0.
+Lemma poly0_face_set : (P = `[poly0]) -> face_set = fset0.
 Admitted.
 
-Hypothesis P_non_empty : (P `>` `[poly0]).
-
-Lemma face_set_self : P \in face_set.
+Lemma face_set_self : (P `>` `[poly0]) -> P \in face_set.
 Admitted.
 
 Lemma argmin_in_face_set c :
   bounded P c -> argmin P c \in face_set.
 Admitted.
 
-Lemma face_is_argmin Q : Q \in face_set -> exists2 c, Q = argmin P c & bounded P c.
+Lemma faceP {Q} :
+  reflect (exists2 c, Q = argmin P c & bounded P c) (Q \in face_set).
 Admitted.
 
+(*
+Lemma face_non_empty
+ *)
+
+End FaceBase.
+End FaceBase.
+
+Section Face.
+
+Context {R : realFieldType} {n : nat}.
+
+Implicit Type (P Q : 'poly[R]_n).
+
+Definition face_set P : {fset 'poly[R]_n} := FaceBase.face_set (\repr P).
+
+Lemma poly0_face_set P : face_set '[poly0] = fset0.
+Proof.
+by apply: FaceBase.poly0_face_set; rewrite reprK.
+Qed.
+
+Lemma face_set_self P : (P `>` `[poly0]) -> P \in face_set P.
+Proof.
+rewrite /face_set -{-3}[P]reprK; exact: FaceBase.face_set_self.
+Qed.
+
+Lemma argmin_in_face_set P c :
+  bounded P c -> argmin P c \in face_set P.
+Proof.
+rewrite  /face_set -{-3}[P]reprK; exact: FaceBase.argmin_in_face_set.
+Qed.
+
+Lemma faceP {P Q} :
+  reflect (exists2 c, Q = argmin P c & bounded P c) (Q \in face_set P).
+rewrite /face_set -{-3}[P]reprK; exact: FaceBase.faceP.
+Qed.
+
+Lemma face_base P base :
+  P = '[base] -> face_set P = [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
+Proof.
+rewrite -/(FaceBase.face_set base).
+move => P_base; apply/fsetP => Q.
+apply: (sameP faceP); rewrite P_base; exact: FaceBase.faceP.
+Qed.
+
+Lemma polyI_face P Q Q' :
+  Q \in face_set P -> Q' \in face_set P ->  (Q `&` Q') > `[poly0] -> (Q `&` Q') \in face_set P.
+Proof.
+move/imfsetP => /= [I] /andP.
 
 
 Section Base.

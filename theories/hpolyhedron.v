@@ -17,6 +17,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
+Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
 Module HPolyhedron.
@@ -171,6 +172,24 @@ End HPolyhedron.
 
 Export HPolyhedron.Exports.
 
+Section HPolyhedronProp.
+
+Variable (R : realFieldType) (n : nat).
+
+(*
+CoInductive hpoly_spec (P : 'poly[R]_n) (m : nat) : 'M[R]_(m,n) -> 'cV[R]_m -> Type :=
+  HpolySpec A b of (P = '['P(A,b)]) : hpoly_spec P A b.
+
+Lemma hpolyP (P : 'poly[R]_n) : (* not properly usable yet *)
+  let: 'P(m,A,b) := \repr P in
+  hpoly_spec P A b.
+Proof.
+Admitted.
+*)
+
+
+End HPolyhedronProp.
+
 (*Section Test.
 
 Local Open Scope poly_scope.
@@ -270,14 +289,14 @@ case : base I => [m A b] I.
 by move => x /in_hpolyEqP [].
 Qed.
 
+Lemma hpolyEq_polyI (base: 'hpoly[R]_n) (I J : {set 'I_(#ineq base)}) :
+  'P^=(base; I) `&` 'P^=(base; J) =i 'P^=(base; I :|: J). (* should =i be =~ instead *)
+Admitted.
+
 End HPolyEq.
 
 Notation "''P^=' ( P ; J )" := (@hpolyEq_of_set _ _ P J).
 Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J).
-
-
-
-
 
 (*Reserved Notation "{ 'over' P , x 'minimizes' c }" (at level 70, format "{ 'over'  P ,  x  'minimizes'  c }").
 Reserved Notation "{ 'over' P , F 'argmin' c }" (at level 70, format "{ 'over'  P ,  F  'argmin'  c }").
