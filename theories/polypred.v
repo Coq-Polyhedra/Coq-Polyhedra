@@ -271,7 +271,15 @@ Proof.
 by rewrite in_hs ltrNge.
 Qed.
 
-Let inE := (in_poly0, in_polyT, in_polyI, in_hs, inE).
+Definition mk_hp c d : T := `[hs c & d] `&` `[hs (-c) & (-d)].
+
+Notation "'`[' 'hp'  c & d  ']'" := (mk_hp c d) (at level 70) : poly_scope.
+
+Lemma in_hp c d x : x \in (`[hp c & d] : T) = ('[c,x] == d).
+Proof.
+Admitted.
+
+Let inE := (in_poly0, in_polyT, in_polyI, in_hs, in_hp, inE).
 
 Lemma poly_subsetP {P Q : T} : reflect {subset P <= Q} (P `<=` Q).
 Proof.
@@ -331,20 +339,21 @@ Proof.
 exact: (PolyPred.poly_subsetPn (PolyPred.class T)).
 Qed.
 
-Lemma subset0n_proper (P : T): ~~ (P `<=` `[poly0]) = (P `>` `[poly0]).
-Proof.
-by rewrite /poly_proper poly0_subset /=.
-Qed.
+Lemma proper0N_equiv (P : T): ~~ (P `>` `[poly0]) = (P `=~` `[poly0]).
+Admitted.
 
 Lemma equiv0N_proper (P : T) : (P `!=~` `[poly0]) = (P `>` `[poly0]).
-Proof.
-by rewrite /poly_equiv poly0_subset andbT subset0n_proper.
-Qed.
+Admitted.
 
 Lemma subset0_equiv (P : T) : (P `<=` `[poly0]) = (P `=~` `[poly0]).
-Proof.
-by apply: negb_inj; rewrite subset0n_proper equiv0N_proper.
-Qed.
+Admitted.
+
+CoInductive empty_spec (P : T) : bool -> bool -> bool -> Set :=
+| Empty of (P =i `[poly0]) : empty_spec P false true true
+| NonEmpty of (P `>` `[poly0]) : empty_spec P true false false.
+
+Lemma emptyP (P : T) : empty_spec P (P  `>` `[poly0]) (P `=~` `[poly0]) (P `<=` `[poly0]).
+Admitted.
 
 Lemma proper0P {P : T} :
   reflect (exists x, x \in P) (P `>` `[poly0]).
@@ -390,26 +399,8 @@ Admitted.
 Lemma poly_proper_trans : transitive poly_proper.
 Admitted.
 
-Definition argmin P c := [pred x | (x \in P) && (P `<=` `[hs c & '[c, x]])].
-
-Lemma minimize_in {P : T} {x} c :
-  x \in argmin P c -> x \in P.
-Proof.
-by move/andP => [?].
-Qed.
-
-Lemma minimize_lower_bound {c x y} (P : T) :
-  x \in argmin P c -> y \in P -> '[c,x] <= '[c,y].
-Proof.
-by move/andP => [_ /poly_subset_hsP/(_ y)].
-Qed.
-
-Lemma minimize_eq {P : T} {c v x} :
-  v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
-Admitted.
-
 Lemma boundedP {P : T} {c} :
-  reflect (exists x, x \in argmin P c) (bounded P c).
+  reflect (exists x, (x \in P) && (P `<=` `[hs c & '[c, x]])) (bounded P c).
 Proof.
 exact: (PolyPred.boundedP (PolyPred.class T)).
 Qed.
@@ -433,21 +424,62 @@ Lemma opt_point (P : T) c (b : bounded P c) :
 Proof.
 rewrite /opt_value; set x := xchoose _.
 exists x; last by done.
-apply/(minimize_in (c := c)); exact: (xchooseP (@boundedP _ _ _)).
+by move: (xchooseP (boundedP b)) => /andP [?].
 Qed.
 
-Lemma opt_value_lower_bound (P : T) c (b : bounded P c) :
-  forall y, y \in P -> '[c,y] >= opt_value b.
+Lemma opt_value_lower_bound {P : T} {c} (b : bounded P c) :
+  P `<=` (`[ hs c & opt_value b ]).
 Proof.
-move => y y_in_P.
+by rewrite /opt_value; move/andP : (xchooseP (boundedP b)) => [_].
+Qed.
+
+Definition argmin (P : T) c :=
+  if @idP (bounded P c) is ReflectT H then
+    P `&` `[hp c & opt_value H]
+  else
+    `[poly0].
+
+Lemma in_argmin P c x :
+  x \in argmin P c = (x \in P) && (P `<=` `[hs c & '[c, x]]).
+Proof.
+rewrite /argmin; case: {-}_/idP => [| /negP c_unbounded]; last first.
+- rewrite inE; symmetry; apply: negbTE.
+  case: (emptyP P) => [-> | P_non_empty]; first by rewrite inE.
+  move/(boundedPn P_non_empty)/(_ '[c,x]): c_unbounded => [y y_in_P c_y_lt_c_x].
+  rewrite negb_and; apply/orP; right.
+  apply/poly_subsetPn; exists y; apply/andP; split; by rewrite ?notin_hs.
+- move => c_bounded; rewrite !inE; apply/andP/andP.
+  + move => [x_in_P /eqP ->]; split; by [done | exact: opt_value_lower_bound].
+  + move => [x_in_P subset]; split; first by done.
+    rewrite -lter_anti; apply/andP; split.
+    * move/opt_point : (c_bounded) => [z z_in_P <-].
+      by move/poly_subsetP/(_ _ z_in_P): subset; rewrite in_hs.
+    * rewrite -in_hs; by apply/(poly_subsetP (opt_value_lower_bound _)).
+Qed.
+
+Lemma bounded_argminN0 P c :
+  (bounded P c) = (argmin P c `>` `[poly0]).
+Admitted.
+
+Lemma argmin_subset P c : argmin P c `<=` P.
+Admitted.
+
+Lemma argmin_lower_bound {c x y} (P : T) :
+  x \in argmin P c -> y \in P -> '[c,x] <= '[c,y].
+Admitted.
+(*Proof.
+by move/andP => [_ /poly_subset_hsP/(_ y)].
+Qed.*)
+
+Lemma argmin_eq {P : T} {c v x} :
+  v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
+Admitted.
+
+
+(*move => y y_in_P.
 rewrite /opt_value; set x := xchoose _.
 apply: (minimize_lower_bound (P := P)); [exact: (xchooseP (@boundedP _ _ _)) | done].
-Qed.
-
-Lemma minimize_opt_value (P : T) c x (b : bounded P c) :
-  (x \in argmin P c) = (x \in P) && ('[c,x] == opt_value b).
-Proof.
-Admitted.
+Qed.*)
 
 Lemma bounded_lower_bound (P : T) c :
   (P `>` `[poly0]) -> reflect (exists d, (forall x, x \in P -> '[c,x] >= d)) (bounded P c).
@@ -457,14 +489,6 @@ move => P_non_empty; apply: introP => [ c_bounded | /(boundedPn P_non_empty) c_u
 - move => [d c_bounded]; move/(_ d): c_unbouded => [x x_in_P c_x_lt_K].
   by move/(_ _ x_in_P): c_bounded; rewrite lerNgt => /negP.
 Qed.
-
-Definition mk_hp c d : T := `[hs c & d] `&` `[hs (-c) & (-d)].
-
-Notation "'`[' 'hp'  c & d  ']'" := (mk_hp c d) (at level 70) : poly_scope.
-
-Lemma in_hp c d x : x \in (`[hp c & d] : T) = ('[c,x] == d).
-Proof.
-Admitted.
 
 Definition mk_line (c Ω : 'cV[R]_n) : T :=
   let S := kermx c in
@@ -825,6 +849,9 @@ Proof.
 apply/quot_eqP => x; apply: (sameP in_lineP); rewrite !inE.
 exact: in_lineP.
 Qed.
+
+Lemma argmin_mono (P : T) c : argmin '[P] c = '[argmin P c].
+Admitted.
 
 Lemma pointed_mono (P : T) : pointed '[P] = pointed P.
 Proof.
