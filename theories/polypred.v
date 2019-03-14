@@ -608,7 +608,6 @@ Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope
 Notation "'`[' 'pt'  Ω  ']'" := (mk_line 0 Ω) (at level 70) : poly_scope.
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'segm'  Ω & Ω'  ']'" := (mk_segm Ω Ω') (at level 70) : poly_scope.
-Notation "{ 'over' P , x 'minimizes' c }" := ((x%R \in P) && (P `<=` `[hs c & '[c, x]]))%PH : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -829,6 +828,10 @@ Proof.
 by apply: (sameP poly_subsetP); apply: (iffP poly_subsetP) => [ H x | H x];
 move/(_ x): H; rewrite !inE.
 Qed.
+
+Lemma poly_proper_mono (P Q : T) : ('[P] `<` '[Q]) = (P `<` Q).
+Proof.
+Admitted.
 
 Lemma bounded_mono (P : T) c : bounded '[P] c = bounded P c.
 Proof.
