@@ -47,20 +47,15 @@ Proof.
 by move/imfsetP => /= [I]; rewrite inE => ? ->.
 Qed.
 
-Lemma face_polyEq Q : Q \in face_set -> exists I, Q = '['P^=(base; I)].
+Lemma face_polyEq Q : Q \in face_set -> exists I, Q = '['P^=(base; I)] /\ Q `>` `[poly0].
 Proof.
-by move/imfsetP => /= [I]; rewrite inE => _ ->; exists I.
+by move/imfsetP => /= [I]; rewrite inE => ? ->; exists I.
 Qed.
 
-Lemma in_face_set I : ('P^=(base; I) `>` `[poly0]) -> '['P^=(base; I)] \in face_set.
+Lemma polyEq_face I : ('['P^=(base; I)] `>` `[poly0]) -> '['P^=(base; I)] \in face_set.
 Proof.
-move => non_empty; apply/imfsetP; exists I; rewrite ?inE //=.
-
-
-rewrite inE.
-
-Lemma face_set_inP Q :
-  reflect (Q
+by move => non_empty; apply/imfsetP; exists I; rewrite ?inE //=.
+Qed.
 
 End FaceBase.
 End FaceBase.
@@ -94,18 +89,45 @@ Lemma faceP {P Q} :
 rewrite /face_set -{-3}[P]reprK; exact: FaceBase.faceP.
 Qed.
 
-Lemma face_base P base :
-  P = '[base] -> face_set P = [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
+Lemma face_base base :
+  face_set '[base] = [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
 Proof.
 rewrite -/(FaceBase.face_set base).
-move => P_base; apply/fsetP => Q.
-apply: (sameP faceP); rewrite P_base; exact: FaceBase.faceP.
+apply/fsetP => Q; apply: (sameP faceP); exact: FaceBase.faceP.
+Qed.
+
+Lemma face_proper0 P Q : Q \in face_set P -> Q `>` `[poly0].
+Proof.
+by rewrite -[P]reprK; exact: FaceBase.face_proper0.
+Qed.
+
+Lemma face_polyEq base Q :
+  Q \in face_set '[base] -> exists I, Q = '['P^=(base; I)] /\ Q `>` `[poly0].
+Proof.
+rewrite face_base; exact: FaceBase.face_polyEq.
+Qed.
+
+Lemma polyEq_face base I : ('['P^=(base; I)] `>` `[poly0]) -> '['P^=(base; I)] \in (face_set '[base]).
+Proof.
+rewrite face_base; exact: FaceBase.polyEq_face.
 Qed.
 
 Lemma polyI_face P Q Q' :
-  Q \in face_set P -> Q' \in face_set P ->  (Q `&` Q') > `[poly0] -> (Q `&` Q') \in face_set P.
+  Q \in face_set P -> Q' \in face_set P ->  ((Q `&` Q') `>` `[poly0]) -> (Q `&` Q') \in face_set P.
 Proof.
-move/imfsetP => /= [I] /andP.
+rewrite -[P]reprK; move => /face_polyEq [I] [-> _] /face_polyEq [I'] [-> _].
+rewrite polyEq_polyI; exact: polyEq_face.
+Qed.
+
+Lemma face_of_face P Q Q' :
+  Q \in face_set P -> Q' \in face_set Q -> Q' \in face_set P.
+Proof.
+rewrite -[P]reprK.
+move => /face_polyEq [I] [-> _] /face_polyEq [I'] [->].
+move: (hpolyEq_of_hpolyEq I') => [K] /quot_repr_eqP ->.
+exact: polyEq_face.
+Qed.
+
 
 
 Section Base.
