@@ -449,6 +449,12 @@ Definition argmin (P : T) c :=
   else
     `[poly0].
 
+Lemma argmin_polyI (P : T) c (b : bounded P c) :
+  argmin P c = P `&` `[hp c & opt_value b].
+Proof.
+by rewrite /argmin; case: {-}_/idP => [b' | ?]; rewrite ?[b]eq_irrelevance.
+Qed.
+
 Lemma in_argmin P c x :
   x \in argmin P c = (x \in P) && (P `<=` `[hs c & '[c, x]]).
 Proof.
@@ -717,6 +723,9 @@ apply: repr_inj.
 by rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ'); apply: choose_id; try exact: poly_equiv_refl.
 Qed.
 
+Lemma quot_repr_eqP (P Q : T) : (P =i Q) <-> '[P] = '[Q].
+Admitted.
+
 End BasicProperties.
 
 Notation "''[' P  ]" := (class_of P) : poly_scope.
@@ -810,6 +819,7 @@ Notation reprK := reprK.
 Notation repr_inj := repr_inj.
 Notation repr_equiv := repr_equiv.
 Notation quot_eqP := quot_eqP.
+Notation quot_repr_eqP := quot_repr_eqP.
 End Exports.
 End Quotient.
 
@@ -874,3 +884,7 @@ by apply: (sameP pointedPn); apply: (iffP pointedPn) => [[c [Ω]] H | [c [Ω]] H
 Qed.
 
 End QuotientProperties.
+
+Definition quotE := (@poly_subset_mono, @poly_proper_mono, @bounded_mono,
+                    @polyI_mono, @big_polyI_mono, @hs_mono, @line_mono,
+                    @argmin_mono, @pointed_mono).
