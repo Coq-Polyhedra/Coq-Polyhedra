@@ -46,7 +46,8 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition mem_hpoly (P : 'hpoly[R]_n) :=
-  let: 'P(A,b) := P in [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
+  let: 'P(A,b) := P in
+    [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
 
 Canonical hpoly_predType := mkPredType mem_hpoly.
 
@@ -104,7 +105,7 @@ Qed.
 Definition polyI P Q :=
   let: 'P(A, b) := P in
   let: 'P(A', b') := Q in
-  'P(col_mx A A', col_mx b b').
+    'P(col_mx A A', col_mx b b').
 
 Lemma in_polyI P Q : (polyI P Q) =i [predI P & Q].
 Proof.
@@ -115,23 +116,70 @@ Qed.
 
 Definition bounded P c :=
   let: 'P(A, b) := P in
-  Simplex.bounded A b c.
+    Simplex.bounded A b c.
 
 Definition opt_value P c :=
   let: 'P(A, b) := P in
-  Simplex.opt_value A b c.
+    Simplex.opt_value A b c.
 
 Definition poly_subset P Q :=
   let: 'P(A, b) := P in
   let: 'P(A', b') := Q in
-  Simplex.feasible A b ||
-    [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
+    (~~ Simplex.feasible A b) ||
+      [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
 
-Lemma poly_subsetP P Q : reflect {subset P <= Q} (poly_subset P Q).
-Admitted.
+Lemma poly_subsetP P Q :
+  reflect {subset P <= Q} (poly_subset P Q).
+Proof. (* RK *)
+case: P => m A b; case: Q => m' A' b'.
+apply: (iffP idP) => [ /orP poly_subset_P_Q | subset_P_Q].
+- case: poly_subset_P_Q => [ empty_P | /forallP hs_incl x x_in_P].
+  + move => x x_in_P.
+    move: empty_P; apply/contraR => _.
+    by apply/Simplex.feasibleP; exists x.
+  + apply/forallP => i.
+    move/andP: (hs_incl i) => [/Simplex.boundedP [_ opt_is_opt] ?].
+    apply: (@ler_trans _ (Simplex.opt_value A b (row i A')^T) _ _); first by done.
+    by rewrite -row_vdot; apply: opt_is_opt.
+- apply/orP.
+  case: (boolP (Simplex.feasible A b)) => [feasible_P | _]; last by left.
+  right.
+  apply/forallP => i.
+  suff bounded_P_row_i_A': Simplex.bounded A b (row i A')^T.
+    apply/andP; split; first exact: bounded_P_row_i_A'.
+    move/Simplex.boundedP: bounded_P_row_i_A' => [[x [/subset_P_Q  x_in_Q <-]] _].
+    rewrite row_vdot.
+    exact: ((forallP x_in_Q) i).
+  apply/(Simplex.boundedP_lower_bound _ feasible_P).
+  exists (b' i 0).
+  move => x /subset_P_Q x_in_Q.
+  rewrite row_vdot.
+  exact: ((forallP x_in_Q) i).
+Qed.
 
-Lemma poly_subsetPn P Q : reflect (exists x, (x \in P) && (x \notin Q)) (~~ (poly_subset P Q)).
-Admitted.
+Lemma poly_subsetPn P Q :
+  reflect (exists x, (x \in P) && (x \notin Q)) (~~ (poly_subset P Q)).
+Proof. (* RK *)
+case: P => m A b; case: Q => m' A' b'.
+apply: (iffP idP) => [|[? /andP [? not_im_Q]]]; last by move: not_im_Q; apply/contra; move/poly_subsetP ->.
+rewrite negb_or negbK negb_forall.
+move/andP => [feasible_P /existsP [i /nandP unbounded_or]].
+have unbounded_suff: ~~ Simplex.bounded A b (row i A')^T -> exists x : 'cV_n, (x \in 'P (A, b)) && (x \notin 'P (A', b')).
+  rewrite -(Simplex.unbounded_is_not_bounded _ feasible_P) => /Simplex.unboundedP unbounded_P_row_i_A'.
+  move: (unbounded_P_row_i_A' (b' i 0)) => [x [x_in_P ineq]].
+  exists x; apply/andP; split; first exact: x_in_P.
+  move: ineq; apply: contraL => x_in_Q.
+  rewrite -lerNgt row_vdot.
+  exact: ((forallP x_in_Q) i).
+case: unbounded_or; first exact: unbounded_suff.
+case: (boolP (Simplex.bounded A b (row i A')^T)) => [? | ? _]; last by apply: unbounded_suff.
+rewrite -ltrNge => ineq.
+exists (Simplex.opt_point A b (row i A')^T).
+apply/andP; split; first by apply: Simplex.opt_point_is_feasible.
+move: ineq; apply: contraL => opt_point_in_Q.
+rewrite -lerNgt /Simplex.opt_value row_vdot.
+exact: ((forallP opt_point_in_Q) i).
+Qed.
 
 Lemma boundedP P c : reflect (exists x, (x \in P) && poly_subset P (mk_hs c '[c,x])) (bounded P c).
 Admitted.
