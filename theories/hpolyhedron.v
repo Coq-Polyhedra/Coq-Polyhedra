@@ -445,6 +445,13 @@ apply/poly_equivP => x; rewrite in_hpolyEq !inE; apply: congr1; rewrite row_vdot
 by apply/forall_inP/idP => [/(_ _ (set11 i)) | ? j /set1P ->].
 Qed.
 
+
+Lemma polyEq1 (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (i : 'I_m) :
+  '['P^=(A, b; [set i])] = '['P(A,b)] `&` `[hp (row i A)^T & b i 0].
+Proof.
+rewrite !quotE; apply/quotP; exact: hpolyEq1.
+Qed.
+
 End HPolyEq.
 
 Notation "''P^=' ( P ; J )" := (@hpolyEq_of_set _ _ P J).
