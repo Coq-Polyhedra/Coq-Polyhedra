@@ -132,8 +132,8 @@ Lemma poly_subsetP P Q :
   reflect {subset P <= Q} (poly_subset P Q).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
-apply: (iffP idP) => [ /orP poly_subset_P_Q | subset_P_Q].
-- case: poly_subset_P_Q => [ empty_P | /forallP hs_incl x x_in_P].
+apply: (iffP idP) => [/orP poly_subset_P_Q | subset_P_Q].
+- case: poly_subset_P_Q => [empty_P | /forallP hs_incl x x_in_P].
   + move => x x_in_P.
     move: empty_P; apply/contraR => _.
     by apply/Simplex.feasibleP; exists x.
@@ -161,7 +161,7 @@ Lemma poly_subsetPn P Q :
   reflect (exists2 x, x \in P & x \notin Q) (~~ (poly_subset P Q)).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
-apply: (iffP idP) => [|[?] [? not_in_Q]];
+apply: (iffP idP) => [| [?] ? not_in_Q];
   last by move: not_in_Q; apply/contra; move/poly_subsetP ->.
 rewrite negb_or negbK negb_forall.
 move/andP => [feasible_P /existsP [i /nandP unbounded_or]].
