@@ -77,18 +77,18 @@ Qed.
 
 Lemma face_set_self P : (P `>` `[poly0]) -> P \in face_set P.
 Proof.
-rewrite /face_set -{-3}[P]reprK; exact: FaceBase.face_set_self.
+rewrite /face_set; case/hpolyP: P => m A b; exact: FaceBase.face_set_self.
 Qed.
 
 Lemma argmin_in_face_set P c :
   bounded P c -> argmin P c \in face_set P.
 Proof.
-rewrite  /face_set -{-3}[P]reprK; exact: FaceBase.argmin_in_face_set.
+rewrite /face_set; case/hpolyP: P => m A b; exact: FaceBase.argmin_in_face_set.
 Qed.
 
 Lemma faceP {P Q} :
   reflect (exists2 c, Q = argmin P c & bounded P c) (Q \in face_set P).
-rewrite /face_set -{-3}[P]reprK; exact: FaceBase.faceP.
+rewrite /face_set; case/hpolyP: P => m A b; exact: FaceBase.faceP.
 Qed.
 
 Lemma face_base base :
@@ -100,7 +100,7 @@ Qed.
 
 Lemma face_proper0 P Q : Q \in face_set P -> Q `>` `[poly0].
 Proof.
-by rewrite -[P]reprK; exact: FaceBase.face_proper0.
+rewrite /face_set; case/hpolyP: P => m A b; exact: FaceBase.face_proper0.
 Qed.
 
 Lemma face_polyEq base Q :
@@ -117,14 +117,14 @@ Qed.
 Lemma polyI_face P Q Q' :
   Q \in face_set P -> Q' \in face_set P ->  ((Q `&` Q') `>` `[poly0]) -> (Q `&` Q') \in face_set P.
 Proof.
-rewrite -[P]reprK; move => /face_polyEq [I] [-> _] /face_polyEq [I'] [-> _].
+case/hpolyP: P => m A b; move => /face_polyEq [I] [-> _] /face_polyEq [I'] [-> _].
 rewrite polyEq_polyI; exact: polyEq_face.
 Qed.
 
 Lemma face_of_face P Q Q' :
   Q \in face_set P -> Q' \in face_set Q -> Q' \in face_set P.
 Proof.
-rewrite -[P]reprK.
+case/hpolyP: P => m A b.
 move => /face_polyEq [I] [-> _] /face_polyEq [I'] [->].
 move: (hpolyEq_of_hpolyEq I') => [K] /quot_repr_eqP ->.
 exact: polyEq_face.
@@ -171,9 +171,7 @@ Qed.
 Lemma repr_base (P : 'poly[R]_n) :
   [P has \base (\repr P)].
 Proof.
-rewrite -{1}[P]reprK; exact: self_base.
-(* a case/reprP would be much more efficient, since
- * to avoid playing with -{1}[P]                    *)
+case/hpolyP: P => m A b; exact: self_base.
 Qed.
 
 Definition active (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
