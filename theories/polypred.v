@@ -124,11 +124,11 @@ Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
   in_polyI : forall P Q, (polyI P Q) =i [predI P & Q];
   poly_subset : rel T;
   poly_subsetP : forall P Q, reflect {subset P <= Q} (poly_subset P Q);
-  poly_subsetPn : forall P Q, reflect (exists x, (x \in P) && (x \notin Q)) (~~ (poly_subset P Q));
+  poly_subsetPn : forall P Q, reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q));
   mk_hs : 'cV[R]_n -> R -> T;
   in_hs : forall c d x, x \in (mk_hs c d) = ('[c,x] >= d);
   bounded : T -> 'cV[R]_n -> bool;
-  boundedP : forall P c, reflect (exists x, (x \in P) && poly_subset P (mk_hs c '[c,x])) (bounded P c);
+  boundedP : forall P c, reflect (exists2 x, x \in P & poly_subset P (mk_hs c '[c,x])) (bounded P c);
   boundedPn : forall P c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c);
   pointed : pred T;
   pointedPn : forall P, reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in P)) (~~ pointed P)
@@ -261,6 +261,19 @@ have := H i _; rewrite mem_index_enum; last by move/implyP->.
 by move=> /(_ isT) /implyP.
 Qed.
 
+
+Lemma big_poly_inf (I : finType) (j : I) (P : pred I) (F : I -> T) :
+  P j -> (\polyI_(i | P i) F i) `<=` F j.
+Admitted.
+
+Lemma big_polyI_min (I : finType) (j : I) (Q : T) (P : pred I) (F : I -> T) :
+  P j -> (F j `<=` Q) -> \polyI_(i | P i) F i `<=` Q.
+Admitted.
+
+Lemma big_polyIsP (I : finType) (Q : T) (P : pred I) (F : I -> T) :
+  reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \polyI_(i | P i) F i).
+Admitted.
+
 Lemma in_hs c d x : x \in (`[hs c & d] : T) = ('[c,x] >= d).
 Proof.
 exact: (PolyPred.in_hs (PolyPred.class T)).
@@ -279,7 +292,7 @@ Lemma in_hp c d x : x \in (`[hp c & d] : T) = ('[c,x] == d).
 Proof.
 Admitted.
 
-Let inE := (in_poly0, in_polyT, in_polyI, in_hs, in_hp, inE).
+Let inE := (in_poly0, in_polyT, in_polyI, in_hp,  in_hs, inE).
 
 Lemma poly_subsetP {P Q : T} : reflect {subset P <= Q} (P `<=` Q).
 Proof.
@@ -334,7 +347,7 @@ by apply/poly_subsetP => x; rewrite inE.
 Qed.
 
 Lemma poly_subsetPn {P Q : T} :
-  reflect (exists x, (x \in P) && (x \notin Q)) (~~ (P `<=` Q)).
+  reflect (exists2 x, x \in P & (x \notin Q)) (~~ (P `<=` Q)).
 Proof.
 exact: (PolyPred.poly_subsetPn (PolyPred.class T)).
 Qed.
@@ -369,7 +382,8 @@ Lemma proper0P {P : T} :
   reflect (exists x, x \in P) (P `>` `[poly0]).
 Proof.
 rewrite -[_ `<` _]negbK proper0N_equiv -subset0_equiv.
-by apply/(iffP poly_subsetPn) => [[x H] | [x H]]; exists x; rewrite inE andbT in H *.
+apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in];
+  exists x; by rewrite ?inE.
 Qed.
 
 Definition pick_point (P : T) :=
@@ -388,9 +402,9 @@ Lemma poly_properP {P Q : T} :
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
 apply: (iffP andP) =>
-  [[/poly_subsetP ? /poly_subsetPn [x /andP [??]]] | [? [x ??]] ].
+  [[/poly_subsetP ? /poly_subsetPn [x ??]] | [? [x ??]] ].
 - by split; [ done | exists x].
-- by split; [ apply/poly_subsetP | apply/poly_subsetPn; exists x; apply/andP].
+- by split; [ apply/poly_subsetP | apply/poly_subsetPn; exists x].
 Qed.
 
 Lemma poly_properxx (P : T) : (P `<` P) = false.
@@ -410,9 +424,16 @@ Lemma poly_proper_trans : transitive poly_proper.
 Admitted.
 
 Lemma boundedP {P : T} {c} :
-  reflect (exists x, (x \in P) && (P `<=` `[hs c & '[c, x]])) (bounded P c).
+  reflect (exists2 x, (x \in P) & (P `<=` `[hs c & '[c, x]])) (bounded P c).
 Proof.
 exact: (PolyPred.boundedP (PolyPred.class T)).
+Qed.
+
+Lemma boundedPP {P : T} {c} :
+  reflect (exists x, (x \in P) && (P `<=` `[hs c & '[c, x]])) (bounded P c).
+Proof.
+by apply/(iffP boundedP) => [[x] ?? | [x] /andP [??]];
+  exists x; first by apply/andP; split.
 Qed.
 
 Lemma boundedPn {P : T} {c} :
@@ -420,27 +441,27 @@ Lemma boundedPn {P : T} {c} :
 Proof.
 rewrite -subset0N_proper; move => P_non_empty.
 apply: (iffP (PolyPred.boundedPn _ P_non_empty)) => [H K | H K]; move/(_ K): H.
-- move/poly_subsetPn => [x /andP [x_in_P x_not_in_hs]].
+- move/poly_subsetPn => [x x_in_P x_not_in_hs].
   exists x; by rewrite notin_hs in x_not_in_hs.
 - move => [x x_in_P c_x_lt_K].
-  apply/poly_subsetPn; exists x; apply/andP; split; by rewrite ?notin_hs.
+  apply/poly_subsetPn; exists x; by rewrite ?notin_hs.
 Qed.
 
 Definition opt_value (P : T) c (b : bounded P c) :=
-  let x := xchoose (boundedP b) in '[c,x].
+  let x := xchoose (boundedPP b) in '[c,x].
 
 Lemma opt_point (P : T) c (b : bounded P c) :
   exists2 x, x \in P & '[c,x] = opt_value b.
 Proof.
 rewrite /opt_value; set x := xchoose _.
 exists x; last by done.
-by move: (xchooseP (boundedP b)) => /andP [?].
+by move: (xchooseP (boundedPP b)) => /andP [?].
 Qed.
 
 Lemma opt_value_lower_bound {P : T} {c} (b : bounded P c) :
   P `<=` (`[ hs c & opt_value b ]).
 Proof.
-by rewrite /opt_value; move/andP : (xchooseP (boundedP b)) => [_].
+by rewrite /opt_value; move/andP : (xchooseP (boundedPP b)) => [_].
 Qed.
 
 Definition argmin (P : T) c :=
@@ -463,7 +484,7 @@ rewrite /argmin; case: {-}_/idP => [| /negP c_unbounded]; last first.
   case: (emptyP P) => [-> | P_non_empty]; first by rewrite inE.
   move/(boundedPn P_non_empty)/(_ '[c,x]): c_unbounded => [y y_in_P c_y_lt_c_x].
   rewrite negb_and; apply/orP; right.
-  apply/poly_subsetPn; exists y; apply/andP; split; by rewrite ?notin_hs.
+  apply/poly_subsetPn; exists y; by rewrite ?notin_hs.
 - move => c_bounded; rewrite !inE; apply/andP/andP.
   + move => [x_in_P /eqP ->]; split; by [done | exact: opt_value_lower_bound].
   + move => [x_in_P subset]; split; first by done.
@@ -767,7 +788,7 @@ by apply: (iffP poly_subsetP) => [H x | H x]; exact: H.
 Qed.
 
 Lemma poly_subsetPn P Q :
-  reflect (exists x, (x \in P) && (x \notin Q)) (~~ (poly_subset P Q)).
+  reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q)).
 Proof.
 apply: (iffP poly_subsetPn) => [[x] H | [x] H]; exists x; by rewrite !inE in H *.
 Qed.
@@ -778,12 +799,13 @@ by rewrite !inE.
 Qed.
 
 Lemma boundedP P c :
-  reflect (exists x, (x \in P) && poly_subset P (mk_hs c '[c,x])) (bounded P c).
+  reflect (exists2 x, x \in P & poly_subset P (mk_hs c '[c,x])) (bounded P c).
 Proof.
-apply: (iffP boundedP) => [[x] H | [x] H]; exists x; move: H;
-suff ->: poly_subset P (mk_hs c '[ c, x]) = (repr P `<=` (`[ hs c & '[ c, x] ]));
-by rewrite ?inE; try by apply: (sameP (poly_subsetP _ _));
-  apply: (iffP (PolyPred.poly_subsetP _ _ _)) => H z; move/(_ z): H; rewrite !inE.
+have eq x : poly_subset P (mk_hs c '[ c, x]) = (repr P `<=` (`[ hs c & '[ c, x] ]))
+  by apply: (sameP (poly_subsetP _ _));
+     apply: (iffP (PolyPred.poly_subsetP _ _ _)) => sub z;
+     move/(_ z): sub; rewrite !inE.
+by apply: (iffP boundedP) => [[x] H H' | [x] H H']; exists x; rewrite ?inE ?eq in H' *.
 Qed.
 
 Lemma boundedPn P c :
@@ -825,7 +847,7 @@ End Quotient.
 
 Export Quotient.Exports.
 
-Definition inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hs, inE).
+Definition inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hp, @in_hs, inE).
 
 Section QuotientProperties.
 
@@ -845,8 +867,8 @@ Admitted.
 
 Lemma bounded_mono (P : T) c : bounded '[P] c = bounded P c.
 Proof.
-by apply: (sameP boundedP); apply: (iffP boundedP) => [[x] H | [x] H];
-  exists x; rewrite !inE poly_subset_mono in H *.
+by apply: (sameP boundedP); apply: (iffP boundedP) => [[x] H H' | [x] H H'];
+  exists x; rewrite ?inE ?poly_subset_mono in H H' *.
 Qed.
 
 Lemma polyI_mono (P Q : T) : '[P] `&` '[Q] = '[P `&` Q].
