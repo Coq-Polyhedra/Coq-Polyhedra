@@ -388,7 +388,7 @@ apply/poly_equivP/andP; split; apply/poly_subsetP => x x_in.
 - apply/in_hpolyEqP; split.
   + by move/(poly_subsetP hpolyEq_antimono0)/(poly_subsetP hpolyEq_antimono0): x_in.
   + move => k /setUP; case.
-    * move/(poly_subsetP hpolyEq_antimono0): x_in; exact: hpolyEq_eq.
+    * apply: hpolyEq_eq; move: x x_in; apply: (poly_subsetP hpolyEq_antimono0).
     * move/imsetP => [j'] j'_in_J ->; rewrite /f.
       case: (splitP' j') => [j j'_eq| j j'_eq].
       - by move/hpolyEq_eq/(_ j'_in_J) : x_in; rewrite j'_eq mul_col_mx !col_mxEu.
@@ -396,7 +396,7 @@ apply/poly_equivP/andP; split; apply/poly_subsetP => x x_in.
         rewrite mulNmx -row_submx_mul mxE [RHS]mxE 2!row_submx_mxE.
         exact: oppr_inj.
 - apply/in_hpolyEqP; split.
-  move: x_in; apply/(poly_subsetP (hpolyEq_antimono (subsetUl _ _))).
+  move: x x_in; apply/poly_subsetP/hpolyEq_antimono; exact: subsetUl.
   move => j /(mem_imset f)/(subsetP (@subsetUr _ I _)) fj_in_K.
   move/hpolyEq_eq/(_ fj_in_K): x_in.
   rewrite /f; case: splitP' => [j' ->| j' -> eq].
