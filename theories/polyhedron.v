@@ -197,10 +197,19 @@ Qed.
 
 Lemma activePn P (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) i :
   [P has \base 'P(A,b)] ->
-  reflect (exists2 x, x \in P & x \notin (`[hs (row i A)^T & b i 0] : 'poly[R]_n)) (i \notin [eq(P) on 'P(A,b)]).
+  reflect (exists2 x, x \in P & x \notin (`[hp (row i A)^T & b i 0] : 'poly[R]_n)) (i \notin [eq(P) on 'P(A,b)]).
 Proof.
 move => P_base; rewrite -sub1set -(activeP P_base).
-apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in x_notin]; exists x. rewrite ?//. by done.
+apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in x_notin]; exists x.
+- done.
+- have x_in_PAb: x \in 'P(A,b).
+
+
+  move: x_in. apply/(poly_subsetP (has_base_subset _)).
+
+  rewrite notin_hs.
+
+  try by done.
 - move: x_notin; apply: contraR; rewrite -lerNgt => Ai_x_le_bi.
   rewrite 2!inE hpolyEq1 3!inE ![X in _ && X]inE.
   have x_in_PAb : x \in 'P(A,b)
