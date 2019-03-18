@@ -26,7 +26,9 @@ Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
 Let P := '[base].
 
-Definition face_set : {fset 'poly[R]_n} := [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
+Definition face_set : {fset 'poly[R]_n} :=
+  [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)}
+                               & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
 
 Lemma poly0_face_set : (P = `[poly0]) -> face_set = fset0.
 Admitted.
@@ -128,12 +130,13 @@ move: (hpolyEq_of_hpolyEq I') => [K] /quot_repr_eqP ->.
 exact: polyEq_face.
 Qed.
 
+End Face.
 
+Section Eq.
 
-Section Base.
+Context {R : realFieldType} {n : nat}.
 
-Variable R : realFieldType.
-Variable n : nat.
+Implicit Type (P Q : 'poly[R]_n) (base : 'hpoly[R]_n).
 
 Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
   [exists I , P == '['P^=(base; I)]].
@@ -146,11 +149,79 @@ Proof.
 exact: exists_eqP.
 Qed.
 
-Lemma hpolyEq_base (base: 'hpoly[R]_n) I :
+Lemma has_base_subset (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
+  [ P has \base base ] -> P `<=` '[base].
+Proof.
+move/has_baseP => [I ->]; rewrite quotE; exact: hpolyEq_antimono0.
+Qed.
+
+Lemma polyEq_base (base: 'hpoly[R]_n) I :
   [ '['P^=(base; I)] has \base base ].
 Proof.
 by apply/has_baseP; exists I.
 Qed.
+
+Lemma self_base (P: 'hpoly[R]_n) :
+  ['[P] has \base P].
+Proof.
+by apply/has_baseP; exists set0; symmetry; apply/quot_eqP => x; rewrite !inE; exact: hpolyEq0.
+(* suboptimal to introduce x, quot_eqP is not adapted !!! *)
+Qed.
+
+Lemma repr_base (P : 'poly[R]_n) :
+  [P has \base (\repr P)].
+Proof.
+rewrite -{1}[P]reprK; exact: self_base.
+(* a case/reprP would be much more efficient, since
+ * to avoid playing with -{1}[P]                    *)
+Qed.
+
+Definition active (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
+  \bigcup_(I | P `<=` '['P^=(base; I)]) I.
+
+Notation "'[eq'  P 'on' base ]" := (active P base) : poly_scope.
+Notation "'[eq'  P ]" := (active P _) : poly_scope.
+
+Lemma repr_active P base :
+  [P has \base base] -> P = '['P^=(base; [eq P])].
+Proof.
+move => /has_baseP [I0] ->; rewrite -polyEq_big_polyI;
+  last by apply/pred0Pn; exists I0; exact: poly_subset_refl.
+apply/quot_eqP/poly_equivP/andP; split. (* sequence of view is suboptimal *)
+- by apply/big_polyIsP => ?.
+- by apply/big_poly_inf; exact: poly_subset_refl.
+Qed.
+
+Lemma activeP {P base I} : [P has \base base] -> (P `<=` '['P^=(base; I)]) = (I \subset [eq P]).
+Proof.
+move => P_base; apply/idP/idP; first exact: bigcup_sup.
+by rewrite {2}(repr_active P_base); move/hpolyEq_antimono; rewrite quotE.
+Qed.
+
+Lemma activePn P (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) i :
+  [P has \base 'P(A,b)] ->
+  reflect (exists2 x, x \in P & (A *m x) i 0 > b i 0) (i \notin [eq(P) on 'P(A,b)]).
+Proof.
+move => P_base; rewrite -sub1set -(activeP P_base).
+apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in x_notin]; exists x; try by done.
+- move: x_notin; apply: contraR; rewrite -lerNgt => Ai_x_le_bi.
+  rewrite 2!inE hpolyEq1 3!inE ![X in _ && X]inE.
+  have x_in_PAb : x \in 'P(A,b)
+    by move/(poly_subsetP (has_base_subset P_base)): x_in; rewrite !inE.
+  rewrite x_in_PAb /=.
+
+  apply: contraTF.
+
+Search _ (_ \subset _) in finset.
+
+
+Section Base.
+
+Variable R : realFieldType.
+Variable n : nat.
+
+
+
 
 Lemma repr_hpolyEq (P : 'poly[R]_n) (hP : 'hpoly[R]_n) :
   P = '[hP] -> P = '['P^=(hP; set0)].
@@ -162,32 +233,11 @@ suff ->: [forall j in set0, (A *m x) j 0 == b j 0]
 by apply/forall_inP => j; rewrite inE.
 Qed.
 
-Lemma self_base (P : 'poly[R]_n) (hP : 'hpoly[R]_n) :
-  P = '[hP] -> [P has \base hP].
-Proof.
-move/repr_hpolyEq => P_eq.
-by apply/has_baseP; exists set0.
-Qed.
-
-Lemma hpoly_base (P : 'poly[R]_n) :
-  [P has \base (hpoly P)].
-Proof.
-by apply/self_base; rewrite hpolyK.
-Qed.
-
-Lemma subset_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
-  [ P has \base base ] -> { subset P <= base }.
-Proof.
-move/has_baseP => [I ->] x.
-rewrite mem_quotP; exact: hpolyEq_antimono0.
-Qed.
 
 Definition active (P : 'poly[R]_n) base :=
   let: 'P(A,b) as base := base return {set 'I_(#ineq base)} in
     [ set i: 'I_(#ineq base) | poly_subset_hyperplane P (row i A)^T (b i 0) ].
 
-Notation "{ 'eq' P 'on' base }" := (active P base).
-Notation "{ 'eq' P }" := (active P _).
 
 Section ActiveInP.
 
