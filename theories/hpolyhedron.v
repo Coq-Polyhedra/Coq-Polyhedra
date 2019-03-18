@@ -53,16 +53,16 @@ Canonical hpoly_predType := mkPredType mem_hpoly.
 
 Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
   let: 'P(A,b) := P in
-    Tagged (fun m => 'M[R]_(m,n+1)) (row_mx A b).
+    Tagged (fun m => 'M[R]_(m,n) * 'cV[R]_m)%type (A, b).
 
-Definition hpoly_from_matrix (M : {m : nat & 'M[R]_(m, n+1)}) :=
-  let Ab := tagged M in
-    HPoly (lsubmx Ab) (rsubmx Ab).
+Definition hpoly_from_matrix (M : {m : nat & 'M[R]_(m,n) * 'cV[R]_m}%type) :=
+  let: (A, b) := tagged M in
+    HPoly A b.
 
 Lemma matrix_from_hpolyK :
   cancel matrix_from_hpoly hpoly_from_matrix.
 Proof.
-by move => [m A b]; rewrite /matrix_from_hpoly /hpoly_from_matrix row_mxKl row_mxKr.
+by move => [m A b]; rewrite /matrix_from_hpoly /hpoly_from_matrix.
 Qed.
 
 Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
@@ -220,23 +220,30 @@ End HPolyhedron.
 
 Export HPolyhedron.Exports.
 
-Section HPolyhedronProp.
+Section HPolyhedronSpec.
+(* YOUR ATTENTION PLEASE: hpolyP (provisional name) is intended to replace
+ * every occurence of the ugly -reprK rewriting rule.
+ * This is because hpolyP avoids to specify precisely which occurence
+ * of (P : 'poly[R]_n) should be replaced by \repr P.
+ * In this way, we just have a simple
+ * case/hpoly: P => m A b
+ * instead of a complicated
+ * rewrite -{X,Y,-Z}[P]reprK; case: (\repr P) => m A b
+ *)
 
 Variable (R : realFieldType) (n : nat).
 
-(*
-CoInductive hpoly_spec (P : 'poly[R]_n) (m : nat) : 'M[R]_(m,n) -> 'cV[R]_m -> Type :=
-  HpolySpec A b of (P = '['P(A,b)]) : hpoly_spec P A b.
+Variant hpoly_spec : 'poly[R]_n -> 'hpoly[R]_n -> {m & 'M[R]_(m,n) * 'cV[R]_m}%type -> Type :=
+  HpolySpec (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+    hpoly_spec '['P(A,b)] 'P(A,b) (Tagged _ (A, b)).
 
-Lemma hpolyP (P : 'poly[R]_n) : (* not properly usable yet *)
-  let: 'P(m,A,b) := \repr P in
-  hpoly_spec P A b.
+Lemma hpolyP (P : 'poly[R]_n) :
+  hpoly_spec P (\repr P) (HPolyhedron.matrix_from_hpoly (\repr P)).
 Proof.
-Admitted.
-*)
+by rewrite -{1}[P]reprK; case: (\repr P).
+Qed.
 
-
-End HPolyhedronProp.
+End HPolyhedronSpec.
 
 (*Section Test.
 
