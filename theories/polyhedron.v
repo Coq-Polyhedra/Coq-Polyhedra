@@ -91,7 +91,7 @@ Lemma faceP {P Q} :
 rewrite /face_set; case/hpolyP: P => m A b; exact: FaceBase.faceP.
 Qed.
 
-Lemma face_base base :
+Lemma face_set_base base :
   face_set '[base] = [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)} & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
 Proof.
 rewrite -/(FaceBase.face_set base).
@@ -106,12 +106,12 @@ Qed.
 Lemma face_polyEq base Q :
   Q \in face_set '[base] -> exists I, Q = '['P^=(base; I)] /\ Q `>` `[poly0].
 Proof.
-rewrite face_base; exact: FaceBase.face_polyEq.
+rewrite face_set_base; exact: FaceBase.face_polyEq.
 Qed.
 
 Lemma polyEq_face base I : ('['P^=(base; I)] `>` `[poly0]) -> '['P^=(base; I)] \in (face_set '[base]).
 Proof.
-rewrite face_base; exact: FaceBase.polyEq_face.
+rewrite face_set_base; exact: FaceBase.polyEq_face.
 Qed.
 
 Lemma polyI_face P Q Q' :
@@ -121,14 +121,8 @@ case/hpolyP: P => m A b; move => /face_polyEq [I] [-> _] /face_polyEq [I'] [-> _
 rewrite polyEq_polyI; exact: polyEq_face.
 Qed.
 
-Lemma face_of_face P Q Q' :
-  Q \in face_set P -> Q' \in face_set Q -> Q' \in face_set P.
-Proof.
-case/hpolyP: P => m A b.
-move => /face_polyEq [I] [-> _] /face_polyEq [I'] [->].
-move: (hpolyEq_of_hpolyEq I') => [K] /quotP ->.
-exact: polyEq_face.
-Qed.
+Lemma face_subset P Q : Q \in face_set P -> Q `<=` P.
+Admitted.
 
 End Face.
 
@@ -219,6 +213,50 @@ Lemma subset_on_base P Q base :
 Proof.
 by move => P_base /repr_active {1}->; rewrite activeP.
 Qed.
+
+Lemma face_set_subset P Q :
+  Q \in face_set P -> (face_set Q `<=` face_set P)%fset.
+Proof.
+case/hpolyP: P => m A b.
+move => /face_polyEq [I] [-> _].
+apply/fsubsetP => Q' /face_polyEq [I'] [->].
+move: (hpolyEq_of_hpolyEq I') => [K] /quotP ->.
+exact: polyEq_face.
+Qed.
+
+Lemma face_on_baseP {P base Q} :
+  [P has \base base] ->
+  reflect (exists2 I, Q = '['P^=(base; I)] & ([eq P] \subset I)) (Q \in face_set P).
+Proof.
+Admitted.
+
+Fact face_set_of_face (P Q : 'poly[R]_n) :
+  Q \in face_set P -> face_set Q = [fset Q' in face_set P | (Q' `<=` Q)%PH]%fset.
+Proof.
+move => Q_face.
+apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
+- move => Q' Q'_face.
+  rewrite in_fsetE inE; apply/andP; split; last exact: face_subset.
+  by move: Q' Q'_face; apply/fsubsetP; exact: face_set_subset.
+- move => Q'; rewrite in_fsetE inE => /= /andP [Q'_face Q'_sub_Q].
+  move/(face_on_baseP (repr_base _)) : Q'_face => [I'] Q'_eq.
+  rewrite Q'_eq in Q'_sub_Q *.
+
+  move/(face_on_baseP (repr_base _)) : Q_face => [I] Q_eq.
+  rewrite Q_eq in Q'_sub_Q * => eq_P_sub_I.
+
+
+  apply/(face_on_baseP (polyEq_base _)).
+
+
+  move/(face_baseP (hpoly_base P)): F_face_P => [F_base eqP_sub_eqF F_non_empty].
+  move/(face_baseP (hpoly_base P)): F'_face_P => [F'_base eq_P_sub_eq_F' F'_non_empty].
+  apply/(face_baseP F_base); split.
+  + exact: F'_base.
+  + by apply/(subset_on_base F'_base F_base).
+  + exact: F'_non_empty.
+Qed.
+
 
 End Base.
 
