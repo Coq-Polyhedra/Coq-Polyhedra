@@ -726,6 +726,7 @@ Proof.
 by move: (chooseP (poly_equiv_refl P)); rewrite poly_equiv_sym => /poly_equivP.
 Qed.
 
+
 Definition mem (P : {quot T}) := (mem (\repr P)) : pred 'cV[R]_n.
 Canonical quot_predType := mkPredType mem.
 Canonical quot_choicePredType := ChoicePredType 'cV[R]_n {quot T}.
@@ -889,7 +890,12 @@ Qed.
 
 Lemma hs_mono (c : 'cV[R]_n) d : `[hs c & d] = '[`[hs c & d]] :> {quot T}.
 Proof.
-by apply/quotP/poly_equivP => x; rewrite in_hs.
+by apply/quotP/poly_equivP => x; rewrite inE.
+Qed.
+
+Lemma hp_mono (c : 'cV[R]_n) d : `[hp c & d] = '[`[hp c & d]] :> {quot T}.
+Proof.
+by apply/quot_equivP/poly_equivP => x; rewrite !inE.
 Qed.
 
 Lemma line_mono (c Ω : 'cV[R]_n) : `[line c & Ω] = '[`[line c & Ω]] :> {quot T}.
@@ -912,4 +918,4 @@ End QuotientProperties.
 
 Definition quotE := (@poly_subset_mono, @poly_proper_mono, @bounded_mono,
                     @polyI_mono, @big_polyI_mono, @hs_mono, @line_mono,
-                    @argmin_mono, @pointed_mono).
+                    @argmin_mono, @pointed_mono, @hp_mono).
