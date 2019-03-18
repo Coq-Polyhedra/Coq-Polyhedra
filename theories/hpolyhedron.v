@@ -322,6 +322,11 @@ Proof.
 move => /in_hpolyEqP [_ x_act] j_in_J; exact: x_act.
 Qed.
 
+Lemma hpolyEq_ineqE (x : 'cV[R]_n) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (J : {set 'I_m}) j :
+  x \in 'P^=(A, b; J) -> j \in J ->
+    (x \in `[hp (row j A)^T & b j 0] : 'hpoly[R]_n) = (x \in `[hs -(row j A)^T & -(b j 0)] : 'hpoly[R]_n).
+Admitted.
+
 Lemma hpolyEq_antimono (base : 'hpoly[R]_n) (I J : {set 'I_(#ineq base)}) :
   I \subset J -> 'P^=(base; J) `<=` 'P^=(base; I).
 Proof.
