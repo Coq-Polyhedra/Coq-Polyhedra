@@ -181,8 +181,27 @@ rewrite -lerNgt /Simplex.opt_value row_vdot.
 exact: ((forallP opt_point_in_Q) i).
 Qed.
 
-Lemma boundedP P c : reflect (exists2 x, (x \in P) & poly_subset P (mk_hs c '[c,x])) (bounded P c).
-Admitted.
+Lemma boundedP P c :
+  reflect (exists2 x, (x \in P) & poly_subset P (mk_hs c '[c,x])) (bounded P c).
+Proof. (* RK *)
+case: P => m A b.
+apply/(equivP (Simplex.boundedP A b c) _);
+  split => [[[x [? opt_value_eq]] opt_value_is_opt] | [x ? /poly_subsetP incl_hs]].
+- exists x; first by done.
+  apply/poly_subsetP => y y_in_P.
+  rewrite in_hs opt_value_eq.
+  by apply: opt_value_is_opt.
+- have opt_value_eq: '[ c, x] = Simplex.opt_value A b c.
+    apply: Simplex.opt_value_is_optimal; first by done.
+    move => y y_in_P.
+    rewrite -in_hs.
+    exact: (incl_hs _ y_in_P).
+  split.
+  + by exists x.
+  + move => y y_in_P.
+    rewrite -in_hs -opt_value_eq.
+    exact: (incl_hs _ y_in_P).
+Qed.
 
 Lemma boundedPn P c :
   ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
