@@ -204,12 +204,28 @@ apply/(equivP (Simplex.boundedP A b c) _);
 Qed.
 
 Lemma boundedPn P c :
-  ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
-Admitted.
+  ~~ (poly_subset P poly0) ->
+    reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
+Proof. (* RK *)
+case: P => m A b non_empty_P.
+have feasible_P: Simplex.feasible A b
+  by move/poly_subsetPn: non_empty_P => [x ? _];
+  apply/Simplex.feasibleP; exists x.
+rewrite /bounded (Simplex.bounded_is_not_unbounded c feasible_P) negbK.
+apply/(equivP (Simplex.unboundedP A b c) _);
+  split => [unbounded_cond_point K | unbounded_cond_hs K].
+- apply/poly_subsetPn.
+  move: (unbounded_cond_point K) => [x [? val_x_sineq]].
+  exists x; first by done.
+  by rewrite in_hs -ltrNge.
+- move/poly_subsetPn: (unbounded_cond_hs K) => [x ? x_not_in_hs].
+  exists x; split; first by done.
+  by rewrite in_hs -ltrNge in x_not_in_hs.
+Qed.
 
 Definition pointed P :=
   let: 'P(A, _) := P in
-  Simplex.pointed A.
+    Simplex.pointed A.
 
 Lemma pointedPn P :
   reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in P)) (~~ pointed P).
