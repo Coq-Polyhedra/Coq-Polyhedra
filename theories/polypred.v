@@ -723,17 +723,22 @@ Qed.
 
 Lemma repr_equiv (P : T) : \repr '[P] =i P.
 Proof.
-move: (chooseP (poly_equiv_refl P)); rewrite poly_equiv_sym.
-exact: poly_equivP.
+by move: (chooseP (poly_equiv_refl P)); rewrite poly_equiv_sym => /poly_equivP.
 Qed.
 
-Definition mem (P : {quot T}) := mem (\repr P) : pred 'cV[R]_n.
+Definition mem (P : {quot T}) := (mem (\repr P)) : pred 'cV[R]_n.
 Canonical quot_predType := mkPredType mem.
 Canonical quot_choicePredType := ChoicePredType 'cV[R]_n {quot T}.
 
+Lemma quotP (P Q : T) : '[P] = '[Q] <-> P `=~` Q.
+Admitted.
+
+(*
 Lemma quot_eqP (P Q : {quot T}) : (P =i Q) -> (P = Q).
 Proof.
-rewrite -[P]reprK -[Q]reprK.
+Admitted.*)
+
+(*rewrite -[P]reprK -[Q]reprK.
 set P' := repr P; set Q' := repr Q; move => P_equiv_Q.
 have P'_equiv_Q' : P' `=~` Q'
   by apply/poly_equivP => x; move/(_ x): P_equiv_Q; rewrite !repr_equiv.
@@ -742,10 +747,7 @@ have chooseP'_eq_chooseQ' : poly_equiv P' =1 poly_equiv Q'.
   try by rewrite poly_equiv_sym in P'_equiv_Q'.
 apply: repr_inj.
 by rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ'); apply: choose_id; try exact: poly_equiv_refl.
-Qed.
-
-Lemma quot_repr_eqP (P Q : T) : (P =i Q) <-> '[P] = '[Q].
-Admitted.
+Qed.*)
 
 End BasicProperties.
 
@@ -840,8 +842,7 @@ Notation "''[' P  ]" := (class_of P) (at level 0).
 Notation reprK := reprK.
 Notation repr_inj := repr_inj.
 Notation repr_equiv := repr_equiv.
-Notation quot_eqP := quot_eqP.
-Notation quot_repr_eqP := quot_repr_eqP.
+Notation quotP := quotP.
 End Exports.
 End Quotient.
 
@@ -854,6 +855,9 @@ Section QuotientProperties.
 Local Open Scope poly_scope.
 
 Context {R : realFieldType} {n : nat} {T : polyPredType R n}.
+
+Lemma quot_equivP (P Q : {quot T}) : (P `=~` Q) -> P = Q.
+Admitted.
 
 Lemma poly_subset_mono (P Q : T) : ('[P] `<=` '[Q]) = (P `<=` Q).
 Proof.
@@ -873,25 +877,24 @@ Qed.
 
 Lemma polyI_mono (P Q : T) : '[P] `&` '[Q] = '[P `&` Q].
 Proof.
-by apply/quot_eqP => x; rewrite !inE.
+by apply/quotP/poly_equivP => x; rewrite !inE.
 Qed.
 
 Lemma big_polyI_mono (I : finType) (P : pred I) (F : I -> T) :
   \polyI_(i | P i) '[F i] = '[\polyI_(i | P i) (F i)].
 Proof.
-apply/quot_eqP => x; apply: (sameP (in_big_polyI _ _ _)); rewrite inE.
-by apply: (iffP (in_big_polyI _ _ _)) => [H i Pi | H i Pi];
-  move/(_ _ Pi): H; rewrite !inE.
+rewrite (@big_morph _ _ _ (`[polyT] : {quot T}) (polyI : {quot T} -> {quot T} -> {quot T})) //.
+by move => Q Q'; rewrite polyI_mono.
 Qed.
 
 Lemma hs_mono (c : 'cV[R]_n) d : `[hs c & d] = '[`[hs c & d]] :> {quot T}.
 Proof.
-by apply/quot_eqP => x; rewrite in_hs.
+by apply/quotP/poly_equivP => x; rewrite in_hs.
 Qed.
 
 Lemma line_mono (c Ω : 'cV[R]_n) : `[line c & Ω] = '[`[line c & Ω]] :> {quot T}.
 Proof.
-apply/quot_eqP => x; apply: (sameP in_lineP); rewrite !inE.
+apply/quot_equivP/poly_equivP => x. apply: (sameP in_lineP); rewrite !inE.
 exact: in_lineP.
 Qed.
 

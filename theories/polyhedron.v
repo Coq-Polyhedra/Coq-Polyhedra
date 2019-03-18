@@ -126,7 +126,7 @@ Lemma face_of_face P Q Q' :
 Proof.
 case/hpolyP: P => m A b.
 move => /face_polyEq [I] [-> _] /face_polyEq [I'] [->].
-move: (hpolyEq_of_hpolyEq I') => [K] /quot_repr_eqP ->.
+move: (hpolyEq_of_hpolyEq I') => [K] /quotP ->.
 exact: polyEq_face.
 Qed.
 
@@ -164,8 +164,7 @@ Qed.
 Lemma self_base (P: 'hpoly[R]_n) :
   ['[P] has \base P].
 Proof.
-by apply/has_baseP; exists set0; symmetry; apply/quot_eqP => x; rewrite !inE; exact: hpolyEq0.
-(* suboptimal to introduce x, quot_eqP is not adapted !!! *)
+apply/has_baseP; exists set0; symmetry; apply/quotP; exact: hpolyEq0.
 Qed.
 
 Lemma repr_base (P : 'poly[R]_n) :
@@ -185,7 +184,7 @@ Lemma repr_active P base :
 Proof.
 move => /has_baseP [I0] ->; rewrite -polyEq_big_polyI;
   last by apply/pred0Pn; exists I0; exact: poly_subset_refl.
-apply/quot_eqP/poly_equivP/andP; split. (* sequence of view is suboptimal *)
+apply/quot_equivP/andP; split. (* sequence of view is suboptimal *)
 - by apply/big_polyIsP => ?.
 - by apply/big_poly_inf; exact: poly_subset_refl.
 Qed.
@@ -198,10 +197,10 @@ Qed.
 
 Lemma activePn P (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) i :
   [P has \base 'P(A,b)] ->
-  reflect (exists2 x, x \in P & (A *m x) i 0 > b i 0) (i \notin [eq(P) on 'P(A,b)]).
+  reflect (exists2 x, x \in P & x \notin (`[hs (row i A)^T & b i 0] : 'poly[R]_n)) (i \notin [eq(P) on 'P(A,b)]).
 Proof.
 move => P_base; rewrite -sub1set -(activeP P_base).
-apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in x_notin]; exists x; try by done.
+apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in x_notin]; exists x. rewrite ?//. by done.
 - move: x_notin; apply: contraR; rewrite -lerNgt => Ai_x_le_bi.
   rewrite 2!inE hpolyEq1 3!inE ![X in _ && X]inE.
   have x_in_PAb : x \in 'P(A,b)
