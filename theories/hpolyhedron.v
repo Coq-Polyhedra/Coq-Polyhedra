@@ -228,8 +228,27 @@ Definition pointed P :=
     Simplex.pointed A.
 
 Lemma pointedPn P :
-  reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in P)) (~~ pointed P).
-Admitted.
+  ~~ (poly_subset P poly0) ->
+    reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
+Proof. (* RK *)
+case: P => m A b non_empty_P.
+have feasible_P: exists x, x \in 'P (A, b)
+  by move/poly_subsetPn: non_empty_P => [x ? _]; exists x.
+apply/(equivP (Simplex.pointedPn A) _); split =>
+  [[d [? /Simplex.feasible_dirP d_feas_dir /Simplex.feasible_dirP md_feas_dir]] | [d [? d_recession_dir]]];
+    exists d; split; try by done.
+- move => x x_in_P λ.
+  case: (boolP (0 <= λ)) => [? | ?].
+  + by apply: d_feas_dir.
+  + rewrite -[d]opprK scalerN -scaleNr.
+    apply: md_feas_dir; try by done.
+    by rewrite oppr_ge0; apply: ltrW; rewrite ltrNge.
+- apply/(@Simplex.feasible_dirP _ _ _ _ b); try by done.
+  by move => x x_in_P λ _; apply: d_recession_dir.
+- apply/(@Simplex.feasible_dirP _ _ _ _ b); try by done.
+  move => x x_in_P λ _; rewrite scalerN -scaleNr.
+  by apply: d_recession_dir.
+Qed.
 
 Definition hpoly_polyPredMixin :=
   PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
