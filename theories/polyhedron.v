@@ -127,6 +127,47 @@ case/hpolyP: P => m A b; move => /face_polyEq [I] [-> _].
 rewrite quotE; exact: hpolyEq_antimono0.
 Qed.
 
+Lemma face_set_subset P Q :
+  Q \in face_set P -> (face_set Q `<=` face_set P)%fset.
+Proof.
+case/hpolyP: P => m A b.
+move => /face_polyEq [I] [-> _].
+apply/fsubsetP => Q' /face_polyEq [I'] [->].
+move: (hpolyEq_of_hpolyEq I') => [K] /quotP ->.
+exact: polyEq_face.
+Qed.
+
+Lemma face_set_of_face (P Q : 'poly[R]_n) :
+  Q \in face_set P -> face_set Q = [fset Q' in face_set P | (Q' `<=` Q)%PH]%fset.
+Proof.
+move => Q_face.
+apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
+- move => Q' Q'_face.
+  rewrite in_fsetE inE; apply/andP; split; last exact: face_subset.
+  by move: Q' Q'_face; apply/fsubsetP; exact: face_set_subset.
+- move => Q'; rewrite in_fsetE inE => /= /andP [Q'_face].
+  move/faceP : Q'_face => [c [-> c_bounded_on_P]] argminPc_sub_Q.
+  have c_bounded_on_Q : bounded Q c
+    by apply: (bounded_mono1 c_bounded_on_P); exact: (face_subset Q_face).
+  suff ->: argmin P c = argmin Q c by exact: argmin_in_face_set.
+  rewrite [RHS]argmin_polyI.
+  suff <-: opt_value c_bounded_on_P = opt_value c_bounded_on_Q.
+  + apply/quot_equivP/andP; split.
+    * apply/poly_subsetIP; split; first by done.
+      rewrite argmin_polyI; exact: poly_subsetIr.
+    * rewrite argmin_polyI; apply: polySI; exact: face_subset.
+  + apply/eqP; rewrite eqr_le; apply/andP; split.
+    * apply: opt_value_antimono1; exact: (face_subset Q_face).
+    * have /proper0P [x x_in]: (argmin P c `>` `[poly0])
+        by rewrite -bounded_argminN0. (* bounded_argminN0 is not easy to use *)
+      move/(poly_subsetP argminPc_sub_Q) : (x_in).
+      suff <-: '[c,x] = opt_value c_bounded_on_P.
+      - move/(poly_subsetP (opt_value_lower_bound c_bounded_on_Q)).
+        by rewrite inE.
+      - move/(poly_subsetP (argmin_opt_value c_bounded_on_P)): x_in.
+        by rewrite inE => /eqP.
+Qed.
+
 End Face.
 
 Section Base.
@@ -170,11 +211,33 @@ Proof.
 case/hpolyP: P => m A b; exact: self_base.
 Qed.
 
+
 Lemma has_base_face P base :
   [P has \base base] -> (P `>` `[poly0]) -> P \in face_set '[base].
 Proof.
 move/has_baseP => [I] ->; exact: polyEq_face.
 Qed.
+
+Lemma face_has_base P base Q :
+  [P has \base base] -> Q \in face_set P -> [Q has \base base].
+Proof.
+move => P_base.
+case: (emptyP P) => [/poly_equivP/quot_equivP ->| P_non_empty].
+- by rewrite poly0_face_set in_fset0.
+- have: P \in face_set '[base] by exact: has_base_face.
+  move => P_face Q_face.
+  have /face_polyEq [I [-> _]] : Q \in face_set '[base]
+    by move: Q Q_face; apply/fsubsetP; exact: face_set_subset.
+  exact: polyEq_base.
+Qed.
+
+End Base.
+
+Notation "[ P 'has' '\base' base ]" := (has_base P base).
+
+Section Active.
+
+Context {R : realFieldType} {n : nat}.
 
 Definition active (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
   \bigcup_(I | P `<=` '['P^=(base; I)]) I.
@@ -223,61 +286,7 @@ Proof.
 by move => P_base /repr_active {1}->; rewrite activeP.
 Qed.
 
-Lemma face_set_subset P Q :
-  Q \in face_set P -> (face_set Q `<=` face_set P)%fset.
-Proof.
-case/hpolyP: P => m A b.
-move => /face_polyEq [I] [-> _].
-apply/fsubsetP => Q' /face_polyEq [I'] [->].
-move: (hpolyEq_of_hpolyEq I') => [K] /quotP ->.
-exact: polyEq_face.
-Qed.
-
-Lemma face_set_of_face (P Q : 'poly[R]_n) :
-  Q \in face_set P -> face_set Q = [fset Q' in face_set P | (Q' `<=` Q)%PH]%fset.
-Proof.
-move => Q_face.
-apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
-- move => Q' Q'_face.
-  rewrite in_fsetE inE; apply/andP; split; last exact: face_subset.
-  by move: Q' Q'_face; apply/fsubsetP; exact: face_set_subset.
-- move => Q'; rewrite in_fsetE inE => /= /andP [Q'_face].
-  move/faceP : Q'_face => [c [-> c_bounded_on_P]] argminPc_sub_Q.
-  have c_bounded_on_Q : bounded Q c
-    by apply: (bounded_mono1 c_bounded_on_P); exact: (face_subset Q_face).
-  suff ->: argmin P c = argmin Q c by exact: argmin_in_face_set.
-  rewrite [RHS]argmin_polyI.
-  suff <-: opt_value c_bounded_on_P = opt_value c_bounded_on_Q.
-  + apply/quot_equivP/andP; split.
-    * apply/poly_subsetIP; split; first by done.
-      rewrite argmin_polyI; exact: poly_subsetIr.
-    * rewrite argmin_polyI; apply: polySI; exact: face_subset.
-  + apply/eqP; rewrite eqr_le; apply/andP; split.
-    * apply: opt_value_antimono1; exact: (face_subset Q_face).
-    * have /proper0P [x x_in]: (argmin P c `>` `[poly0])
-        by rewrite -bounded_argminN0. (* bounded_argminN0 is not easy to use *)
-      move/(poly_subsetP argminPc_sub_Q) : (x_in).
-      suff <-: '[c,x] = opt_value c_bounded_on_P.
-      - move/(poly_subsetP (opt_value_lower_bound c_bounded_on_Q)).
-        by rewrite inE.
-      - move/(poly_subsetP (argmin_opt_value c_bounded_on_P)): x_in.
-        by rewrite inE => /eqP.
-Qed.
-
-Lemma face_has_base P base Q :
-  [P has \base base] -> Q \in face_set P -> [Q has \base base].
-Proof.
-move => P_base.
-case: (emptyP P) => [/poly_equivP/quot_equivP ->| P_non_empty].
-- by rewrite poly0_face_set in_fset0.
-- have: P \in face_set '[base] by exact: has_base_face.
-  move => P_face Q_face.
-  have /face_polyEq [I [-> _]] : Q \in face_set '[base]
-    by move: Q Q_face; apply/fsubsetP; exact: face_set_subset.
-  exact: polyEq_base.
-Qed.
-
-End Base.
+End Active.
 
 
 (*
