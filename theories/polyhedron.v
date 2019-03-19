@@ -248,7 +248,8 @@ apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
     * rewrite argmin_polyI; apply: polySI; exact: face_subset.
   + apply/eqP; rewrite eqr_le; apply/andP; split.
     * apply: opt_value_antimono1; exact: (face_subset Q_face).
-    * have /proper0P [x x_in]: (argmin P c `>` `[poly0])
+    * (* what's next is a bit complicated *)
+      have /proper0P [x x_in]: (argmin P c `>` `[poly0])
         by rewrite -bounded_argminN0. (* bounded_argminN0 is not easy to use *)
       move/(poly_subsetP Q'_sub_Q) : (x_in).
       suff <-: '[c,x] = opt_value c_bounded_on_P.
