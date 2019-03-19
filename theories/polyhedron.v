@@ -1,4 +1,4 @@
-(*************************************************************************)
+ (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
 (* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
@@ -70,7 +70,7 @@ Implicit Type (P Q : 'poly[R]_n).
 
 Definition face_set P : {fset 'poly[R]_n} := FaceBase.face_set (\repr P).
 
-Lemma poly0_face_set P : face_set '[poly0] = fset0.
+Lemma poly0_face_set : face_set '[poly0] = fset0.
 Proof.
 by apply: FaceBase.poly0_face_set; rewrite reprK.
 Qed.
@@ -122,7 +122,10 @@ rewrite polyEq_polyI; exact: polyEq_face.
 Qed.
 
 Lemma face_subset P Q : Q \in face_set P -> Q `<=` P.
-Admitted.
+Proof.
+case/hpolyP: P => m A b; move => /face_polyEq [I] [-> _].
+rewrite quotE; exact: hpolyEq_antimono0.
+Qed.
 
 End Face.
 
@@ -225,10 +228,21 @@ exact: polyEq_face.
 Qed.
 
 Lemma face_on_baseP {P base Q} :
-  [P has \base base] ->
-  reflect (exists2 I, Q = '['P^=(base; I)] & ([eq P] \subset I)) (Q \in face_set P).
+  [P has \base base] -> (Q \in face_set P) = [&& [Q has \base base], (Q `>` '[poly0]) & (Q `<=` P)].
 Proof.
+move => P_base.
+case: (emptyP P) => [/poly_equivP/quot_equivP P_empty | P_non_empty].
+- rewrite P_empty in P_base *.
+  rewrite poly0_face_set in_fset0; symmetry; apply/negbTE/negP.
+  move/and3P => [_ proper0Q].
+  rewrite subset0_equiv => /quot_equivP Q_eq0.
+  by rewrite Q_eq0 quotE poly_properxx in proper0Q.
+- have P_face: P \in face_set '[base].
+  + move: P_non_empty; move/has_baseP: P_base => [I] ->.
+    exact: polyEq_face.
+  apply/idP/idP.
 Admitted.
+
 
 Fact face_set_of_face (P Q : 'poly[R]_n) :
   Q \in face_set P -> face_set Q = [fset Q' in face_set P | (Q' `<=` Q)%PH]%fset.
