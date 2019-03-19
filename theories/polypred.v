@@ -131,7 +131,7 @@ Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
   boundedP : forall P c, reflect (exists2 x, x \in P & poly_subset P (mk_hs c '[c,x])) (bounded P c);
   boundedPn : forall P c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c);
   pointed : pred T;
-  pointedPn : forall P, reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in P)) (~~ pointed P)
+  pointedPn : forall P, ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P)
 }.
 
 Record class_of (T : Type) : Type :=
@@ -586,11 +586,12 @@ Admitted.
 
 Lemma pointedPn {P : T} :
   reflect (exists c Ω, `[line c & Ω] `<=` P) (~~ (pointed P)).
-Proof.
+(* RK Proof.
 apply: (iffP (PolyPred.pointedPn _ _)) => [[c [Ω]] incl | [c [Ω]] /poly_subsetP incl]; exists c; exists Ω.
 - apply/poly_subsetP => x /in_lineP [μ ->]; exact: incl.
 - by move => μ; apply/incl/in_lineP; exists μ.
-Qed.
+Qed.*)
+Admitted.
 
 Definition mk_hline (c Ω : 'cV[R]_n) : T :=
   `[hs c & '[c,Ω]] `&` `[line c & Ω].
@@ -834,16 +835,19 @@ by apply: (iffP boundedP) => [[x] H H' | [x] H H']; exists x; rewrite ?inE ?eq i
 Qed.
 
 Lemma boundedPn P c :
-  ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
+  ~~ (poly_subset P poly0) ->
+    reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
 Admitted.
 
 Lemma pointedPn P :
-  reflect (exists (c x : 'cV[R]_n), (forall μ, x + μ *: c \in (mem P))) (~~ pointed P).
-Proof.
+  ~~ (poly_subset P poly0) ->
+    reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
+(* RK Proof.
 apply: (iffP pointedPn) => [[c [Ω]] H| [c [Ω]] H]; exists c; exists Ω.
 - by move => μ; apply/(PolyPred.poly_subsetP _ _ _ H) ; apply/in_lineP; exists μ.
 - by apply/(PolyPred.poly_subsetP _ _ _) => x /in_lineP [μ ->].
-Qed.
+Qed.*)
+Admitted.
 
 Definition quot_polyPredMixin :=
   PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn

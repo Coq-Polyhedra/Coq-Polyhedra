@@ -40,6 +40,35 @@ Definition active_ineq x :=
 
 Definition feasible_dir := [pred d | (A *m d) >=m 0].
 
+Lemma feasible_dirP d : 
+  (exists x, x \in polyhedron) ->
+    reflect (forall x, x \in polyhedron -> (forall λ, λ >= 0 -> x + λ *: d \in polyhedron)) (feasible_dir d). (* RK: lemma used in hpolyhedron *)
+Proof.
+move => feasible_A_b.
+apply/(iffP idP) => [feasible_dir_d x ? λ λ_ge_0 | d_recession_dir].
+- rewrite inE mulmxDr -scalemxAr -[b]addr0.
+  apply/lev_add; first by done.
+  have ->: 0 = λ *: (0 : 'cV[R]_m) by rewrite scaler0.
+  by apply/lev_wpscalar.
+- apply/contraT.
+  rewrite negb_forall.
+  move/existsP => [i A_d_i_neq].
+  rewrite mxE in A_d_i_neq.
+  move: feasible_A_b => [x x_in_polyhedron].
+  set λ := ((A *m d) i 0 + b i 0 - (A *m x) i 0) * ((A *m d) i 0)^-1.
+  have λ_ge_0: 0 <= λ.
+    rewrite ler_ndivl_mulr; last by rewrite -ltrNge in A_d_i_neq.
+    rewrite mul0r ler_subl_addr.
+    apply: ler_add; last exact: ((forallP x_in_polyhedron) i).
+    apply: ltrW.
+    by rewrite -ltrNge in A_d_i_neq.
+  move: (forallP (d_recession_dir _ x_in_polyhedron _  λ_ge_0) i) => b_i_ineq.
+  rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in b_i_ineq;
+    last by apply: ltr0_neq0; rewrite -ltrNge in A_d_i_neq.
+  rewrite mulr1 [(A *m x) i 0 + _]addrC -3!ler_subl_addr opprK -addrA -opprB addNr in b_i_ineq.
+  by rewrite b_i_ineq in A_d_i_neq.
+Qed.
+
 Definition pointed := (mxrank A >= n)%N.
 
 Lemma pointedPn :
