@@ -468,8 +468,8 @@ Admitted.
 Definition opt_value (P : T) c (b : bounded P c) :=
   let x := xchoose (boundedPP b) in '[c,x].
 
-Lemma opt_value_mono1 (P Q : T) c (b : bounded P c) (sub : Q `<=` P):
-  opt_value b <= opt_value (bounded_mono1 b sub).
+Lemma opt_value_antimono1 (P Q : T) c (b : bounded P c) (b' : bounded Q c) :
+  Q `<=` P -> opt_value b <= opt_value b'.
 Admitted.
 
 Lemma opt_point (P : T) c (b : bounded P c) :
@@ -521,6 +521,10 @@ Lemma bounded_argminN0 P c :
 Admitted.
 
 Lemma argmin_subset P c : argmin P c `<=` P.
+Admitted.
+
+Lemma argmin_opt_value P c (b : bounded P c) :
+  argmin P c `<=` `[hp c & opt_value b].
 Admitted.
 
 Lemma argmin_lower_bound {c x y} (P : T) :
