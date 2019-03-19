@@ -227,23 +227,6 @@ move: (hpolyEq_of_hpolyEq I') => [K] /quotP ->.
 exact: polyEq_face.
 Qed.
 
-Lemma face_on_baseP {P base Q} :
-  [P has \base base] -> (Q \in face_set P) = [&& [Q has \base base], (Q `>` '[poly0]) & (Q `<=` P)].
-Proof.
-move => P_base.
-case: (emptyP P) => [/poly_equivP/quot_equivP P_empty | P_non_empty].
-- rewrite P_empty in P_base *.
-  rewrite poly0_face_set in_fset0; symmetry; apply/negbTE/negP.
-  move/and3P => [_ proper0Q].
-  rewrite subset0_equiv => /quot_equivP Q_eq0.
-  by rewrite Q_eq0 quotE poly_properxx in proper0Q.
-- have P_face: P \in face_set '[base].
-  + move: P_non_empty; move/has_baseP: P_base => [I] ->.
-    exact: polyEq_face.
-  apply/idP/idP.
-Admitted.
-
-
 Fact face_set_of_face (P Q : 'poly[R]_n) :
   Q \in face_set P -> face_set Q = [fset Q' in face_set P | (Q' `<=` Q)%PH]%fset.
 Proof.
@@ -252,24 +235,18 @@ apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP.
 - move => Q' Q'_face.
   rewrite in_fsetE inE; apply/andP; split; last exact: face_subset.
   by move: Q' Q'_face; apply/fsubsetP; exact: face_set_subset.
-- move => Q'; rewrite in_fsetE inE => /= /andP [Q'_face Q'_sub_Q].
-  move/(face_on_baseP (repr_base _)) : Q'_face => [I'] Q'_eq.
-  rewrite Q'_eq in Q'_sub_Q *.
-
-  move/(face_on_baseP (repr_base _)) : Q_face => [I] Q_eq.
-  rewrite Q_eq in Q'_sub_Q * => eq_P_sub_I.
-
-
-  apply/(face_on_baseP (polyEq_base _)).
-
-
-  move/(face_baseP (hpoly_base P)): F_face_P => [F_base eqP_sub_eqF F_non_empty].
-  move/(face_baseP (hpoly_base P)): F'_face_P => [F'_base eq_P_sub_eq_F' F'_non_empty].
-  apply/(face_baseP F_base); split.
-  + exact: F'_base.
-  + by apply/(subset_on_base F'_base F_base).
-  + exact: F'_non_empty.
-Qed.
+- move => Q'; rewrite in_fsetE inE => /= /andP [Q'_face].
+  move/faceP : Q'_face => [c [-> c_bounded_on_P]] Q'_sub_Q.
+  have c_bounded_on_Q : bounded Q c.
+  + apply: (bounded_mono1 c_bounded_on_P); exact: (face_subset Q_face).
+  suff ->: argmin P c = argmin Q c by exact: argmin_in_face_set.
+  rewrite 2!argmin_polyI in Q'_sub_Q *.
+  suff <-: opt_value c_bounded_on_P = opt_value c_bounded_on_Q.
+  - apply/quot_equivP/andP; split.
+    + apply/poly_subsetIP; split; by [ done | exact: poly_subsetIr].
+    + apply: polySI; exact: face_subset.
+  -
+Admitted.
 
 
 End Base.

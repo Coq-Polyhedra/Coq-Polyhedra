@@ -251,6 +251,21 @@ Proof.
 exact: (PolyPred.in_polyI (PolyPred.class T)).
 Qed.
 
+Lemma poly_subsetIl (P Q : T) : P `&` Q `<=` P.
+Admitted.
+
+Lemma poly_subsetIr (P Q : T) : P `&` Q `<=` Q.
+Admitted.
+
+Lemma polyIS (P P' Q : T) : P `<=` P' -> Q `&` P `<=` Q `&` P'.
+Admitted.
+
+Lemma polySI (P P' Q : T) : P `<=` P' -> P `&` Q `<=` P' `&` Q.
+Admitted.
+
+Lemma poly_subsetIP (P Q Q' : T) : reflect (P `<=` Q /\ P `<=` Q') (P `<=` Q `&` Q').
+Admitted.
+
 Lemma in_big_polyI (I : finType) (P : pred I) (F : I -> T) x :
   reflect (forall i : I, P i -> x \in (F i)) (x \in \polyI_(i | P i) (F i)).
 Proof.
@@ -260,7 +275,6 @@ rewrite big_all_cond; apply: (iffP allP) => /= H i;
 have := H i _; rewrite mem_index_enum; last by move/implyP->.
 by move=> /(_ isT) /implyP.
 Qed.
-
 
 Lemma big_poly_inf (I : finType) (j : I) (P : pred I) (F : I -> T) :
   P j -> (\polyI_(i | P i) F i) `<=` F j.
@@ -447,8 +461,16 @@ apply: (iffP (PolyPred.boundedPn _ P_non_empty)) => [H K | H K]; move/(_ K): H.
   apply/poly_subsetPn; exists x; by rewrite ?notin_hs.
 Qed.
 
+Lemma bounded_mono1 (P Q : T) c :
+  bounded P c -> Q `<=` P -> bounded Q c.
+Admitted.
+
 Definition opt_value (P : T) c (b : bounded P c) :=
   let x := xchoose (boundedPP b) in '[c,x].
+
+Lemma opt_value_mono1 (P Q : T) c (b : bounded P c) (sub : Q `<=` P):
+  opt_value b <= opt_value (bounded_mono1 b sub).
+Admitted.
 
 Lemma opt_point (P : T) c (b : bounded P c) :
   exists2 x, x \in P & '[c,x] = opt_value b.
