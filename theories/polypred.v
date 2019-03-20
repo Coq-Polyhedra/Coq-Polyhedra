@@ -203,12 +203,15 @@ Local Open Scope poly_scope.
 Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
 Notation "'`[' 'polyT' ']'" := polyT (at level 70) : poly_scope.
 Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
-Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity) : poly_scope.
-Notation "P `>=` Q" := (Q `<=` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity, Q at next level) : poly_scope.
+Notation "P `>=` Q" := (Q `<=` P) (at level 70, no associativity, only parsing) : poly_scope.
 Notation "P `=~` Q" := (poly_equiv P Q) (at level 70, no associativity) : poly_scope.
 Notation "P `!=~` Q" := (~~ (poly_equiv P Q)) (at level 70, no associativity) : poly_scope.
-Notation "P `<` Q" := (poly_proper P Q) (at level 70, no associativity) : poly_scope.
+Notation "P `<` Q" := (poly_proper P Q) (at level 70, no associativity, Q at next level) : poly_scope.
 Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "'`[' 'hs'  c & d  ']'" := (mk_hs c d) (at level 70) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
