@@ -589,13 +589,20 @@ Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
 Admitted.
 
 Lemma pointedPn {P : T} :
-  reflect (exists c Ω, `[line c & Ω] `<=` P) (~~ (pointed P)).
-(* RK Proof.
-apply: (iffP (PolyPred.pointedPn _ _)) => [[c [Ω]] incl | [c [Ω]] /poly_subsetP incl]; exists c; exists Ω.
-- apply/poly_subsetP => x /in_lineP [μ ->]; exact: incl.
-- by move => μ; apply/incl/in_lineP; exists μ.
-Qed.*)
-Admitted.
+  (P `>` `[poly0]) ->
+    reflect (exists c, (c != 0) /\ (forall Ω,  Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
+(*RK : I had to add the non_emptiness assumption because now pointed only makes sense under this assumption. I also slightly modified statement*)
+Proof. (* RK *)
+rewrite -subset0N_proper => non_empty_P.
+apply: (iffP (PolyPred.pointedPn non_empty_P)) => [[c [? incl]] | [c [? incl]]];
+  exists c; split; try by done.
+- move => Ω Ω_in_P.
+  apply/poly_subsetP => x /in_lineP [μ ->].
+  exact: incl.
+- move => μ μ_in_P λ.
+  apply/(poly_subsetP (incl _ μ_in_P))/in_lineP.
+  by exists λ.
+Qed.
 
 Definition mk_hline (c Ω : 'cV[R]_n) : T :=
   `[hs c & '[c,Ω]] `&` `[line c & Ω].
@@ -937,11 +944,20 @@ Qed.
 Lemma argmin_mono (P : T) c : argmin '[P] c = '[argmin P c].
 Admitted.
 
-Lemma pointed_mono (P : T) : pointed '[P] = pointed P.
-Proof.
-apply: negb_inj.
-by apply: (sameP pointedPn); apply: (iffP pointedPn) => [[c [Ω]] H | [c [Ω]] H];
-  exists c; exists Ω; rewrite line_mono poly_subset_mono in H *.
+Lemma pointed_mono (P : T) :
+  (P `>` `[poly0]) -> pointed '[P] = pointed P.
+(*RK : I had to add the non_emptiness assumption because now pointed only makes sense under this assumption. *)
+Proof. (* RK *)
+move => non_empty_P.
+apply: negb_inj; symmetry.
+apply: (sameP (pointedPn non_empty_P)).
+rewrite -poly_proper_mono in non_empty_P.
+apply: (iffP (pointedPn non_empty_P)) => [[c [? line_incl]] | [c [? line_incl]]];
+  exists c; split; try by done.
+- move => Ω ?; rewrite -poly_subset_mono -line_mono.
+  by apply: line_incl; rewrite inE.
+- move => Ω ?; rewrite line_mono poly_subset_mono.
+  by apply: line_incl; rewrite -inE.
 Qed.
 
 End QuotientProperties.
