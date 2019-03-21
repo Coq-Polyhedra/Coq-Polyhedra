@@ -8,7 +8,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap (*fingroup*).
 Require Import extra_misc inner_product vector_order extra_matrix row_submx simplex polypred hpolyhedron.
 
 Set Implicit Arguments.
@@ -19,48 +19,107 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
-Section Base.
+Section PredSort.
+
+Variable (R : realFieldType) (n : nat).
+
+Definition poly_sort := PolyPred.sort [polyPredType of 'poly[R]_n].
+Canonical poly_sort_eqType := Eval hnf in [eqType of poly_sort].
+Canonical poly_sort_choiceType := Eval hnf in [choiceType of poly_sort].
+Canonical poly_sort_predType := Eval hnf in [predType of poly_sort].
+Canonical poly_sort_choicePredType := Eval hnf in [choicePredType of poly_sort].
+Canonical poly_sort_polyPredType := Eval hnf in [polyPredType of poly_sort].
+Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.
+
+End PredSort.
+
+Section PolyBase.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
-Definition has_base (P : 'poly[R]_n) :=
+Definition has_base (P : poly_sort R n) :=
   [exists I, P == '['P^=(base; I)]].
 
-Lemma has_baseP (P : 'poly[R]_n) :
-  reflect (exists I, P = '[ 'P^=(base; I) ]) (has_base P).
-Proof.
-exact: exists_eqP.
-Qed.
-
-Inductive poly_base := PolyBase { poly :> 'poly[R]_n; _ : has_base poly}.
-Canonical poly_base_subType := [subType for poly].
+Inductive poly_base := PolyBase { pval :> poly_sort R n ; _ : has_base pval}.
+Canonical poly_base_subType := [subType for pval].
 Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
 Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
-Definition poly_base_choiceMixin := [choiceMixin of poly_base by <:].
-Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
+Coercion poly_base_to_poly P := (pval P : 'poly[R]_n).
 
-Implicit Type (P : poly_base).
-
-Lemma poly_baseP P : has_base P.
+Lemma poly_baseP (P : poly_base) : has_base P.
 Proof.
 exact: valP.
 Qed.
 
-Canonical poly_base_polyPredType :=
+End PolyBase.
 
-End Base.
-
-Notation "[ P 'has' '\base' base ]" := (has_base base P).
 Notation "'{poly'  base '}'" := (poly_base base).
+Notation "[ P 'has' '\base' base ]" := (has_base base P).
+
+Section Test.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Variables (P Q : {poly base}) (Q' : 'poly[R]_n) (x : 'cV[R]_n).
+
+Set Printing Coercions.
+
+Check (x \in P).
+Check (P : 'poly[R]_n).
+
+Goal P `<=` Q' -> forall x, x \in P -> x \in Q'.
+move/poly_subsetP => H z z_in_P.
+by move/H: z_in_P.
+Qed.
+
+Unset Printing Coercions.
+
+End Test.
+
+Section HasBase.
+
+Variable (R : realFieldType) (n : nat).
+
+Implicit Type (base : 'hpoly[R]_n) (P : 'poly[R]_n).
+
+Lemma has_baseP base P : reflect (exists I, P = '['P^=(base; I)]) [P has \base base].
+Proof.
+exact: exists_eqP.
+Qed.
+
+Lemma has_base_subset base P :
+  [ P has \base base ] -> P `<=` '[base].
+Proof.
+move/has_baseP => [I ->]; rewrite quotE; exact: hpolyEq_antimono0.
+Qed.
+
+Lemma polyEq_base base I :
+  [ '['P^=(base; I)] has \base base ].
+Proof.
+by apply/has_baseP; exists I.
+Qed.
+
+Lemma self_base (base : 'hpoly[R]_n) :
+  ['[base] has \base base].
+Proof.
+apply/has_baseP; exists set0; symmetry; apply/quotP; exact: hpolyEq0.
+Qed.
+
+Lemma repr_base (P : 'poly[R]_n) :
+  [P has \base (\repr P)].
+Proof.
+case/hpolyP: P => m A b; exact: self_base.
+Qed.
+
+End HasBase.
 
 Section Face.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
-Implicit Type (P Q : {poly base}).
-
-Definition face_set P := [fset Q | Q : {poly base} & ((`[poly0] : 'poly[R]_n) `<` Q `<=` P)%PH]%fset.
-
+(* This bugs, perhaps because of finmap, but alternatively we should equip {poly base} with
+ * a finType structure, and work with MathComp finset (ie {set {poly base}}) instead *)
+Definition face_set (P : 'poly[R]_n) := [fset Q : 'poly[R]_n | (`[poly0] `<` Q `<=` P)%PH]%fset.
 
 End Face.
 
