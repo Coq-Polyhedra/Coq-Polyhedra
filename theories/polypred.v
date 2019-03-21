@@ -252,19 +252,35 @@ exact: (PolyPred.in_polyI (PolyPred.class T)).
 Qed.
 
 Lemma poly_subsetIl (P Q : T) : P `&` Q `<=` P.
-Admitted.
+Proof. (* RK *)
+apply/PolyPred.poly_subsetP => x.
+by rewrite in_polyI inE; move/andP/proj1.
+Qed.
 
 Lemma poly_subsetIr (P Q : T) : P `&` Q `<=` Q.
-Admitted.
+Proof. (* RK *)
+apply/PolyPred.poly_subsetP => x.
+by rewrite in_polyI inE; move/andP/proj2.
+Qed.
 
 Lemma polyIS (P P' Q : T) : P `<=` P' -> Q `&` P `<=` Q `&` P'.
-Admitted.
+Proof. (* RK *)
+move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI !inE.
+case: (x \in Q) => //; apply: (PolyPred.poly_subsetP _ _ _ sPP').
+Qed.
 
 Lemma polySI (P P' Q : T) : P `<=` P' -> P `&` Q `<=` P' `&` Q.
-Admitted.
+Proof. (* RK *)
+move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI !inE andbC.
+by case: (x \in Q) => // => x_in_P; move: ((PolyPred.poly_subsetP _ _ _ sPP') _ x_in_P) => ->.
+Qed.
 
 Lemma poly_subsetIP (P Q Q' : T) : reflect (P `<=` Q /\ P `<=` Q') (P `<=` Q `&` Q').
-Admitted.
+Proof.
+apply: (iffP idP) => [/PolyPred.poly_subsetP subset_P_QIQ' | [/PolyPred.poly_subsetP subset_P_Q /PolyPred.poly_subsetP subset_P_Q']].
+- by split; apply/PolyPred.poly_subsetP => x x_in_P; move: (subset_P_QIQ' _ x_in_P); rewrite in_polyI; case/andP.
+- by apply/PolyPred.poly_subsetP => x x_in_P; rewrite in_polyI inE; apply/andP; split; [exact: (subset_P_Q _ x_in_P) | exact: (subset_P_Q' _ x_in_P)].
+Qed.
 
 Lemma in_big_polyI (I : finType) (P : pred I) (F : I -> T) x :
   reflect (forall i : I, P i -> x \in (F i)) (x \in \polyI_(i | P i) (F i)).
@@ -456,9 +472,9 @@ Proof.
 rewrite -subset0N_proper; move => P_non_empty.
 apply: (iffP (PolyPred.boundedPn _ P_non_empty)) => [H K | H K]; move/(_ K): H.
 - move/poly_subsetPn => [x x_in_P x_not_in_hs].
-  exists x; by rewrite notin_hs in x_not_in_hs.
+  by exists x; rewrite notin_hs in x_not_in_hs.
 - move => [x x_in_P c_x_lt_K].
-  apply/poly_subsetPn; exists x; by rewrite ?notin_hs.
+  by apply/poly_subsetPn; exists x; rewrite ?notin_hs.
 Qed.
 
 Lemma bounded_mono1 (P Q : T) c :
