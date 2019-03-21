@@ -63,7 +63,7 @@ Section ClassDef.
 Variable V : Type.
 
 Structure mixin_of (T : Type) :=
-  Mixin { mem : T -> pred V }.
+  Mixin { mem_pred_sort : T -> pred_sort (predPredType V) }.
 
 Record class_of (T : Type) : Type :=
   Class { base : Choice.class_of T;
@@ -71,7 +71,7 @@ Record class_of (T : Type) : Type :=
 
 Local Coercion base : class_of >-> Choice.class_of.
 
-Structure type  := Pack {sort; _ : class_of sort}.
+Structure type := Pack {sort; _ : class_of sort}.
 Local Coercion sort : type >-> Sortclass.
 Local Coercion mixin : class_of >-> mixin_of.
 
@@ -90,17 +90,17 @@ Notation xclass := (class : class_of xT).
 
 Definition eqType := @Equality.Pack cT xclass xT.
 Definition choiceType := @Choice.Pack cT xclass xT.
-Definition pred_of_type := @mkPredType _ cT (mem xclass).
+Definition pred_of_type := @mkPredType _ cT (mem_pred_sort xclass).
+Definition pred_of (P : cT) : pred_sort _ := (mem_pred_sort xclass P).
 End ClassDef.
 
 Module Import Exports.
 Coercion base : class_of >-> Choice.class_of.
 Coercion mixin : class_of >-> mixin_of.
-Coercion eqType : type >-> Equality.type.
-Coercion choiceType : type >-> Choice.type.
+Coercion sort : type >-> Sortclass.
+Coercion pred_of : sort >-> pred_sort.
 Canonical eqType.
 Canonical choiceType.
-Coercion pred_of_type : type >-> predType.
 Canonical pred_of_type.
 Notation choicePredType V := (type V).
 Notation ChoicePredType V T := (@pack V T _ id _ _ id _ _ id).
@@ -121,17 +121,17 @@ Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
   poly0 : T; in_poly0 : poly0 =i pred0;
   polyT : T; in_polyT : polyT =i predT;
   polyI : T -> T -> T;
-  in_polyI : forall P Q, (polyI P Q) =i [predI P & Q];
+  in_polyI : forall (P Q : T), (polyI P Q) =i [predI P & Q];
   poly_subset : rel T;
-  poly_subsetP : forall P Q, reflect {subset P <= Q} (poly_subset P Q);
-  poly_subsetPn : forall P Q, reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q));
+  poly_subsetP : forall (P Q : T), reflect {subset P <= Q} (poly_subset P Q);
+  poly_subsetPn : forall (P Q : T), reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q));
   mk_hs : 'cV[R]_n -> R -> T;
   in_hs : forall c d x, x \in (mk_hs c d) = ('[c,x] >= d);
   bounded : T -> 'cV[R]_n -> bool;
-  boundedP : forall P c, reflect (exists2 x, x \in P & poly_subset P (mk_hs c '[c,x])) (bounded P c);
-  boundedPn : forall P c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c);
+  boundedP : forall (P : T) c, reflect (exists2 x, x \in P & poly_subset P (mk_hs c '[c,x])) (bounded P c);
+  boundedPn : forall (P : T) c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c);
   pointed : pred T;
-  pointedPn : forall P, ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P)
+  pointedPn : forall (P : T), ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P)
 }.
 
 Record class_of (T : Type) : Type :=
@@ -158,17 +158,19 @@ Definition pack b0 (m0 : mixin_of (@ChoicePred.Pack 'cV[R]_n T b0)) :=
 Definition eqType := @Equality.Pack cT xclass xT.
 Definition choiceType := @Choice.Pack cT xclass xT.
 Definition choicePredType := @ChoicePred.Pack 'cV[R]_n cT xclass.
-Definition pred_of_type := @mkPredType _ cT (ChoicePred.mem xclass).
+Definition pred_of_type := @mkPredType _ cT (ChoicePred.mem_pred_sort xclass).
+Definition pred_of (P : cT) : (pred_sort _) := (ChoicePred.mem_pred_sort xclass P).
 End ClassDef.
 
 Module Import Exports.
 Coercion base : class_of >-> ChoicePred.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
-Coercion eqType : type >-> Equality.type.
+Coercion pred_of : sort >-> pred_sort.
+(*Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
 Coercion pred_of_type : type >-> predType.
-Coercion choicePredType : type >-> ChoicePred.type.
+Coercion choicePredType : type >-> ChoicePred.type.*)
 Canonical eqType.
 Canonical choiceType.
 Canonical pred_of_type.
@@ -187,13 +189,14 @@ Section PolyPredProperties.
 
 Context {R : realFieldType} {n : nat} {T : polyPredType R n}.
 
-Definition poly0 := PolyPred.poly0 (PolyPred.class T).
-Definition polyT := PolyPred.polyT (PolyPred.class T).
-Definition polyI := PolyPred.polyI (PolyPred.class T).
-Definition poly_subset := PolyPred.poly_subset (PolyPred.class T).
-Definition mk_hs := PolyPred.mk_hs (PolyPred.class T).
-Definition bounded := PolyPred.bounded (PolyPred.class T).
-Definition pointed := PolyPred.pointed (PolyPred.class T).
+Definition poly0 : T := PolyPred.poly0 (PolyPred.class T).
+Definition polyT : T := PolyPred.polyT (PolyPred.class T).
+Definition polyI : T -> T -> T := PolyPred.polyI (PolyPred.class T).
+
+Definition poly_subset : rel T := PolyPred.poly_subset (PolyPred.class T).
+Definition mk_hs : _ -> _ -> T := PolyPred.mk_hs (PolyPred.class T).
+Definition bounded : T -> _ -> bool := PolyPred.bounded (PolyPred.class T).
+Definition pointed : pred T := PolyPred.pointed (PolyPred.class T).
 
 Definition poly_equiv (P Q : T) := (poly_subset P Q) && (poly_subset Q P).
 Definition poly_proper (P Q : T) := ((poly_subset P Q) && (~~ (poly_subset Q P))).
@@ -660,12 +663,15 @@ End PolyPredProperties.
 Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
 Notation "'`[' 'polyT' ']'" := polyT (at level 70) : poly_scope.
 Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
-Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity) : poly_scope.
+Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity, Q at next level) : poly_scope.
 Notation "P `>=` Q" := (Q `<=` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
 Notation "P `=~` Q" := (poly_equiv P Q) (at level 70, no associativity) : poly_scope.
 Notation "P `!=~` Q" := (~~ (poly_equiv P Q)) (at level 70, no associativity) : poly_scope.
-Notation "P `<` Q" := (poly_proper P Q) (at level 70, no associativity) : poly_scope.
+Notation "P `<` Q" := (poly_proper P Q) (at level 70, no associativity, Q at next level) : poly_scope.
 Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "'`[' 'hs'  c & d  ']'" := (mk_hs c d) (at level 70) : poly_scope.
 Notation "'`[' 'hp'  c & d  ']'" := (mk_hp c d) (at level 70) : poly_scope.
 Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
@@ -703,7 +709,6 @@ Hint Resolve poly_equiv_refl : core.
 Module Quotient.
 
 Local Open Scope poly_scope.
-
 
 Section Def.
 
@@ -763,10 +768,9 @@ Proof.
 by move: (chooseP (poly_equiv_refl P)); rewrite poly_equiv_sym => /poly_equivP.
 Qed.
 
-
-Definition mem (P : {quot T}) := (mem (\repr P)) : pred 'cV[R]_n.
-Canonical quot_predType := mkPredType mem.
-Canonical quot_choicePredType := ChoicePredType 'cV[R]_n {quot T}.
+Definition mem_pred_sort (P : {quot T}) := (mem (\repr P)) : pred 'cV[R]_n.
+Canonical quot_predType := mkPredType mem_pred_sort.
+Canonical quot_choicePredType := @ChoicePredType 'cV[R]_n {quot T}.
 
 Lemma quotP (P Q : T) : '[P] = '[Q] <-> P `=~` Q.
 Admitted.
@@ -799,7 +803,7 @@ Implicit Types P : {quot T}.
 
 Definition poly0 : {quot T} := '[ `[poly0] ].
 Definition polyT : {quot T} := '[ `[polyT] ].
-Definition polyI P Q : {quot T} := '[ (\repr P) `&` (\repr Q) ].
+Definition polyI (P Q : {quot T}) : {quot T} := '[ (\repr P) `&` (\repr Q) ].
 Definition poly_subset (P Q : {quot T}) := (\repr P) `<=` (\repr Q).
 Definition mk_hs c d : {quot T} := '[ `[hs c & d] ].
 Definition bounded P c := bounded (\repr P) c.
@@ -807,12 +811,12 @@ Definition pointed P := pointed (\repr P).
 
 Let inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hs, inE).
 
-Lemma in_poly0 : poly0 =i pred0.
+Lemma in_poly0 : (poly0 : {quot T}) =i pred0.
 Proof.
 by move => ?; rewrite !inE.
 Qed.
 
-Lemma in_polyT : polyT =i predT.
+Lemma in_polyT : (polyT : {quot T}) =i predT.
 Proof.
 by move => ?; rewrite !inE.
 Qed.
@@ -863,9 +867,7 @@ apply: (iffP pointedPn) => [[c [Ω]] H| [c [Ω]] H]; exists c; exists Ω.
 Qed.*)
 Admitted.
 
-Definition quot_polyPredMixin :=
-  PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
-                 in_hs boundedP boundedPn pointedPn.
+Definition quot_polyPredMixin := PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn in_hs boundedP boundedPn pointedPn.
 Canonical quot_polyPredType := PolyPredType R n quot_polyPredMixin.
 
 End PolyPredStructure.

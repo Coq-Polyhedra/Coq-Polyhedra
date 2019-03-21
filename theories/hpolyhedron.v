@@ -262,7 +262,7 @@ Canonical hpoly_predType.
 Canonical hpoly_choiceType.
 Canonical hpoly_choicePredType.
 Canonical hpoly_polyPredType.
-Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
+Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
 Notation "''poly[' R ]_ n" := {quot 'hpoly[R]_n}%PH (at level 8).
 Notation "''poly_' n" := {quot 'hpoly_n}%PH (at level 8).
@@ -454,14 +454,14 @@ apply/andP; split; apply/poly_subsetP => x x_in.
       - move/hpolyEq_eq/(_ j'_in_J) : x_in; rewrite j'_eq mul_col_mx !col_mxEd.
         rewrite mulNmx -row_submx_mul mxE [RHS]mxE 2!row_submx_mxE.
         exact: oppr_inj.
-- apply/in_hpolyEqP; split.
-  move: x x_in; apply/poly_subsetP/hpolyEq_antimono; exact: subsetUl.
-  move => j /(mem_imset f)/(subsetP (@subsetUr _ I _)) fj_in_K.
-  move/hpolyEq_eq/(_ fj_in_K): x_in.
-  rewrite /f; case: splitP' => [j' ->| j' -> eq].
-  + by rewrite mul_col_mx !col_mxEu.
-  + rewrite mul_col_mx !col_mxEd mulNmx -row_submx_mul mxE [RHS]mxE 2!row_submx_mxE.
-    by rewrite eq.
+      - apply/in_hpolyEqP; split.
+        move: x x_in; apply/poly_subsetP/hpolyEq_antimono; exact: subsetUl.
+        move => j /(mem_imset f)/(subsetP (@subsetUr _ I _)) fj_in_K.
+        move/hpolyEq_eq/(_ fj_in_K): x_in.
+        rewrite /f; case: splitP' => [j' ->| j' -> eq].
+        + by rewrite mul_col_mx !col_mxEu.
+        + rewrite mul_col_mx !col_mxEd mulNmx -row_submx_mul mxE [RHS]mxE 2!row_submx_mxE.
+          by rewrite eq.
 Qed.
 
 Lemma hpolyEq0 (base: 'hpoly[R]_n) :
