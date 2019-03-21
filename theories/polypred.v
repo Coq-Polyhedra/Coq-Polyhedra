@@ -853,12 +853,21 @@ Admitted.
 Lemma pointedPn P :
   ~~ (poly_subset P poly0) ->
     reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
-(* RK Proof.
-apply: (iffP pointedPn) => [[c [Ω]] H| [c [Ω]] H]; exists c; exists Ω.
-- by move => μ; apply/(PolyPred.poly_subsetP _ _ _ H) ; apply/in_lineP; exists μ.
-- by apply/(PolyPred.poly_subsetP _ _ _) => x /in_lineP [μ ->].
-Qed.*)
-Admitted.
+Proof. (* RK *)
+move=> non_empty_P.
+have H : ((`[ poly0 ]) `<` \repr P).
+  apply/contraT; rewrite -subset0N_proper negbK => /PolyPred.poly_subsetP empty_P.
+  move/poly_subsetPn: non_empty_P => [x].
+  by move/empty_P; rewrite !inE.
+apply: (iffP (pointedPn H)) => [[c [? incl]] | [c [? incl]]];
+  exists c; split; try by done.
+- move => μ μ_in_P λ.
+  apply/(PolyPred.poly_subsetP _ _ _ (incl _ μ_in_P))/in_lineP.
+  by exists λ.
+- move => Ω Ω_in_P.
+  apply/PolyPred.poly_subsetP => x /in_lineP [μ ->].
+  exact: incl.
+Qed.
 
 Definition quot_polyPredMixin :=
   PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
