@@ -1,4 +1,4 @@
- (*************************************************************************)
+(*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
 (* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
@@ -19,8 +19,55 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
+Section Base.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Definition has_base (P : 'poly[R]_n) :=
+  [exists I, P == '['P^=(base; I)]].
+
+Lemma has_baseP (P : 'poly[R]_n) :
+  reflect (exists I, P = '[ 'P^=(base; I) ]) (has_base P).
+Proof.
+exact: exists_eqP.
+Qed.
+
+Inductive poly_base := PolyBase { poly :> 'poly[R]_n; _ : has_base poly}.
+Canonical poly_base_subType := [subType for poly].
+Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
+Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
+Definition poly_base_choiceMixin := [choiceMixin of poly_base by <:].
+Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
+
+Implicit Type (P : poly_base).
+
+Lemma poly_baseP P : has_base P.
+Proof.
+exact: valP.
+Qed.
+
+Canonical poly_base_polyPredType :=
+
+End Base.
+
+Notation "[ P 'has' '\base' base ]" := (has_base base P).
+Notation "'{poly'  base '}'" := (poly_base base).
+
+Section Face.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Implicit Type (P Q : {poly base}).
+
+Definition face_set P := [fset Q | Q : {poly base} & ((`[poly0] : 'poly[R]_n) `<` Q `<=` P)%PH]%fset.
+
+
+End Face.
+
 Module FaceBase.
 Section FaceBase.
+
+
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
@@ -181,11 +228,6 @@ Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
 
 Notation "[ P 'has' '\base' base ]" := (has_base P base).
 
-Lemma has_baseP (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
-  reflect (exists I, P = '[ 'P^=(base; I) ]) [P has \base base].
-Proof.
-exact: exists_eqP.
-Qed.
 
 Lemma has_base_subset (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
   [ P has \base base ] -> P `<=` '[base].
