@@ -44,12 +44,55 @@ Inductive poly_base := PolyBase { pval :> poly_sort R n ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
 Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
 Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
+Definition poly_base_choiceMixin := Eval hnf in [choiceMixin of poly_base by <:].
+Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
 Coercion poly_base_to_poly P := (pval P : 'poly[R]_n).
 
 Lemma poly_baseP (P : poly_base) : has_base P.
 Proof.
 exact: valP.
 Qed.
+
+Lemma has_baseP {P} : reflect (exists I, P = '['P^=(base; I)]) (has_base P).
+Proof.
+exact: exists_eqP.
+Qed.
+
+Lemma polyEq_base I :
+  has_base '['P^=(base; I)].
+Proof.
+by apply/has_baseP; exists I.
+Qed.
+
+Definition set_of_poly_base (P : poly_base) : {set 'I_(#ineq base)} :=
+  xchoose (existsP (poly_baseP P)).
+
+Definition set_of_poly_base_pinv (I : {set 'I_(#ineq base)})  : option poly_base :=
+  let P := PolyBase (polyEq_base I) in
+  if I == set_of_poly_base P then Some P else None.
+
+Lemma set_of_poly_baseK :
+  pcancel set_of_poly_base set_of_poly_base_pinv.
+Proof.
+move => P.
+rewrite /set_of_poly_base_pinv; last first.
+case: ifP; last first.
+- move/negbT/negP.
+  suff <-: P = PolyBase (polyEq_base (xchoose (existsP (poly_baseP P)))) by done.
+  apply/val_inj/eqP => /=; exact: (xchooseP (existsP (poly_baseP P))).
+- set P' := PolyBase (polyEq_base (xchoose (existsP (poly_baseP P)))).
+  move/eqP => set_eq_set'.
+  suff ->: (P = P' :> poly_base) by done.
+  move/eqP: (xchooseP (existsP (poly_baseP P))).
+  rewrite /set_of_poly_base in set_eq_set'; rewrite set_eq_set'.
+  move/eqP: (xchooseP (existsP (poly_baseP P'))) => <-.
+  exact: val_inj.
+Qed.
+
+Definition poly_base_countMixin := PcanCountMixin set_of_poly_baseK.
+Canonical poly_base_countType := Eval hnf in CountType poly_base poly_base_countMixin.
+Definition poly_base_finMixin := PcanFinMixin set_of_poly_baseK.
+Canonical poly_base_finType := Eval hnf in FinType poly_base poly_base_finMixin.
 
 End PolyBase.
 
@@ -82,21 +125,10 @@ Variable (R : realFieldType) (n : nat).
 
 Implicit Type (base : 'hpoly[R]_n) (P : 'poly[R]_n).
 
-Lemma has_baseP base P : reflect (exists I, P = '['P^=(base; I)]) [P has \base base].
-Proof.
-exact: exists_eqP.
-Qed.
-
 Lemma has_base_subset base P :
   [ P has \base base ] -> P `<=` '[base].
 Proof.
 move/has_baseP => [I ->]; rewrite quotE; exact: hpolyEq_antimono0.
-Qed.
-
-Lemma polyEq_base base I :
-  [ '['P^=(base; I)] has \base base ].
-Proof.
-by apply/has_baseP; exists I.
 Qed.
 
 Lemma self_base (base : 'hpoly[R]_n) :
@@ -117,9 +149,23 @@ Section Face.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
-(* This bugs, perhaps because of finmap, but alternatively we should equip {poly base} with
- * a finType structure, and work with MathComp finset (ie {set {poly base}}) instead *)
-Definition face_set (P : 'poly[R]_n) := [fset Q : 'poly[R]_n | (`[poly0] `<` Q `<=` P)%PH]%fset.
+Implicit Type (P : {poly base}).
+
+Definition face_set P : {set {poly base}} :=
+  [set Q : {poly base} | (`[poly0] `<` Q `<=` P)].
+
+Lemma face_set_self P : (P `>` `[poly0]) -> P \in (face_set P).
+Proof.
+move => ?; rewrite inE; apply/andP; split; [done | exact: poly_subset_refl].
+Qed.
+
+(* BUG below, we should be able to write :> (poly_sort R n) instead *)
+Lemma poly0_face_set P : ((P : poly_sort _ _) = (`[poly0] : poly_sort _ _)) -> face_set P = set0.
+Proof.
+move => P_eq0; apply/setP => Q; rewrite !inE P_eq0.
+apply: negbTE; apply/negP => /andP [Q_gt0 Q_le0].
+by move: (poly_proper_subset Q_gt0 Q_le0); rewrite poly_properxx.
+Qed.
 
 End Face.
 
@@ -136,11 +182,7 @@ Definition face_set : {fset 'poly[R]_n} :=
   [fset '['P^=(base; I)] | I : {set 'I_(#ineq base)}
                                & ('['P^=(base; I)] `>` `[poly0]) ]%fset.
 
-Lemma poly0_face_set : (P = `[poly0]) -> face_set = fset0.
-Admitted.
 
-Lemma face_set_self : (P `>` `[poly0]) -> P \in face_set.
-Admitted.
 
 Lemma argmin_in_face_set c :
   bounded P c -> argmin P c \in face_set.
