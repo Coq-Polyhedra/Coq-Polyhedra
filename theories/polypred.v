@@ -468,7 +468,7 @@ apply: (iffP (PolyPred.boundedPn _ P_non_empty)) => [H K | H K]; move/(_ K): H.
 Qed.
 
 Lemma bounded_mono1 (P Q : T) c :
-  bounded P c -> Q `<=` P -> bounded Q c.
+  bounded P c -> `[poly0] `<` Q `<=` P -> bounded Q c.
 Admitted.
 
 Definition opt_value (P : T) c (b : bounded P c) :=
@@ -539,6 +539,10 @@ Admitted.
 (*Proof.
 by move/andP => [_ /poly_subset_hsP/(_ y)].
 Qed.*)
+
+Lemma subset_argmin (P Q : T) c :
+  bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c `=~` argmin Q c.
+Admitted.
 
 Lemma argmin_eq {P : T} {c v x} :
   v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
