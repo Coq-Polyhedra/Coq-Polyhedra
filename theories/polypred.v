@@ -246,7 +246,25 @@ Proof.
 exact: (PolyPred.in_polyT (PolyPred.class T)).
 Qed.
 
-Lemma in_polyI (P Q : T) : (P `&` Q) =i [predI P & Q].
+Lemma poly_subsetP {P Q : T} : reflect {subset P <= Q} (P `<=` Q).
+Proof.
+exact: (PolyPred.poly_subsetP (PolyPred.class T)).
+Qed.
+
+Lemma poly_subset_refl : reflexive poly_subset.
+Proof.
+by move => P; apply/poly_subsetP.
+Qed.
+
+Lemma poly_subset_trans : transitive poly_subset.
+Proof.
+move => P' P P'' /poly_subsetP P_eq_P' /poly_subsetP P'_eq_P''.
+by apply/poly_subsetP => x; move/P_eq_P'/P'_eq_P''.
+Qed.
+
+(* RK: the next statement of this result seems to be better
+Lemma in_polyI (P Q : T) : (P `&` Q) =i [predI P & Q]. *)
+Lemma in_polyI (P Q : T) x : (x \in (P `&` Q)) = ((x \in P) && (x \in Q)).
 Proof.
 exact: (PolyPred.in_polyI (PolyPred.class T)).
 Qed.
@@ -254,24 +272,24 @@ Qed.
 Lemma poly_subsetIl (P Q : T) : P `&` Q `<=` P.
 Proof. (* RK *)
 apply/PolyPred.poly_subsetP => x.
-by rewrite in_polyI inE; move/andP/proj1.
+by rewrite in_polyI; move/andP/proj1.
 Qed.
 
 Lemma poly_subsetIr (P Q : T) : P `&` Q `<=` Q.
 Proof. (* RK *)
 apply/PolyPred.poly_subsetP => x.
-by rewrite in_polyI inE; move/andP/proj2.
+by rewrite in_polyI; move/andP/proj2.
 Qed.
 
 Lemma polyIS (P P' Q : T) : P `<=` P' -> Q `&` P `<=` Q `&` P'.
 Proof. (* RK *)
-move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI !inE.
+move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI.
 case: (x \in Q) => //; apply: (PolyPred.poly_subsetP _ _ _ sPP').
 Qed.
 
 Lemma polySI (P P' Q : T) : P `<=` P' -> P `&` Q `<=` P' `&` Q.
 Proof. (* RK *)
-move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI !inE andbC.
+move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI andbC.
 by case: (x \in Q) => // => x_in_P; move: ((PolyPred.poly_subsetP _ _ _ sPP') _ x_in_P) => ->.
 Qed.
 
@@ -279,7 +297,7 @@ Lemma poly_subsetIP (P Q Q' : T) : reflect (P `<=` Q /\ P `<=` Q') (P `<=` Q `&`
 Proof.
 apply: (iffP idP) => [/PolyPred.poly_subsetP subset_P_QIQ' | [/PolyPred.poly_subsetP subset_P_Q /PolyPred.poly_subsetP subset_P_Q']].
 - by split; apply/PolyPred.poly_subsetP => x x_in_P; move: (subset_P_QIQ' _ x_in_P); rewrite in_polyI; case/andP.
-- by apply/PolyPred.poly_subsetP => x x_in_P; rewrite in_polyI inE; apply/andP; split; [exact: (subset_P_Q _ x_in_P) | exact: (subset_P_Q' _ x_in_P)].
+- by apply/PolyPred.poly_subsetP => x x_in_P; rewrite in_polyI; apply/andP; split; [exact: (subset_P_Q _ x_in_P) | exact: (subset_P_Q' _ x_in_P)].
 Qed.
 
 Lemma in_big_polyI (I : finType) (P : pred I) (F : I -> T) x :
@@ -294,15 +312,27 @@ Qed.
 
 Lemma big_poly_inf (I : finType) (j : I) (P : pred I) (F : I -> T) :
   P j -> (\polyI_(i | P i) F i) `<=` F j.
-Admitted.
+Proof. (* RK *)
+move => ?.
+apply/PolyPred.poly_subsetP => ? /in_big_polyI in_polyI_cond.
+by apply: (in_polyI_cond j).
+Qed.
 
 Lemma big_polyI_min (I : finType) (j : I) (Q : T) (P : pred I) (F : I -> T) :
   P j -> (F j `<=` Q) -> \polyI_(i | P i) F i `<=` Q.
-Admitted.
+Proof. (* RK *)
+by move => ? ?; apply/(@poly_subset_trans (F j) _ _); [apply: big_poly_inf | done].
+Qed.
 
 Lemma big_polyIsP (I : finType) (Q : T) (P : pred I) (F : I -> T) :
   reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \polyI_(i | P i) F i).
-Admitted.
+Proof. (* RK *)
+apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
+- by apply/(poly_subset_trans Q_subset_polyI _)/big_poly_inf.
+- apply/PolyPred.poly_subsetP => ? ?.
+  apply/in_big_polyI => j P_j.
+  by apply: (PolyPred.poly_subsetP _ _ _ ((forall_Q_subset _) P_j)).
+Qed.
 
 Lemma in_hs c d x : x \in (`[hs c & d] : T) = ('[c,x] >= d).
 Proof.
@@ -319,26 +349,11 @@ Definition mk_hp c d : T := `[hs c & d] `&` `[hs (-c) & (-d)].
 Notation "'`[' 'hp'  c & d  ']'" := (mk_hp c d) (at level 70) : poly_scope.
 
 Lemma in_hp c d x : x \in (`[hp c & d] : T) = ('[c,x] == d).
-Proof.
-Admitted.
+Proof. (* RK *)
+by rewrite in_polyI 2!in_hs vdotNl ler_oppl opprK eq_sym eqr_le.
+Qed.
 
 Let inE := (in_poly0, in_polyT, in_polyI, in_hp,  in_hs, inE).
-
-Lemma poly_subsetP {P Q : T} : reflect {subset P <= Q} (P `<=` Q).
-Proof.
-exact: (PolyPred.poly_subsetP (PolyPred.class T)).
-Qed.
-
-Lemma poly_subset_refl : reflexive poly_subset.
-Proof.
-by move => P; apply/poly_subsetP.
-Qed.
-
-Lemma poly_subset_trans : transitive poly_subset.
-Proof.
-move => P' P P'' /poly_subsetP P_eq_P' /poly_subsetP P'_eq_P''.
-by apply/poly_subsetP => x; move/P_eq_P'/P'_eq_P''.
-Qed.
 
 Lemma poly_subset_hsP {P : T} {c d} :
   reflect (forall x, x \in P -> '[c,x] >= d) (P `<=` `[hs c & d]).
