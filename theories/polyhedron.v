@@ -50,29 +50,26 @@ by apply/has_baseP; exists I.
 Qed.
 Canonical polyEq_base I := PolyBase (polyEq_baseP I).
 
+Definition poly_base_of (x : poly_base) & (phantom 'poly[R]_n x) : poly_base := x.
+Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
+
 Definition set_of_poly_base (P : poly_base) : {set 'I_(#ineq base)} :=
   xchoose (existsP (poly_base_base P)).
 
 Definition set_of_poly_base_pinv (I : {set 'I_(#ineq base)})  : option poly_base :=
-  let P := PolyBase (polyEq_baseP I) in
+  let P := '['P^=(base; I)]%:poly_base in
   if I == set_of_poly_base P then Some P else None.
 
 Lemma set_of_poly_baseK :
   pcancel set_of_poly_base set_of_poly_base_pinv.
 Proof.
-move => P.
-rewrite /set_of_poly_base_pinv; last first.
+have eq: forall P : poly_base, P = '['P^=(base; (set_of_poly_base P))]%:poly_base.
+- move => P; apply/val_inj => /=; apply/eqP.
+  exact: (xchooseP (existsP (poly_base_base P))).
+move => P; rewrite /set_of_poly_base_pinv.
 case: ifP; last first.
-- move/negbT/negP.
-  suff <-: P = PolyBase (polyEq_baseP (xchoose (existsP (poly_base_base P)))) by done.
-  apply/val_inj/eqP => /=; exact: (xchooseP (existsP (poly_base_base P))).
-- set P' := PolyBase (polyEq_baseP (xchoose (existsP (poly_base_base P)))).
-  move/eqP => set_eq_set'.
-  suff ->: (P = P' :> poly_base) by done.
-  move/eqP: (xchooseP (existsP (poly_base_base P))).
-  rewrite /set_of_poly_base in set_eq_set'; rewrite set_eq_set'.
-  move/eqP: (xchooseP (existsP (poly_base_base P'))) => <-.
-  exact: val_inj.
+- move/negbT/negP; by rewrite -eq.
+- by move/eqP ->; rewrite -2!eq.
 Qed.
 
 Definition poly_base_countMixin := PcanCountMixin set_of_poly_baseK.
@@ -82,11 +79,11 @@ Canonical poly_base_finType := Eval hnf in FinType poly_base poly_base_finMixin.
 
 End PolyBase.
 
-Notation "'{poly'  base '}'" := (poly_base base).
-Notation "[ P 'has' '\base' base ]" := (has_base base P).
-Notation "'[poly' 'of' I ]" := (PolyBase (polyEq_baseP I)).
+Notation "'{poly'  base '}'" := (poly_base base) : poly_scope.
+Notation "[ P 'has' '\base' base ]" := (has_base base P) : poly_scope.
+Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
 
-Section Test.
+(*Section Test.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
@@ -105,7 +102,7 @@ Qed.
 
 Unset Printing Coercions.
 
-End Test.
+End Test.*)
 
 Section HasBase.
 
@@ -114,7 +111,7 @@ Variable (R : realFieldType) (n : nat).
 Implicit Type (base : 'hpoly[R]_n) (P : 'poly[R]_n).
 
 Variant poly_base_spec (base : 'hpoly[R]_n) : {poly base} -> 'poly[R]_n -> Type :=
-  HpolySpec I : poly_base_spec [poly of I] '['P^=(base; I)].
+  HpolySpec I : poly_base_spec '['P^=(base; I)]%:poly_base '['P^=(base; I)].
 
 Lemma poly_baseP base (P : {poly base}) :
   poly_base_spec P (pval P).
@@ -132,7 +129,8 @@ Lemma self_baseP base :
 Proof.
 apply/has_baseP; exists set0; symmetry; apply/quotP; exact: hpolyEq0.
 Qed.
-Canonical self_base base := PolyBase (self_baseP base).
+(* BUG here: this cannot be made canonical because '[base] and '[P^=(base; I)] share
+ * the same head symbol, so making self_baseP canonical would be ignored *)
 
 (*Lemma self_base (base : 'hpoly[R]_n) :
 
@@ -174,7 +172,6 @@ Canonical argmin_base base (P : {poly base}) c (b : bounded P c) := PolyBase (ar
 Definition face_set base (P : {poly base}) : {set {poly base}} :=
   [set Q : {poly base} | (`[poly0] `<` Q `<=` P)].
 
-
 Lemma face_set_self base (P : {poly base}) : (P `>` `[poly0]) -> P \in (face_set P).
 Proof.
 move => ?; rewrite inE; apply/andP; split; [done | exact: poly_subset_refl].
@@ -191,7 +188,9 @@ Lemma faceP base (P Q : {poly base}):
 Proof.
 apply: (iffP idP); last first.
 - move => [c] ? c_bounded.
-  have ->: Q = argmin_base c_bounded by exact: val_inj.
+  have ->: Q = (argmin P c)%:poly_base.
+  + move => b'; have ->: b' = c_bounded by exact: eq_irrelevance.
+    exact: val_inj.
   rewrite inE; apply/andP; split;
     [ by rewrite -bounded_argminN0 | exact: argmin_subset ].
 - (* here there is a mistake: two cases should be distinguished
