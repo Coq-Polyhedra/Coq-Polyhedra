@@ -199,19 +199,24 @@ apply: (iffP idP); last first.
 - (* here there is a mistake: two cases should be distinguished
    * if base is empty, then face_set is empty since P is empty has well.
    * if base is non-empty, then we can argue that c_bounded and c_argmin are valid *)
-  move: P Q; case: base => m A b P /poly_baseP [I].
-  rewrite inE => /andP [Q_prop0 Q_sub_P].
-  pose c := \sum_(i in I) (row i A)^T.
-  have c_bounded : bounded '['P(A,b)] c.
-  + admit. (* should be proved in hpolyhedron *)
-  have c_argmin : argmin '['P(A,b)] c = '['P^=(A,b; I)].
-  + admit. (* should be proved in hpolyhedron *)
-  exists c.
-  + rewrite /= -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
-    apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
-  + apply: (bounded_mono1 c_bounded); apply/andP; split.
-    * exact: (poly_proper_subset Q_prop0).
-    * exact: poly_base_subset.
+  case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
+  + suff P_eq0: (P = (`[poly0]) :> 'poly[R]_n).
+    * by move/poly0_face_set: (P_eq0) ->; rewrite P_eq0 inE => ?.
+    * move: (poly_base_subset P); rewrite base_eq0 subset0_equiv.
+      exact: quot_equivP.
+  + move: base_prop0 P Q; case: base => m A b base_prop0 P /poly_baseP [I].
+    rewrite inE => /andP [Q_prop0 Q_sub_P].
+    pose c := \sum_(i in I) (row i A)^T.
+    have c_bounded : bounded '['P(A,b)] c.
+    * admit. (* should be proved in hpolyhedron (and use base_prop0) *)
+    have c_argmin : argmin '['P(A,b)] c = '['P^=(A,b; I)].
+    * admit. (* should be proved in hpolyhedron *)
+    exists c.
+    * rewrite /= -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
+      apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
+    * apply: (bounded_mono1 c_bounded); apply/andP; split.
+      - exact: (poly_proper_subset Q_prop0).
+      - exact: poly_base_subset.
 Admitted.
 
 End Face.
