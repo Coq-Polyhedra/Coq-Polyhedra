@@ -183,6 +183,9 @@ move => P_eq0; apply/setP => Q; rewrite !inE P_eq0.
 exact: poly_proper_subsetxx.
 Qed.
 
+(* Ideally, we would prefer the equality Q = (argmin P c)%:poly_base
+ * however, this would require to automatically infer a (_ : bounded P c)
+ * hypothesis *)
 Lemma faceP base (P Q : {poly base}):
   reflect (exists2 c, (Q = argmin P c :> 'poly[R]_n) & bounded P c) (Q \in face_set P).
 Proof.
