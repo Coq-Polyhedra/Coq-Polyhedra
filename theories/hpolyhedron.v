@@ -254,6 +254,9 @@ Definition hpoly_polyPredMixin :=
   PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
                  in_hs boundedP boundedPn pointedPn.
 Canonical hpoly_polyPredType := PolyPredType R n hpoly_polyPredMixin.
+
+Definition poly_sort :=
+  PolyPred.sort (Quotient.quot_polyPredType hpoly_polyPredType).
 End PolyPred.
 
 Module Import Exports.
@@ -262,10 +265,11 @@ Canonical hpoly_predType.
 Canonical hpoly_choiceType.
 Canonical hpoly_choicePredType.
 Canonical hpoly_polyPredType.
+Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
-Notation "''poly[' R ]_ n" := {quot 'hpoly[R]_n}%PH (at level 8).
-Notation "''poly_' n" := {quot 'hpoly_n}%PH (at level 8).
+Notation "''poly[' R ]_ n" := (@poly_sort R n) (at level 8).
+Notation "''poly_' n" := 'poly[_]_n (at level 8).
 Notation "'#ineq' P" := (nb_ineq P) (at level 0).
 Notation "''P' ( m , A , b )" := (@HPoly _ _ m A b) (at level 0).
 Notation "''P' ( A , b )" := 'P(_, A, b) (at level 0).

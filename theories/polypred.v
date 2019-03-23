@@ -474,6 +474,14 @@ Admitted.
 Lemma poly_proper_trans : transitive poly_proper.
 Admitted.
 
+Lemma poly_proper_subsetxx (P Q : T) : (* to be compared with lter_anti *)
+  (P `<` Q `<=` P) = false.
+Admitted.
+
+Lemma poly_subset_properxx (P Q : T) :
+  (P `<=` Q `<` P) = false.
+Admitted.
+
 Lemma boundedP {P : T} {c} :
   reflect (exists2 x, (x \in P) & (P `<=` `[hs c & '[c, x]])) (bounded P c).
 Proof.

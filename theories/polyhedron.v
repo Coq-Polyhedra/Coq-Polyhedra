@@ -19,34 +19,19 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
-Section PredSort.
-
-Variable (R : realFieldType) (n : nat).
-
-Definition poly_sort := PolyPred.sort [polyPredType of 'poly[R]_n].
-Canonical poly_sort_eqType := Eval hnf in [eqType of poly_sort].
-Canonical poly_sort_choiceType := Eval hnf in [choiceType of poly_sort].
-Canonical poly_sort_predType := Eval hnf in [predType of poly_sort].
-Canonical poly_sort_choicePredType := Eval hnf in [choicePredType of poly_sort].
-Canonical poly_sort_polyPredType := Eval hnf in [polyPredType of poly_sort].
-Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.
-
-End PredSort.
-
 Section PolyBase.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
-Definition has_base (P : poly_sort R n) :=
+Definition has_base (P : 'poly[R]_n) :=
   [exists I, P == '['P^=(base; I)]].
 
-Inductive poly_base := PolyBase { pval :> poly_sort R n ; _ : has_base pval}.
+Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
 Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
 Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
 Definition poly_base_choiceMixin := Eval hnf in [choiceMixin of poly_base by <:].
 Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
-Coercion poly_base_to_poly P := (pval P : 'poly[R]_n).
 
 Lemma poly_base_base (P : poly_base) : has_base P.
 Proof.
@@ -109,6 +94,7 @@ Variables (P Q : {poly base}) (Q' : 'poly[R]_n) (x : 'cV[R]_n).
 
 Set Printing Coercions.
 
+Check (P `&` Q).
 Check (x \in P).
 Check (P : 'poly[R]_n).
 
@@ -194,16 +180,11 @@ Proof.
 move => ?; rewrite inE; apply/andP; split; [done | exact: poly_subset_refl].
 Qed.
 
-(* BUG below on the notation `[poly0], which requires the extra parenthesis *)
 Lemma poly0_face_set base (P : {poly base}) : (P = (`[poly0]) :> 'poly[R]_n) -> face_set P = set0.
 Proof.
-move => P_eq0; apply/setP => Q; rewrite !inE.
-Fail rewrite P_eq0. (* this is due to the incompatibility between pval and the coercion to 'poly[R]_n *)
-Admitted.
-(*
-apply: negbTE; apply/negP => /andP [Q_gt0 Q_le0].
-by move: (poly_proper_subset Q_gt0 Q_le0); rewrite poly_properxx.
-Qed.*)
+move => P_eq0; apply/setP => Q; rewrite !inE P_eq0.
+exact: poly_proper_subsetxx.
+Qed.
 
 Lemma faceP base (P Q : {poly base}):
   reflect (exists2 c, (Q = argmin P c :> 'poly[R]_n) & bounded P c) (Q \in face_set P).
