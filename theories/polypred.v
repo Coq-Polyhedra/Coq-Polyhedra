@@ -299,6 +299,12 @@ move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI andbC.
 by case: (x \in Q) => // => x_in_P; move: ((PolyPred.poly_subsetP _ _ _ sPP') _ x_in_P) => ->.
 Qed.
 
+Lemma polyISS (P P' Q Q' : T) : P `<=` P' -> Q `<=` Q' -> P `&` Q `<=` P' `&` Q'.
+Admitted.
+
+Lemma polyIxx (P : T) : P `&` P `=~` P.
+Admitted.
+
 Lemma poly_subsetIP (P Q Q' : T) : reflect (P `<=` Q /\ P `<=` Q') (P `<=` Q `&` Q').
 Proof.
 apply: (iffP idP) => [/PolyPred.poly_subsetP subset_P_QIQ' | [/PolyPred.poly_subsetP subset_P_Q /PolyPred.poly_subsetP subset_P_Q']].
