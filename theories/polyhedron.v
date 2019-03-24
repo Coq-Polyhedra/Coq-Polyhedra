@@ -205,10 +205,7 @@ apply: (iffP idP); last first.
     exact: val_inj.
   rewrite inE; apply/andP; split;
     [ by rewrite -bounded_argminN0 | exact: argmin_subset ].
-- (* here there is a mistake: two cases should be distinguished
-   * if base is empty, then face_set is empty since P is empty has well.
-   * if base is non-empty, then we can argue that c_bounded and c_argmin are valid *)
-  case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
+- case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
   + suff P_eq0: (P = (`[poly0]) :> 'poly[R]_n).
     * by move/poly0_face_set: (P_eq0) ->; rewrite P_eq0 inE => ?.
     * move: (poly_base_subset P); rewrite base_eq0 subset0_equiv.
