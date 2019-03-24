@@ -7,3 +7,4 @@ theories/row_submx.v
 theories/simplex.v
 theories/polypred.v
 theories/hpolyhedron.v
+theories/polyhedron.v
