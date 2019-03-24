@@ -317,7 +317,7 @@ Qed.
 
 End Active.
 
-
+(*
 (*
 Lemma active_inPn i :
   reflect (exists x, x \in P /\ (A *m x) i 0 > b i 0) (i \notin { eq(P) on 'P(A,b) }).
@@ -1185,4 +1185,4 @@ Arguments face_baseP [R n P Q base].
 Notation "\face P" := (face_set P).
 
 Arguments non_emptyP [R n P].
-Arguments faceP [R n P Q].
+Arguments faceP [R n P Q].*)
