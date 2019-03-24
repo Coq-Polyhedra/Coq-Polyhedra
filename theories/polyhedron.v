@@ -1,7 +1,7 @@
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
-(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
+(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
 (*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
 (* All rights reserved.                                                  *)
@@ -124,8 +124,8 @@ Proof.
 case/poly_baseP: P => I; rewrite quotE; exact: hpolyEq_antimono0.
 Qed.
 
-(* BUG here: self_baseP cannot be made canonical because '[base] and '[P^=(base; I)] share
- * the same head symbol, so making self_baseP canonical would be ignored *)
+(* BUG here: self_baseP cannot be made canonical because the structures of the terms
+ * '[base] and '[P^=(base; I)] are the same, so making self_baseP canonical would be ignored *)
 Lemma self_baseP base :
   ['[base] has \base base].
 Proof.
@@ -256,136 +256,63 @@ Qed.
 
 End Face.
 
-End HasBase.
-
-Section Face.
-
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
-
-Implicit Type (P : {poly base}).
-
-
-End Face.
-
-Section Face.
-
-Context {R : realFieldType} {n : nat}.
-
-Implicit Type (P Q : 'poly[R]_n).
-
-
-
-End Face.
-
-Section Base.
-
-Context {R : realFieldType} {n : nat}.
-
-Implicit Type (P Q : 'poly[R]_n) (base : 'hpoly[R]_n).
-
-Definition has_base (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
-  [exists I , P == '['P^=(base; I)]].
-
-Notation "[ P 'has' '\base' base ]" := (has_base P base).
-
-
-Lemma has_base_subset (P : 'poly[R]_n) (base : 'hpoly[R]_n) :
-  [ P has \base base ] -> P `<=` '[base].
-Proof.
-move/has_baseP => [I ->]; rewrite quotE; exact: hpolyEq_antimono0.
-Qed.
-
-Lemma polyEq_base (base: 'hpoly[R]_n) I :
-  [ '['P^=(base; I)] has \base base ].
-Proof.
-by apply/has_baseP; exists I.
-Qed.
-
-Lemma self_base (P: 'hpoly[R]_n) :
-  ['[P] has \base P].
-Proof.
-apply/has_baseP; exists set0; symmetry; apply/quotP; exact: hpolyEq0.
-Qed.
-
-Lemma repr_base (P : 'poly[R]_n) :
-  [P has \base (\repr P)].
-Proof.
-case/hpolyP: P => m A b; exact: self_base.
-Qed.
-
-
-Lemma has_base_face P base :
-  [P has \base base] -> (P `>` `[poly0]) -> P \in face_set '[base].
-Proof.
-move/has_baseP => [I] ->; exact: polyEq_face.
-Qed.
-
-Lemma face_has_base P base Q :
-  [P has \base base] -> Q \in face_set P -> [Q has \base base].
-Proof.
-move => P_base.
-case: (emptyP P) => [/poly_equivP/quot_equivP ->| P_non_empty].
-- by rewrite poly0_face_set in_fset0.
-- have: P \in face_set '[base] by exact: has_base_face.
-  move => P_face Q_face.
-  have /face_polyEq [I [-> _]] : Q \in face_set '[base]
-    by move: Q Q_face; apply/fsubsetP; exact: face_set_subset.
-  exact: polyEq_base.
-Qed.
-
-End Base.
-
-Notation "[ P 'has' '\base' base ]" := (has_base P base).
-
 Section Active.
 
-Context {R : realFieldType} {n : nat}.
+Variable (R : realFieldType) (n : nat).
 
-Definition active (P : 'poly[R]_n) (base : 'hpoly[R]_n) :=
+Implicit Type (base : 'hpoly[R]_n).
+
+Definition active base (P : {poly base}) :=
   \bigcup_(I | P `<=` '['P^=(base; I)]) I.
 
-Notation "'[eq'  P 'on' base ]" := (active P base) : poly_scope.
-Notation "'[eq'  P ]" := (active P _) : poly_scope.
+Notation "'{eq'  P }" := (active P) : poly_scope.
 
-Lemma repr_active P base :
-  [P has \base base] -> P = '['P^=(base; [eq P])].
+Lemma repr_active base (P : {poly base}) :
+  P = '['P^=(base; {eq P})]%:poly_base.
 Proof.
-move => /has_baseP [I0] ->; rewrite -polyEq_big_polyI;
-  last by apply/pred0Pn; exists I0; exact: poly_subset_refl.
-apply/quot_equivP/andP; split. (* sequence of view is suboptimal *)
-- by apply/big_polyIsP => ?.
+apply: val_inj => /=.
+case/poly_baseP: P => [I]; rewrite -polyEq_big_polyI;
+  last by apply/pred0Pn; exists I; exact: poly_subset_refl.
+apply/quot_equivP/andP; split.
+- by apply/big_polyIsP.
 - by apply/big_poly_inf; exact: poly_subset_refl.
 Qed.
 
-Lemma activeP {P base I} : [P has \base base] -> (P `<=` '['P^=(base; I)]) = (I \subset [eq P]).
+Lemma activeP base (P : {poly base}) I : (P `<=` '['P^=(base; I)]) = (I \subset {eq P}).
 Proof.
-move => P_base; apply/idP/idP; first exact: bigcup_sup.
-by rewrite {2}(repr_active P_base); move/hpolyEq_antimono; rewrite quotE.
+apply/idP/idP; first exact: bigcup_sup.
+by rewrite {2}(repr_active P); move/hpolyEq_antimono; rewrite quotE.
 Qed.
 
-Lemma active_polyEq base (I : {set 'I_(#ineq base)}) : I \subset [eq '['P^=(base; I)] on base].
+Lemma active_polyEq base (I : {set 'I_(#ineq base)}) : I \subset {eq '['P^=(base; I)]%:poly_base}.
 Proof.
-rewrite -activeP; [exact: poly_subset_refl | exact: polyEq_base].
+rewrite -activeP; exact: poly_subset_refl.
 Qed.
 
-Lemma activePn P (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) i :
-  [P has \base 'P(A,b)] ->
-  reflect (exists2 x, x \in P & x \notin (`[hp (row i A)^T & b i 0] : 'poly[R]_n)) (i \notin [eq(P) on 'P(A,b)]).
+Lemma activePn (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) i :
+  reflect (exists2 x, x \in P & x \notin (`[hp (row i A)^T & b i 0] : 'poly[R]_n)) (i \notin {eq P}).
 Proof.
-move => P_base; rewrite -sub1set -(activeP P_base).
+rewrite -sub1set -(activeP P).
 apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in x_notin]; exists x; try by done.
 - have x_in_PAb: x \in '['P(A,b)]
-    by move: x_in; apply/(poly_subsetP (has_base_subset _)).
+    by move: x_in; apply/(poly_subsetP (poly_base_subset _)).
   move: x_notin; apply: contraNN; rewrite polyEq1 => x_in_hp.
-  by rewrite 2!inE /=; apply/andP; split.
-- by move: x_notin; apply: contraNN; rewrite polyEq1 2!inE /= => /andP [_].
+  by rewrite inE; apply/andP; split.
+- by move: x_notin; apply: contraNN; rewrite polyEq1 inE /= => /andP [_].
 Qed.
 
-Lemma subset_on_base P Q base :
-  [P has \base base] -> [Q has \base base] ->
-    (P `<=` Q) = ([eq Q on base] \subset [eq P on base]).
+Lemma poly_base_subset_eq base (P Q : {poly base}) :
+    (P `<=` Q) = ({eq Q} \subset {eq P}).
 Proof.
-by move => P_base /repr_active {1}->; rewrite activeP.
+by rewrite {1}(repr_active Q) activeP.
+Qed.
+
+Lemma polyI_eq base (P Q : {poly base}) :
+  {eq P} :|: {eq Q} \subset {eq (P `&` Q)%:poly_base}.
+Proof.
+rewrite -activeP -polyEq_polyI.
+apply: polyISS; rewrite ?{1}(repr_active P) 1?{1}(repr_active Q);
+  exact: poly_subset_refl.
 Qed.
 
 End Active.
