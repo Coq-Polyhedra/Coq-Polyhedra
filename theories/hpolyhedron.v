@@ -8,7 +8,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex polypred.
 
