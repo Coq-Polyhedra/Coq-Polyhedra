@@ -8,8 +8,8 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
-Require Import extra_misc inner_product vector_order extra_matrix.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
+Require Import extra_misc inner_product vector_order extra_matrix barycenter.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -131,7 +131,10 @@ Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
   boundedP : forall (P : T) c, reflect (exists2 x, x \in P & poly_subset P (mk_hs c '[c,x])) (bounded P c);
   boundedPn : forall (P : T) c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c);
   pointed : pred T;
-  pointedPn : forall (P : T), ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P)
+  pointedPn : forall (P : T), ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P);
+  conv : {fset 'cV[R]_n} -> T;
+  convP : forall V x, reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V);
+  convexP : forall (P : T) (V : {fset 'cV[R]_n}), {subset V <= P} -> (poly_subset (conv V) P)
 }.
 
 Record class_of (T : Type) : Type :=
@@ -192,11 +195,11 @@ Context {R : realFieldType} {n : nat} {T : polyPredType R n}.
 Definition poly0 : T := PolyPred.poly0 (PolyPred.class T).
 Definition polyT : T := PolyPred.polyT (PolyPred.class T).
 Definition polyI : T -> T -> T := PolyPred.polyI (PolyPred.class T).
-
 Definition poly_subset : rel T := PolyPred.poly_subset (PolyPred.class T).
 Definition mk_hs : _ -> _ -> T := PolyPred.mk_hs (PolyPred.class T).
 Definition bounded : T -> _ -> bool := PolyPred.bounded (PolyPred.class T).
 Definition pointed : pred T := PolyPred.pointed (PolyPred.class T).
+Definition conv : {fset 'cV[R]_n} -> T := PolyPred.conv (PolyPred.class T).
 
 Definition poly_equiv (P Q : T) := (poly_subset P Q) && (poly_subset Q P).
 Definition poly_proper (P Q : T) := ((poly_subset P Q) && (~~ (poly_subset Q P))).
@@ -613,7 +616,6 @@ Definition mk_line (c Ω : 'cV[R]_n) : T :=
   \polyI_(i < n) `[hp (row i S)^T & '[(row i S)^T, Ω]].
 
 Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
-Notation "'`[' 'pt'  Ω  ']'" := (mk_line 0 Ω) (at level 70) : poly_scope.
 
 Lemma in_lineP {c Ω x : 'cV[R]_n} :
   reflect (exists μ, x = Ω + μ *: c) (x \in `[line c & Ω]).
@@ -635,13 +637,6 @@ apply: (iffP idP); last first.
   move/(_ i isT): H; rewrite in_hp => /eqP.
   by rewrite /d vdotBr => ->; rewrite addrN.
 Qed.
-
-Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
-Proof.
-Admitted.
-
-Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
-Admitted.
 
 Lemma pointedPn {P : T} :
   (P `>` `[poly0]) ->
@@ -681,14 +676,31 @@ rewrite !inE; apply: (iffP andP).
   exact: vnorm_ge0.
 Qed.
 
-Definition mk_segm (Ω Ω' : 'cV[R]_n) : T :=
-  let c := Ω' - Ω in
-  `[hs (-c) & '[-c, Ω']] `&` `[hline c & Ω].
+Lemma convP V x :
+  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Proof.
+exact: PolyPred.convP.
+Qed.
 
-Notation "'`[' 'segm'  Ω & Ω'  ']'" := (mk_segm Ω Ω') (at level 70) : poly_scope.
+Lemma convexP P (V : {fset 'cV[R]_n}) :
+  {subset V <= P} -> conv V `<=` P.
+Proof.
+exact: PolyPred.convexP.
+Qed.
 
+Notation "'`[' 'pt'  Ω  ']'" := (conv [fset Ω]%fset) (at level 70) : poly_scope.
+
+Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
+Proof.
+Admitted.
+
+Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
+Admitted.
+
+(* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
+ * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
-  reflect (exists2 μ, 0 <= μ <= 1 & x = Ω + μ *: (Ω' - Ω)) (x \in `[segm Ω & Ω']).
+  reflect (exists2 μ, 0 <= μ <= 1 & x = Ω + μ *: (Ω' - Ω)) (x \in conv [fset Ω; Ω']%fset).
 Proof.
 Admitted.
 
@@ -705,6 +717,9 @@ Admitted.
 
 Lemma compact_pointed P :
   (P `>` `[poly0]) -> compact P -> pointed P. (* RK *)
+Admitted.
+
+Lemma compact_conv V : compact (conv V).
 Admitted.
 
 End PolyPredProperties.
@@ -724,9 +739,8 @@ Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 
 Notation "'`[' 'hs'  c & d  ']'" := (mk_hs c d) (at level 70) : poly_scope.
 Notation "'`[' 'hp'  c & d  ']'" := (mk_hp c d) (at level 70) : poly_scope.
 Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
-Notation "'`[' 'pt'  Ω  ']'" := (mk_line 0 Ω) (at level 70) : poly_scope.
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
-Notation "'`[' 'segm'  Ω & Ω'  ']'" := (mk_segm Ω Ω') (at level 70) : poly_scope.
+Notation "'`[' 'pt'  Ω  ']'" := (conv [fset Ω]%fset) (at level 70) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -857,6 +871,7 @@ Definition poly_subset (P Q : {quot T}) := (\repr P) `<=` (\repr Q).
 Definition mk_hs c d : {quot T} := '[ `[hs c & d] ].
 Definition bounded P c := bounded (\repr P) c.
 Definition pointed P := pointed (\repr P).
+Definition conv V : {quot T} := '[ (conv V) ].
 
 Let inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hs, inE).
 
@@ -925,7 +940,21 @@ apply: (iffP (pointedPn H)) => [[c [? incl]] | [c [? incl]]];
   exact: incl.
 Qed.
 
-Definition quot_polyPredMixin := PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn in_hs boundedP boundedPn pointedPn.
+Lemma convP V x :
+  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Proof.
+rewrite inE; exact: PolyPred.convP.
+Qed.
+
+Lemma convexP P (V : {fset 'cV[R]_n}) :
+  {subset V <= P} -> poly_subset (conv V) P.
+Proof.
+move => V_sub_P; apply/poly_subsetP => x.
+rewrite !inE; move: x; apply/(PolyPred.poly_subsetP _)/PolyPred.convexP.
+exact: V_sub_P.
+Qed.
+
+Definition quot_polyPredMixin := PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn in_hs boundedP boundedPn pointedPn convP convexP.
 Canonical quot_polyPredType := PolyPredType R n quot_polyPredMixin.
 
 End PolyPredStructure.
