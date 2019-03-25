@@ -418,17 +418,27 @@ Proof.
 exact: (PolyPred.poly_subsetPn (PolyPred.class T)).
 Qed.
 
-Lemma proper0N_equiv (P : T): ~~ (P `>` `[poly0]) = (P `=~` `[poly0]).
-Admitted.
+Lemma proper0N_equiv (P : T) : ~~ (P `>` `[poly0]) = (P `=~` `[poly0]).
+Proof. (* RK *)
+rewrite negb_and negbK /poly_equiv !poly0_subset //=.
+by apply/idP/idP => [-> | ]; [done | case/andP].
+Qed.
 
-Lemma subset0N_proper (P : T): ~~ (P `<=` `[poly0]) = (P `>` `[poly0]).
-Admitted.
+Lemma subset0N_proper (P : T) : ~~ (P `<=` `[poly0]) = (P `>` `[poly0]).
+Proof. (* RK *)
+apply/idP/idP => [? | /andP [_ ?]]; last by done.
+by apply/andP; split; [exact: poly0_subset | done].
+Qed.
 
 Lemma equiv0N_proper (P : T) : (P `!=~` `[poly0]) = (P `>` `[poly0]).
-Admitted.
+Proof. (* RK *)
+by rewrite -proper0N_equiv negbK.
+Qed.
 
 Lemma subset0_equiv (P : T) : (P `<=` `[poly0]) = (P `=~` `[poly0]).
-Admitted.
+Proof. (* RK *)
+by apply/negb_inj; rewrite subset0N_proper equiv0N_proper.
+Qed.
 
 CoInductive empty_spec (P : T) : bool -> bool -> bool -> Set :=
 | Empty of (P =i `[poly0]) : empty_spec P false true true
@@ -480,22 +490,36 @@ Qed.
 
 Lemma poly_proper_subset (P P' P'' : T) :
   (P `<` P') -> (P' `<=` P'') -> (P `<` P'').
-Admitted.
+Proof. (* RK *)
+move/poly_properP => [sPP' [x ? ?]] /poly_subsetP sP'P''.
+apply/poly_properP; split; first by move => ? ?; apply/sP'P''/sPP'.
+by exists x; [apply/sP'P'' | done].
+Qed.
 
 Lemma poly_subset_proper (P P' P'' : T) :
   (P `<=` P') -> (P' `<` P'') -> (P `<` P'').
-Admitted.
+Proof. (* RK *)
+move => /poly_subsetP sPP' /poly_properP [sP'P'' [x ? x_notin_P']].
+apply/poly_properP; split; first by move => ? ?; apply/sP'P''/sPP'.
+by exists x; [done | move: x_notin_P'; apply/contra/sPP'].
+Qed.
 
 Lemma poly_proper_trans : transitive poly_proper.
-Admitted.
+Proof. (* RK *)
+by move => ? ? ? /poly_properP [? _]; apply/poly_subset_proper/poly_subsetP.
+Qed.
 
 Lemma poly_proper_subsetxx (P Q : T) : (* to be compared with lter_anti *)
   (P `<` Q `<=` P) = false.
-Admitted.
+Proof. (* RK *)
+by apply/negbTE/nandP/orP; rewrite negb_and negbK -orbA orbC orbN.
+Qed.
 
 Lemma poly_subset_properxx (P Q : T) :
   (P `<=` Q `<` P) = false.
-Admitted.
+Proof. (* RK *)
+by apply/negbTE/nandP/orP; rewrite negb_and negbK orbA orbC orbA orbN.
+Qed.
 
 Lemma boundedP {P : T} {c} :
   reflect (exists2 x, (x \in P) & (P `<=` `[hs c & '[c, x]])) (bounded P c).
