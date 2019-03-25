@@ -292,27 +292,33 @@ Qed.
 
 Lemma polyIS (P P' Q : T) : P `<=` P' -> Q `&` P `<=` Q `&` P'.
 Proof. (* RK *)
-move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI.
+move => sPP'; apply/PolyPred.poly_subsetP => x; rewrite !in_polyI.
 case: (x \in Q) => //; apply: (PolyPred.poly_subsetP _ _ _ sPP').
 Qed.
 
 Lemma polySI (P P' Q : T) : P `<=` P' -> P `&` Q `<=` P' `&` Q.
 Proof. (* RK *)
-move=> sPP'; apply/PolyPred.poly_subsetP=> x; rewrite !in_polyI andbC.
+move => sPP'; apply/PolyPred.poly_subsetP => x; rewrite !in_polyI andbC.
 by case: (x \in Q) => // => x_in_P; move: ((PolyPred.poly_subsetP _ _ _ sPP') _ x_in_P) => ->.
 Qed.
 
 Lemma polyISS (P P' Q Q' : T) : P `<=` P' -> Q `<=` Q' -> P `&` Q `<=` P' `&` Q'.
-Admitted.
-
-Lemma polyIxx (P : T) : P `&` P `=~` P.
-Admitted.
+Proof. (* RK *)
+move => /PolyPred.poly_subsetP sPP' /PolyPred.poly_subsetP sQQ'; apply/PolyPred.poly_subsetP => ?.
+by rewrite !in_polyI; move/andP => [? ?]; apply/andP; split; [apply/sPP' | apply/sQQ'].
+Qed.
 
 Lemma poly_subsetIP (P Q Q' : T) : reflect (P `<=` Q /\ P `<=` Q') (P `<=` Q `&` Q').
 Proof.
 apply: (iffP idP) => [/PolyPred.poly_subsetP subset_P_QIQ' | [/PolyPred.poly_subsetP subset_P_Q /PolyPred.poly_subsetP subset_P_Q']].
 - by split; apply/PolyPred.poly_subsetP => x x_in_P; move: (subset_P_QIQ' _ x_in_P); rewrite in_polyI; case/andP.
 - by apply/PolyPred.poly_subsetP => x x_in_P; rewrite in_polyI; apply/andP; split; [exact: (subset_P_Q _ x_in_P) | exact: (subset_P_Q' _ x_in_P)].
+Qed.
+
+Lemma polyIxx (P : T) : P `&` P `=~` P.
+Proof. (* RK *)
+apply/andP; split; first exact: poly_subsetIl.
+by apply/poly_subsetIP; split; exact: (poly_subset_refl P).
 Qed.
 
 Lemma in_big_polyI (I : finType) (P : pred I) (F : I -> T) x :
