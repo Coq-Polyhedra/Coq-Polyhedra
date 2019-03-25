@@ -8,9 +8,9 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
-Require Import simplex polypred.
+Require Import simplex barycenter polypred.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -250,9 +250,24 @@ apply/(equivP (Simplex.pointedPn A) _); split =>
   by apply: d_recession_dir.
 Qed.
 
+(* TO BE FIXED. The lock is here to realize that the definition should not unfolded (yet). *)
+Fact conv_key : unit. by []. Qed.
+
+Definition conv (V : {fset 'cV[R]_n}) := locked_with conv_key poly0.
+
+Lemma convP V x :
+  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Admitted. (* cannot be proved yet *)
+
+(* In contrast, convexP can be proved immediately,
+   this follows from the convexity of halfspaces *)
+Lemma convexP P (V : {fset 'cV[R]_n}) :
+  {subset V <= P} -> poly_subset (conv V) P.
+Admitted.
+
 Definition hpoly_polyPredMixin :=
   PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
-                 in_hs boundedP boundedPn pointedPn.
+                 in_hs boundedP boundedPn pointedPn convP convexP.
 Canonical hpoly_polyPredType := PolyPredType R n hpoly_polyPredMixin.
 
 Definition poly_sort :=
