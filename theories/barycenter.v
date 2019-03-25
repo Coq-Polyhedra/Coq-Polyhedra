@@ -1,14 +1,15 @@
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
-(* (c) Copyright 2018, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
+(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
 (* All rights reserved.                                                  *)
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron.
+From mathcomp
+     Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -19,10 +20,8 @@ Import GRing.Theory Num.Theory.
 
 Reserved Notation "[ w '\weight' 'over' V ]" (at level 0, format "[ w  '\weight'  'over'  V ]").
 Reserved Notation "\bary[ w ] V " (at level 70, format "\bary[ w ]  V").
-Reserved Notation "\conv V " (at level 50, format "\conv  V").
-Reserved Notation "[ c '\separates' x '\from' V ]" (at level 0, format "[ c  '\separates'  x  '\from'  V ]").
 
-Section Barycenter.
+Section Weight.
 
 Variable R : realFieldType.
 Variable n : nat.
@@ -31,8 +30,6 @@ Definition weight (V : {fset 'cV[R]_n}) (w : {fsfun 'cV[R]_n -> R for fun => 0%R
   [&& (finsupp w `<=` V)%fset, [forall v : V, w (val v) >= 0] & (\sum_(v : V) w (val v) == 1)].
 
 Notation "[ w '\weight' 'over' V ]" := (weight V w).
-
-Section CoreProp.
 
 Variable V : {fset 'cV[R]_n}.
 Variable w : {fsfun 'cV[R]_n -> R for fun => 0%R}.
@@ -45,7 +42,7 @@ Proof.
 case: finsuppP; first done.
 move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl /forallP w_ge0 _].
 move/supp_incl => v_in_V.
-bpose v' := [`v_in_V]%fset.
+pose v' := [`v_in_V]%fset.
 have ->: v = val v' by done.
 exact: w_ge0.
 Qed.
@@ -72,20 +69,13 @@ rewrite big_seq_fsetE /=.
 by move/and3P: (w_weight_over_V) => [_ _ /eqP].
 Qed.
 
-End CoreProp.
-
-Section OtherProp.
-
-Implicit Types V : {fset 'cV[R]_n}.
-Implicit Type w : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-
-Lemma weightP V w :
+Lemma weightP :
   reflect [/\ (forall v, w v >= 0), (forall v, v \notin V -> w v = 0) & (\sum_(v <- V) w v = 1)]
           [w \weight over V].
 Proof.
 apply: (iffP idP).
 - move => w_weight; split;
-    [exact: (weight_ge0 w_weight) | exact: weight_eq0 | exact: weight_sum1].
+    [exact: weight_ge0 | exact: weight_eq0 | exact: weight_sum1].
 - move => [w_ge0 w_supp sum_w].
   apply/and3P; split.
   + apply/fsubsetP => v.
@@ -94,11 +84,22 @@ apply: (iffP idP).
   + by apply/eqP; move: sum_w; rewrite big_seq_fsetE.
 Qed.
 
-Lemma weight_subset V V' w : (V `<=` V')%fset -> [w \weight over V] -> [w \weight over V'].
+Definition bary : 'cV[R]_n := \sum_(v <- V) (w v) *: v.
+
+End Weight.
+
+Notation "[ w '\weight' 'over' V ]" := (weight V w).
+Notation "\bary[ w ] V" := (bary V w).
+
+(* REMARK: this is the only lemma which points out it might be a bad idea
+ * to implements weights using a type depending on V.
+ * Alternatively, we could craft a special function handling this case.
+ * I don't know yet what it the best solution *)
+Lemma weight_subset (R : realFieldType) n (V V' : {fset 'cV[R]_n}) w :
+  (V `<=` V')%fset -> [w \weight over V] -> [w \weight over V'].
 Admitted.
 
-End OtherProp.
-
+(*
 Definition bary (V : {fset 'cV[R]_n}) w : 'cV[R]_n := \sum_(v <- V) (w v) *: v.
 
 Definition nth_fset (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) := val (enum_val i).
@@ -239,7 +240,9 @@ rewrite inE; apply: (iffP HPrim.non_emptyP) => [ [w] | [w] ].
   + by rewrite -sum_vect_fset.
   + apply/gev0P => i; rewrite mxE; exact: w_ge0.
 Qed.
+ *)
 
+(*
 Lemma convP0 : \conv(fset0 : {fset 'cV[R]_n}) =i pred0.
 Proof.
 move => x; rewrite [RHS]inE.
@@ -270,13 +273,9 @@ Lemma convU1 v V' x :
 Admitted.
 
 End ConvexHullProp.
+ *)
 
-Section Segments. (* XA: ideally, segments should be defined as hpolyhedra (and then polyhedra)
-                   * however, the H-representation is not easy to deal with                    *)
-
-
-End Segments.
-
+(*
 Section Separation.
 
 Variable R : realFieldType.
@@ -418,3 +417,4 @@ Lemma halfspace_gt_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] > d].
 Admitted.
 
 End Convexity.
+*)
