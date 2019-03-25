@@ -525,7 +525,6 @@ set u := Simplex.dual_opt_point _ _ _ .
 by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
 Qed.*)
 
-
 Lemma normal_cone_lower_bound (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) :
   u >=m 0 -> 'P(A, b) `<=` `[hs (A^T *m u) & '[b,u]].
 Proof.
@@ -535,11 +534,10 @@ Qed.
 
 Lemma normal_cone_bounded (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) :
   ('P(A, b) `>` `[poly0]) -> u >=m 0 -> bounded 'P(A,b) (A^T *m u).
-Admitted.
-(*Proof.
-  move => P_non_empty u_ge0; apply/bounded_lower_bound; first by done.
-exists '[b, u]; exact: normal_cone_lower_bound.
-Qed.*)
+Proof.
+move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
+exists '[b,u]; exact: normal_cone_lower_bound.
+Qed.
 
 (*
 Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :

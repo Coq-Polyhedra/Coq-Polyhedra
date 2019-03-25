@@ -212,9 +212,14 @@ apply: (iffP idP); last first.
       exact: quot_equivP.
   + move: base_prop0 P Q; case: base => m A b base_prop0 P /poly_baseP [I].
     rewrite inE => /andP [Q_prop0 Q_sub_P].
-    pose c := \sum_(i in I) (row i A)^T.
+    pose e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
+    have e_ge0 : e >=m 0.
+    * admit.
+    have e_gt0 : forall i, i \in I -> e i 0 > 0.
+    * admit.
+    pose c := A^T *m e.
     have c_bounded : bounded '['P(A,b)] c.
-    * admit. (* should be proved in hpolyhedron (and use base_prop0) *)
+    * rewrite quotE; apply: normal_cone_bounded; try by rewrite quotE in base_prop0.
     have c_argmin : argmin '['P(A,b)] c = '['P^=(A,b; I)].
     * admit. (* should be proved in hpolyhedron *)
     exists c.
