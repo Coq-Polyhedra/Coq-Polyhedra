@@ -514,11 +514,9 @@ Notation "''P^=' ( A , b ; J )" := 'P^=('P(A,b); J) : poly_scope.
 Section Duality.
 
 Variable (R : realFieldType) (n : nat).
-Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (c : 'cV[R]_n).
+Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
 
-Implicit Types (u : 'cV[R]_m).
-
-Lemma dual_opt_sol (H : bounded 'P(A,b) c) :
+Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(A,b) c) :
     exists u, [/\ u >=m 0, c = A^T *m u & '[b, u] = opt_value H].
 Admitted.
 (*Proof.
@@ -528,32 +526,50 @@ set u := Simplex.dual_opt_point _ _ _ .
 by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
 Qed.*)
 
-Lemma normal_cone_lower_bound u :
+Variable (u : 'cV[R]_m).
+
+Lemma dual_sol_lower_bound :
   u >=m 0 -> 'P(A, b) `<=` `[hs (A^T *m u) & '[b,u]].
 Proof.
 move => u_ge0; apply/poly_subsetP => x ?.
 by rewrite inE -vdot_mulmx vdotC; apply: vdot_lev.
 Qed.
 
-Lemma normal_cone_bounded u :
+Lemma dual_sol_bounded :
   ('P(A, b) `>` `[poly0]) -> u >=m 0 -> bounded 'P(A,b) (A^T *m u).
 Proof.
 move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
-exists '[b,u]; exact: normal_cone_lower_bound.
+exists '[b,u]; exact: dual_sol_lower_bound.
 Qed.
 
+Hypothesis u_ge0 : u >=m 0.
 Variable (I : {set 'I_m}).
+Hypothesis u_supp : forall i, (u i 0 > 0) = (i \in I).
 
-Let e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
-
-Fact e_ge0 : e >=m 0.
+Lemma compl_slack_cond x :
+  x \in 'P(A,b) -> reflect ('[A^T *m u, x] = '[b, u]) (x \in 'P^=(A, b; I)).
 Admitted.
 
-Fact e_gt0 i : (e i 0 > 0) = (i \in I).
+Lemma dual_sol_argmin : ('P^=(A, b; I) `>` `[poly0]) -> argmin 'P(A,b) (A^T *m u) `=~` 'P^=(A, b; I).
+move => PI_non_empty.
+have P_non_empty : ('P(A,b) `>` `[poly0]).
+- apply: (poly_proper_subset PI_non_empty); exact: hpolyEq_antimono0.
+move/proper0P : PI_non_empty => [x x_in].
+set c := _ *m _; have c_bounded := (dual_sol_bounded P_non_empty u_ge0).
+rewrite argmin_polyI.
+suff ->: opt_value c_bounded = '[b,u].
+- apply/poly_equivP => y; rewrite inE.
+  apply/andP/idP => [[y_in_P c_y_eq]| y_in_PI].
+  + apply/compl_slack_cond => //.
+    by rewrite ?inE in c_y_eq; apply/eqP.
+  + have y_in_P: y \in 'P(A,b).
+    * move: y y_in_PI; apply/poly_subsetP; exact: hpolyEq_antimono0.
+    split; first by done.
+    by rewrite inE; apply/eqP/compl_slack_cond.
+-
 Admitted.
 
-Lemma normal_cone_argmin : ('P^=(A, b; I) `>` `[poly0]) -> 'P^=(A, b; I) `=~` argmin 'P(A,b) (A^T *m e).
-Admitted.
+
 
 (*
 Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :

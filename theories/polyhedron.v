@@ -149,20 +149,6 @@ Qed.*)
 
 End HasBase.
 
-Module FaceInternal.
-Section FaceInternal.
-
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
-
-(* this is the very classic proof of Schrijver
- * in fact, this could be proved in hpolyhedron instead *)
-Lemma argmin_has_base c :
-  bounded '[base] c -> [(argmin '[base] c) has \base base].
-Admitted.
-
-End FaceInternal.
-End FaceInternal.
-
 Section Face.
 
 Variable (R : realFieldType) (n : nat).
@@ -172,10 +158,25 @@ Implicit Type (base : 'hpoly[R]_n).
 Lemma argmin_baseP base (P : {poly base}) c :
   bounded P c -> [(argmin P c) has \base base].
 Proof.
-case/poly_baseP: P => [I] /FaceInternal.argmin_has_base/has_baseP => [[J] ->].
-move: (hpolyEq_of_hpolyEq J) => [K] /quotP ->.
-exact: polyEq_baseP.
+(* we first suppose that flat_prop holds, ie this is the situation in which
+ * P would play the role of the base *)
+suff flat_prop: forall (Q : 'hpoly[R]_n), bounded '[Q] c -> [(argmin '[Q] c) has \base Q].
+- case/poly_baseP: P => [I] /flat_prop/has_baseP => [[J] ->].
+  move: (hpolyEq_of_hpolyEq J) => [K] /quotP ->.
+  exact: polyEq_baseP.
+- (* now this is the classic proof of Schrijver *)
+  move => [m A b]; rewrite !quotE => c_bounded.
+  move: (dual_opt_sol c_bounded) => [u] [u_ge0 c_eq b_u_eq_opt_val].
+  rewrite {}c_eq in c_bounded b_u_eq_opt_val *. (* dual_opt_sol is badly specified
+                                                 * we should use an inductive spec instead *)
+  pose I := [set i | u i 0 > 0].
+  have supp_u : forall i, (u i 0 > 0) = (i \in I) by move => i; rewrite inE.
+  apply/has_baseP; exists I; apply/quotP; apply/dual_sol_argmin => //.
+  move: (opt_point c_bounded) => [x] x_in_PAb; rewrite -b_u_eq_opt_val.
+  move/(compl_slack_cond u_ge0 supp_u x_in_PAb) => x_in_PAbI.
+  by apply/proper0P; exists x.
 Qed.
+
 Canonical argmin_base base (P : {poly base}) c (b : bounded P c) := PolyBase (argmin_baseP b).
 
 Definition face_set base (P : {poly base}) : {set {poly base}} :=
@@ -214,21 +215,22 @@ apply: (iffP idP); last first.
     rewrite inE => /andP [Q_prop0 Q_sub_P].
     pose e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
     have e_ge0 : e >=m 0.
-    * admit.
-    have e_gt0 : forall i, i \in I -> e i 0 > 0.
-    * admit.
+    * apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.
+    have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
+    * move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].
     pose c := A^T *m e.
     have c_bounded : bounded '['P(A,b)] c.
-    * rewrite quotE; apply: normal_cone_bounded; try by rewrite quotE in base_prop0.
+    * rewrite quotE; apply: dual_sol_bounded; try by rewrite quotE in base_prop0.
     have c_argmin : argmin '['P(A,b)] c = '['P^=(A,b; I)].
-    * admit. (* should be proved in hpolyhedron *)
+    * rewrite quotE; apply/quotP.
+      by apply: dual_sol_argmin; rewrite ?quotE in Q_prop0.
     exists c.
     * rewrite /= -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
       apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
     * apply: (bounded_mono1 c_bounded); apply/andP; split.
       - exact: (poly_proper_subset Q_prop0).
       - exact: poly_base_subset.
-Admitted.
+Qed.
 
 Lemma face_set_of_face base (P Q : {poly base}) :
   Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
