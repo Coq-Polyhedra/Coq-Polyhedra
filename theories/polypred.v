@@ -383,6 +383,15 @@ apply: (iffP poly_subsetP) => [sub x x_in_P | sub x x_in_P ];
   move/(_ _ x_in_P): sub; by rewrite in_hs.
 Qed.
 
+Lemma hs_antimono c d d' :
+  d <= d' -> `[hs c & d'] `<=` `[hs c & d]. (* RK *)
+Proof.
+move => d_le_d'.
+apply/poly_subset_hsP => x.
+rewrite inE => ?.
+by apply: (ler_trans d_le_d' _).
+Qed.
+
 Lemma poly_equivP {P Q : T} : reflect (P =i Q) (P `=~` Q).
 Proof.
 apply/(iffP andP) => [[/poly_subsetP P_le_Q /poly_subsetP Q_le_P] x | P_eq_Q ].
@@ -547,27 +556,37 @@ Qed.
 
 Lemma bounded_mono1 (P Q : T) c :
   bounded P c -> `[poly0] `<` Q `<=` P -> bounded Q c.
-Admitted.
+Proof. (* RK *)
+move => /boundedPP [x /andP [_ /poly_subsetP sPhs]] /andP [Q_non_empty /poly_subsetP sQP].
+apply/contraT => /(boundedPn Q_non_empty) Q_unbounded.
+move: (Q_unbounded '[ c, x]) => [y y_in_Q x_y_vdot_sineq].
+suff : ('[ c, x] <= '[ c, y]) by rewrite lerNgt x_y_vdot_sineq.
+by rewrite -in_hs; apply/sPhs/sQP.
+Qed.
 
-Definition opt_value (P : T) c (b : bounded P c) :=
-  let x := xchoose (boundedPP b) in '[c,x].
+Definition opt_value (P : T) c (bounded_P : bounded P c) :=
+  let x := xchoose (boundedPP bounded_P) in '[c,x].
 
-Lemma opt_value_antimono1 (P Q : T) c (b : bounded P c) (b' : bounded Q c) :
-  Q `<=` P -> opt_value b <= opt_value b'.
-Admitted.
-
-Lemma opt_point (P : T) c (b : bounded P c) :
-  exists2 x, x \in P & '[c,x] = opt_value b.
+Lemma opt_point (P : T) c (bounded_P : bounded P c) :
+  exists2 x, x \in P & '[c,x] = opt_value bounded_P.
 Proof.
 rewrite /opt_value; set x := xchoose _.
 exists x; last by done.
-by move: (xchooseP (boundedPP b)) => /andP [?].
+by move: (xchooseP (boundedPP bounded_P)) => /andP [?].
 Qed.
 
-Lemma opt_value_lower_bound {P : T} {c} (b : bounded P c) :
-  P `<=` (`[ hs c & opt_value b ]).
+Lemma opt_value_lower_bound {P : T} {c} (bounded_P : bounded P c) :
+  P `<=` (`[ hs c & opt_value bounded_P]).
 Proof.
-by rewrite /opt_value; move/andP : (xchooseP (boundedPP b)) => [_].
+by rewrite /opt_value; move/andP : (xchooseP (boundedPP bounded_P)) => [_].
+Qed.
+
+Lemma opt_value_antimono1 (P Q : T) c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
+  Q `<=` P -> opt_value bounded_P <= opt_value bounded_Q.
+Proof. (* RK *)
+move => /poly_subsetP sQP.
+move: (opt_point bounded_Q) => [x ? <-].
+by rewrite -in_hs; apply/(poly_subsetP (opt_value_lower_bound bounded_P))/sQP.
 Qed.
 
 Definition argmin (P : T) c :=
@@ -576,10 +595,10 @@ Definition argmin (P : T) c :=
   else
     `[poly0].
 
-Lemma argmin_polyI (P : T) c (b : bounded P c) :
-  argmin P c = P `&` `[hp c & opt_value b].
+Lemma argmin_polyI (P : T) c (bounded_P : bounded P c) :
+  argmin P c = P `&` `[hp c & opt_value bounded_P].
 Proof.
-by rewrite /argmin; case: {-}_/idP => [b' | ?]; rewrite ?[b]eq_irrelevance.
+by rewrite /argmin; case: {-}_/idP => [b' | ?]; rewrite ?[bounded_P]eq_irrelevance.
 Qed.
 
 Lemma in_argmin P c x :
@@ -602,24 +621,35 @@ Qed.
 
 Lemma bounded_argminN0 P c :
   (bounded P c) = (argmin P c `>` `[poly0]).
-Admitted.
+Proof. (* RK *)
+apply/idP/idP => [/boundedP [x ? ?] | /proper0P [x]].
+- apply/proper0P; exists x.
+  by rewrite in_argmin; apply/andP.
+- rewrite in_argmin => /andP [? ?].
+  by apply/boundedP; exists x.
+Qed.
 
 Lemma argmin_subset P c : argmin P c `<=` P.
-Admitted.
+Proof. (* RK *)
+rewrite /argmin; case: {-}_/idP => [bounded_P | _];
+  [exact: poly_subsetIl | exact: poly0_subset].
+Qed.
 
-Lemma argmin_opt_value P c (b : bounded P c) :
-  argmin P c `<=` `[hp c & opt_value b].
-Admitted.
+Lemma argmin_opt_value P c (bounded_P : bounded P c) :
+  argmin P c `<=` `[hp c & opt_value bounded_P].
+Proof. (* RK *)
+rewrite argmin_polyI; exact: poly_subsetIr.
+Qed.
 
 Lemma argmin_lower_bound {c x y} (P : T) :
   x \in argmin P c -> y \in P -> '[c,x] <= '[c,y].
-Admitted.
-(*Proof.
-by move/andP => [_ /poly_subset_hsP/(_ y)].
-Qed.*)
+Proof. (* RK *)
+by rewrite in_argmin; move/andP => [_ /poly_subset_hsP/(_ y)].
+Qed.
 
 Lemma subset_argmin (P Q : T) c :
   bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c `=~` argmin Q c.
+Proof.
 Admitted.
 
 Lemma argmin_eq {P : T} {c v x} :
