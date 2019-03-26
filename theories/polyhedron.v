@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx simplex polypred hpolyhedron.
+Require Import inner_product vector_order polypred hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
