@@ -377,10 +377,26 @@ Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
 Implicit Types (P Q F : {poly base}).
 
-Variable (P : {poly base}).
+Definition fvertex_set P := [set F in face_set P | dim F == 0%N].
 
 Definition vertex_set P :=
-  [fset (pick_point (pval F)) | F in face_set P & dim F == 0%N]%fset.
+  ((fun (F : {poly base}) => pick_point F) @` (fvertex_set P))%fset.
+
+Lemma vertex_has_baseP P x (H : x \in vertex_set P) : [ `[pt x] has \base base].
+Proof.
+move/imfsetP: H => [fx /=]; rewrite inE => /andP [fx_face].
+have fx_non_empty: (fx `>` `[poly0]) by move: fx_face; rewrite inE => /andP [].
+move/(dim0P fx_non_empty) => [x'] fx_eq.
+rewrite fx_eq pick_point_pt => ->; rewrite -fx_eq.
+exact: poly_base_base.
+Qed.
+Canonical vertex_poly_base P x (H : x \in vertex_set P) := PolyBase (vertex_has_baseP H).
+
+Lemma vertex_in_face_set P x (H : x \in vertex_set P) : vertex_poly_base H \in face_set P.
+Admitted.
+(*Variable (P : {poly base}) (x : 'cV[R]_n).
+  Check (`[pt x]%:poly_base).*)
+
 
 End Vertex.
 
