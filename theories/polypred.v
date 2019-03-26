@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
-Require Import extra_misc inner_product vector_order extra_matrix barycenter.
+Require Import extra_matrix inner_product barycenter.
 
 Set Implicit Arguments.
 Unset Strict Implicit.

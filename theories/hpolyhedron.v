@@ -551,10 +551,11 @@ Lemma compl_slack_cond x :
 Admitted.
 
 Lemma dual_sol_argmin : ('P^=(A, b; I) `>` `[poly0]) -> argmin 'P(A,b) (A^T *m u) `=~` 'P^=(A, b; I).
+Proof.
 move => PI_non_empty.
 have P_non_empty : ('P(A,b) `>` `[poly0]).
 - apply: (poly_proper_subset PI_non_empty); exact: hpolyEq_antimono0.
-move/proper0P : PI_non_empty => [x x_in].
+move/proper0P : PI_non_empty => [x x_in_PI].
 set c := _ *m _; have c_bounded := (dual_sol_bounded P_non_empty u_ge0).
 rewrite argmin_polyI.
 suff ->: opt_value c_bounded = '[b,u].
@@ -566,9 +567,16 @@ suff ->: opt_value c_bounded = '[b,u].
     * move: y y_in_PI; apply/poly_subsetP; exact: hpolyEq_antimono0.
     split; first by done.
     by rewrite inE; apply/eqP/compl_slack_cond.
--
-Admitted.
-
+- have x_in_P : x \in 'P(A,b).
+  + move: x x_in_PI; apply/poly_subsetP; exact: hpolyEq_antimono0.
+  apply/eqP; rewrite eqr_le; apply/andP; split.
+  - have <- : '[c,x] = '[b,u] by apply/compl_slack_cond.
+    move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound c_bounded).
+    by rewrite inE.
+  - move: (opt_point c_bounded) => [y y_in_P <-].
+    move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound u_ge0).
+    by rewrite inE.
+Qed.
 
 
 (*
