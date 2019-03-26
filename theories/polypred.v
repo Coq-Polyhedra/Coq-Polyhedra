@@ -134,7 +134,7 @@ Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
   pointedPn : forall (P : T), ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P);
   conv : {fset 'cV[R]_n} -> T;
   convP : forall V x, reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V);
-  convexP : forall (P : T) (V : {fset 'cV[R]_n}), {subset V <= P} -> (poly_subset (conv V) P)
+  convexP : forall (P : T) (V : {fset 'cV[R]_n}), {subset V <= P} -> poly_subset (conv V) P
 }.
 
 Record class_of (T : Type) : Type :=
