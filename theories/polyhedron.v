@@ -8,8 +8,9 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
-Require Import inner_product vector_order polypred hpolyhedron.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
+Require Import inner_product vector_order row_submx.
+Require Import polypred hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -80,7 +81,7 @@ Canonical poly_base_finType := Eval hnf in FinType poly_base poly_base_finMixin.
 End PolyBase.
 
 Notation "'{poly'  base '}'" := (poly_base base) : poly_scope.
-Notation "[ P 'has' '\base' base ]" := (has_base base P) : poly_scope.
+Notation "'[' P 'has' '\base' base ']'" := (has_base base P) : poly_scope.
 Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
 
 (*Section Test.
@@ -108,7 +109,7 @@ Section HasBase.
 
 Variable (R : realFieldType) (n : nat).
 
-Implicit Type (base : 'hpoly[R]_n) (P : 'poly[R]_n).
+Implicit Types (base : 'hpoly[R]_n) (P : 'poly[R]_n).
 
 Variant poly_base_spec (base : 'hpoly[R]_n) : {poly base} -> 'poly[R]_n -> Type :=
   HpolySpec I : poly_base_spec '['P^=(base; I)]%:poly_base '['P^=(base; I)].
@@ -153,7 +154,7 @@ Section Face.
 
 Variable (R : realFieldType) (n : nat).
 
-Implicit Type (base : 'hpoly[R]_n).
+Implicit Types (base : 'hpoly[R]_n).
 
 Lemma argmin_baseP base (P : {poly base}) c :
   bounded P c -> [(argmin P c) has \base base].
@@ -187,6 +188,7 @@ Proof.
 move => ?; rewrite inE; apply/andP; split; [done | exact: poly_subset_refl].
 Qed.
 
+(* TO BE FIXED : why do we need extra parenthesis for `[poly0] *)
 Lemma poly0_face_set base (P : {poly base}) : (P = (`[poly0]) :> 'poly[R]_n) -> face_set P = set0.
 Proof.
 move => P_eq0; apply/setP => Q; rewrite !inE P_eq0.
@@ -320,6 +322,68 @@ apply: polyISS; rewrite ?{1}(repr_active P) 1?{1}(repr_active Q);
 Qed.
 
 End Active.
+
+Notation "'{eq'  P }" := (active P) : poly_scope.
+
+Section AffineHull.
+
+Variable (R : realFieldType) (n : nat).
+
+Implicit Types (base : 'hpoly[R]_n) (d : 'cV[R]_n).
+
+Definition hull base :=
+  let: 'P(A, _) as base := base in
+  fun (P : {poly base}) => kermx (row_submx A {eq P})^T.
+
+Lemma in_hullP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) (d : 'cV[R]_n) :
+  reflect (forall j, j \in {eq P} -> (A *m d) j 0 = 0) (d^T <= hull P)%MS.
+Proof.
+apply: (equivP sub_kermxP); rewrite -trmx_mul -{1}[0]trmx0; split.
+- by move/trmx_inj; rewrite -row_submx_mul => /row_submx_col0P.
+- by move => ?; apply/congr1; rewrite -row_submx_mul; apply/row_submx_col0P.
+Qed.
+
+Definition dim base (P : {poly base}) := \rank (hull P).
+
+Fact relint_key : unit. Proof. by []. Qed.
+Definition relint_pt base (P : {poly base}) : 'cV[R]_n := locked_with relint_key 0.
+
+Lemma relint_pt_in_poly base (P : {poly base}) : (P `>` `[poly0]) -> relint_pt P \in P.
+Admitted.
+
+Lemma relint_pt_ineq (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) i :
+  i \notin {eq P} -> relint_pt P \notin (`[hp (row i A)^T & b i 0] : 'poly[R]_n).
+Admitted.
+
+Lemma hull_relintP base (P : {poly base}) d :
+  (P `>` `[poly0]) -> reflect (exists eps, eps > 0 /\ relint_pt P + eps *: d \in P)
+                             ((d^T <= hull P)%MS).
+Admitted.
+
+Lemma hullP base (P : {poly base}) d :
+   (P `>` `[poly0]) -> reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS])
+                              (d^T <= hull P)%MS.
+Admitted.
+
+(* TO BE FIXED : why do we need extra parenthesis for `[pt x] ? *)
+Lemma dim0P base (P : {poly base}) : (P `>` `[poly0]) -> reflect (exists x, (P = (`[pt x]) :> 'poly[R]_n)) (dim P == 0%N).
+Admitted.
+
+End AffineHull.
+
+Section Vertex.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Implicit Types (P Q F : {poly base}).
+
+Variable (P : {poly base}).
+
+Definition vertex_set P :=
+  [fset (pick_point (pval F)) | F in face_set P & dim F == 0%N]%fset.
+
+End Vertex.
+
 
 (*
 (*

@@ -462,7 +462,7 @@ apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in];
   exists x; by rewrite ?inE.
 Qed.
 
-Definition pick_point (P : T) :=
+Definition pick_point (P : T) : 'cV[R]_n :=
   match (@proper0P P) with
   | ReflectT P_non_empty => xchoose P_non_empty
   | ReflectF _ => 0
@@ -725,6 +725,10 @@ Proof.
 Admitted.
 
 Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
+Admitted.
+
+Lemma pick_point_pt (Ω : 'cV[R]_n) :
+  pick_point (`[pt Ω] : T) = Ω.
 Admitted.
 
 (* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
