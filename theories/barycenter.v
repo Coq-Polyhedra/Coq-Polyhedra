@@ -84,6 +84,14 @@ apply: (iffP idP).
   + by apply/eqP; move: sum_w; rewrite big_seq_fsetE.
 Qed.
 
+Definition uweight : ({fsfun 'cV[R]_n -> R for fun => 0%R})  := [fsfun x : V => 1/(#|`V|%:R) | 0]%fset.
+
+Lemma uweightP : [w \weight over V].
+Admitted.
+
+Lemma uweight_gt0 v : v \in V -> uweight v > 0.
+Admitted.
+
 Definition bary : 'cV[R]_n := \sum_(v <- V) (w v) *: v.
 
 End Weight.

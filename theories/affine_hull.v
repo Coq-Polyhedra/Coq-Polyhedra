@@ -1,37 +1,36 @@
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
-(* (c) Copyright 2018, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
+(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
 (*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
 (*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
 (* All rights reserved.                                                  *)
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx hpolyhedron polyhedron.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
+Require Import extra_misc inner_product vector_order extra_matrix row_submx.
+Require Import polypred hpolyhedron polyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
+Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
 Module HullBase.
 
 Section Hull.
 
-Variable R : realFieldType.
-Variable n : nat.
-Variable P : 'poly[R]_n.
+Variable (R : realFieldType) (n : nat).
+Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}).
 
-Variable m : nat.
-Variable A : 'M[R]_(m,n).
-Variable b : 'cV[R]_m.
+Definition hull := kermx (row_submx A {eq P})^T.
 
-Hypothesis P_non_empty : non_empty P.
-Hypothesis P_base : [ P has \base 'P(A,b) ].
+Hypothesis P_non_empty : (P `>` `[poly0]).
+
 
 Definition relint_pt_ith i (H : i \notin { eq(P) on 'P(A,b) }) :=
   xchoose ((@exists_andP _ _ _).1 (active_inPn P_base _ H)).
