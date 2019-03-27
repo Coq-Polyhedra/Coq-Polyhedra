@@ -776,7 +776,9 @@ Proof.
 exact: PolyPred.convexP.
 Qed.
 
-Notation "'`[' 'pt'  Ω  ']'" := (conv [fset Ω]%fset) (at level 70) : poly_scope.
+Definition mk_pt (Ω : 'cV[R]_n) : T := conv ([fset Ω]%fset).
+
+Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 
 Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
 Proof.
@@ -787,6 +789,12 @@ Admitted.
 
 Lemma pick_point_pt (Ω : 'cV[R]_n) :
   pick_point (`[pt Ω] : T) = Ω.
+Admitted.
+
+Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
+Admitted.
+
+Lemma pt_subset (Ω : 'cV[R]_n) (P : T) : `[pt Ω] `<=` P = (Ω \in P).
 Admitted.
 
 (* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
@@ -832,7 +840,7 @@ Notation "'`[' 'hs'  c & d  ']'" := (mk_hs c d) (at level 70) : poly_scope.
 Notation "'`[' 'hp'  c & d  ']'" := (mk_hp c d) (at level 70) : poly_scope.
 Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
-Notation "'`[' 'pt'  Ω  ']'" := (conv [fset Ω]%fset) (at level 70) : poly_scope.
+Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
