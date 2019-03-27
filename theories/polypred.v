@@ -647,20 +647,48 @@ Proof. (* RK *)
 by rewrite in_argmin; move/andP => [_ /poly_subset_hsP/(_ y)].
 Qed.
 
+Lemma subset_opt_value (P Q : T) c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
+  argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q. (* RK *)
+Proof.
+move => /andP [/poly_subsetP s_argminQ_P ?].
+apply/eqP; rewrite eqr_le; apply/andP; split; last by apply: opt_value_antimono1.
+move: (opt_point bounded_Q) => [x ? x_is_opt_on_Q].
+rewrite -x_is_opt_on_Q -in_hs.
+apply/(poly_subsetP (opt_value_lower_bound bounded_P))/s_argminQ_P.
+rewrite in_argmin; apply/andP; split; first by done.
+rewrite x_is_opt_on_Q.
+exact: opt_value_lower_bound.
+Qed.
+
 Lemma subset_argmin (P Q : T) c :
   bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c `=~` argmin Q c.
-Proof.
-Admitted.
+Proof. (* RK *)
+move => bounded_Q /andP [? ?].
+rewrite {1}/argmin; case: {-}_/idP => [bounded_P | unbounded_P]; apply/andP; split.
+- rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
+  by apply/polyISS; [done | exact: poly_subset_refl].
+- apply/poly_subsetIP; split; first by done.
+  rewrite (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
+  exact: argmin_opt_value.
+- exact: poly0_subset.
+- move/negP: unbounded_P; apply/contraR.
+  rewrite subset0N_proper => non_empty_argmin_Q_c.
+  apply/(bounded_mono1 bounded_Q _)/andP; split; last by done.
+  by apply/(poly_proper_subset non_empty_argmin_Q_c _).
+Qed.
 
 Lemma argmin_eq {P : T} {c v x} :
   v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
-Admitted.
-
-
-(*move => y y_in_P.
-rewrite /opt_value; set x := xchoose _.
-apply: (minimize_lower_bound (P := P)); [exact: (xchooseP (@boundedP _ _ _)) | done].
-Qed.*)
+Proof. (* RK *)
+move => v_in_argmin; rewrite in_argmin.
+apply: (iffP idP) => [/andP [? /poly_subsetP sPhs] | [? ->]].
+- split; first by done.
+  apply/eqP; rewrite eqr_le; apply/andP; split; last by apply: (argmin_lower_bound v_in_argmin _).
+  by rewrite -in_hs; apply/sPhs/(poly_subsetP (argmin_subset _ c)).
+- apply/andP; split; first by done.
+  rewrite in_argmin in v_in_argmin.
+  exact: (proj2 (andP v_in_argmin)).
+Qed.
 
 Lemma bounded_lower_bound (P : T) c :
   (P `>` `[poly0]) -> reflect (exists d, P `<=` `[hs c & d]) (bounded P c).
