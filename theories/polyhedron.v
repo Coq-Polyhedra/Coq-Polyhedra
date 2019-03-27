@@ -382,6 +382,63 @@ Admitted.
 
 End AffineHull.
 
+
+
+Section VertexBase.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Inductive vertex_base := VertexBase { pt_val :> 'cV[R]_n; _ : [ `[pt pt_val] has \base base] }.
+Canonical vertex_base_subType := [subType for pt_val].
+Definition vertex_base_eqMixin := Eval hnf in [eqMixin of vertex_base by <:].
+Canonical vertex_base_eqType := Eval hnf in EqType vertex_base vertex_base_eqMixin.
+Definition vertex_base_choiceMixin := Eval hnf in [choiceMixin of vertex_base by <:].
+Canonical vertex_base_choiceType := Eval hnf in ChoiceType vertex_base vertex_base_choiceMixin.
+
+Lemma vertex_base_baseP (v : vertex_base) : [ `[pt v] has \base base].
+Proof.
+exact : (valP v).
+Qed.
+
+Canonical vertex_base_poly (v : vertex_base) := PolyBase (vertex_base_baseP v).
+
+Lemma poly_base_vertexP (P : {poly base}) :
+  P `>` (`[poly0]) -> (dim P == 0%N) -> [ `[pt (pick_point P)] has \base base].
+Admitted.
+
+Definition poly_base_vertex (P : {poly base}) :=
+  if @idP (P `>` (`[poly0])) is ReflectT P_prop0 then
+    if @idP (dim P == 0%N) is ReflectT P_dim0 then
+      Some (VertexBase (poly_base_vertexP P_prop0 P_dim0))
+    else None
+  else None.
+
+Lemma vertex_poly_baseK : pcancel vertex_base_poly poly_base_vertex.
+Admitted.
+
+Definition vertex_base_countMixin := PcanCountMixin vertex_poly_baseK.
+Canonical vertex_base_countType := Eval hnf in CountType vertex_base vertex_base_countMixin.
+Definition vertex_base_finMixin := PcanFinMixin vertex_poly_baseK.
+Canonical vertex_base_finType := Eval hnf in FinType vertex_base vertex_base_finMixin.
+
+End VertexBase.
+
+Notation "'{vertex'  base '}'" := (vertex_base base) : poly_scope.
+
+Section Vertex.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Definition vertex_set (P : {poly base}) := [set v : {vertex base} | (pt_val v) \in P].
+
+Lemma vertexP (P : {poly base}) (v : {vertex base}) :
+  (v \in vertex_set P) = (`[pt v]%:poly_base \in face_set P).
+Admitted.
+
+
+End Vertex.
+
+(*
 Section Vertex.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
@@ -410,7 +467,7 @@ Admitted.
 
 
 End Vertex.
-
+*)
 
 (*
 (*
