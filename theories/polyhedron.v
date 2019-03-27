@@ -20,6 +20,14 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
+(* Enrico's trick for tc resolution in have *)
+Notation "!! x" := (ltac:(refine x)) (at level 100, only parsing).
+(* infer class to help typeclass inference on the fly *)
+Class infer (P : Prop) := Infer : P.
+Hint Mode infer ! : typeclass_instances.
+Hint Extern 0 (infer _) => (exact) : typeclass_instances.
+Lemma inferP (P : Prop) : P -> infer P. Proof. by []. Qed.
+
 Section PolyBase.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
@@ -160,7 +168,7 @@ Lemma argmin_baseP base (P : {poly base}) c :
   bounded P c -> [(argmin P c) has \base base].
 Proof.
 (* we first suppose that flat_prop holds, ie this is the situation in which
- * P would play the role of the base *)
+ * P (here quantified as Q) would play the role of the base *)
 suff flat_prop: forall (Q : 'hpoly[R]_n), bounded '[Q] c -> [(argmin '[Q] c) has \base Q].
 - case/poly_baseP: P => [I] /flat_prop/has_baseP => [[J] ->].
   move: (hpolyEq_of_hpolyEq J) => [K] /quotP ->.
@@ -178,7 +186,16 @@ suff flat_prop: forall (Q : 'hpoly[R]_n), bounded '[Q] c -> [(argmin '[Q] c) has
   by apply/proper0P; exists x.
 Qed.
 
-Canonical argmin_base base (P : {poly base}) c (b : bounded P c) := PolyBase (argmin_baseP b).
+Canonical argmin_base base (P : {poly base}) c (b : infer (bounded P c)) := PolyBase (argmin_baseP b).
+
+(*Section Test.
+
+Variable (base : 'hpoly[R]_n) (P Q : {poly base}) (c : 'cV[R]_n).
+
+Set Printing All.
+Lemma foo & (infer (bounded P c)) : (argmin P c)%:poly_base = Q.
+Abort.
+End Test.*)
 
 Definition face_set base (P : {poly base}) : {set {poly base}} :=
   [set Q : {poly base} | `[poly0] `<` Q `<=` P].
@@ -202,10 +219,8 @@ Lemma faceP base (P Q : {poly base}) :
   reflect (exists2 c, (Q = argmin P c :> 'poly[R]_n) & bounded P c) (Q \in face_set P).
 Proof.
 apply: (iffP idP); last first.
-- move => [c] ? c_bounded.
-  have ->: Q = (argmin P c)%:poly_base.
-  + move => b'; have ->: b' = c_bounded by exact: eq_irrelevance.
-    exact: val_inj.
+- move => [c] ? /inferP c_bounded.
+  have ->: Q = (argmin P c)%:poly_base by exact: val_inj.
   rewrite inE; apply/andP; split;
     [ by rewrite -bounded_argminN0 | exact: argmin_subset ].
 - case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
