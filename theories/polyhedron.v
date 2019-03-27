@@ -429,12 +429,13 @@ Section Vertex.
 
 Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 
-Definition vertex_set (P : {poly base}) := [set v : {vertex base} | (pt_val v) \in P].
+Definition vertex_set (P : {poly base}) := [set v : {vertex base} | (v : 'cV__) \in P].
 
 Lemma vertexP (P : {poly base}) (v : {vertex base}) :
   (v \in vertex_set P) = (`[pt v]%:poly_base \in face_set P).
-Admitted.
-
+Proof.
+by rewrite inE [RHS]inE pt_proper0 pt_subset.
+Qed.
 
 End Vertex.
 
