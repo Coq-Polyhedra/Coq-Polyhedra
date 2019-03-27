@@ -212,20 +212,16 @@ move => P_eq0; apply/setP => Q; rewrite !inE P_eq0.
 exact: poly_proper_subsetxx.
 Qed.
 
-(* Ideally, we would prefer the equality Q = (argmin P c)%:poly_base
- * however, this would require to automatically infer a (_ : bounded P c)
- * hypothesis, and this is tricky (maybe using typleclasses?) *)
 Lemma faceP base (P Q : {poly base}) :
-  reflect (exists2 c, (Q = argmin P c :> 'poly[R]_n) & bounded P c) (Q \in face_set P).
+  reflect (exists c & infer (bounded P c), Q = (argmin P c)%:poly_base) (Q \in face_set P).
 Proof.
 apply: (iffP idP); last first.
-- move => [c] ? /inferP c_bounded.
-  have ->: Q = (argmin P c)%:poly_base by exact: val_inj.
+- move => [c] [c_bounded] ->.
   rewrite inE; apply/andP; split;
     [ by rewrite -bounded_argminN0 | exact: argmin_subset ].
 - case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
   + suff P_eq0: (P = (`[poly0]) :> 'poly[R]_n).
-    * by move/poly0_face_set: (P_eq0) ->; rewrite P_eq0 inE => ?.
+    * move/poly0_face_set: (P_eq0) ->; by rewrite inE.
     * move: (poly_base_subset P); rewrite base_eq0 subset0_equiv.
       exact: quot_equivP.
   + move: base_prop0 P Q; case: base => m A b base_prop0 P /poly_baseP [I].
@@ -238,15 +234,15 @@ apply: (iffP idP); last first.
     pose c := A^T *m e.
     have c_bounded : bounded '['P(A,b)] c.
     * rewrite quotE; apply: dual_sol_bounded; try by rewrite quotE in base_prop0.
+    have c_bounded_P : infer (bounded P c).
+    * apply: (bounded_mono1 c_bounded); apply/andP; split;
+      [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
+    exists c; exists c_bounded_P; apply/val_inj => /=.
     have c_argmin : argmin '['P(A,b)] c = '['P^=(A,b; I)].
     * rewrite quotE; apply/quotP.
       by apply: dual_sol_argmin; rewrite ?quotE in Q_prop0.
-    exists c.
-    * rewrite /= -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
+    * rewrite -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
       apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
-    * apply: (bounded_mono1 c_bounded); apply/andP; split.
-      - exact: (poly_proper_subset Q_prop0).
-      - exact: poly_base_subset.
 Qed.
 
 Lemma face_set_of_face base (P Q : {poly base}) :
