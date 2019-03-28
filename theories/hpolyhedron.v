@@ -492,19 +492,41 @@ set t := (X in _ && X); suff ->: t by rewrite andbT.
 by apply/forall_inP => i; rewrite in_set0.
 Qed.
 
-Lemma hpolyEq1 (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (i : 'I_m) :
-  'P^=(A, b; [set i]) `=~` 'P(A,b) `&` `[hp (row i A)^T & b i 0].
+Definition nth_hp {T : polyPredType R n} (base : 'hpoly[R]_n) :=
+  let: 'P(A,b) as base := base in
+  fun (i: 'I_#ineq base) => `[hp (row i A)^T & (b i 0)] : T.
+
+Lemma hpolyEq1 base (i : 'I_#ineq base) :
+  'P^=(base; [set i]) `=~` base `&` nth_hp i.
 Proof.
-apply/poly_equivP => x; rewrite in_hpolyEq !inE; apply: congr1; rewrite row_vdot.
+Admitted.
+(*apply/poly_equivP => x; rewrite in_hpolyEq !inE; apply: congr1; rewrite row_vdot.
 by apply/forall_inP/idP => [/(_ _ (set11 i)) | ? j /set1P ->].
-Qed.
+Qed.*)
 
-
-Lemma polyEq1 (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (i : 'I_m) :
-  '['P^=(A, b; [set i])] = '['P(A,b)] `&` `[hp (row i A)^T & b i 0].
+Lemma polyEq1 base (i : 'I_#ineq base) :
+  '['P^=(base; [set i])] = '[base] `&` (nth_hp i).
 Proof.
-rewrite !quotE; apply/quotP; exact: hpolyEq1.
-Qed.
+Admitted.
+(*  rewrite [_ `&` _]quotE; apply/quotP. Admitted. exact: hpolyEq1.
+Qed.*)
+
+Definition slice_set (m : nat) (I : {set 'I_m}) := ord0 |: ((@rshift 1 m) @: I).
+
+Definition slice_base c d (base : 'hpoly[R]_n) :=
+  let: 'P(A,b) := base in 'P(col_mx c^T A, col_mx d%:M b).
+
+Lemma slice_hpolyEq c d (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) I :
+  slice c d 'P^=(A,b; I) `=~` 'P^=(slice_base c d 'P(A,b); slice_set I).
+Admitted.
+
+Lemma nth_hp_slice0 {T : polyPredType R n} c d (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+  nth_hp (base := slice_base c d 'P(A,b)) ord0 = (`[hp c & d]) :> T.
+Admitted.
+
+Lemma nth_hp_slice {T : polyPredType R n} c d (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (i : 'I_(#ineq 'P(A,b))) :
+  nth_hp (base := slice_base c d 'P(A,b)) (@rshift 1 _ i) = (nth_hp i) :> T.
+Admitted.
 
 End HPolyEq.
 

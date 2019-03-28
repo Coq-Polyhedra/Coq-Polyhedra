@@ -340,6 +340,14 @@ Proof.
 rewrite -activeP; exact: poly_subset_refl.
 Qed.
 
+Lemma in_active base (P : {poly base}) (i : 'I_#ineq base) :
+  (i \in {eq P}) = (P `<=` '[nth_hp i]).
+Proof.
+suff ->: (P `<=` '[ nth_hp i ]) =  (P `<=` '['P^=(base; [set i])]).
+- by rewrite activeP sub1set.
+- rewrite polyEq1.
+Admitted.
+
 Lemma activePn (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) i :
   reflect (exists2 x, x \in P & x \notin (`[hp (row i A)^T & b i 0] : 'poly[R]_n)) (i \notin {eq P}).
 Proof.
@@ -365,6 +373,21 @@ rewrite -activeP -polyEq_polyI.
 apply: polyISS; rewrite ?{1}(repr_active P) 1?{1}(repr_active Q);
   exact: poly_subset_refl.
 Qed.
+
+Lemma slice_poly_baseP (c: 'cV[R]_n) (d : R) base (P : {poly base})  :
+  [ (slice c d P) has \base (`[hs c & d] `&` base) ].
+Proof.
+move: P; case: base => m A b P.
+case/poly_baseP: P => [I] _; rewrite !quotE; apply/has_baseP.
+exists (slice_set I); apply/quotP; exact: slice_hpolyEq.
+Qed.
+Canonical slice_poly_base (c: 'cV[R]_n) (d : R) base (P : {poly base})
+          (b : infer (slice c d P `>` `[poly0])) := PolyBase (is_poly_baseP b (slice_poly_baseP c d P)).
+
+Lemma active_slice (c: 'cV[R]_n) (d : R) (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)})
+      (b' : infer (slice c d P `>` `[poly0])) :
+  (slice_set {eq P}) \subset {eq (slice c d P)%:poly_base}.
+Admitted.
 
 End Active.
 
@@ -393,7 +416,7 @@ Definition dim base (P : {poly base}) := \rank (hull P).
 Fact relint_key : unit. Proof. by []. Qed.
 Definition relint_pt base (P : {poly base}) : 'cV[R]_n := locked_with relint_key 0.
 
-Lemma relint_pt_in_poly base (P : {poly base}) : (P `>` `[poly0]) -> relint_pt P \in P.
+Lemma relint_pt_in_poly base (P : {poly base}) : relint_pt P \in P.
 Admitted.
 
 Lemma relint_pt_ineq (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) i :
@@ -401,21 +424,51 @@ Lemma relint_pt_ineq (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,
 Admitted.
 
 Lemma hull_relintP base (P : {poly base}) d :
-  (P `>` `[poly0]) -> reflect (exists eps, eps > 0 /\ relint_pt P + eps *: d \in P)
+  reflect (exists eps, eps > 0 /\ relint_pt P + eps *: d \in P)
                              ((d^T <= hull P)%MS).
 Admitted.
 
 Lemma hullP base (P : {poly base}) d :
-   (P `>` `[poly0]) -> reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS])
+   reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS])
                               (d^T <= hull P)%MS.
 Admitted.
 
 (* TO BE FIXED : why do we need extra parenthesis for `[pt x] ? *)
-Lemma dim0P base (P : {poly base}) : (P `>` `[poly0]) -> reflect (exists x, (P = (`[pt x]) :> 'poly[R]_n)) (dim P == 0%N).
+Lemma dim0P base (P : {poly base}) : reflect (exists x, (P = (`[pt x]) :> 'poly[R]_n)) (dim P == 0%N).
 Admitted.
 
 End AffineHull.
 
+Section Vertex.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Definition vertex_set (P : {poly base}) :=
+  [set F in face_set P | (dim F == 0)%N].
+
+Lemma mink (P : {poly base}) :
+  P = conv ((fun (F : {poly base}) => pick_point F) @` (vertex_set P))%fset :> 'poly[R]_n.
+Admitted.
+
+Lemma vertex_setP (P F : {poly base}) :
+  reflect (exists2 x, x \in P & F = (`[pt x]) :> 'poly[R]_n) (F \in vertex_set P).
+Admitted.
+
+End Vertex.
+
+Section VertexFigure.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Variable (P v : {poly base}) (c : 'cV[R]_n) (d : R).
+Hypothesis v_vert : v \in vertex_set P.
+Hypothesis v_sep : forall w, w \in vertex_set P -> w != v -> '[c, pick_point w] > d.
+Hypothesis v_opt : '[c, pick_point v] < d.
+
+
+End VertexFigure.
+
+(*
 
 
 Section VertexBase.
@@ -471,7 +524,7 @@ Admitted.
 
 End Vertex.
 
-
+*)
 
 (*
 Section Vertex.
