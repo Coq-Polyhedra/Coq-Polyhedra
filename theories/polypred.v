@@ -781,21 +781,44 @@ Definition mk_pt (Ω : 'cV[R]_n) : T := conv ([fset Ω]%fset).
 Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 
 Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
-Proof.
-Admitted.
+Proof. (* RK *)
+apply/idP/idP => [/convP [w /weightP [w_ge0 _ sum_w] ->] | /eqP ->].
+- rewrite big_seq_fset1 in sum_w.
+  by rewrite /bary big_seq_fset1 sum_w scale1r.
+- pose w := [fsfun x : [fset Ω]%fset => 1%R | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
+  have w_Ω_eq_1: w Ω = 1 
+    by rewrite fsfun_ffun /=; case: insubP => [? ? ? /= | /= ]; [done | rewrite in_fset1 eq_refl].
+  apply/convP; exists w.
+  + apply/weightP; split.
+    * move => v; rewrite fsfun_ffun.
+      by case: insubP => [? _ _ /= | /= _]; [exact: ler01 | done].
+    * move => v; rewrite fsfun_ffun.
+      by case: insubP => [? -> _ /= | /= _].
+    * by rewrite big_seq_fset1.
+  + by rewrite /bary big_seq_fset1 w_Ω_eq_1 scale1r.
+Qed.
 
 Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
-Admitted.
+Proof. (* RK *)
+by rewrite in_pt.
+Qed.
+
+Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
+Proof. (* RK *)
+apply/proper0P; exists Ω; exact: in_pt_self.
+Qed.
 
 Lemma pick_point_pt (Ω : 'cV[R]_n) :
   pick_point (`[pt Ω] : T) = Ω.
-Admitted.
-
-Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
-Admitted.
+Proof. (* RK *)
+apply/eqP; rewrite -in_pt; apply/pick_pointP; exact: pt_proper0.
+Qed.
 
 Lemma pt_subset (Ω : 'cV[R]_n) (P : T) : `[pt Ω] `<=` P = (Ω \in P).
-Admitted.
+Proof. (* RK *)
+by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
+  [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_subsetP => v; rewrite in_pt => /eqP ->].
+Qed.
 
 (* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
  * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
