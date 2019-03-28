@@ -33,12 +33,13 @@ Notation "[ w '\weight' 'over' V ]" := (weight V w).
 
 Variable V : {fset 'cV[R]_n}.
 Variable w : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-Hypothesis w_weight_over_V : [ w \weight over V ].
+(*Hypothesis w_weight_over_V : [ w \weight over V ].*)
 
 Implicit Type v : 'cV[R]_n.
 
-Lemma weight_ge0 v : w v >= 0.
+Lemma weight_ge0 v : [ w \weight over V ] -> w v >= 0.
 Proof.
+move => w_weight_over_V.
 case: finsuppP; first done.
 move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl /forallP w_ge0 _].
 move/supp_incl => v_in_V.
@@ -47,24 +48,25 @@ have ->: v = val v' by done.
 exact: w_ge0.
 Qed.
 
-Lemma weight_eq0 v : v \notin V -> w v = 0.
+Lemma weight_eq0 v : [ w \weight over V ] -> v \notin V -> w v = 0.
 Proof.
-move => v_notin_V; apply: fsfun_dflt.
+move => w_weight_over_V v_notin_V; apply: fsfun_dflt.
 move: v_notin_V; apply: contra.
 move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl _ _].
 exact: supp_incl.
 Qed.
 
-Lemma weight_gt0 v : w v > 0 -> v \in V.
+Lemma weight_gt0 v : [ w \weight over V ] -> w v > 0 -> v \in V.
 Proof.
-move => w_v_gt0.
+move => w_weight_over_V w_v_gt0.
 suff: v \in finsupp w.
 - move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl _ _]; exact: supp_incl.
 - rewrite mem_finsupp; exact: lt0r_neq0.
 Qed.
 
-Lemma weight_sum1 : \sum_(v <- V) w v = 1.
+Lemma weight_sum1 : [ w \weight over V ] -> \sum_(v <- V) w v = 1.
 Proof.
+move => w_weight_over_V.
 rewrite big_seq_fsetE /=.
 by move/and3P: (w_weight_over_V) => [_ _ /eqP].
 Qed.
@@ -75,7 +77,7 @@ Lemma weightP :
 Proof.
 apply: (iffP idP).
 - move => w_weight; split;
-    [exact: weight_ge0 | exact: weight_eq0 | exact: weight_sum1].
+    [move => v; exact: weight_ge0 | move => v; exact: weight_eq0 | exact: weight_sum1].
 - move => [w_ge0 w_supp sum_w].
   apply/and3P; split.
   + apply/fsubsetP => v.
