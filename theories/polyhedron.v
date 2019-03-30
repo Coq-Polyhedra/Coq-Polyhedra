@@ -458,12 +458,23 @@ End Vertex.
 
 Section VertexFigure.
 
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+Variable (R : realFieldType) (n : nat).
+Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
 
-Variable (P v : {poly base}) (c : 'cV[R]_n) (d : R).
+Variable (P v : {poly 'P(A,b)}) (c : 'cV[R]_n) (d : R).
 Hypothesis v_vert : v \in vertex_set P.
 Hypothesis v_sep : forall w, w \in vertex_set P -> w != v -> '[c, pick_point w] > d.
 Hypothesis v_opt : '[c, pick_point v] < d.
+
+Lemma slice_face_proper0 F : F \in face_set P -> v `<` F -> [set v] \proper vertex_set F.
+Admitted.
+
+
+Lemma slice_face_proper0 F : F \in face_set P -> v `<` F -> slice c d F `>` `[poly0].
+rewrite inE.
+
+Admitted.
+
 
 
 End VertexFigure.
