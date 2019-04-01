@@ -877,6 +877,11 @@ Admitted.
 Lemma compact_conv V : compact (conv V).
 Admitted.
 
+Definition slice (c : 'cV[R]_n) (d : R) P := `[hp c & d] `&` P.
+
+Lemma in_slice c d P x : (x \in slice c d P) = (x \in P) && ('[c,x] == d).
+Admitted.
+
 End PolyPredProperties.
 
 Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
@@ -1133,7 +1138,7 @@ End Quotient.
 
 Export Quotient.Exports.
 
-Definition inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hp, @in_hs, inE).
+Definition inE := (repr_equiv, @in_poly0, @in_polyT, @in_polyI, @in_hp, @in_hs, @in_slice, inE).
 
 Section QuotientProperties.
 
@@ -1207,8 +1212,11 @@ apply: (iffP (pointedPn non_empty_P)) => [[c [? line_incl]] | [c [? line_incl]]]
   by apply: line_incl; rewrite -inE.
 Qed.
 
+Lemma slice_mono c d (P : T) : slice c d '[P] = '[slice c d P].
+Admitted.
+
 End QuotientProperties.
 
 Definition quotE := (@poly_subset_mono, @poly_proper_mono, @bounded_mono,
                     @polyI_mono, @big_polyI_mono, @hs_mono, @line_mono,
-                    @argmin_mono, @pointed_mono, @hp_mono).
+                    @argmin_mono, @pointed_mono, @hp_mono, @slice_mono).
