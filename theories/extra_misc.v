@@ -7,7 +7,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix finmap.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -220,6 +220,16 @@ Proof.
         case: minrP => //.
 Qed.
 
+Lemma ltW_lt (x y z : R) : (x < y < z) -> (x <= y < z).
+Proof.
+move => /andP [??]; rewrite ltrW //=.
+Qed.
+
+Lemma lt_ltW (x y z : R) : (x < y < z) -> (x < y <= z).
+Proof.
+move => /andP [??]; rewrite ltrW andbT //=.
+Qed.
+
 End ExtraNum.
 
 Section ExtraBool.
@@ -246,3 +256,11 @@ apply/setP => i; apply/idP/idP; move/(mem_imset f).
 Qed.
 
 End ExtraFinset.
+
+Section ExtraFinmap.
+
+Lemma fproperP (K : choiceType) (A B : {fset K}) :
+  reflect ({subset A <= B} /\ exists2 x, x \in B & x \notin A) (A `<` B)%fset.
+Admitted.
+
+End ExtraFinmap.
