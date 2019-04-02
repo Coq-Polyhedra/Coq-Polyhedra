@@ -301,6 +301,13 @@ End RowSubmxPerm.
 
 Section SplitExtra.
 
+CoInductive split1_spec (n: nat) : 'I_(n.+1) -> Type :=
+| Split1Lo : split1_spec ord0
+| Split1Hi (k : 'I_n) : split1_spec (@rshift 1 _ k).
+
+Lemma split1P (n : nat) (i : 'I_(n.+1)) : split1_spec i.
+Admitted.
+
 Variable m n: nat.
 
 Lemma lshift_inj: injective (@lshift m n).
@@ -344,6 +351,7 @@ case: (splitP i) => [j | k].
 - have <-: (nat_of_ord (rshift m k) = (m+k))%N by done.
   by move/ord_inj ->; constructor.
 Qed.
+
 
 Lemma lrshift_distinct i j: lshift n i != rshift m j.
 Proof.
