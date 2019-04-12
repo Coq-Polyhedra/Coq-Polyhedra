@@ -38,6 +38,16 @@ Proof.
 by split; move => [x H]; exists x; apply/andP.
 Qed.
 
+Lemma eq_imply (b b' : bool) : b = b' -> (b -> b').
+Proof.
+by move ->.
+Qed.
+
+Lemma eq_imply2 (b b' : bool) : b = b' -> (b' -> b).
+Proof.
+by move ->.
+Qed.
+
 Arguments exists_andP [T A B].
 Prenex Implicits exists_andP.
 
@@ -222,12 +232,12 @@ Qed.
 
 Lemma ltW_lt (x y z : R) : (x < y < z) -> (x <= y < z).
 Proof.
-move => /andP [??]; rewrite ltrW //=.
+by move => /andP [??]; rewrite ltrW //=.
 Qed.
 
 Lemma lt_ltW (x y z : R) : (x < y < z) -> (x < y <= z).
 Proof.
-move => /andP [??]; rewrite ltrW andbT //=.
+by move => /andP [??]; rewrite ltrW //= andbT.
 Qed.
 
 End ExtraNum.

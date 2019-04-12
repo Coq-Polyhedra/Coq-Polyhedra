@@ -9,7 +9,7 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
-Require Import extra_matrix inner_product barycenter.
+Require Import extra_misc extra_matrix inner_product barycenter.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -871,21 +871,27 @@ case: (boolP (Ω == Ω')) => [/eqP -> | Ω_neq_Ω'].
 Qed.
 
 Definition compact (P : T) :=
-  (P `>` `[poly0]) ==> [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
+  (*(P `>` `[poly0]) ==> *)
+  [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
 
 Lemma compactP_Linfty (P : T) :
+  (P `>` `[poly0]) ->
   reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
 Admitted.
 
 Lemma compactP P :
-  reflect ((P `>` `[poly0]) -> forall c, bounded P c) (compact P).
+  reflect ((*(P `>` `[poly0]) -> *)
+      forall c, bounded P c) (compact P).
 Admitted.
 
 Lemma compact_pointed P :
-  (P `>` `[poly0]) -> compact P -> pointed P. (* RK *)
+  (*(P `>` `[poly0]) -> *) compact P -> pointed P. (* RK *)
 Admitted.
 
-Lemma compact_conv V : compact (conv V).
+Lemma compact_conv (V : {fset 'cV[R]_n}) : (*('|V|%fset > 0)%N ->*) compact (conv V).
+Admitted.
+
+Lemma compact_pt (Ω : 'cV[R]_n) : compact (`[pt Ω] : T).
 Admitted.
 
 Definition slice (c : 'cV[R]_n) (d : R) P := `[hp c & d] `&` P.
@@ -1226,8 +1232,98 @@ Qed.
 Lemma slice_mono c d (P : T) : slice c d '[P] = '[slice c d P].
 Admitted.
 
+Lemma compact_mono (P : T) : compact '[P] = compact P.
+Admitted.
+
 End QuotientProperties.
 
 Definition quotE := (@poly_subset_mono, @poly_proper_mono, @bounded_mono,
                     @polyI_mono, @big_polyI_mono, @hs_mono, @line_mono,
                     @argmin_mono, @pointed_mono, @hp_mono, @slice_mono).
+
+Section ProperPolytope.
+
+Local Open Scope poly_scope.
+
+Section Def.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Implicit Types phT : phant T.
+
+Inductive polyt phT := Polyt { ptval :> T; _ : compact ptval }.
+
+End Def.
+
+Notation "'{polyt'  T '}'" := (@polyt _ _ _ (Phant T)) (at level 0).
+(*Notation "\ptval" := (@ptval _ _ _ (Phant _)).*)
+
+Section BasicProperties.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Canonical polyt_subType := [subType for (@ptval _ _ T (Phant T))].
+Definition polyt_eqMixin := Eval hnf in [eqMixin of {polyt T} by <:].
+Canonical polyt_eqType := Eval hnf in EqType {polyt T} polyt_eqMixin.
+Definition polyt_choiceMixin := Eval hnf in [choiceMixin of {polyt T} by <:].
+Canonical polyt_choiceType := Eval hnf in ChoiceType {polyt T} polyt_choiceMixin.
+
+Lemma polytP (P : {polyt T}) : compact P.
+Proof.
+exact: valP.
+Qed.
+
+Lemma polyt_proper0 (P : {polyt T}) : (P `>` `[poly0]).
+Admitted.
+
+End BasicProperties.
+
+Section OtherProperties.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+
+Class infer (P : Prop) := Infer : P.
+Hint Mode infer ! : typeclass_instances.
+Hint Extern 0 (infer _) => (exact) : typeclass_instances.
+Lemma inferP (P : Prop) : P -> infer P. Proof. by []. Qed.
+
+(*Definition polyt_of (x : {polyt T}) & (phantom T x) : {polyt T} := x.
+Notation "P %:polyt" := (@polyt_of _ (Phantom _ P)) (at level 0) : poly_scope.
+*)
+
+Canonical polyt_pt (Ω : 'cV[R]_n) := Polyt (Phant T) (compact_pt Ω).
+Canonical polyt_conv (V : {fset 'cV[R]_n}) := Polyt (Phant T) (compact_conv V).
+Canonical polyt_class (P : {polyt T}) :=
+  Polyt (Phant {quot T}) (eq_imply2 (compact_mono P) (polytP P)).
+Definition polyt_of (P : T) (b : (compact P) ) & (phantom (compact P) b) := Polyt (Phant T) b.
+Notation "P %:polyt" := (@polyt_of P _ (Phantom (compact P) _)) (at level 0) : poly_scope.
+
+Variable is_face : T -> bool.
+ Instance foo (P : T) (b : is_face P) : infer (compact P).
+Admitted.
+Canonical fooP P (b : is_face P) := Polyt (Phant _) (foo b).
+Variable P : T.
+Hypothesis (b : compact P).
+Let ph := Phantom (compact P) b.
+Set Printing All.
+Goal (P%:polyt `>` `[poly0]).
+apply: polyt_proper0.
+
+
+Variable (P : T).
+Hypothesis b : is_face P.
+Eval simpl in (val (fooP b)).
+
+Goal (P `>` `[poly0]).
+apply: polyt_proper0.
+
+Instance b' : infer (compact P). exact: inferP. Qed.
+Check (P %:polyt).
+
+Goal ('[ P%:polyt ] `>` `[poly0]).
+exact: polyt_proper0.
+Qed.
+
+
+End BasicProperties.
