@@ -1241,7 +1241,7 @@ Definition quotE := (@poly_subset_mono, @poly_proper_mono, @bounded_mono,
                     @polyI_mono, @big_polyI_mono, @hs_mono, @line_mono,
                     @argmin_mono, @pointed_mono, @hp_mono, @slice_mono).
 
-Section ProperPolytope.
+Section ProperPolyhedron.
 
 Local Open Scope poly_scope.
 
@@ -1251,46 +1251,82 @@ Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
 
 Implicit Types phT : phant T.
 
-Inductive polyt phT := Polyt { ptval :> T; _ : compact ptval }.
+Inductive ppoly phT := Ppoly { ppval :> T; _ : ppval `>` `[poly0] }.
 
 End Def.
 
-Notation "'{polyt'  T '}'" := (@polyt _ _ _ (Phant T)) (at level 0).
+Notation "'{ppoly'  T '}'" := (@ppoly _ _ _ (Phant T)) (at level 0) : poly_scope.
 (*Notation "\ptval" := (@ptval _ _ _ (Phant _)).*)
 
 Section BasicProperties.
 
 Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
 
-Canonical polyt_subType := [subType for (@ptval _ _ T (Phant T))].
-Definition polyt_eqMixin := Eval hnf in [eqMixin of {polyt T} by <:].
-Canonical polyt_eqType := Eval hnf in EqType {polyt T} polyt_eqMixin.
-Definition polyt_choiceMixin := Eval hnf in [choiceMixin of {polyt T} by <:].
-Canonical polyt_choiceType := Eval hnf in ChoiceType {polyt T} polyt_choiceMixin.
+Canonical ppoly_subType := [subType for (@ppval _ _ T (Phant T))].
+Definition ppoly_eqMixin := Eval hnf in [eqMixin of {ppoly T} by <:].
+Canonical ppoly_eqType := Eval hnf in EqType {ppoly T} ppoly_eqMixin.
+Definition ppoly_choiceMixin := Eval hnf in [choiceMixin of {ppoly T} by <:].
+Canonical ppoly_choiceType := Eval hnf in ChoiceType {ppoly T} ppoly_choiceMixin.
 
-Lemma polytP (P : {polyt T}) : compact P.
+Lemma ppolyP (P : {ppoly T}) : (P `>` `[poly0]).
 Proof.
 exact: valP.
 Qed.
 
-Lemma polyt_proper0 (P : {polyt T}) : (P `>` `[poly0]).
-Admitted.
-
 End BasicProperties.
+End ProperPolyhedron.
 
-Section OtherProperties.
+Notation "'{ppoly'  T '}'" := (@ppoly _ _ _ (Phant T)) (at level 0) : poly_scope.
+
+Section Test.
+
+Local Open Scope poly_scope.
 
 Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
 
+Definition ppoly_of (x : T) (b : (x `>` `[poly0])) & (phantom (x `>` `[poly0]) b) : {ppoly T} :=
+                               @Ppoly  _ _ _ (Phant T) x b.
+Notation "P %:ppoly" := (@ppoly_of P _ (Phantom _ _)) (at level 0) : poly_scope.
 
 Class infer (P : Prop) := Infer : P.
 Hint Mode infer ! : typeclass_instances.
 Hint Extern 0 (infer _) => (exact) : typeclass_instances.
 Lemma inferP (P : Prop) : P -> infer P. Proof. by []. Qed.
 
-(*Definition polyt_of (x : {polyt T}) & (phantom T x) : {polyt T} := x.
-Notation "P %:polyt" := (@polyt_of _ (Phantom _ P)) (at level 0) : poly_scope.
-*)
+Inductive foo := Foo { P : bool; _ : P}.
+Variable P : T.
+Hypothesis toto : (P `>` `[poly0]).
+
+Canonical fooT := Foo toto.
+
+(*
+Lemma fooP P (b : foo P) : P.
+by case : b.
+Qed.*)
+Canonical bar (P : T) (b : infer (P `>` `[poly0])) := @Ppoly _ _ _ (Phant T) P b.
+
+Require Import Recdef.
+
+Lemma bar' : (P%:ppoly) = P :> T.
+
+Check bar.
+
+
+Lemma bar (b : fo := foo (P `>` `[polyØ])
+
+End Test.
+
+
+
+
+(*
+Section OtherProperties.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+
+
+
 
 Canonical polyt_pt (Ω : 'cV[R]_n) := Polyt (Phant T) (compact_pt Ω).
 Canonical polyt_conv (V : {fset 'cV[R]_n}) := Polyt (Phant T) (compact_conv V).
@@ -1325,5 +1361,5 @@ Goal ('[ P%:polyt ] `>` `[poly0]).
 exact: polyt_proper0.
 Qed.
 
-
 End BasicProperties.
+*)

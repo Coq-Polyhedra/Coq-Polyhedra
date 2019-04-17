@@ -20,6 +20,7 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
+(*
 (* Enrico's trick for tc resolution in have *)
 Notation "!! x" := (ltac:(refine x)) (at level 100, only parsing).
 (* infer class to help typeclass inference on the fly *)
@@ -27,6 +28,7 @@ Class infer (P : Prop) := Infer : P.
 Hint Mode infer ! : typeclass_instances.
 Hint Extern 0 (infer _) => (exact) : typeclass_instances.
 Lemma inferP (P : Prop) : P -> infer P. Proof. by []. Qed.
+ *)
 
 Section PolyBase.
 
@@ -35,26 +37,17 @@ Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
 Definition has_base (P : 'poly[R]_n) :=
   [exists I, P == '['P^=(base; I)]].
 
-Definition is_poly_base (P : 'poly[R]_n) :=
-  (P `>` `[poly0]) && (has_base P).
-
-Lemma is_poly_baseP (P : 'poly[R]_n) :
-  (P `>` `[poly0]) -> (has_base P) -> is_poly_base P.
-Admitted.
-
-Inductive poly_base :=
-  PolyBase { pval :> 'poly[R]_n ; _ : is_poly_base pval}.
+Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
 Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
 Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
 Definition poly_base_choiceMixin := Eval hnf in [choiceMixin of poly_base by <:].
 Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
 
-Lemma poly_base_proper0 (P : poly_base) : P `>` `[poly0].
-Admitted.
-
 Lemma poly_base_base (P : poly_base) : has_base P.
-Admitted.
+Proof.
+exact: valP.
+Qed.
 
 Lemma has_baseP {P} : reflect (exists I, P = '['P^=(base; I)]) (has_base P).
 Proof.
@@ -66,9 +59,8 @@ Lemma polyEq_baseP I :
 Proof.
 by apply/has_baseP; exists I.
 Qed.
+Canonical polyEq_base I := PolyBase (polyEq_baseP I).
 
-Canonical polyEq_base I (b : infer ('['P^=(base; I)] `>` `[poly0])) :=
-  PolyBase (is_poly_baseP b (polyEq_baseP I)).
 Definition poly_base_of (x : poly_base) & (phantom 'poly[R]_n x) : poly_base := x.
 Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
 
@@ -76,29 +68,26 @@ Definition set_of_poly_base (P : poly_base) : {set 'I_(#ineq base)} :=
   xchoose (existsP (poly_base_base P)).
 
 Definition set_of_poly_base_pinv (I : {set 'I_(#ineq base)})  : option poly_base :=
-  if (@idP ('['P^=(base; I)] `>` `[poly0])) is ReflectT prop0 then
-    let b := Infer prop0 in
-    let P := '['P^=(base; I)]%:poly_base in
-    if I == set_of_poly_base P then Some P else None
-  else None.
+  let P := '['P^=(base; I)]%:poly_base in
+  if I == set_of_poly_base P then Some P else None.
 
 Lemma set_of_poly_baseK :
   pcancel set_of_poly_base set_of_poly_base_pinv.
 Proof.
-Admitted.
-(*have eq: forall P : poly_base, P = '['P^=(base; (set_of_poly_base P))]%:poly_base.
+have eq: forall P : poly_base, P = '['P^=(base; (set_of_poly_base P))]%:poly_base.
 - move => P; apply/val_inj => /=; apply/eqP.
   exact: (xchooseP (existsP (poly_base_base P))).
 move => P; rewrite /set_of_poly_base_pinv.
 case: ifP; last first.
 - move/negbT/negP; by rewrite -eq.
 - by move/eqP ->; rewrite -2!eq.
-Qed.*)
+Qed.
 
 Definition poly_base_countMixin := PcanCountMixin set_of_poly_baseK.
 Canonical poly_base_countType := Eval hnf in CountType poly_base poly_base_countMixin.
 Definition poly_base_finMixin := PcanFinMixin set_of_poly_baseK.
 Canonical poly_base_finType := Eval hnf in FinType poly_base poly_base_finMixin.
+Canonical poly_base_subFinType := [subFinType of poly_base].
 
 End PolyBase.
 
@@ -134,8 +123,7 @@ Variable (R : realFieldType) (n : nat).
 Implicit Types (base : 'hpoly[R]_n) (P : 'poly[R]_n).
 
 Variant poly_base_spec (base : 'hpoly[R]_n) : {poly base} -> 'poly[R]_n -> Type :=
-  HpolySpec I (b : infer ('['P^=(base; I)] `>` `[poly0])) :
-    poly_base_spec '['P^=(base; I)]%:poly_base '['P^=(base; I)].
+  HpolySpec I : poly_base_spec '['P^=(base; I)]%:poly_base '['P^=(base; I)].
 
 Lemma poly_baseP base (P : {poly base}) :
   poly_base_spec P (pval P).
@@ -145,7 +133,7 @@ Admitted.
 Lemma poly_base_subset base (P : {poly base}) :
   P `<=` '[base].
 Proof.
-case/poly_baseP: P => I _; rewrite quotE; exact: hpolyEq_antimono0.
+case/poly_baseP: P => I; rewrite quotE; exact: hpolyEq_antimono0.
 Qed.
 
 (* BUG here: self_baseP cannot be made canonical because the structures of the terms
@@ -158,12 +146,9 @@ Qed.*)
 
 Lemma polyI_baseP base (P Q : {poly base}) : [P `&` Q has \base base].
 Proof.
-case/poly_baseP: P => [I] _ ; case/poly_baseP: Q => [J] _.
+case/poly_baseP: P => [I] ; case/poly_baseP: Q => [J].
 rewrite polyEq_polyI; exact: polyEq_baseP.
 Qed.
-Canonical polyI_base base (P Q : {poly base}) (b : infer ((P `&` Q) `>` (`[poly0]))) :=
-  PolyBase (is_poly_baseP b (polyI_baseP P Q)).
-
 (*Lemma self_base (base : 'hpoly[R]_n) :
 
 Lemma repr_base (P : 'poly[R]_n) :
@@ -173,6 +158,150 @@ case/hpolyP: P => m A b; exact: self_base.
 Qed.*)
 
 End HasBase.
+
+Section PPolyBase.
+
+Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+
+Definition is_ppoly_base := [pred P : {poly base} | pval P `>` `[poly0]].
+
+Inductive ppoly_base := PPolyBase { ppval :> {poly base} ; _ : is_ppoly_base ppval }.
+Canonical ppoly_base_subType := [subType for ppval].
+Definition ppoly_base_eqMixin := Eval hnf in [eqMixin of ppoly_base by <:].
+Canonical ppoly_base_eqType := Eval hnf in EqType ppoly_base ppoly_base_eqMixin.
+Definition ppoly_base_choiceMixin := Eval hnf in [choiceMixin of ppoly_base by <:].
+Canonical ppoly_base_choiceType := Eval hnf in ChoiceType ppoly_base ppoly_base_choiceMixin.
+Definition ppoly_base_countMixin := Eval hnf in [countMixin of ppoly_base by <:].
+Canonical ppoly_base_countType := Eval hnf in CountType ppoly_base ppoly_base_countMixin.
+Canonical poly_base_subCountType := Eval hnf in [subCountType of ppoly_base].
+Definition ppoly_base_finMixin := Eval hnf in [finMixin of ppoly_base by <:].
+Canonical ppoly_base_finType := Eval hnf in FinType ppoly_base ppoly_base_finMixin.
+
+Lemma ppolyP (P : ppoly_base) : (P `>` `[poly0]).
+Proof.
+exact: (valP P).
+Qed.
+
+End PPolyBase.
+
+Notation "'{ppoly'  base '}'" := (ppoly_base base) : poly_scope.
+
+Section Face.
+
+Variable (R : realFieldType) (n : nat).
+
+Implicit Types (base : 'hpoly[R]_n).
+
+Lemma argmin_baseP base (P : {poly base}) c :
+  bounded P c -> [(argmin P c) has \base base].
+Proof.
+(* we first suppose that flat_prop holds, ie this is the situation in which
+ * P (here quantified as Q) would play the role of the base *)
+suff flat_prop: forall (Q : 'hpoly[R]_n), bounded '[Q] c -> [(argmin '[Q] c) has \base Q].
+- case/poly_baseP: P => [I] /flat_prop/has_baseP => [[J] ->].
+  move: (hpolyEq_of_hpolyEq J) => [K] /quotP ->.
+  exact: polyEq_baseP.
+- (* now this is the classic proof of Schrijver *)
+  move => [m A b]; rewrite !quotE => c_bounded.
+  move: (dual_opt_sol c_bounded) => [u] [u_ge0 c_eq b_u_eq_opt_val].
+  rewrite {}c_eq in c_bounded b_u_eq_opt_val *. (* dual_opt_sol is badly specified
+                                                 * we should use an inductive spec instead *)
+  pose I := [set i | u i 0 > 0].
+  have supp_u : forall i, (u i 0 > 0) = (i \in I) by move => i; rewrite inE.
+  apply/has_baseP; exists I; apply/quotP; apply/dual_sol_argmin => //.
+  move: (opt_point c_bounded) => [x] x_in_PAb; rewrite -b_u_eq_opt_val.
+  move/(compl_slack_cond u_ge0 supp_u x_in_PAb) => x_in_PAbI.
+  by apply/proper0P; exists x.
+Qed.
+Canonical argmin_base base (P : {poly base}) c (b : bounded P c) := PolyBase (argmin_baseP b).
+
+(*Section Test.
+
+Variable (base : 'hpoly[R]_n) (P Q : {poly base}) (c : 'cV[R]_n).
+
+Set Printing All.
+Lemma foo & (infer (bounded P c)) : (argmin P c)%:poly_base = Q.
+Abort.
+End Test.*)
+
+Definition face_set base (P : {ppoly base}) : {set {ppoly base}} :=
+  [set Q : {ppoly base} | Q `<=` P].
+
+Lemma face_set_self base (P : {ppoly base}) : P \in (face_set P).
+Proof.
+rewrite inE; exact: poly_subset_refl.
+Qed.
+
+(* TO BE FIXED : why do we need extra parenthesis for `[poly0] *)
+Lemma poly0_face_set base (P : {ppoly base}) : (P = (`[poly0]) :> 'poly[R]_n) -> face_set P = set0.
+Proof.
+move => P_eq0; apply/setP => Q; rewrite !inE P_eq0; apply: negbTE.
+rewrite subset0N_proper; exact: ppolyP.
+Qed.
+
+Lemma faceP base (P Q : {ppoly base}) :
+  reflect (exists2 c, bounded P c & Q = (argmin P c) :> 'poly[R]_n) (Q \in face_set P).
+Proof.
+Set Printing Coercions.
+apply: (iffP idP); last first.
+- move => [c c_bounded].
+  rewrite inE => ->; exact: argmin_subset.
+- case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
+  + suff P_eq0: (P = (`[poly0]) :> 'poly[R]_n).
+    * move/poly0_face_set: (P_eq0) ->; by rewrite inE.
+    * move: (poly_base_subset P); rewrite base_eq0 subset0_equiv.
+      exact: quot_equivP.
+  + move: base_prop0 P Q; case: base => m A b base_prop0 P.
+    Admitted. (*/poly_baseP [I].
+    rewrite inE => /andP [Q_prop0 Q_sub_P].
+    pose e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
+    have e_ge0 : e >=m 0.
+    * apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.
+    have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
+    * move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].
+    pose c := A^T *m e.
+    have c_bounded : bounded '['P(A,b)] c.
+    * rewrite quotE; apply: dual_sol_bounded; try by rewrite quotE in base_prop0.
+    have c_bounded_P : infer (bounded P c).
+    * apply: (bounded_mono1 c_bounded); apply/andP; split;
+      [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
+    exists c; exists c_bounded_P; apply/val_inj => /=.
+    have c_argmin : argmin '['P(A,b)] c = '['P^=(A,b; I)].
+    * rewrite quotE; apply/quotP.
+      by apply: dual_sol_argmin; rewrite ?quotE in Q_prop0.
+    * rewrite -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
+      apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
+Qed.*)
+
+Lemma face_set_of_face base (P Q : {ppoly base}) :
+  Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
+Proof.
+rewrite inE => ?; apply/setP => Q'; rewrite !inE.
+Admitted.
+(*
+apply/andP/andP => [[? Q'_sub_Q] | [/andP [??] ?]];
+  split; try by done.
+apply/andP; split; [done | exact: (poly_subset_trans Q'_sub_Q)].
+Qed.*)
+
+Corollary face_set_subset base (P Q  : {ppoly base}) :
+  Q \in face_set P -> (face_set Q \subset face_set P).
+Proof.
+move/face_set_of_face ->; apply/subsetP => Q'.
+by rewrite inE => /andP [?].
+Qed.
+
+Lemma polyI_face_set base (P Q Q' : {ppoly base}) :
+  Q \in face_set P -> Q' \in face_set P -> (Q `&` Q') `>` (`[poly0]) -> (* again, extra parenthesis
+                                                                       * required, to be fixed *)
+    (Q `&` Q')%:poly_base \in face_set P.
+Proof.
+rewrite !inE => /andP [_ Q_sub_P] /andP [_ Q'_sub_P] ?.
+apply/andP; split; first by done.
+by move: (polyISS Q_sub_P Q'_sub_P); rewrite (quot_equivP (polyIxx _)).
+Qed.
+
+End Face.
 
 Section Face.
 
