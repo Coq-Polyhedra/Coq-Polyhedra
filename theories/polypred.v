@@ -278,6 +278,12 @@ Proof.
 exact: (PolyPred.in_polyI (PolyPred.class T)).
 Qed.
 
+Lemma polyI0 {P : T} : P `&` (`[poly0]) `=~` `[poly0].
+Admitted.
+
+Lemma poly0I {P : T} : (`[poly0]) `&` P `=~` `[poly0].
+Admitted.
+
 Lemma poly_subsetIl (P Q : T) : P `&` Q `<=` P.
 Proof. (* RK *)
 apply/poly_subsetP => x.
@@ -444,7 +450,7 @@ Proof. (* RK *)
 by rewrite -proper0N_equiv negbK.
 Qed.
 
-Lemma subset0_equiv (P : T) : (P `<=` `[poly0]) = (P `=~` `[poly0]).
+Lemma subset0_equiv {P : T} : (P `<=` `[poly0]) = (P `=~` `[poly0]).
 Proof. (* RK *)
 by apply/negb_inj; rewrite subset0N_proper equiv0N_proper.
 Qed.
@@ -567,6 +573,9 @@ move: (Q_unbounded '[ c, x]) => [y y_in_Q x_y_vdot_sineq].
 suff : ('[ c, x] <= '[ c, y]) by rewrite lerNgt x_y_vdot_sineq.
 by rewrite -in_hs; apply/sPhs/sQP.
 Qed.
+
+Lemma bounded_poly0 c : bounded (`[poly0]) c = false.
+Admitted.
 
 Definition opt_value (P : T) c (bounded_P : bounded P c) :=
   let x := xchoose (boundedPP bounded_P) in '[c,x].
@@ -1163,7 +1172,7 @@ Local Open Scope poly_scope.
 
 Context {R : realFieldType} {n : nat} {T : polyPredType R n}.
 
-Lemma quot_equivP (P Q : {quot T}) : (P `=~` Q) -> P = Q.
+Lemma quot_equivP {P Q : {quot T}} : (P `=~` Q) -> P = Q.
 Admitted.
 
 Lemma poly_subset_mono (P Q : T) : ('[P] `<=` '[Q]) = (P `<=` Q).
