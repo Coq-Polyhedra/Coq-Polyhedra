@@ -1241,6 +1241,7 @@ Definition quotE := (@poly_subset_mono, @poly_proper_mono, @bounded_mono,
                     @polyI_mono, @big_polyI_mono, @hs_mono, @line_mono,
                     @argmin_mono, @pointed_mono, @hp_mono, @slice_mono).
 
+(*
 Section ProperPolyhedron.
 
 Local Open Scope poly_scope.
@@ -1315,7 +1316,7 @@ Check bar.
 Lemma bar (b : fo := foo (P `>` `[polyØ])
 
 End Test.
-
+*)
 
 
 
