@@ -1021,7 +1021,7 @@ Definition mem_pred_sort (P : {quot T}) := (mem (\repr P)) : pred 'cV[R]_n.
 Canonical quot_predType := mkPredType mem_pred_sort.
 Canonical quot_choicePredType := @ChoicePredType 'cV[R]_n {quot T}.
 
-Lemma quotP (P Q : T) : '[P] = '[Q] <-> P `=~` Q.
+Lemma quotP {P Q : T} : '[P] = '[Q] <-> P `=~` Q.
 Admitted.
 
 (*
@@ -1041,6 +1041,8 @@ by rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ'); apply: choose_id; try ex
 Qed.*)
 
 End BasicProperties.
+
+Arguments quotP [R n T].
 
 Notation "''[' P  ]" := (class_of P) : poly_scope.
 
