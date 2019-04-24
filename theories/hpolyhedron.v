@@ -492,6 +492,12 @@ set t := (X in _ && X); suff ->: t by rewrite andbT.
 by apply/forall_inP => i; rewrite in_set0.
 Qed.
 
+Lemma polyEq0 (base: 'hpoly[R]_n) :
+  '['P^=(base; set0)] = '[base].
+Proof.
+apply/quotP; exact: hpolyEq0.
+Qed.
+
 Definition nth_hp {T : polyPredType R n} (base : 'hpoly[R]_n) :=
   let: 'P(A,b) as base := base in
   fun (i: 'I_#ineq base) => `[hp (row i A)^T & (b i 0)] : T.

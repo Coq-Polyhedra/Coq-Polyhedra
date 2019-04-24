@@ -264,11 +264,14 @@ case: (emptyP '[base]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
   have c_bounded_P : (bounded P c).
   + apply: (bounded_mono1 c_bounded); apply/andP; split;
       [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
-  have c_argmin: (argmin '['P^=(A,b; set0)] c)%:poly_base = Q.
-  + apply/val_inj. rewrite [LHS]/=. rewrite quotE; apply/quotP.
+  have c_argmin: argmin '['P(A,b)] c = Q.
+  + rewrite quotE; apply/quotP.
       by apply: dual_sol_argmin; rewrite {Q_sub_P}; rewrite ?quotE in Q_prop0.
-    * rewrite -c_argmin; symmetry; apply/quot_equivP; apply/subset_argmin; first by done.
-      apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
+  suff <- : (argmin P c)%:poly_base = Q by constructor.
+  apply: val_inj; rewrite 2!SubK.
+  rewrite -c_argmin; apply/quot_equivP.
+  apply/subset_argmin; first by done.
+  apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
 Qed.
 
 Lemma face_set_of_face base (P Q : {ppoly base}) :
