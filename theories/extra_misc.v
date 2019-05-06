@@ -240,6 +240,16 @@ Proof.
 by move => /andP [??]; rewrite ltrW //= andbT.
 Qed.
 
+Lemma lt_leW (x y z : R) : (x < y <= z) -> (x <= y <= z).
+Proof.
+by move => /andP [??]; rewrite ltrW //= andbT.
+Qed.
+
+Lemma ltW_le (x y z : R) : (x <= y < z) -> (x <= y <= z).
+Proof.
+by move => /andP [-> ?]; rewrite ltrW //=.
+Qed.
+
 End ExtraNum.
 
 Section ExtraBool.
