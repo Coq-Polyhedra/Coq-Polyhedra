@@ -1075,7 +1075,7 @@ Lemma polyEq_polyI {m : nat} {base: m.-base[R,n]} {I J : {set 'I_m}} :
   'P^=(base; I) `&` 'P^=(base; J) `=~` 'P^=(base; I :|: J).
 Admitted.
 
-Lemma polyEq_big_polyI (m : nat) (base: m.-base[R,n]) (I : finType) (P : pred I) F :
+Lemma polyEq_big_polyI {m : nat} {base: m.-base[R,n]} {I : finType} {P : pred I} {F} :
   ~~ pred0b P -> \polyI_(i | P i) 'P^=(base; F i) `=~` 'P^=(base; \bigcup_(i | P i) (F i)).
 Proof.
 move/pred0Pn => [i0 Pi0].
@@ -1087,7 +1087,7 @@ apply/andP; split; last first.
   move => j /bigcupP => [[i]] Pi; apply: polyEq_eq; exact: x_in.
 Qed.
 
-Lemma polyEq_of_polyEq (m : nat) (base base': m.-base[R,n]) I J : (* quite short proof after all! *)
+Lemma polyEq_of_polyEq (m : nat) (base : m.-base[R,n]) I J : (* quite short proof after all! *)
    exists K, 'P^=(baseEq base I; J) `=~` 'P^=(base; K).
 Proof.
 move: I J; case: base => [A b] I J.
@@ -1123,7 +1123,7 @@ apply/andP; split; apply/poly_subsetP => x x_in.
           * by rewrite !in_nth_hp mul_col_mx !col_mxEd.
 Qed.
 
-Lemma polyEq1 (m : nat) (base: m.-base) i :
+Lemma polyEq1 {m : nat} {base: m.-base} {i} :
   'P^=(base; [set i]) `=~` 'P(base) `&` nth_hp base i.
 Proof.
 Admitted.

@@ -35,7 +35,7 @@ Section PolyBase.
 Variable (R : realFieldType) (n : nat) (m : nat) (base : m.-base[R,n]).
 
 Definition has_base (P : 'poly[R]_n) :=
-  (P `>` `[poly0]) ==> [exists I, P == '['P^=(base; I)]].
+  (P `>` `[poly0]) ==> [exists I, P == 'P^=(base; I)].
 
 Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
@@ -55,13 +55,13 @@ by rewrite /has_base poly_properxx.
 Qed.
 Canonical poly0_base := PolyBase poly0_baseP.
 
-Lemma has_baseP {P} : reflect (P `>` (`[poly0]) -> exists I, P = '['P^=(base; I)]) (has_base P).
+Lemma has_baseP {P} : reflect (P `>` (`[poly0]) -> exists I, P = 'P^=(base; I)) (has_base P).
 Proof.
 by apply/(iffP implyP) => [H P_prop0 | H P_prop0]; move/(_ P_prop0): H => ?; apply/exists_eqP.
 Qed.
 
 Lemma polyEq_baseP I :
-  has_base '['P^=(base; I)].
+  has_base 'P^=(base; I).
 Proof.
 by apply/has_baseP; exists I.
 Qed.
@@ -81,7 +81,7 @@ Definition set_of_poly_base (P : poly_base) : option {set 'I_m} :=
     None.
 
 Definition set_of_poly_base_pinv (I : {set 'I_m})  : option poly_base :=
-  let P := '['P^=(base; I)]%:poly_base in
+  let P := 'P^=(base; I)%:poly_base in
   if set_of_poly_base P == Some I then Some P else None.
 
 Lemma set_of_poly_baseK :
@@ -138,7 +138,7 @@ Implicit Types (base : m.-base[R,n]) (P : 'poly[R]_n).
 
 CoInductive poly_base_spec base : {poly base} -> Type :=
 | PolyBase0 : poly_base_spec (`[poly0])%:poly_base
-| PolyBaseN0 I of ('['P^=(base; I)]%:poly_base `>` `[poly0]) : poly_base_spec '['P^=(base; I)]%:poly_base.
+| PolyBaseN0 I of ('P^=(base; I)%:poly_base `>` `[poly0]) : poly_base_spec 'P^=(base; I)%:poly_base.
 
 Lemma poly_baseP base (P : {poly base}) :
   poly_base_spec P.
@@ -155,9 +155,9 @@ Proof.
 Admitted.
 
 Lemma poly_base_subset base (P : {poly base}) :
-  P `<=` '['P(base)].
+  P `<=` 'P(base).
 Proof.
-case/poly_baseP: P => [|I _]; rewrite quotE; [exact: poly0_subset | exact: hpolyEq_antimono0].
+case/poly_baseP: P => [|I _]; [exact: poly0_subset | exact: polyEq_antimono0].
 Qed.
 
 (* BUG here: self_baseP cannot be made canonical because the structures of the terms
@@ -172,7 +172,7 @@ Lemma polyI_baseP base (P Q : {poly base}) : [P `&` Q has \base base].
 Proof.
 case/poly_baseP: P => [|I _]; case/poly_baseP: Q => [|J _];
   try by rewrite ?(quot_equivP polyI0) ?(quot_equivP poly0I) poly0_baseP.
-by rewrite polyEq_polyI polyEq_baseP.
+by rewrite (quot_equivP polyEq_polyI) polyEq_baseP.
 Qed.
 Canonical polyI_base base (P Q : {poly base}) := PolyBase (polyI_baseP P Q).
 
@@ -195,21 +195,22 @@ Lemma argmin_baseP (m : nat) (base : m.-base[R,n]) (P : {poly base}) c :
 Proof.
 (* we first suppose that flat_prop holds, ie this is the situation in which
  * P (here quantified as Q) would play the role of the base *)
-suff flat_prop: forall p (Q : p.-base), bounded '['P(Q)] c -> [(argmin '['P(Q)] c) has \base Q].
+suff flat_prop: forall p (Q : p.-base), bounded ('P(Q) : 'poly[R]_n) c -> [(argmin ('P(Q) : 'poly[R]_n) c) has \base Q].
 - apply/has_baseP; rewrite -bounded_argminN0.
   case/poly_baseP : P => [| I _]; first by rewrite bounded_poly0.
-  move => bounded_PI.
-  move/flat_prop/has_baseP: (bounded_PI); rewrite -bounded_argminN0.
+  rewrite /= (quot_equivP polyEq_flatten) => bounded_PI.
+  move/flat_prop/has_baseP: (bounded_PI). rewrite -bounded_argminN0.
   move => /(_ bounded_PI) => [[J] ->].
-  by move: (hpolyEq_of_hpolyEq base J) => [K] /quotP ->; exists K.
+  by move: (polyEq_of_polyEq (T := [polyPredType of 'poly[R]_n]) base J)
+    => [K] /quot_equivP ->; exists K. (* TODO: ugly to specify the polyPredType *)
 - (* now this is the classic proof of Schrijver *)
-  move => m' [A b]; rewrite !quotE => c_bounded.
+  move => m' [A b] c_bounded.
   move: (dual_opt_sol c_bounded) => [u] [u_ge0 c_eq b_u_eq_opt_val].
   rewrite {}c_eq in c_bounded b_u_eq_opt_val *. (* dual_opt_sol is badly specified
                                                  * we should use an inductive spec instead *)
   pose I := [set i | u i 0 > 0].
   have supp_u : forall i, (u i 0 > 0) = (i \in I) by move => i; rewrite inE.
-  apply/has_baseP; exists I; apply/quotP; apply/dual_sol_argmin => //.
+  apply/has_baseP; exists I; apply/quot_equivP; apply/dual_sol_argmin => //.
   move: (opt_point c_bounded) => [x] x_in_PAb; rewrite -b_u_eq_opt_val.
   move/(compl_slack_cond u_ge0 supp_u x_in_PAb) => x_in_PAbI.
   by apply/proper0P; exists x.
@@ -250,7 +251,8 @@ CoInductive face_spec m (base : m.-base) (P : {poly base}) : {poly base} -> Type
 Lemma faceP m (base : m.-base) (P Q : {poly base}) :
   Q \in face_set P -> face_spec P Q.
 Proof.
-case: (emptyP '['P(base)]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
+case: (emptyP ('P(base) : 'poly[R]_n))
+  => [/poly_equivP/quot_equivP base_eq0 | base_prop0].
 - suff ->: (P = (`[poly0]%:poly_base)).
   + rewrite poly0_face_set inE => /eqP ->.
     constructor.
@@ -258,7 +260,7 @@ case: (emptyP '['P(base)]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
     by move/quot_equivP/val_inj.
 - move: base_prop0 P Q; case: base => A b base_prop0 P Q.
   case/poly_baseP: Q; first constructor.
-  move => I; set Q := ('[ 'P^= (A, b; I) ]) %:poly_base.
+  move => I; set Q := ('P^= (A, b; I)) %:poly_base.
   rewrite inE => Q_prop0 Q_sub_P.
   pose e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
   have e_ge0 : e >=m 0.
@@ -266,14 +268,14 @@ case: (emptyP '['P(base)]) => [/poly_equivP/quot_equivP base_eq0| base_prop0].
     have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
   + move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].
   pose c := A^T *m e.
-  have c_bounded : bounded '['P(A,b)] c.
-  + rewrite quotE; apply: dual_sol_bounded; try by rewrite quotE in base_prop0.
+  have c_bounded : bounded ('P(A,b) : 'poly[R]_n) c.
+  + exact: dual_sol_bounded.
   have c_bounded_P : (bounded P c).
   + apply: (bounded_mono1 c_bounded); apply/andP; split;
       [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
-  have c_argmin: argmin '['P(A,b)] c = Q.
-  + rewrite quotE; apply/quotP.
-      by apply: dual_sol_argmin; rewrite {Q_sub_P}; rewrite ?quotE in Q_prop0.
+  have c_argmin: argmin 'P(A,b) c = Q.
+  + apply/quot_equivP.
+    by apply: dual_sol_argmin; rewrite {Q_sub_P}.
   suff <- : (argmin P c)%:poly_base = Q by constructor.
   apply: val_inj; rewrite 2!SubK -c_argmin.
   apply/quot_equivP; apply/subset_argmin; first by done.
@@ -299,9 +301,8 @@ Lemma polyI_face_set m (base : m.-base) (P Q Q' : {poly base}) :
   Q \in face_set P -> Q' \in face_set P -> (Q `&` Q')%:poly_base \in face_set P.
 Proof.
 rewrite !inE => Q_sub_P Q'_sub_P.
-by move: (polyISS Q_sub_P Q'_sub_P); rewrite (quot_equivP (polyIxx _)).
+by move: (polyISS Q_sub_P Q'_sub_P); rewrite (quot_equivP polyIxx).
 Qed.
-
 
 End Face.
 
@@ -310,7 +311,7 @@ Section Active.
 Variable (R : realFieldType) (n : nat).
 
 Definition active m (base : m.-base[R,n]) (P : {poly base}) :=
-  \bigcup_(I | P `<=` '['P^=(base; I)]) I.
+  \bigcup_(I | P `<=` 'P^=(base; I)) I.
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
 
@@ -329,22 +330,23 @@ exact: poly_base_proper0.
 Qed.*)
 
 Lemma repr_active m (base : m.-base) (P : {poly base}) :
-  P `>` (`[poly0]) -> P = '['P^=(base; {eq P})]%:poly_base.
+  P `>` (`[poly0]) -> P = 'P^=(base; {eq P})%:poly_base.
 Proof.
 case/poly_baseP: (P); first by rewrite poly_properxx.
 move => I _ _; apply: val_inj => /=.
-rewrite -polyEq_big_polyI; last by apply/pred0Pn; exists I; exact: poly_subset_refl.
+rewrite -(quot_equivP (polyEq_big_polyI _));
+  last by apply/pred0Pn; exists I; exact: poly_subset_refl.
 apply/quot_equivP/andP; split.
 - by apply/big_polyIsP.
 - by apply/big_poly_inf; exact: poly_subset_refl.
 Qed.
 
 Lemma activeP m (base : m.-base) (P : {poly base}) I :
-  (P `<=` '['P^=(base; I)]) = (I \subset {eq P}).
+  (P `<=` 'P^=(base; I)) = (I \subset {eq P}).
 Proof.
 apply/idP/idP; first exact: bigcup_sup.
-case: (poly_base_emptyP P) => [-> | /repr_active {2}->]; first by rewrite /= poly0_subset.
-by move/hpolyEq_antimono; rewrite quotE.
+case: (poly_base_emptyP P) => [-> | /repr_active {2}-> /=]; first by rewrite /= poly0_subset.
+by move/polyEq_antimono.
 Qed.
 
 Lemma repr_active0 m (base : m.-base) :
@@ -352,7 +354,7 @@ Lemma repr_active0 m (base : m.-base) :
 Admitted.
 
 Lemma active_polyEq m (base : m.-base) (I : {set 'I_m}) :
-  I \subset {eq '['P^=(base; I)]%:poly_base}.
+  I \subset {eq 'P^=(base; I)%:poly_base}.
 Proof.
 rewrite -activeP; exact: poly_subset_refl.
 Qed.
@@ -360,9 +362,9 @@ Qed.
 Lemma in_active m (base : m.-base) (P : {poly base}) i :
   (i \in {eq P}) = (P `<=` nth_hp base i).
 Proof.
-suff ->: (P `<=` nth_hp base i) =  (P `<=` '['P^=(base; [set i])]).
+suff ->: (P `<=` nth_hp base i) =  (P `<=` 'P^=(base; [set i])).
 - by rewrite activeP sub1set.
-- rewrite polyEq1.
+- rewrite (quot_equivP (polyEq1 _ _)).
 Admitted.
 
 Lemma poly_base_subset_eq m (base : m.-base) (P Q : {poly base}) :
@@ -378,17 +380,16 @@ case: (poly_base_emptyP P) => [-> | P_prop0].
 Qed.
 
 Lemma poly_base_extremeL m (base : m.-base[R,n]) (P : {poly base}) x y α :
-   x \in '['P(base)] -> y \in '['P(base)] ->
+   x \in ('P(base) : 'poly[R]_n) -> y \in ('P(base) : 'poly[R]_n) ->
      0 <= α < 1 -> (1-α) *: x + α *: y \in P -> x \in P.
 Proof.
-case: base P => [A b] P.
 set z : 'cV_n := _ + _.
-rewrite 2!inE => x_in_P.
-rewrite 2!inE => y_in_P α_01 z_in_P.
+move => x_in_P y_in_P α_01 z_in_P.
 have P_prop0 : (P `>` `[poly0]) by apply/proper0P; exists z.
-rewrite [P]repr_active //= in z_in_P *.
-rewrite 2!inE in z_in_P *; rewrite 2!inE.
-apply/in_hpolyEqP; split; first done.
+rewrite [P]repr_active /= in z_in_P *.
+(*rewrite 2!inE in z_in_P *; rewrite 2!inE.*)
+Set Printing Coercions.
+Check (@in_polyEqP _ _ [polyPredType of 'poly[R]_n] _ _ _ _ (is_true (x \in ('P^= (base; {eq P}))))). split; last done.
 move => j j_in_eq; apply: (hp_extremeL (y := y) (α := α));
   try by rewrite // !inE /= row_vdot;
          do ?[move/forallP: x_in_P | move/forallP: y_in_P].
