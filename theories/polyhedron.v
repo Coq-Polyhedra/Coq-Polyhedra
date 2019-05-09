@@ -103,6 +103,13 @@ Definition poly_base_finMixin := PcanFinMixin set_of_poly_baseK.
 Canonical poly_base_finType := Eval hnf in FinType poly_base poly_base_finMixin.
 Canonical poly_base_subFinType := [subFinType of poly_base].
 
+Lemma poly_of_baseP :
+  has_base 'P(base).
+Proof.
+by apply/has_baseP; exists set0; rewrite (quot_equivP polyEq0).
+Qed.
+Canonical poly_of_base_base := PolyBase (poly_of_baseP).
+
 End PolyBase.
 
 Notation "'{poly'  base '}'" := (poly_base base) : poly_scope.
@@ -134,6 +141,33 @@ Qed.
 Unset Printing Coercions.
 
 End Test.*)
+
+Section PolyhedronSpec.
+
+Variable (R : realFieldType) (n : nat).
+
+Variant poly_spec : 'poly[R]_n -> {m & m.-base[R,n]} -> Type :=
+  PolySpec (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+    poly_spec 'P(A,b) (Tagged _ (A, b)).
+
+Lemma polyP (P : 'poly[R]_n) :
+  poly_spec P (HPolyhedron.matrix_from_hpoly (\repr P)).
+Proof.
+case: {2}(\repr P) (erefl (\repr P)) => [m [A b]] /= H.
+suff {1}->: P = 'P(A,b) by rewrite H /=.
+Admitted.
+
+Variant take_base_spec : 'poly[R]_n -> {m & m.-base[R,n]} -> Type :=
+  TakeBaseSpec (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) :
+    take_base_spec 'P(A,b)%:poly_base (Tagged _ (A, b)).
+
+Lemma take_baseP (P : 'poly[R]_n) :
+  take_base_spec P (HPolyhedron.matrix_from_hpoly (\repr P)).
+Proof.
+by case: (polyP P).
+Qed.
+
+End PolyhedronSpec.
 
 Section HasBase.
 
@@ -194,6 +228,17 @@ End HasBase.
 Section Face.
 
 Variable (R : realFieldType) (n : nat).
+
+Definition face_set (P : 'poly[R]_n) :=
+  let: TakeBaseSpec _ A b := take_baseP P in
+  [fset (pval Q) | Q : {poly (A,b)} & (Q `<=` P)%PH]%fset.
+
+Goal forall P, P \in face_set P.
+move => P; rewrite /face_set /=.
+case/take_baseP : P => [m A b].
+apply/imfsetP; exists ('P(A,b)%:poly_base); last done.
+rewrite //= inE; exact: poly_subset_refl.
+Qed.
 
 Lemma argmin_baseP (m : nat) (base : m.-base[R,n]) (P : {poly base}) c :
   [(argmin P c) has \base base].

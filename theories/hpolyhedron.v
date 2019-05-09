@@ -278,7 +278,7 @@ End PolyPred.
 
 Module Import Exports.
 Canonical hpoly_eqType.
-Canonical hpoly_predType.
+(*Canonical hpoly_predType.*)
 Canonical hpoly_choiceType.
 Canonical hpoly_choicePredType.
 Canonical hpoly_polyPredType.
@@ -292,6 +292,14 @@ End Exports.
 End HPolyhedron.
 
 Export HPolyhedron.Exports.
+
+
+
+
+
+
+
+
 
 (*
 Section HPolyhedronSpec.
@@ -337,99 +345,6 @@ Proof.
 by rewrite reprK.
 Qed.
 End Test.*)
-
-Section Duality.
-
-Variable (R : realFieldType) (n : nat) (T : polyPredType R n).
-Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
-
-Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded ('P(A,b) : T) c) :
-    exists u, [/\ u >=m 0, c = A^T *m u & '[b, u] = opt_value H].
-Admitted.
-(*Proof.
-move: (H) => H0. (* duplicate assumption *)
-move: H; rewrite /bounded -Simplex.boundedP_cert.
-set u := Simplex.dual_opt_point _ _ _ .
-by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
-Qed.*)
-
-Variable (u : 'cV[R]_m).
-
-Lemma dual_sol_lower_bound :
-  u >=m 0 -> ('P(A, b) : T) `<=` `[hs (A^T *m u) & '[b,u]].
-Proof.
-move => u_ge0; apply/poly_subsetP => x x_in.
-by rewrite inE -vdot_mulmx vdotC; apply: vdot_lev;
-  last by rewrite in_poly_of_base in x_in.
-Qed.
-
-Lemma dual_sol_bounded :
-  (('P(A, b) : T) `>` `[poly0]) -> u >=m 0 -> bounded ('P(A,b) : T) (A^T *m u).
-Proof.
-move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
-exists '[b,u]; exact: dual_sol_lower_bound.
-Qed.
-
-Hypothesis u_ge0 : u >=m 0.
-Variable (I : {set 'I_m}).
-Hypothesis u_supp : forall i, (u i 0 > 0) = (i \in I).
-
-Lemma compl_slack_cond x :
-  x \in ('P(A,b) : T) -> reflect ('[A^T *m u, x] = '[b, u]) (x \in ('P^=(A, b; I) : T)).
-Admitted.
-
-Lemma dual_sol_argmin : (('P^=(A, b; I) : T) `>` `[poly0]) -> argmin ('P(A,b) : T) (A^T *m u) `=~` 'P^=(A, b; I).
-Proof.
-move => PI_non_empty.
-have P_non_empty : (('P(A,b) : T) `>` `[poly0]).
-- apply: (poly_proper_subset PI_non_empty); exact: polyEq_antimono0.
-move/proper0P : PI_non_empty => [x x_in_PI].
-set c := _ *m _; have c_bounded := (dual_sol_bounded P_non_empty u_ge0).
-rewrite argmin_polyI.
-suff ->: opt_value c_bounded = '[b,u].
-- apply/poly_equivP => y; rewrite inE.
-  apply/andP/idP => [[y_in_P c_y_eq]| y_in_PI].
-  + apply/compl_slack_cond => //.
-    by rewrite ?inE in c_y_eq; apply/eqP.
-  + have y_in_P: y \in ('P(A,b) : T).
-    * move: y y_in_PI; apply/poly_subsetP; exact: polyEq_antimono0.
-    split; first by done.
-    by rewrite inE; apply/eqP/compl_slack_cond.
-- have x_in_P : x \in ('P(A,b) : T).
-  + move: x x_in_PI; apply/poly_subsetP; exact: polyEq_antimono0.
-  apply/eqP; rewrite eqr_le; apply/andP; split.
-  - have <- : '[c,x] = '[b,u] by apply/compl_slack_cond.
-    move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound c_bounded).
-    by rewrite inE.
-  - move: (opt_point c_bounded) => [y y_in_P <-].
-    move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound u_ge0).
-    by rewrite inE.
-Qed.
-
-
-(*
-Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :
-  u >=m 0 -> x \in 'P(A,b) ->
-    let c := A^T *m u in
-      reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
-              ('[c,x] == '[b, u]).
-Proof.
-move => u_ge0 x_in_P /=.
-have u_in_dual : u \in Simplex.dual_polyhedron A (A^T *m u)
- by rewrite inE eq_refl.
-rewrite -subr_eq0 (Simplex.compl_slack_cond_duality_gap_equiv x_in_P u_in_dual).
-apply/(iffP idP).
-(* stupid proof, because of the fact that compl_slack_cond has not the right formulation (and compl_slack_condP doesn't help) *)
-- move => Hcsc i u_i_gt0.
-  move/forallP/(_ i): Hcsc; rewrite inE.
-  by move/lt0r_neq0/negbTE: u_i_gt0 => -> /= /eqP.
-- move => Hcsc; apply/forallP => i; rewrite -[X in X || _]negbK.
-  have ->: (u i 0 != 0) = (u i 0 > 0)
-      by rewrite lt0r; move/gev0P/(_ i): u_ge0 ->; rewrite andbT.
-  by rewrite -implybE; apply/implyP; rewrite inE; move/Hcsc ->.
-Qed.*)
-
-End Duality.
 
 (*
 Section FeasibleBasicPoints. (* RK *)
