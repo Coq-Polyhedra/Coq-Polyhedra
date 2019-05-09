@@ -276,30 +276,30 @@ Lemma foo & (infer (bounded P c)) : (argmin P c)%:poly_base = Q.
 Abort.
 End Test.*)
 
-Definition face_set m (base : m.-base[R,n]) (P : {poly base}) : {set {poly base}} :=
+(*Definition face_set m (base : m.-base[R,n]) (P : {poly base}) : {set {poly base}} :=
   [set Q : {poly base} | Q `<=` P].
 
 Lemma face_set_self m (base : m.-base) (P : {poly base}) : P \in (face_set P).
 Proof.
 rewrite inE; exact: poly_subset_refl.
-Qed.
+Qed.*)
 
 (* TO BE FIXED : why do we need extra parenthesis for `[poly0] *)
-Lemma poly0_face_set m (base : m.-base) :
+(*Lemma poly0_face_set m (base : m.-base) :
   face_set (`[poly0]%:poly_base) = [set `[poly0]%:poly_base] :> {set {poly base}}.
 Proof.
 apply/setP => P; rewrite !inE /=.
 rewrite subset0_equiv; apply/idP/eqP => [? | -> /=].
 - by apply/val_inj/quot_equivP.
 - exact: poly_equiv_refl.
-Qed.
+Qed.*)
 
 CoInductive face_spec m (base : m.-base) (P : {poly base}) : {poly base} -> Type :=
 | EmptyFace : face_spec P (`[poly0])%:poly_base
 | ArgMin c of (bounded P c) : face_spec P (argmin P c)%:poly_base.
 
 Lemma faceP m (base : m.-base) (P Q : {poly base}) :
-  Q \in face_set P -> face_spec P Q.
+  Q `<=` P -> face_spec P Q.
 Proof.
 case: (emptyP ('P(base) : 'poly[R]_n))
   => [/poly_equivP/quot_equivP base_eq0 | base_prop0].
@@ -331,6 +331,12 @@ case: (emptyP ('P(base) : 'poly[R]_n))
   apply/quot_equivP; apply/subset_argmin; first by done.
   apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
 Qed.
+
+
+Lemma face_setE (m : nat) (base : m.-base[R,n]) (P : {poly base}) :
+  face_set P = [fset (pval Q) | Q : {poly base} & (Q `<=` P)%PH]%fset.
+Admitted.
+
 
 Lemma face_set_of_face m (base : m.-base) (P Q : {poly base}) :
   Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
