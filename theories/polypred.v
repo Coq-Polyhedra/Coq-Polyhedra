@@ -120,14 +120,14 @@ Notation xclass := (class : class_of xT).
 Definition eqType := @Equality.Pack cT xclass xT.
 Definition choiceType := @Choice.Pack cT xclass xT.
 Definition pred_of_type := @mkPredType _ cT (mem_pred_sort xclass).
-Definition pred_of (P : cT) : pred_sort _ := (mem_pred_sort xclass P).
+(*Definition pred_of (P : cT) : pred_sort _ := (mem_pred_sort xclass P).*)
 End ClassDef.
 
 Module Import Exports.
 Coercion base : class_of >-> Choice.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
-Coercion pred_of : sort >-> pred_sort.
+(*Coercion pred_of : sort >-> pred_sort.*)
 Canonical eqType.
 Canonical choiceType.
 Canonical pred_of_type.
@@ -190,7 +190,7 @@ Definition pack b0 (m0 : mixin_of (@ChoicePred.Pack 'cV[R]_n T b0)) :=
 Definition eqType := @Equality.Pack cT xclass xT.
 Definition choiceType := @Choice.Pack cT xclass xT.
 Definition choicePredType := @ChoicePred.Pack 'cV[R]_n cT xclass.
-Definition pred_of_type := @mkPredType _ cT (ChoicePred.mem_pred_sort xclass).
+(*Definition pred_of_type := @mkPredType _ cT (ChoicePred.mem_pred_sort xclass).*)
 Definition pred_of (P : cT) : (pred_sort _) := (ChoicePred.mem_pred_sort xclass P).
 End ClassDef.
 
@@ -205,7 +205,7 @@ Coercion pred_of_type : type >-> predType.
 Coercion choicePredType : type >-> ChoicePred.type.*)
 Canonical eqType.
 Canonical choiceType.
-Canonical pred_of_type.
+(*Canonical pred_of_type.*)
 Canonical choicePredType.
 Notation polyPredType R n := (@type _ n (Phant R)).
 Notation polyPredMixin := mixin_of.
@@ -828,13 +828,13 @@ Proof.
 exact: PolyPred.convP.
 Qed.
 
-Lemma convexP P (V : {fset 'cV[R]_n}) :
+Lemma convexP (P : T) (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> conv V `<=` P.
 Proof.
 exact: PolyPred.convexP.
 Qed.
 
-Lemma convexP2 P (v w : 'cV[R]_n) :
+Lemma convexP2 (P : T) (v w : 'cV[R]_n) :
   v \in P -> w \in P -> conv ([fset v; w]%fset) `<=` P.
 Admitted.
 
@@ -1131,7 +1131,7 @@ Admitted.
 by apply/forall_inP/idP => [/(_ _ (set11 i)) | ? j /set1P ->].
 Qed.*)
 
-Lemma slice_polyEq c d (m : nat) (base: m.-base) I :
+Lemma slice_polyEq {c} {d} {m : nat} {base: m.-base} {I} :
   slice c d 'P^=(base; I) `=~` 'P^=(slice_base c d base; slice_set I).
 Admitted.
 
@@ -1390,7 +1390,7 @@ Module Import Exports.
 Canonical quot_subType.
 Canonical quot_eqType.
 Canonical quot_choiceType.
-Canonical quot_predType.
+(*Canonical quot_predType.*)
 Canonical quot_choicePredType.
 Canonical quot_polyPredType.
 Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0).

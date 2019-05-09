@@ -111,7 +111,7 @@ Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_sco
 
 (*Section Test.
 
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
+Variable (R : realFieldType) (n m : nat) (base : m.-base[R,n]).
 
 Variables (P Q : {poly base}) (Q' : 'poly[R]_n) (x : 'cV[R]_n).
 
@@ -124,6 +124,11 @@ Check (P : 'poly[R]_n).
 Goal P `<=` Q' -> forall x, x \in P -> x \in Q'.
 move/poly_subsetP => H z z_in_P.
 by move/H: z_in_P.
+Qed.
+
+Goal (P = Q' :> 'poly[R]_n) -> x \in P -> x \in Q'.
+move <-.
+done.
 Qed.
 
 Unset Printing Coercions.
@@ -364,7 +369,7 @@ Lemma in_active m (base : m.-base) (P : {poly base}) i :
 Proof.
 suff ->: (P `<=` nth_hp base i) =  (P `<=` 'P^=(base; [set i])).
 - by rewrite activeP sub1set.
-- rewrite (quot_equivP (polyEq1 _ _)).
+- rewrite (quot_equivP polyEq1).
 Admitted.
 
 Lemma poly_base_subset_eq m (base : m.-base) (P Q : {poly base}) :
@@ -380,44 +385,51 @@ case: (poly_base_emptyP P) => [-> | P_prop0].
 Qed.
 
 Lemma poly_base_extremeL m (base : m.-base[R,n]) (P : {poly base}) x y α :
-   x \in ('P(base) : 'poly[R]_n) -> y \in ('P(base) : 'poly[R]_n) ->
-     0 <= α < 1 -> (1-α) *: x + α *: y \in P -> x \in P.
+  x \in ('P(base) : 'poly[R]_n) -> y \in ('P(base) : 'poly[R]_n) ->
+    0 <= α < 1 -> (1-α) *: x + α *: y \in P -> x \in P.
 Proof.
+case: base P x y α => [A b] P x y α.
 set z : 'cV_n := _ + _.
 move => x_in_P y_in_P α_01 z_in_P.
 have P_prop0 : (P `>` `[poly0]) by apply/proper0P; exists z.
-rewrite [P]repr_active /= in z_in_P *.
-(*rewrite 2!inE in z_in_P *; rewrite 2!inE.*)
-Set Printing Coercions.
-Check (@in_polyEqP _ _ [polyPredType of 'poly[R]_n] _ _ _ _ (is_true (x \in ('P^= (base; {eq P}))))). split; last done.
-move => j j_in_eq; apply: (hp_extremeL (y := y) (α := α));
-  try by rewrite // !inE /= row_vdot;
-         do ?[move/forallP: x_in_P | move/forallP: y_in_P].
-by move/hpolyEq_eq/(_ j_in_eq) : z_in_P.
+rewrite [P]repr_active // in z_in_P *.
+apply/in_polyEqP; split; last done.
+move => j j_in_eq.
+apply: (hp_extremeL (y := y) (α := α)); try by done.
+- rewrite in_poly_of_base in x_in_P.
+  rewrite // !inE /= row_vdot.
+  by move/forallP: x_in_P.
+- rewrite in_poly_of_base in y_in_P.
+  rewrite // !inE /= row_vdot.
+  by move/forallP: y_in_P.
+by move/polyEq_eq/(_ j_in_eq) : z_in_P.
 Qed.
 
 Lemma poly_base_extremeR m (base : m.-base[R,n]) (P : {poly base}) x y α :
-   x \in '['P(base)] -> y \in '['P(base)] ->
-     0 < α <= 1 -> (1-α) *: x + α *: y \in P -> y \in P.
+  x \in ('P(base) : 'poly[R]_n) -> y \in ('P(base) : 'poly[R]_n) ->
+    0 < α <= 1 -> (1-α) *: x + α *: y \in P -> y \in P.
 Proof.
-case: base P => [A b] P.
+case: base P x y α => [A b] P x y α.
 set z : 'cV_n := _ + _.
-rewrite 2!inE => x_in_P.
-rewrite 2!inE => y_in_P α_01 z_in_P.
+move => x_in_P y_in_P α_01 z_in_P.
 have P_prop0 : (P `>` `[poly0]) by apply/proper0P; exists z.
 rewrite [P]repr_active // in z_in_P *.
-rewrite 2!inE in z_in_P *; rewrite 2!inE.
-apply/in_hpolyEqP; split; first done.
-move => j j_in_eq; apply: (hp_extremeR (x := x) (α := α));
-  try by rewrite // !inE /= row_vdot;
-         do ?[move/forallP: x_in_P | move/forallP: y_in_P].
-by move/hpolyEq_eq/(_ j_in_eq) : z_in_P.
+apply/in_polyEqP; split; last done.
+move => j j_in_eq.
+apply: (hp_extremeR (x := x) (α := α)); try by done.
+- rewrite in_poly_of_base in x_in_P.
+  rewrite // !inE /= row_vdot.
+  by move/forallP: x_in_P.
+- rewrite in_poly_of_base in y_in_P.
+  rewrite // !inE /= row_vdot.
+  by move/forallP: y_in_P.
+by move/polyEq_eq/(_ j_in_eq) : z_in_P.
 Qed.
 
 Lemma polyI_eq m (base : m.-base) (P Q : {poly base}) :
   {eq P} :|: {eq Q} \subset {eq (P `&` Q)%:poly_base}.
 Proof.
-rewrite -activeP -polyEq_polyI.
+rewrite -activeP -(quot_equivP polyEq_polyI).
 by apply: polyISS; rewrite activeP.
 Qed.
 
@@ -426,7 +438,7 @@ Lemma slice_poly_baseP (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly base}
 Proof.
 case/poly_baseP: P => [ | I _]; first by rewrite (quot_equivP slice0); exact: poly0_baseP.
 apply/has_baseP => _.
-by exists (slice_set I); rewrite -slice_polyEq quotE.
+by exists (slice_set I); rewrite -(quot_equivP slice_polyEq).
 Qed.
 Canonical slice_poly_base (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly base})
           := PolyBase (slice_poly_baseP c d P).
@@ -434,11 +446,10 @@ Canonical slice_poly_base (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly ba
 Lemma active_slice (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly base}) :
       (slice_set {eq P}) \subset {eq (slice c d P)%:poly_base}.
 Proof.
-rewrite -activeP -slice_polyEq.
+rewrite -activeP -(quot_equivP slice_polyEq).
 case: (poly_base_emptyP P) => [-> /= | /= ].
 - rewrite {1}(quot_equivP slice0); exact: poly0_subset.
 - move/repr_active => {1}->.
-  rewrite {1}[X in X `<=` _]quotE.
   exact: poly_subset_refl.
 Qed.
 
