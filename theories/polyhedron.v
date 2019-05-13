@@ -20,16 +20,6 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
-(*
-(* Enrico's trick for tc resolution in have *)
-Notation "!! x" := (ltac:(refine x)) (at level 100, only parsing).
-(* infer class to help typeclass inference on the fly *)
-Class infer (P : Prop) := Infer : P.
-Hint Mode infer ! : typeclass_instances.
-Hint Extern 0 (infer _) => (exact) : typeclass_instances.
-Lemma inferP (P : Prop) : P -> infer P. Proof. by []. Qed.
- *)
-
 Section PolyBase.
 
 Variable (R : realFieldType) (n : nat) (m : nat) (base : m.-base[R,n]).
@@ -69,9 +59,6 @@ Canonical polyEq_base I := PolyBase (polyEq_baseP I).
 
 Definition poly_base_of (x : poly_base) & (phantom 'poly[R]_n x) : poly_base := x.
 Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
-
-(*Variable (P : poly_base).
-Check (implyP (poly_base_base P)).*)
 
 Definition set_of_poly_base (P : poly_base) : option {set 'I_m} :=
   if emptyP P is NonEmpty H then
@@ -228,14 +215,6 @@ by rewrite (quot_equivP polyEq_polyI) polyEq_baseP.
 Qed.
 Canonical polyI_base base (P Q : {poly base}) := PolyBase (polyI_baseP P Q).
 
-(*Lemma self_base (base : 'hpoly[R]_n) :
-
-Lemma repr_base (P : 'poly[R]_n) :
-  [P has \base (\repr P)].
-Proof.
-case/hpolyP: P => m A b; exact: self_base.
-Qed.*)
-
 End HasBase.
 
 Section Active.
@@ -340,6 +319,8 @@ Qed.
 
 End Active.
 
+Notation "'{eq'  P }" := (active P) : poly_scope.
+
 Section Face.
 
 Variable (R : realFieldType) (n : nat).
@@ -380,42 +361,42 @@ Lemma foo & (infer (bounded P c)) : (argmin P c)%:poly_base = Q.
 Abort.
 End Test.*)
 
-(*Definition face_set m (base : m.-base[R,n]) (P : {poly base}) : {set {poly base}} :=
+Definition face_set m (base : m.-base[R,n]) (P : {poly base}) : {set {poly base}} :=
   [set Q : {poly base} | Q `<=` P].
 
 Lemma face_set_self m (base : m.-base) (P : {poly base}) : P \in (face_set P).
 Proof.
 rewrite inE; exact: poly_subset_refl.
-Qed.*)
+Qed.
 
 (* TO BE FIXED : why do we need extra parenthesis for `[poly0] *)
-(*Lemma poly0_face_set m (base : m.-base) :
+Lemma poly0_face_set m (base : m.-base) :
   face_set (`[poly0]%:poly_base) = [set `[poly0]%:poly_base] :> {set {poly base}}.
 Proof.
 apply/setP => P; rewrite !inE /=.
 rewrite subset0_equiv; apply/idP/eqP => [? | -> /=].
 - by apply/val_inj/quot_equivP.
 - exact: poly_equiv_refl.
-Qed.*)
+Qed.
 
 CoInductive face_spec m (base : m.-base) (P : {poly base}) : {poly base} -> Type :=
 | EmptyFace : face_spec P (`[poly0])%:poly_base
 | ArgMin c of (bounded P c) : face_spec P (argmin P c)%:poly_base.
 
 Lemma faceP m (base : m.-base) (P Q : {poly base}) :
-  Q `<=` P -> face_spec P Q.
+  Q \in face_set P -> face_spec P Q.
 Proof.
 case: (emptyP ('P(base) : 'poly[R]_n))
   => [/poly_equivP/quot_equivP base_eq0 | base_prop0].
 - suff ->: (P = (`[poly0]%:poly_base)).
-  + rewrite subset0_equiv => /quot_equivP.
+  + rewrite inE subset0_equiv => /quot_equivP.
     move/val_inj ->; constructor.
     move: (poly_base_subset P); rewrite base_eq0 //=.
     by rewrite subset0_equiv => /quot_equivP/val_inj.
 - move: base_prop0 P Q; case: base => A b base_prop0 P Q.
   case/poly_baseP: Q; first constructor.
   move => I; set Q := ('P^= (A, b; I)) %:poly_base.
-  move => Q_prop0 Q_sub_P.
+  rewrite inE; move => Q_prop0 Q_sub_P.
   pose e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
   have e_ge0 : e >=m 0.
   + apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.
@@ -436,6 +417,29 @@ case: (emptyP ('P(base) : 'poly[R]_n))
   apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
 Qed.
 
+Lemma face_set_of_face m (base : m.-base) (P Q : {poly base}) :
+  Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
+Proof.
+rewrite inE => Q_sub_P; apply/setP => Q'; rewrite !inE.
+apply/idP/andP => [Q'_sub_Q | [_?]]; last by done.
+by split; try exact: (poly_subset_trans Q'_sub_Q).
+Qed.
+
+Corollary face_set_subset m (base : m.-base) (P Q  : {poly base}) :
+  Q \in face_set P -> (face_set Q \subset face_set P).
+Proof.
+move/face_set_of_face ->; apply/subsetP => Q'.
+by rewrite inE => /andP [?].
+Qed.
+
+Lemma polyI_face_set m (base : m.-base) (P Q Q' : {poly base}) :
+  Q \in face_set P -> Q' \in face_set P -> (Q `&` Q')%:poly_base \in face_set P.
+Proof.
+rewrite !inE => Q_sub_P Q'_sub_P.
+by move: (polyISS Q_sub_P Q'_sub_P); rewrite (quot_equivP polyIxx).
+Qed.
+
+(*
 Definition face_set (P : 'poly[R]_n) :=
   let: ChangeBaseSpec _ A b P' _ := change_baseP P in
   [fset (pval Q) | Q : {poly (A,b)} & (Q `<=` P')%PH]%fset.
@@ -443,11 +447,12 @@ Definition face_set (P : 'poly[R]_n) :=
 Lemma face_setE (m : nat) (base : m.-base[R,n]) (P : {poly base}) :
   face_set P = [fset (pval Q) | Q : {poly base} & (Q `<=` P)%PH]%fset.
 Proof.
-apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP => Q.
+apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP => Q0.
+(* TODO: shorten the proof, both parts are almost the same *)
 - rewrite /face_set.
   case: (change_baseP P) => [m' A b] P' P_eq_P'.
-  move/imfsetP => [Q'] /= Q'_sub_P ->.
-  case/faceP : Q'_sub_P.
+  move/imfsetP => [Q] /= Q_sub_P ->.
+  case/pb_faceP : Q_sub_P.
   + apply/in_imfset; rewrite /=.
     exact: poly0_subset.
   + move => c c_bounded.
@@ -456,8 +461,8 @@ apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP => Q.
     * by rewrite /= P_eq_P'.
 - rewrite /face_set.
   case: (change_baseP P) => [m' A b] P' P_eq_P'.
-  move/imfsetP => [Q'] /= Q'_sub_P ->.
-  case/faceP : Q'_sub_P.
+  move/imfsetP => [Q] /= Q_sub_P ->.
+  case/pb_faceP : Q_sub_P.
   + apply/in_imfset; rewrite /=.
     exact: poly0_subset.
   + move => c c_bounded.
@@ -477,6 +482,18 @@ move/imfsetP => [Q'] /= Q'_sub_P ->.
 by constructor.
 Qed.
 
+CoInductive face_spec (P : 'poly[R]_n) : 'poly[R]_n -> Prop :=
+| EmptyFace : face_spec P (`[poly0])
+| ArgMin c of (bounded P c) : face_spec P (argmin P c).
+
+Lemma faceP (P Q : 'poly[R]_n) :
+  Q \in face_set P -> face_spec P Q.
+Proof.
+case/take_baseP : P => m A b P.
+case/face_setP => ? /pb_faceP.
+by case => [|??]; constructor.
+Qed.
+
 Lemma poly_base_in_face_set (m : nat) (base : m.-base[R,n]) (P Q : {poly base}) :
   ((Q : 'poly[R]_n) \in face_set P) = (Q `<=` P).
 Proof.
@@ -486,8 +503,7 @@ Qed.
 Lemma face_set_self (P : 'poly[R]_n) : P \in (face_set P).
 Proof.
 case/take_baseP : P => [m A b] P.
-rewrite face_setE; apply/in_imfset => /=.
-exact: poly_subset_refl.
+by rewrite poly_base_in_face_set poly_subset_refl.
 Qed.
 
 Lemma face_set_of_face (P Q : 'poly[R]_n) :
@@ -520,6 +536,7 @@ case/face_setP => [Q'0] Q'0_sub_P.
 rewrite face_setE; apply/imfsetP; exists (Q0 `&` Q'0)%:poly_base => //=.
 by move: (polyISS Q0_sub_P Q'0_sub_P); rewrite (quot_equivP polyIxx).
 Qed.
+ *)
 
 End Face.
 
@@ -569,8 +586,8 @@ apply: (hp_extremeR (x := x) (α := α)); try by done.
 by move/polyEq_eq/(_ j_in_eq) : z_in_P.
 Qed.
 
-Definition relint (P : 'poly[R]_n) := (* TODO: fix the additional coercion to 'poly[R]_n *)
-  [predI P & [pred x | [forall Q : face_set P, (val Q `<` P) ==> (x \notin (val Q : 'poly[R]_n))]]].
+Definition relint m (base : m.-base[R,n]) (P : {poly base}) :=
+  [predI P & [pred x | [forall Q : {poly base}, (Q `<` P) ==> (x \notin Q)]]].
 
 Lemma in_relintP m (base : m.-base) (P : {poly base}) x :
   reflect (x \in P /\ (forall Q : {poly base}, (Q `<` P) -> x \notin Q)) (x \in relint P).
@@ -596,8 +613,17 @@ have : z \in (conv ([fset x; y]%fset) : 'poly[R]_n).
   by apply/poly_subsetP/convexP2.
 - move => Q Q_prop_P.
   move/in_relintP: (y_in_relint) => [_ /(_ _ Q_prop_P)].
-  apply: contra; apply/poly_base_extremeR;
-    try by [apply/(poly_subsetP (poly_base_subset P)) | done ].
+  apply: contra.
+  have Q_face : Q \in face_set P by rewrite inE poly_properW.
+  move/faceP : Q_face => [Q_eq0 | c c_bounded].
+  + by rewrite /= inE in Q_eq0.
+  + rewrite /= argmin_polyI // inE => /andP [_ z_in_hp].
+    rewrite inE y_in_P /=.
+    apply: (hp_extremeR (x := x) (α := α)); try done.
+    * move: (x) x_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
+    * move: (y) y_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
 Qed.
 
 Lemma relint_open_convexR m (base : m.-base) (P : {poly base}) x y α :
@@ -612,13 +638,89 @@ have : z \in (conv ([fset x; y]%fset) : 'poly[R]_n).
   by apply/poly_subsetP/convexP2.
 - move => Q Q_prop_P.
   move/in_relintP: (x_in_relint) => [_ /(_ _ Q_prop_P)].
-  apply: contra; apply/poly_base_extremeL;
-    try by [apply/(poly_subsetP (poly_base_subset P)) | done ].
+  apply: contra.
+  have Q_face : Q \in face_set P by rewrite inE poly_properW.
+  move/faceP : Q_face => [Q_eq0 | c c_bounded].
+  + by rewrite /= inE in Q_eq0.
+  + rewrite /= argmin_polyI // inE => /andP [_ z_in_hp].
+    rewrite inE x_in_P /=.
+    apply: (hp_extremeL (y := y) (α := α)); try done.
+    * move: (x) x_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
+    * move: (y) y_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
 Qed.
 
-End Active.
+(*Definition relint (P : 'poly[R]_n) :=
+  (* TODO: fix the additional coercion to 'poly[R]_n *)
+  [predI P & [pred x | [forall Q : face_set P, (val Q `<` P) ==> (x \notin (val Q : 'poly[R]_n))]]].
 
-Notation "'{eq'  P }" := (active P) : poly_scope.
+Lemma in_relintP (P : 'poly[R]_n) x :
+  reflect (x \in P /\ (forall Q : 'poly[R]_n, Q \in face_set P -> (Q `<` P) -> x \notin Q)) (x \in relint P).
+Admitted.
+
+Lemma notin_relintP m (base : m.-base) (P Q : {poly base}) x :
+  Q `<` P -> x \in Q -> x \notin relint P.
+Admitted.
+
+
+Lemma relint_subset (P : 'poly[R]_n) :
+  {subset (relint P) <= P}.
+Proof.
+by move => x /in_relintP [].
+Qed.
+
+Lemma relint_open_convexL (P : 'poly[R]_n) x y α :
+  x \in P -> y \in relint P -> 0 < α <= 1 -> (1-α) *: x + α *: y \in relint P.
+Proof.
+set z : 'cV_n := _ + _.
+move => x_in_P y_in_relint α_01.
+have y_in_P: y \in P by rewrite relint_subset.
+apply/in_relintP; split.
+have : z \in (conv ([fset x; y]%fset) : 'poly[R]_n).
+- apply/in_segmP; exists α; [by apply/lt_leW | done].
+  by apply/poly_subsetP/convexP2.
+- move => Q Q_face Q_prop.
+  move/in_relintP: (y_in_relint) => [_ /(_ _ Q_face Q_prop)].
+  apply: contra.
+  move/faceP : Q_face => [Q_eq0 | c c_bounded].
+  + by rewrite inE in Q_eq0.
+  + rewrite argmin_polyI // inE => /andP [_ z_in_hp].
+    rewrite inE y_in_P /=.
+    apply: (hp_extremeR (x := x) (α := α)); try done.
+    * move: (x) x_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
+    * move: (y) y_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
+Qed.
+
+Lemma relint_open_convexR (P : 'poly[R]_n) x y α :
+  x \in relint P -> y \in P -> 0 <= α < 1 -> (1-α) *: x + α *: y \in relint P.
+Proof.
+set z : 'cV_n := _ + _.
+move => x_in_relint y_in_P α_01.
+have x_in_P: x \in P by rewrite relint_subset.
+apply/in_relintP; split.
+have : z \in (conv ([fset x; y]%fset) : 'poly[R]_n).
+- apply/in_segmP; exists α; [by apply/ltW_le | done].
+  by apply/poly_subsetP/convexP2.
+- move => Q Q_face Q_prop.
+  move/in_relintP: (x_in_relint) => [_ /(_ _ Q_face Q_prop)].
+  apply: contra.
+  move/faceP : Q_face => [Q_eq0 | c c_bounded].
+  + by rewrite inE in Q_eq0.
+  + rewrite argmin_polyI // inE => /andP [_ z_in_hp].
+    rewrite inE x_in_P /=.
+    apply: (hp_extremeL (y := y) (α := α)); try done.
+    * move: (x) x_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
+    * move: (y) y_in_P; apply/poly_subsetP.
+      exact: opt_value_lower_bound.
+Qed.
+ *)
+
+
+End Relint.
 
 Section AffineHull.
 
