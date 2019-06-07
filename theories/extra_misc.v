@@ -93,7 +93,6 @@ elim: n => [ | n IHn]; first by done.
 by rewrite iterS IHn.
 Qed.
 
-
 Lemma card_sub_ord (k : nat) (P : 'I_k -> bool) :
   (#|[set l : 'I_k | P l]| <= k)%N.
 Proof.
@@ -101,6 +100,11 @@ Proof.
   suff: (#|S| <= #|'I_k|)%N.
     - by rewrite card_ord.
   exact: max_card.
+Qed.
+
+Lemma setT_proper (T : finType) (S : {set T}) : (setT \proper S) = false.
+Proof.
+by apply/negbTE/negP; move/properP => [_ [i _]]; rewrite inE.
 Qed.
 
 End Basic.

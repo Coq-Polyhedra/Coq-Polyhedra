@@ -535,12 +535,29 @@ rewrite /pick_point; case: proper0P => [? _ | _] //; exact: xchooseP.
 Qed.
 
 Lemma poly_properP {P Q : T} :
+  (* should {subset P <= Q} to (P `<=` Q) *)
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
 apply: (iffP andP) =>
   [[/poly_subsetP ? /poly_subsetPn [x ??]] | [? [x ??]] ].
 - by split; [ done | exists x].
 - by split; [ apply/poly_subsetP | apply/poly_subsetPn; exists x].
+Qed.
+
+Lemma poly_subset_anti {P Q : T} :
+  (P `<=` Q) -> (Q `<=` P) -> (P `=~` Q).
+Admitted.
+
+Lemma poly_properEneq {P Q : T} :
+  (P `<` Q) = (P `<=` Q) && (P `!=~` Q).
+Proof.
+apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_neq_Q] ].
+- split; first done.
+  apply/negP => P_eq_Q; rewrite (poly_equivP P_eq_Q) in x_notin.
+  by move/negP: x_notin.
+- apply/andP; split; first done.
+  move: P_neq_Q; apply: contra.
+  exact: poly_subset_anti.
 Qed.
 
 Lemma poly_properW (P Q : T) :
