@@ -874,3 +874,6 @@ Admitted.
 
 End Vertex.
 *)
+End VertexFigure.
+
+
