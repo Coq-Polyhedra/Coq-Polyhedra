@@ -308,10 +308,16 @@ exact: (PolyPred.in_polyI (PolyPred.class T)).
 Qed.
 
 Lemma polyI0 {P : T} : P `&` (`[poly0]) `=~` `[poly0].
-Admitted.
+rewrite/poly_equiv.
+have: (P `&` (`[ poly0 ]) `<=` (`[ poly0 ])) => [ | -> //=];apply/poly_subsetP => x; rewrite in_polyI (in_poly0 x) //=.
+by move/andP/proj2.
+Qed.
+
 
 Lemma poly0I {P : T} : (`[poly0]) `&` P `=~` `[poly0].
-Admitted.
+rewrite/poly_equiv.
+by have: ( (`[ poly0 ]) `&` P `<=` (`[ poly0 ])) => [ | -> //=];apply/poly_subsetP => x; rewrite in_polyI (in_poly0 x).
+Qed.
 
 Lemma poly_subsetIl (P Q : T) : P `&` Q `<=` P.
 Proof. (* RK *)
