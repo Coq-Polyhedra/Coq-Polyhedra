@@ -149,9 +149,9 @@ Qed.
 
 End Big.
 
-Implicit Arguments big_rem_idx [R op idx I r P F].
-Implicit Arguments eq_big_seq_congr2 [R op idx I T T' r F].
-Implicit Arguments eq_bigl_seq [R op idx I r P1 F].
+Arguments big_rem_idx [R idx I op r P Q F].
+Arguments eq_big_seq_congr2 [R idx I op T T' r F].
+Arguments eq_bigl_seq [R idx I op r P1 P2 F].
 
 Section ExtraNum.
 

@@ -395,8 +395,8 @@ Proof.
 move => y z; symmetry.
 apply: order_preserving_equiv => i.
 move/(_ (y 0 i) (z 0 i)): (lerW_mono (ler_add2l (x 0 i))) <-.
-move/inj_eq/(_ (y 0 i) (z 0 i)): (mono_inj (ler_add2l (x 0 i))) <-.
-by rewrite !mxE.
+rewrite !mxE; split; first done.
+symmetry; apply/inj_eq; exact: GRing.addrI.
 Qed.
 
 Lemma lex_add2r x :
@@ -405,8 +405,8 @@ Proof.
 move => y z; symmetry.
 apply: order_preserving_equiv => i.
 move/(_ (y 0 i) (z 0 i)): (lerW_mono (ler_add2r (x 0 i))) <-.
-move/inj_eq/(_ (y 0 i) (z 0 i)): (mono_inj (ler_add2r (x 0 i))) <-.
-by rewrite !mxE.
+rewrite !mxE; split; first done.
+symmetry; apply/(inj_eq (GRing.addIr _)).
 Qed.
 
 Lemma lex_pscalar (a : R) :
@@ -416,7 +416,8 @@ move => Ha y z; symmetry.
 apply: order_preserving_equiv => i.
 rewrite !mxE.
 move/(_ (y 0 i) (z 0 i)): (lerW_mono (ler_pmul2l Ha)) <-.
-by move/inj_eq/(_ (y 0 i) (z 0 i)): (mono_inj (ler_pmul2l Ha)) <-.
+split; first done.
+symmetry; apply/inj_eq; apply/mulfI; exact: lt0r_neq0.
 Qed.
 
 Lemma subv_gelex0 x y :
