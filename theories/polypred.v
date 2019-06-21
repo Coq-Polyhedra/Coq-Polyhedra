@@ -109,7 +109,7 @@ Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
 
 Definition pack :=
   fun pT & @pred_sort V pT -> T =>
-    fun a mP (pT' := @PredType _ T a mP) & phant_id pT' pT =>
+    fun a (pT' := @PredType _ T a) & phant_id pT' pT =>
       fun b bT & phant_id (Choice.class bT) b =>
         Pack (Class b (Mixin a)).
 
@@ -117,8 +117,8 @@ Definition clone c of phant_id class c := @Pack T c.
 Let xT := let: Pack T _ := cT in T.
 Notation xclass := (class : class_of xT).
 
-Definition eqType := @Equality.Pack cT xclass xT.
-Definition choiceType := @Choice.Pack cT xclass xT.
+Definition eqType := @Equality.Pack cT xclass.
+Definition choiceType := @Choice.Pack cT xclass.
 Definition pred_of_type := @mkPredType _ cT (mem_pred_sort xclass).
 (*Definition pred_of (P : cT) : pred_sort _ := (mem_pred_sort xclass P).*)
 End ClassDef.
@@ -132,7 +132,7 @@ Canonical eqType.
 Canonical choiceType.
 Canonical pred_of_type.
 Notation choicePredType V := (type V).
-Notation ChoicePredType V T := (@pack V T _ id _ _ id _ _ id).
+Notation ChoicePredType V T := (@pack V T _ id _ id _ _ id).
 Notation "[ 'choicePredType' 'of' T ]" := (@clone _ T _ _ id)
   (at level 0, format "[ 'choicePredType'  'of'  T ]") : form_scope.
 End Exports.
@@ -187,8 +187,8 @@ Definition pack b0 (m0 : mixin_of (@ChoicePred.Pack 'cV[R]_n T b0)) :=
   fun    m & phant_id m0 m => Pack phR (@Class T b m).
 
 (* Inheritance *)
-Definition eqType := @Equality.Pack cT xclass xT.
-Definition choiceType := @Choice.Pack cT xclass xT.
+Definition eqType := @Equality.Pack cT xclass.
+Definition choiceType := @Choice.Pack cT xclass.
 Definition choicePredType := @ChoicePred.Pack 'cV[R]_n cT xclass.
 (*Definition pred_of_type := @mkPredType _ cT (ChoicePred.mem_pred_sort xclass).*)
 Definition pred_of (P : cT) : (pred_sort _) := (ChoicePred.mem_pred_sort xclass P).
@@ -1281,7 +1281,7 @@ Qed.
 
 Definition mem_pred_sort (P : {quot T}) := (mem (\repr P)) : pred 'cV[R]_n.
 Canonical quot_predType := mkPredType mem_pred_sort.
-Canonical quot_choicePredType := @ChoicePredType 'cV[R]_n {quot T}.
+Canonical quot_choicePredType := ChoicePredType 'cV[R]_n {quot T}.
 
 Lemma quotP {P Q : T} : '[P] = '[Q] <-> P `=~` Q.
 Admitted.
