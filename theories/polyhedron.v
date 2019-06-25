@@ -10,7 +10,7 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product vector_order row_submx.
-Require Import polypred hpolyhedron.
+Require Import polypred. (* hpolyhedron.*)
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -22,12 +22,13 @@ Import GRing.Theory Num.Theory.
 
 Section PolyBase.
 
-Variable (R : realFieldType) (n : nat) (m : nat) (base : m.-base[R,n]).
+Variable (R : realFieldType) (n : nat) (T : polyPredType R n) (base : base_t[R,n]).
 
-Definition has_base (P : 'poly[R]_n) :=
-  (P `>` `[poly0]) ==> [exists I, P == 'P^=(base; I)].
+Definition has_base (P : {quot T}) :=
+  (P `>` `[poly0]) ==>
+    [exists base' : {set base}, P == 'P^=(base; [fset ((val x) : base_elt) | x in base']%fset)].
 
-Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.
+Inductive poly_base := PolyBase { pval :> {quot T} ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
 Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
 Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
@@ -39,16 +40,17 @@ Proof.
 exact: valP.
 Qed.
 
-Lemma poly0_baseP : has_base (`[poly0] : 'poly[R]_n).
+Lemma poly0_baseP : has_base (`[poly0] : {quot T}).
 Proof.
 by rewrite /has_base poly_properxx.
 Qed.
 Canonical poly0_base := PolyBase poly0_baseP.
 
-Lemma has_baseP {P} : reflect (P `>` (`[poly0]) -> exists I, P = 'P^=(base; I)) (has_base P).
+Lemma has_baseP {P} : reflect (P `>` (`[poly0]) -> exists2 p, P = 'P^=(p) & p.1 = base) (has_base P).
 Proof.
-by apply/(iffP implyP) => [H P_prop0 | H P_prop0]; move/(_ P_prop0): H => ?; apply/exists_eqP.
-Qed.
+Admitted.
+(*    by apply/(iffP implyP) => [H P_prop0 | H P_prop0]; move/(_ P_prop0): H => ?; apply/exists_eqP.
+Qed.*)
 
 Lemma polyEq_baseP I :
   has_base 'P^=(base; I).
@@ -875,5 +877,3 @@ Admitted.
 End Vertex.
 *)
 End VertexFigure.
-
-
