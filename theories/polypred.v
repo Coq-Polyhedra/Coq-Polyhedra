@@ -57,6 +57,8 @@ Reserved Notation "\polyI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
            format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
+Module Base.
+
 Section Base.
 
 Variable (R : realFieldType) (n : nat).
@@ -65,41 +67,98 @@ Definition base_elt := ('cV[R]_n * R)%type.
 
 Definition opp_base_elt (b : base_elt) : base_elt := (- (fst b), - (snd b)). (* TODO: we should have a notation for that *)
 
-Definition base_t := {fset base_elt}%fset.
+Definition base := {fset base_elt}.
 
-(*Definition slice_set (m : nat) (I : {set 'I_m}) : {set 'I_(1+m)} :=
-  ord0 |: ((@rshift 1 m) @: I) .*)
+Structure tagged_pair := Tag { untag : (base * base)%type}.
+Local Coercion untag : tagged_pair >-> prod.
+Structure wf_pair := Wf { tp : tagged_pair ; _ : (tp.2 `<=` tp.1)%fset}.
+Local Coercion tp : wf_pair >-> tagged_pair.
+Lemma wf_pairP (x : wf_pair) : (x.2 `<=` x.1)%fset.
+Proof.
+by case: x.
+Qed.
+Definition wf_pair_of (p : wf_pair) & (phantom (base * base)%type p) : wf_pair := p.
+Notation "b %:wf" := (wf_pair_of (Phantom _ b)) (at level 0).
 
-Inductive pair_t := { b0 : base_t; b1 : base_t }.
-Definition wf (b : pair_t) := (b1 b `<=` b0 b)%fset.
-Inductive wf_pair_t := Wf { pair :> pair_t ; _ : wf pair}.
+Definition tag1 x := Tag x.
+Definition tag2 x := tag1 x.
+Definition tag3 x := tag2 x.
+Definition tag4 x := tag3 x.
+Canonical tag4.
 
-Lemma wf2T (base : base_t) : wf {| b0 := base ; b1 := base|}.
+Lemma wfT (b : base) : (b `<=` b)%fset.
 Admitted.
-Canonical wf2TP (base : base_t) := Wf (wf2T base).
-Lemma wf20 (base : base_t) : wf {| b0 := base ; b1 := fset0|}.
+Canonical wfTP (b : base) := @Wf (tag1 (_, _)) (wfT b).
+
+Lemma wf0 (b : base) : (fset0 `<=` b)%fset.
 Admitted.
-Canonical wf20P (base : base_t) := Wf (wf20 base).
-Definition wf_pair_of (p : wf_pair_t) mkB : wf_pair_t :=
-  mkB (let: Wf _ x := p return (wf p) in x).
-Notation "( base , base' ) %:wf" := (wf_pair_of [eta (@Wf {| b0 := base; b1 := base' |})]) (at level 0).
-Variable (base : base_t).
-Check ((base, base)%:wf).
-(*Check ((base, fset0)%:wf).*)
+Canonical wf0P (b : base) := @Wf (tag2 (_, _)) (wf0 b).
 
-Definition slice_base (b : base_elt) (base : base_t) : base_t :=
-  (b |` base)%fset.
+Definition slice_pair  (e : base_elt) (p : (base * base)%type) :=
+  (e |` p.1, e |` p.2)%fset.
+Lemma wf_slice (e : base_elt) (x : wf_pair) : (e |` x.2 `<=` e |` x.1)%fset.
+Admitted.
+Canonical wf_sliceP (e : base_elt) (x : wf_pair) :=
+  @Wf (tag3 (slice_pair e x)) (wf_slice e x).
 
-Definition concat_base (base base' : base_t) : base_t :=
-  (base `|` base')%fset.
+Lemma wf_subset (b : base) (base' : {set b}) :
+  ([fset ((val x)) | x in base'] `<=` b)%fset.
+Admitted.
+Canonical wf_subsetP (b : base) (base' : {set b}) :=
+  @Wf (tag4 (_, _)) (wf_subset base').
 
-Definition baseEq (base base' : base_t) : base_t :=
-  concat_base base (opp_base_elt @` base')%fset.
+Section Test.
+Variable (b : base) (e : base_elt) (b' : {set b}).
+Check ((b, fset0)%:wf).
+Check ((b, b)%:wf).
+Check (slice_pair e (b, fset0)).
+Check ((e |` (b, fset0).1, e |` (b, fset0).2)%fset %:wf).
+(* Check ((e |` b, e |` fset0)%fset %:wf). *) (* TODO: ask Georges *)
+Check (b, [fset ((val x)) | x in b']%fset)%:wf.
+End Test.
 
 End Base.
 
-(*Notation "m .-base" := (@base _ _ m) (at level 2, format "m .-base") : type_scope.
-Notation "m .-base [ R , n ]" := (@base R n m) (at level 2, format "m .-base [ R , n ]") : type_scope.*)
+Module Import Exports.
+Canonical tag4.
+Canonical wfTP.
+Canonical wf0P.
+Canonical wf_sliceP.
+Canonical wf_subsetP.
+Coercion untag : tagged_pair >-> prod.
+Coercion tp : wf_pair >-> tagged_pair.
+End Exports.
+
+End Base.
+
+Export Base.Exports.
+
+Notation "'base_elt' [ R , n ]" := (@Base.base_elt R n) (at level 2).
+Notation "'base_elt'" := (base_elt[_,_]) (at level 2).
+Notation "'base_t' [ R , n ]" := (@Base.base R n) (at level 2).
+Notation "'base_t'" := (base_t[_,_]) (at level 2).
+Notation "'wf_pair' [ R , n ]" := (@Base.wf_pair R n) (at level 2).
+Notation "'wf_pair'" := (wf_pair[_,_]) (at level 2).
+Notation "e ||` x" := (Base.slice_pair e x) (at level 70).
+Notation "- e" := (Base.opp_base_elt e) : poly_scope.
+Bind Scope poly_scope with Base.base_elt.
+Notation "b %:wf" := (@Base.wf_pair_of _ _ _ (Phantom _ b)) (at level 0).
+
+Section Test.
+Variable (R : realFieldType) (n : nat).
+Variable (b : base_t[R,n]) (e : base_elt[R,n]).
+Check ((b, fset0)%:wf).
+Check ((b, b)%:wf).
+Check (e ||` (b, fset0)).
+Check ((e |` (b, fset0).1, e |` (b, fset0).2)%fset %:wf).
+(* Check ((e |` b, e |` fset0)%fset %:wf). *) (* TODO: ask Georges *)
+Check (-e).
+Variable (x : R).
+Check (-x).
+End Test.
+
+Definition baseEq (R : realFieldType) (n : nat) (x : wf_pair[R,n]) : wf_pair :=
+  (x.1 `|` ((@Base.opp_base_elt _ _) @` x.2), fset0)%fset %:wf.
 
 Module ChoicePred.
 Section ClassDef.
@@ -169,7 +228,7 @@ Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
   poly_subset : rel T;
   poly_subsetP : forall (P Q : T), reflect {subset P <= Q} (poly_subset P Q);
   poly_subsetPn : forall (P Q : T), reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q));
-  mk_hs : base_elt R n -> T;
+  mk_hs : base_elt[R,n] -> T;
   in_hs : forall b x, x \in (mk_hs b) = ('[fst b,x] >= snd b);
   bounded : T -> 'cV[R]_n -> bool;
   boundedP : forall (P : T) c, reflect (exists2 x, x \in P & poly_subset P (mk_hs (c,'[c,x]))) (bounded P c);
@@ -262,7 +321,7 @@ Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing)
 Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
-Notation "'`[' 'hs'  b  ']'" := (mk_hs b) (at level 70) : poly_scope.
+Notation "'`[' 'hs'  b  ']'" := (mk_hs b%PH) (at level 70) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -430,9 +489,8 @@ Lemma notin_hs :
   * (forall c α x, x \notin (`[hs (c, α)] : T) = ('[c,x] < α)).
 Admitted.
 
-Definition mk_hp b : T := `[hs b] `&` `[hs (opp_base_elt b)].
-
-Notation "'`[' 'hp' b  ']'" := (mk_hp b) (at level 70) : poly_scope.
+Definition mk_hp e : T := `[hs e] `&` `[hs (-e)].
+Notation "'`[' 'hp' e  ']'" := (mk_hp e%PH) (at level 70) : poly_scope.
 
 Lemma in_hp :
   (forall b x, x \in (`[hp b] : T) = ('[fst b,x] == snd b))
@@ -995,9 +1053,9 @@ Admitted.
 Lemma compact_pt (Ω : 'cV[R]_n) : compact (`[pt Ω] : T).
 Admitted.
 
-Definition slice (b : base_elt R n) P := `[hp b] `&` P.
+Definition slice (b : base_elt) P := `[hp b] `&` P.
 
-Lemma slice0 (b : base_elt R n) : slice b (`[poly0]) `=~` `[poly0].
+Lemma slice0 (b : base_elt) : slice b (`[poly0]) `=~` `[poly0].
 Admitted.
 
 (*
@@ -1020,30 +1078,32 @@ by rewrite inE /= row_vdot.
 Qed.
  *)
 
-Definition poly_of_base (base : base_t R n) : T :=
+Definition poly_of_base (base : base_t) : T :=
   \polyI_(b : base) `[hs (val b)].
 
 Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
 
-Definition in_poly_of_base x (base : base_t R n) :
+Definition in_poly_of_base x (base : base_t) :
   (x \in 'P(base)) = [forall b : base, x \in `[hs (val b)]].
 Proof.
 by rewrite in_big_polyI.
 Qed.
 
-Definition polyEq (base : base_t R n) (base' : {set base}) : T :=
-  (\polyI_(b in base') `[hp (val b)]) `&` 'P(base).
+Definition polyEq (p : wf_pair) : T :=
+  (\polyI_(b : p.2) `[hp (val b)]) `&` 'P(p.1).
 
-Notation "''P^=' ( base ; base' )" := (@polyEq base base') : poly_scope.
 
-Fact in_polyEq x (base : base_t R n) (base' : {set base}) :
-  (x \in 'P^=(base; base')) = [forall b in base', x \in `[hp (val b)]] && (x \in 'P(base)).
+Notation "''P^=' ( p )" := (polyEq p) : poly_scope.
+Notation "''P^=' ( base ; base' )" := (polyEq (base,base')%:wf) : poly_scope.
+
+Fact in_polyEq x (p : wf_pair) :
+  (x \in 'P^=(p)) = [forall b : p.2, x \in `[hp (val b)]] && (x \in 'P(p.1)).
 Proof.
 by rewrite inE in_big_polyI.
 Qed.
 
-Lemma in_polyEqP (x : 'cV[R]_n) (base : base_t R n) (base' : {set base}) :
-  reflect ((forall b, b \in base' -> x \in `[hp (val b)]) /\ x \in 'P(base)) (x \in 'P^=(base; base')).
+Lemma in_polyEqP (x : 'cV[R]_n) (p : wf_pair) :
+  reflect ((forall b, b \in p.2 -> x \in `[hp b]) /\ x \in 'P(p.1)) (x \in 'P^=(p)).
 Proof.
 Admitted.
 (*
@@ -1051,14 +1111,14 @@ by rewrite in_polyEq; apply: (equivP andP);
   split; move => [/forall_inP x_sat x_in_PAb].
 Qed.*)
 
-Lemma polyEq_eq (x : 'cV[R]_n) (base : base_t R n) (base' : {set base}) b :
-  x \in 'P^=(base; base') -> b \in base' -> x \in `[hp (val b)].
+Lemma polyEq_eq (x : 'cV[R]_n) (p : wf_pair) b :
+  x \in 'P^=(p) -> b \in p.2 -> x \in `[hp b].
 Proof.
 by move/in_polyEqP => [x_act _ ?]; apply: x_act.
 Qed.
 
-Lemma polyEq0 {base : base_t R n} :
-  'P^=(base; set0) `=~` 'P(base).
+Lemma polyEq0 {base : base_t} :
+  'P^=(base; fset0) `=~` 'P(base).
 Admitted.
 
 (*Lemma polyEq_flatten {base : base_t R n} {base' : {set base}} :
@@ -1172,14 +1232,8 @@ by apply/forall_inP/idP => [/(_ _ (set11 i)) | ? j /set1P ->].
 Qed.*)
  *)
 
-Definition slice_set b base base' :=
-
-
-Lemma slice_polyEq {b : base_elt R n} {base : base_t R n} {base' : {set base}} :
-  slice b 'P^=(base; base') `=~` 'P^=(slice_base b base; slice_set b base base').
-
-
-                                        (b |` base')%fset).
+Lemma slice_polyEq (b : base_elt) (p : wf_pair) :
+  slice b 'P^=(p) `=~` 'P^=((b ||` p)%:wf).
 Admitted.
 
 End PolyPredProperties.
@@ -1202,7 +1256,8 @@ Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
-Notation "''P^=' ( base ; base' )" := (polyEq base base') : poly_scope.
+Notation "''P^=' ( p )" := (polyEq p) : poly_scope.
+Notation "''P^=' ( base ; base' )" := (polyEq (base,base')%:wf) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -1522,12 +1577,12 @@ Admitted.
 Lemma compact_mono (P : T) : compact '[P] = compact P.
 Admitted.
 
-Lemma poly_of_base_mono (base : base_t R n) :
+Lemma poly_of_base_mono (base : base_t) :
   '['P(base)] = 'P(base) :> {quot T}.
 Admitted.
 
-Lemma polyEq_mono (base base' : base_t R n) :
-  '['P^=(base; base')] = 'P^=(base; base') :> {quot T}.
+Lemma polyEq_mono (p : wf_pair) :
+  '['P^=(p)] = 'P^=(p) :> {quot T}.
 Admitted.
 
 End QuotientProperties.
