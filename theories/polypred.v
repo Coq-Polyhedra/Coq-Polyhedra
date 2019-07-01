@@ -84,7 +84,8 @@ Definition tag1 x := Tag x.
 Definition tag2 x := tag1 x.
 Definition tag3 x := tag2 x.
 Definition tag4 x := tag3 x.
-Canonical tag4.
+Definition tag5 x := tag4 x.
+Canonical tag5.
 
 Lemma wfT (b : base) : (b `<=` b)%fset.
 Admitted.
@@ -107,6 +108,12 @@ Admitted.
 Canonical wf_subsetP (b : base) (base' : {set b}) :=
   @Wf (tag4 (_, _)) (wf_subset base').
 
+Lemma wf_fset_subset (b : base) (base' : {fset b}) :
+  ([fsetval x in base'] `<=` b)%fset.
+Admitted.
+Canonical wf_fset_subsetP (b : base) (base' : {fset b}) :=
+  @Wf (tag5 (_, _)) (wf_fset_subset base').
+
 Section Test.
 Variable (b : base) (e : base_elt) (b' : {set b}).
 Check ((b, fset0)%:wf).
@@ -120,11 +127,12 @@ End Test.
 End Base.
 
 Module Import Exports.
-Canonical tag4.
+Canonical tag5.
 Canonical wfTP.
 Canonical wf0P.
 Canonical wf_sliceP.
 Canonical wf_subsetP.
+Canonical wf_fset_subsetP.
 Coercion untag : tagged_pair >-> prod.
 Coercion tp : wf_pair >-> tagged_pair.
 End Exports.

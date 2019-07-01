@@ -1,6 +1,7 @@
 *.vo
 *.glob
 *.v.d
+.coqdeps.d
 
 # Created by configure.sh
 Makefile*
