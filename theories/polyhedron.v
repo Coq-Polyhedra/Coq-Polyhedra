@@ -26,7 +26,7 @@ Variable (R : realFieldType) (n : nat) (T : polyPredType R n) (base : base_t[R,n
 
 Definition has_base (P : {quot T}) :=
   (P `>` `[poly0]) ==>
-    [exists base' : {set base}, P == 'P^=(base; [fset ((val x) : base_elt) | x in base']%fset)].
+    [exists base' : {fset base}, P == 'P^=(base; [fsetval x in base'])%fset].
 
 Inductive poly_base := PolyBase { pval :> {quot T} ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
