@@ -46,31 +46,38 @@ by rewrite /has_base poly_properxx.
 Qed.
 Canonical poly0_base := PolyBase poly0_baseP.
 
-Lemma has_baseP {P} : reflect (P `>` (`[poly0]) -> exists2 p, P = 'P^=(p) & p.1 = base) (has_base P).
+Lemma has_baseP {P} : reflect (P `>` (`[poly0]) -> exists base', P = 'P^=(base; [fsetval x in base']%fset)) (has_base P).
 Proof.
 Admitted.
-(*    by apply/(iffP implyP) => [H P_prop0 | H P_prop0]; move/(_ P_prop0): H => ?; apply/exists_eqP.
+
+    (*by apply/(iffP implyP) => [H P_prop0 | H P_prop0]; move/(_ P_prop0): H => ?; apply/exists_eqP.
 Qed.*)
 
-Lemma polyEq_baseP I :
-  has_base 'P^=(base; I).
+Lemma polyEq_baseP (I : {fset base}) :
+  has_base 'P^=(base; [fsetval x in I]%fset).
 Proof.
-by apply/has_baseP; exists I.
-Qed.
+Admitted.
+(*by apply/has_baseP; exists (base, [fsetval x in I]%fset)%:wf.
+Qed.*)
 Canonical polyEq_base I := PolyBase (polyEq_baseP I).
+ 
+Definition poly_base_of (x : poly_base) & (phantom {quot T} x) : poly_base := x.
+Notation "P %:poly_base" := (poly_base_of (Phantom {quot T} P)) (at level 0) : poly_scope.
 
-Definition poly_base_of (x : poly_base) & (phantom 'poly[R]_n x) : poly_base := x.
-Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
+Variable (I : {fset base}).
+Check ('P^=(base; [fsetval x in I]%fset))%:poly_base.
 
-Definition set_of_poly_base (P : poly_base) : option {set 'I_m} :=
-  if emptyP P is NonEmpty H then
+
+Definition set_of_poly_base (P : poly_base) : option {fset base} :=
+  if emptyP (P : {quot T}) is NonEmpty H then
     let I := xchoose (existsP (implyP (poly_base_base P) H)) in
     Some I
   else
     None.
 
-Definition set_of_poly_base_pinv (I : {set 'I_m})  : option poly_base :=
-  let P := 'P^=(base; I)%:poly_base in
+
+Definition set_of_poly_base_pinv (I : {fset base})  : option poly_base :=
+  let P := ('P^=(base; [fsetval x in I]%fset))%:poly_base in
   if set_of_poly_base P == Some I then Some P else None.
 
 Lemma set_of_poly_baseK :
