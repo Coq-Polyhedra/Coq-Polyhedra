@@ -69,29 +69,42 @@ Definition opp_base_elt (b : base_elt) : base_elt := (- (fst b), - (snd b)). (* 
 
 Definition base := {fset base_elt}.
 
-Structure tagged_pair := Tag { untag : (base * base)%type}.
+(*Structure tagged_pair := Tag { untag : (base * base)%type}.
 Local Coercion untag : tagged_pair >-> prod.
 Structure wf_pair := Wf { tp : tagged_pair ; _ : (tp.2 `<=` tp.1)%fset}.
-Local Coercion tp : wf_pair >-> tagged_pair.
-Lemma wf_pairP (x : wf_pair) : (x.2 `<=` x.1)%fset.
+Local Coercion tp : wf_pair >-> tagged_pair.*)
+
+Definition base_pair := (base * {fset base})%type.
+Definition wf_pred (bp : base_pair) := [forall x : bp.2, (val x `<=` bp.1)%fset]. 
+
+Definition wf_pair_t := subType  wf_pred.
+Structure wf_pair := Wf { wfp : wf_pair_t }.
+Local Coercion wfp : wf_pair >-> wf_pair_t.
+(*Variable (x : wf_pair) (bp : base_pair).
+Check projT2 x.
+Check 
+Local Coercion 
+
+
+Lemma wf_pairP (wp : wf_pair) : ([fsetval x  in wp.2] `<=` wp.1)%fset.
 Proof.
 by case: x.
-Qed.
-Definition wf_pair_of (p : wf_pair) & (phantom (base * base)%type p) : wf_pair := p.
+Qed.*)
+Definition wf_pair_of (p : wf_pair) & (phantom _ p) : wf_pair := p.
 Notation "b %:wf" := (wf_pair_of (Phantom _ b)) (at level 0).
 
-Definition tag1 x := Tag x.
-Definition tag2 x := tag1 x.
+Definition tag1 x := Wf x.
+(*Definition tag2 x := tag1 x.
 Definition tag3 x := tag2 x.
 Definition tag4 x := tag3 x.
-Definition tag5 x := tag4 x.
-Canonical tag5.
+Definition tag5 x := tag4 x.*)
+Canonical tag1.
 
 Lemma wfT (b : base) : (b `<=` b)%fset.
 Admitted.
-Canonical wfTP (b : base) := @Wf (tag1 (_, _)) (wfT b).
+Canonical wfTP (b : base) := @Wf (tag1 _) (wfT b).
 
-Lemma wf0 (b : base) : (fset0 `<=` b)%fset.
+(*Lemma wf0 (b : base) : (fset0 `<=` b)%fset.
 Admitted.
 Canonical wf0P (b : base) := @Wf (tag2 (_, _)) (wf0 b).
 
@@ -112,7 +125,9 @@ Lemma wf_fset_subset (b : base) (base' : {fset b}) :
   ([fsetval x in base'] `<=` b)%fset.
 Admitted.
 Canonical wf_fset_subsetP (b : base) (base' : {fset b}) :=
-  @Wf (tag5 (_, _)) (wf_fset_subset base').
+  @Wf (tag5 (_, _)) (wf_fset_subset base').*)
+
+
 
 Section Test.
 Variable (b : base) (e : base_elt) (b' : {set b}).
