@@ -40,7 +40,7 @@ Definition active_ineq x :=
 
 Definition feasible_dir := [pred d | (A *m d) >=m 0].
 
-Lemma feasible_dirP d : 
+Lemma feasible_dirP d :
   (exists x, x \in polyhedron) ->
     reflect (forall x, x \in polyhedron -> (forall λ, λ >= 0 -> x + λ *: d \in polyhedron)) (feasible_dir d). (* RK: lemma used in hpolyhedron *)
 Proof.
@@ -1929,7 +1929,7 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
 - by move/(intro_existsT (dual_infeasibleP _ _))/negbTE: (conj Hd Hd').
 Qed.
 
-(* RK: I needed this result in the slightly different form below 
+(* RK: I needed this result in the slightly different form below
 Lemma exists_feasible_basis :
   ([set: (feasible_basis A b)] != set0) = (feasible A b) && (pointed A).
 Proof.
