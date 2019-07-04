@@ -67,23 +67,86 @@ Definition base_elt := ('cV[R]_n * R)%type.
 
 Definition opp_base_elt (b : base_elt) : base_elt := (- (fst b), - (snd b)). (* TODO: we should have a notation for that *)
 
-Definition base := {fset base_elt}.
+Notation base := {fset base_elt}.
 
-(*Structure tagged_pair := Tag { untag : (base * base)%type}.
+
+Structure foo (b : base) := Tag { untag : base }.
+Local Coercion untag : foo >-> base.
+Definition wf_foo_pred (b : base) (tf : foo b) := (tf `<=` b)%fset.
+Structure wf_foo  (b : base) := Wf { tf : foo b; _ : wf_foo_pred tf}.
+Local Coercion tf : wf_foo >-> foo.
+
+Definition wf_foo_of (b : base) (p : wf_foo b) & (phantom _ p) : (wf_foo b) := p.
+Notation "b %:wf" := (wf_foo_of (Phantom _ b)) (at level 0).
+
+Definition tag1 b (x : foo b) := @Tag b x.
+Definition tag2 b (x : foo b) := tag1 x.
+Definition tag3 b (x : foo b) := tag2 x.
+Canonical tag4 b (x : foo b) := tag3 x.
+
+Lemma wfT (b : base) : ((@tag1 b (@Tag b b)) `<=` b)%fset.
+Admitted.
+Canonical wfTP (b : base) := @Wf (@tag1 b _) (wfT b).
+
+Lemma wf0 : (fset0 `<=` b)%fset.
+Admitted.
+Canonical wf0P := @Wf (tag2 _) wf0.
+
+Definition slice_pair  (e : base_elt) (b' : base) :=
+  (e |` p.2)%fset.
+Lemma wf_slice (e : base_elt) (x : wf_pair) : (e |` x.2 `<=` e |` x.1)%fset.
+Admitted.
+Canonical wf_sliceP (e : base_elt) (x : wf_pair) :=
+  @Wf (tag3 (slice_pair e x)) (wf_slice e x).
+
+Lemma wf_subset (b : base) (base' : {set b}) :
+  ([fset ((val x)) | x in base'] `<=` b)%fset.
+Admitted.
+Canonical wf_subsetP (b : base) (base' : {set b}) :=
+  @Wf (tag4 (_, _)) (wf_subset base').
+
+Lemma wf_fset_subset (b : base) (base' : {fset b}) :
+  ([fsetval x in base'] `<=` b)%fset.
+Admitted.
+Canonical wf_fset_subsetP (b : base) (base' : {fset b}) :=
+  @Wf (tag5 (_, _)) (wf_fset_subset base').
+
+
+Structure tagged_pair := Tag { untag : (base * base)%type}.
 Local Coercion untag : tagged_pair >-> prod.
+Definition wf_pred (tp : tagged_pair) := (tp.2 `<=` tp.1)%fset.
 Structure wf_pair := Wf { tp : tagged_pair ; _ : (tp.2 `<=` tp.1)%fset}.
-Local Coercion tp : wf_pair >-> tagged_pair.*)
+Local Coercion tp : wf_pair >-> tagged_pair.
+Canonical foo := [subType for tp].
+Check [subType of wf_pair].
+Variable (x : wf_pair).
 
-Definition base_pair := (base * {fset base})%type.
-Definition wf_pred (bp : base_pair) := [forall x : bp.2, (val x `<=` bp.1)%fset]. 
+
+(*Definition base_pair := (base * {fset base})%type.*)
+Set Printing Coercion.
+Variable (T : finType) (B : {fset T}) (C : {fset B}).
+Coercion foo' (x : B) : T := val x.
+
+Coercion foo' (C : {fset B}) : {fset T} := (val @` C)%fset.
+Check (val @` C)%fset.
+
+Check (finType T).
+
+Structure base_pair := Foo (b : base) of {fset b}.
+Print base_pair.
+Variable (b : base) (x : base_elt).
+Hypothesis x_in_b : x \in b.
+Check ([` x_in_b]%fset).
+Check (Foo [fset [` x_in_b]]%fset).
+Definition wf_pred (bp : base_pair) := [forall x : bp.2, (val x `<=` bp.1)%fset].
 
 Definition wf_pair_t := subType  wf_pred.
 Structure wf_pair := Wf { wfp : wf_pair_t }.
 Local Coercion wfp : wf_pair >-> wf_pair_t.
 (*Variable (x : wf_pair) (bp : base_pair).
 Check projT2 x.
-Check 
-Local Coercion 
+Check
+Local Coercion
 
 
 Lemma wf_pairP (wp : wf_pair) : ([fsetval x  in wp.2] `<=` wp.1)%fset.
@@ -1152,8 +1215,8 @@ Lemma in_hpolyEq_setT (x : 'cV[R]_n) (base : base_t R n) :
   (x \in 'P^=(base; base)) = [forall b : base, x \in `[hp (val b)]].
 Admitted.
 
-Lemma polyEq_antimono (base base' base'' : base_t R n) :
-  (base' `<=` base'')%fset -> 'P^=(base; base') `<=` 'P^=(base; base'').
+Lemma polyEq_antimono (base : base_t R n) (base' base'' : {fset base}) :
+  (val @` base' `<=` val @` base'')%fset -> 'P^=(base; val @` base') `<=` 'P^=(base; val @` base'').
 Proof.
 Admitted.
 
