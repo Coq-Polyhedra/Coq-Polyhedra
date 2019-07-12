@@ -69,6 +69,63 @@ Definition opp_base_elt (b : base_elt) : base_elt := (- (fst b), - (snd b)). (* 
 
 Notation base := {fset base_elt}.
 
+Variable (b : base).
+Structure foo := Tag { untag : base }.
+Local Coercion untag : foo >-> base.
+Definition wf_foo_pred (tf : foo) := (tf `<=` b)%fset.
+Structure wf_foo  := Wf { tf : foo; _ : wf_foo_pred tf}.
+Local Coercion tf : wf_foo >-> foo.
+
+Definition wf_foo_of (p : wf_foo) & (phantom _ p) : (wf_foo) := p.
+Notation "b %:wf" := (wf_foo_of (Phantom _ b)) (at level 0).
+
+Definition tag1 (x : foo) := @Tag x.
+Definition tag2 (x : foo) := tag1 x.
+Definition tag3 (x : foo) := tag2 x.
+Canonical tag4 (x : foo) := tag3 x.
+
+Lemma wfT : ((@tag1 (@Tag b)) `<=` b)%fset.
+Admitted.
+Canonical wfTP (b : base) := @Wf (@tag1 _) (wfT).
+
+(*Lemma wfT2 : (b `<=` b)%fset.
+Admitted.
+Canonical wfTP2 (b : base) := @Wf (@tag1 _) (wfT2).*)
+
+Lemma wf0 : (fset0 `<=` b)%fset.
+Admitted.
+Canonical wf0P := @Wf (@tag2 _) wf0.
+
+Definition slice_pair  (e : base_elt) (b' : base) :=
+  (e |` p.2)%fset.
+Lemma wf_slice (e : base_elt) (x : wf_pair) : (e |` x.2 `<=` e |` x.1)%fset.
+Admitted.
+Canonical wf_sliceP (e : base_elt) (x : wf_pair) :=
+  @Wf (tag3 (slice_pair e x)) (wf_slice e x).
+
+Lemma wf_subset (b : base) (base' : {set b}) :
+  ([fset ((val x)) | x in base'] `<=` b)%fset.
+Admitted.
+Canonical wf_subsetP (b : base) (base' : {set b}) :=
+  @Wf (tag4 (_, _)) (wf_subset base').
+
+Lemma wf_fset_subset (b : base) (base' : {fset b}) :
+  ([fsetval x in base'] `<=` b)%fset.
+Admitted.
+Canonical wf_fset_subsetP (b : base) (base' : {fset b}) :=
+  @Wf (tag5 (_, _)) (wf_fset_subset base').
+
+
+(***********************************************)
+
+Variable (R : realFieldType) (n : nat).
+
+Definition base_elt := ('cV[R]_n * R)%type.
+
+Definition opp_base_elt (b : base_elt) : base_elt := (- (fst b), - (snd b)). (* TODO: we should have a notation for that *)
+
+Notation base := {fset base_elt}.
+
 
 Structure foo (b : base) := Tag { untag : base }.
 Local Coercion untag : foo >-> base.
@@ -86,7 +143,7 @@ Canonical tag4 b (x : foo b) := tag3 x.
 
 Lemma wfT (b : base) : ((@tag1 b (@Tag b b)) `<=` b)%fset.
 Admitted.
-Canonical wfTP (b : base) := @Wf (@tag1 b _) (wfT b).
+Canonical wfTP (b : base) := @Wf b (@tag1 b _) (wfT b).
 
 Lemma wf0 : (fset0 `<=` b)%fset.
 Admitted.
