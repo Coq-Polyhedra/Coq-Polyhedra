@@ -60,7 +60,7 @@ Admitted.
 (*by apply/has_baseP; exists (base, [fsetval x in I]%fset)%:wf.
 Qed.*)
 Canonical polyEq_base I := PolyBase (polyEq_baseP I).
- 
+
 Definition poly_base_of (x : poly_base) & (phantom {quot T} x) : poly_base := x.
 Notation "P %:poly_base" := (poly_base_of (Phantom {quot T} P)) (at level 0) : poly_scope.
 
@@ -102,7 +102,10 @@ Canonical poly_base_subFinType := [subFinType of poly_base].
 Lemma poly_of_baseP :
   has_base 'P(base).
 Proof.
-by apply/has_baseP; exists set0; rewrite (quot_equivP polyEq0).
+apply/has_baseP; exists fset0.
+
+
+  rewrite fset0. rewrite (quot_equivP polyEq0).
 Qed.
 Canonical poly_of_base_base := PolyBase (poly_of_baseP).
 
