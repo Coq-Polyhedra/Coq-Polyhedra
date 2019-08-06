@@ -57,6 +57,13 @@ Reserved Notation "\polyI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
            format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
+Notation "!! x" := (ltac:(refine x)) (at level 100, only parsing).
+(* infer class to help typeclass inference on the fly *)
+Class infer (P : Prop) := Infer : P.
+Hint Mode infer ! : typeclass_instances.
+Hint Extern 0 (infer _) => (exact) : typeclass_instances.
+Lemma inferP (P : Prop) : P -> infer P. Proof. by []. Qed.
+
 Module Base.
 
 Section Base.
@@ -73,16 +80,27 @@ Structure tagged_pair := Tag { untag : (base * base)%type}.
 Local Coercion untag : tagged_pair >-> prod.
 Structure wf_pair := Wf { tp : tagged_pair ; _ : (tp.2 `<=` tp.1)%fset}.
 Local Coercion tp : wf_pair >-> tagged_pair.
+Canonical sub_wf_pair := [subType for tp].
 
 Definition wf_pair_of (p : wf_pair) & (phantom (base * base)%type p) : wf_pair := p.
 Notation "b %:wf" := (wf_pair_of (Phantom _ b)) (at level 0).
 
-Definition tag1 x := Tag x.
+Definition tag0 x := Tag x.
+Definition tag1 x := tag0 x.
 Definition tag2 x := tag1 x.
 Definition tag3 x := tag2 x.
 Definition tag4 x := tag3 x.
 Definition tag5 x := tag4 x.
 Canonical tag5.
+
+(*Lemma wfE (p : wf_pair) :
+  (p.1 `<=` p.2)%fset.
+Admitted.
+Canonical wfEP (p : wf_pair) := @Wf (tag5 (_,_)) (wfE p).
+
+Variable p : wf_pair.
+Check ((untag (tp p)) %:wf).
+ *)
 
 Lemma wfT (b : base) : (b `<=` b)%fset.
 Admitted.
@@ -105,24 +123,33 @@ Admitted.
 Canonical wf_fset_subsetP (b : base) (base' : {fset b}) :=
   @Wf (tag4 (_, _)) (wf_fset_subset base').
 
+Canonical wf_fset_inferP (b b' : base) (H : infer (b' `<=` b)%fset) := @Wf (tag0 (_, _)) H.
+
 Section Test.
-Variable (b : base) (e : base_elt) (b' : {fset b}).
+Variable (b : base) (e : base_elt) (b' : {fset b}) (b'' : base).
 Check ((b, fset0)%:wf).
 Check ((b, b)%:wf).
 Check (slice_pair e (b, fset0)).
 Check ((e |` (b, fset0).1, e |` (b, fset0).2)%fset %:wf).
 (* Check ((e |` b, e |` fset0)%fset %:wf). *) (* TODO: ask Georges *)
 Check (b, [fsetval x in b']%fset)%:wf.
+Hypothesis H : (b'' `<=` b)%fset.
+Check (b, b'')%:wf.
+Lemma foo & infer (b'' `<=` b)%fset : (b, b'')%:wf = (b, b'')%:wf.
+Admitted.
+
 End Test.
 
 End Base.
 
 Module Import Exports.
+Canonical sub_wf_pair.
 Canonical tag5.
 Canonical wfTP.
 Canonical wf0P.
 Canonical wf_sliceP.
 Canonical wf_fset_subsetP.
+Canonical wf_fset_inferP.
 Coercion untag : tagged_pair >-> prod.
 Coercion tp : wf_pair >-> tagged_pair.
 End Exports.
@@ -144,7 +171,7 @@ Notation "b %:wf" := (@Base.wf_pair_of _ _ _ (Phantom _ b)) (at level 0).
 
 Section Test.
 Variable (R : realFieldType) (n : nat).
-Variable (b : base_t[R,n]) (e : base_elt[R,n]).
+Variable (b : base_t[R,n]) (e : base_elt[R,n])  (b' : base_t[R,n]).
 Check ((b, fset0)%:wf).
 Check ((b, b)%:wf).
 Check (e ||` (b, fset0)).
@@ -153,6 +180,8 @@ Check ((e |` (b, fset0).1, e |` (b, fset0).2)%fset %:wf).
 Check (-e).
 Variable (x : R).
 Check (-x).
+Hypothesis H : (b' `<=` b)%fset.
+Check (b, b')%:wf.
 End Test.
 
 Definition baseEq (R : realFieldType) (n : nat) (x : wf_pair[R,n]) : wf_pair :=
@@ -192,14 +221,14 @@ Notation xclass := (class : class_of xT).
 Definition eqType := @Equality.Pack cT xclass.
 Definition choiceType := @Choice.Pack cT xclass.
 Definition pred_of_type := @mkPredType _ cT (mem_pred_sort xclass).
-(*Definition pred_of (P : cT) : pred_sort _ := (mem_pred_sort xclass P).*)
+Definition pred_of (P : cT) : pred_sort _ := (mem_pred_sort xclass P).
 End ClassDef.
 
 Module Import Exports.
 Coercion base : class_of >-> Choice.class_of.
 Coercion mixin : class_of >-> mixin_of.
 Coercion sort : type >-> Sortclass.
-(*Coercion pred_of : sort >-> pred_sort.*)
+Coercion pred_of : sort >-> pred_sort.
 Canonical eqType.
 Canonical choiceType.
 Canonical pred_of_type.
@@ -1483,7 +1512,7 @@ Canonical quot_choiceType.
 (*Canonical quot_predType.*)
 Canonical quot_choicePredType.
 Canonical quot_polyPredType.
-Notation "'{quot'  T '}'" := (@quot _ _ _ (Phant T)) (at level 0).
+Notation "'{quot'  T '}'" := (PolyPred.sort [polyPredType of (@quot _ _ _ (Phant T))]) (at level 0).
 Notation "\repr" := (@repr _ _ _ (Phant _)) (at level 0).
 Notation "''[' P  ]" := (class_of P) (at level 0).
 Notation reprK := reprK.
