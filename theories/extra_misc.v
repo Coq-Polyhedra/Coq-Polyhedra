@@ -287,4 +287,9 @@ Lemma fproperP (K : choiceType) (A B : {fset K}) :
   reflect ({subset A <= B} /\ exists2 x, x \in B & x \notin A) (A `<` B)%fset.
 Admitted.
 
+Lemma imfset0 (K K' : choiceType) (f : K -> K') :
+  (f @` fset0)%fset = fset0.
+Admitted.
+
+
 End ExtraFinmap.
