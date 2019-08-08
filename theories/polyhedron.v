@@ -179,22 +179,19 @@ Section Active.
 
 Variable (R : realFieldType) (n : nat) (T : polyPredType R n) (base : base_t[R,n]).
 
-(*Section Test.
-
-Variable (I : finType) (P : pred I).
-Variable F : I -> {fset base}.
-Variable (i : I).
-Goal (base, [fsetval x in (F i)]%fset)%:wf = (base, base)%:wf.
-Abort.
-Goal (base, (\bigcup_(i | P i) [fsetval x in (F i)])%fset)%:wf = (base, base)%:wf.
-Abort.
-
-Hint Resolve (@Base.wf_fsetval _ _ base).*)
-
 Definition active (P : {poly T, base}) :=
-  (\bigcup_(I | (P `<=` 'P^=(base; [fsetval x in (I : {fset base})]%fset))%PH) [fsetval x in I])%fset.
+  \big[@fsetU _/fset0]_(I : {fset base} | (P `<=` 'P^=(base; [fsetval x in I]%fset))) ((fun J : {fset base} => [fsetval x in J]%fset) I).
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
+
+
+(*Section Test.
+Variable (P : {poly T, base}).
+Check (base, {eq P})%:wf.
+Check 'P^=(base; {eq P}) : {quot T}.
+Check 'P^=(base; {eq P})%:poly_base : {poly T, base}.
+End Test.*)
+
 
 Lemma active_wf (P : {poly T, base}) :
   ({eq P} `<=` base)%fset.
@@ -203,84 +200,76 @@ apply/bigfcupsP => I _ _.
 exact: (valP (_, [fsetval _ in _]%fset)%:wf).
 Qed.
 Canonical active_wfP (P : {poly T, base}) := @Base.Wf _ _ (Base.tag5 (_, _)) (active_wf P).
-
-Section Test.
-Variable (P : {poly T, base}).
-Check (base, {eq P})%:wf.
-Check 'P^=(base; {eq P}) : {quot T}.
-Check 'P^=(base; {eq P})%:poly_base : {poly T, base}.
-End Test.
-
-Lemma activeP (P : {poly T, base}) (I : base_t[R,n]) & (I `<=` base)%fset :
-  (P `<=` 'P^=(base; I)) = (I `<=` {eq P})%fset.
-Proof.
-Admitted.
-
-Lemma repr_active_supset (P : {poly T, base}) :
-  P `<=` 'P^=(base; {eq P}).
-case: (has_baseP P) => [-> /= | I Isub [P_eq _ /=]]; first exact: poly0_subset.
-rewrite /active. rewrite -(quot_equivP (polyEq_big_polyI _ _)).
-
-rewrite {1}P_eq; apply: polyEq_antimono.
--
-
-- apply/activeP.
-
-  has_baseP: P {2}(erefl P).
-
-case/poly_baseP: (P) => [I] ?; rewrite -polyEq_big_polyI;
-  last by apply/pred0Pn; exists I; exact: poly_subset_refl.
-by apply/big_polyIsP.
-Qed.
-
-Lemma repr_active_prop0 base (P : {poly base}) :
-  infer ('['P^=(base; {eq P})] `>` `[poly0]).
-Proof.
-apply: inferP; move: (repr_active_supset P); apply: poly_proper_subset.
-exact: poly_base_proper0.
-Qed.*)
+(* In theory, we could avoid making this canonical, because this overlaps with wf_bigU
+ * However, this requires to declare Hint Resolve wf_fsetvalP
+ * and, I don't know if it is related, it considerably slows down Coq,
+ * because this produces _very_ large terms
+ * EDIT: very large terms (as shown by Set Printing All) are generated in all cases, is that due to finset and fsetval?
+ *)
 
 Lemma repr_active (P : {poly T, base}) :
   P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
 Proof.
-Admitted.
-(*case/poly_baseP: (P); first by rewrite poly_properxx.
-move => I _ _; apply: val_inj => /=.
-rewrite -(quot_equivP (polyEq_big_polyI _));
-  last by apply/pred0Pn; exists I; exact: poly_subset_refl.
-apply/quot_equivP/andP; split.
-- by apply/big_polyIsP.
-- by apply/big_poly_inf; exact: poly_subset_refl.
-Qed.*)
+case/has_baseP: (P) => [->|]; first by rewrite poly_properxx.
+move => I Isub [P_eq _] Pprop0; apply: val_inj => /=.
+suff ->: 'P^=(base; {eq P}) =
+  \polyI_(I : {fset base} |  (P `<=` 'P^=(base; [fsetval x in I]%fset))) 'P^= (base; [fsetval x in I]%fset) :> {quot T}.
+- apply/quot_equivP/andP; split.
+  + by apply/big_polyIsP.
+  + rewrite P_eq /=.
+    rewrite [in X in _ `<=` X](Base.wf_eq _ _ (fsub_fsetval Isub)).
+    apply/big_poly_inf.
+    rewrite -(Base.wf_eq _ _ (fsub_fsetval Isub)).
+    exact: poly_subset_refl.
+- symmetry; apply/quot_equivP.
+  rewrite /active; apply: polyEq_big_polyI.
+  apply/pred0Pn. rewrite P_eq /=.
+  rewrite (Base.wf_eq _ _ (fsub_fsetval Isub)).
+  exists [fset x : base | val x \in I]%fset; exact: poly_subset_refl.
+Qed.
 
-Lemma activeP (P : {poly T, base}) (I : base_t[R,n]) (H : (I `<=` base)%fset):
-  expose H in (P `<=` 'P^=(base; I)) = (I `<=` {eq P})%fset.
+Lemma activeP (P : {poly T, base}) (I : base_t[R,n]) & (I `<=` base)%fset :
+  (P `<=` 'P^=(base; I)) = (I `<=` {eq P})%fset.
 Proof.
-move => /=.
+rewrite (Base.wf_eq _ _ (fsub_fsetval H)).
+rewrite [in RHS](fsub_fsetval H).
+set J := [fset x : base | _]%fset.
 apply/idP/idP.
-Admitted.
-(*  apply/idP/idP; first exact: bigcup_sup.
-case: (poly_base_emptyP P) => [-> | /repr_active {2}-> /=]; first by rewrite /= poly0_subset.
-by move/polyEq_antimono.
-Qed.*)
+- by move => Psub; apply/bigfcup_sup.
+- case: (emptyP P) => [ /poly_equivP/quot_equivP -> _|]; first exact: poly0_subset.
+  move/repr_active => {2}-> /=.
+  exact: polyEq_antimono.
+Qed.
 
-Lemma repr_active0 m (base : m.-base) :
-  {eq (`[poly0]%:poly_base : {poly base})} = setT.
-Admitted.
+Lemma repr_active_supset (P : {poly T, base}) :
+  P `<=` 'P^=(base; {eq P}).
+case: (has_baseP P) => [-> /= | _ _ [_ Pprop0 /=]]; first exact: poly0_subset.
+rewrite {1}[P]repr_active //=; exact: poly_subset_refl.
+Qed.
 
-Lemma active_polyEq m (base : m.-base) (I : {set 'I_m}) :
-  I \subset {eq 'P^=(base; I)%:poly_base}.
+Lemma repr_active0 :
+  {eq (`[poly0]%:poly_base : {poly T, base})} = base.
+Proof.
+apply/eqP; rewrite eqEfsubset; apply/andP; split.
+- exact: active_wf.
+- rewrite -activeP => /=; exact: poly0_subset.
+Qed.
+
+Lemma active_polyEq (I : base_t[R,n]) & (I `<=` base)%fset :
+  (I `<=` {eq 'P^=(base; I)%:poly_base})%fset.
 Proof.
 rewrite -activeP; exact: poly_subset_refl.
 Qed.
 
-Lemma in_active m (base : m.-base) (P : {poly base}) i :
-  (i \in {eq P}) = (P `<=` nth_hp base i).
+Lemma in_active (P : {poly T, base}) e & (e \in base)%fset :
+  (e \in {eq P}) = (P `<=` `[hp e]).
 Proof.
-suff ->: (P `<=` nth_hp base i) =  (P `<=` 'P^=(base; [set i])).
-- by rewrite activeP sub1set.
-- rewrite (quot_equivP polyEq1).
+rewrite -!fsub1set in H *.
+have ->: (P `<=` (`[ hp e ])) = (P `<=` 'P^=(base; [fset e]%fset)).
+admit.
 Admitted.
+
+(* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 
 Lemma poly_base_subset_eq m (base : m.-base) (P Q : {poly base}) :
     (P `<=` Q) -> ({eq Q} \subset {eq P}).

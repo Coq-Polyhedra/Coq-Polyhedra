@@ -117,7 +117,7 @@ Admitted.
 Canonical wf_slice (e : base_elt) (x : wf_pair) :=
   @Wf (tag3 (slice_pair e x)) (wf_sliceP e x).
 
-Lemma wf_fsetvalP (b : base) (base' : {fset b}) :
+Lemma wf_fsetvalP {b : base} (base' : {fset b}) :
   ([fsetval x in base'] `<=` b)%fset.
 Admitted.
 Hint Resolve wf_fsetvalP.
@@ -185,6 +185,7 @@ Canonical wfU.
 Canonical wf_bigU.
 Coercion untag : tagged_pair >-> prod.
 Coercion tp : wf_pair >-> tagged_pair.
+(*Hint Resolve Base.wf_fsetvalP.*)
 End Exports.
 
 End Base.
@@ -1194,59 +1195,16 @@ apply/andP; split; last first.
   exact: (polyEq_eq (x_in _ Pi)).
 Qed.
 
-(*Lemma polyEq_flatten {base : base_t R n} {base' : {set base}} :
-  'P^=(base; base') `=~` 'P(baseEq base base').
-Admitted.
 
-Lemma in_hpolyEq_setT (x : 'cV[R]_n) (base : base_t R n) :
-  (x \in 'P^=(base; base)) = [forall b : base, x \in `[hp (val b)]].
-Admitted.
-
-Lemma polyEq_antimono (base : base_t R n) (base' base'' : {fset base}) :
-  (val @` base' `<=` val @` base'')%fset -> 'P^=(base; val @` base') `<=` 'P^=(base; val @` base'').
+Lemma polyEq1 {base: base_t[R,n]} {b} & ([fset b] `<=` base)%fset :
+  'P^=(base; [fset b]%fset) `=~` 'P(base) `&` `[hp b].
 Proof.
 Admitted.
 
-Lemma polyEq_antimono0 {base base' : base_t R n} :
-  'P^=(base; base') `<=` 'P(base).
-Proof.
-Admitted.
-(*case : base I => [m A b] I.
-by move => x /in_hpolyEqP [].
-Qed.*)
-
-(*  case : base => [A b] /=.
-rewrite in_hpolyEq.
-apply/idP/idP => [/andP [_ /forallP forall_cond] | /eqP A_x_eq_b].
-- apply/eqP/colP => j.
-  by apply/eqP/(implyP (forall_cond j)).
-- apply/andP; split.
-  + rewrite inE A_x_eq_b.
-    exact: lev_refl.
-  + apply/forallP => j.
-    apply/implyP => _.
-    by rewrite A_x_eq_b.
-Qed.*)
-
-
-(*case: base I J => [m A b] I J.
-move => /subsetP I_subset_J x.
-rewrite 2!in_hpolyEq.
-move/andP => [x_in_P /forallP sat_in_J].
-apply/andP; split.
-- exact: x_in_P.
-- apply/forallP => j.
-  apply/implyP => j_in_I.
-  apply: (implyP (sat_in_J j)).
-  exact: (I_subset_J _ j_in_I).
-Qed.*)
-
-
-
-
+(*
 Lemma polyEq_of_polyEq (base base1 base2 : base_t R n) : (* quite short proof after all! *)
    exists base3, 'P^=(baseEq base base1; base2) `=~` 'P^=(base; base3).
-(*Proof.
+Proof.
 move: I J; case: base => [A b] I J.
 pose f (j : 'I_(#|I| + m)) :=
   match splitP' j with
@@ -1278,21 +1236,12 @@ apply/andP; split; apply/poly_subsetP => x x_in.
           * rewrite !in_nth_hp /= mul_col_mx !col_mxEu mulNmx -row_submx_mul 2![(- row_submx _ _) j' 0]mxE 2!row_submx_mxE /=.
             rewrite eqr_opp; by rewrite in_nth_hp in eq.
           * by rewrite !in_nth_hp mul_col_mx !col_mxEd.
-Qed.*)
+Qed.
 Admitted.
-
-Lemma polyEq1 {base: base_t R n} {b} :
-  'P^=(base; [fset b]%fset) `=~` 'P(base) `&` `[hp b].
-Proof.
-Admitted.
-(*apply/poly_equivP => x; rewrite in_hpolyEq !inE; apply: congr1; rewrite row_vdot.
-by apply/forall_inP/idP => [/(_ _ (set11 i)) | ? j /set1P ->].
-Qed.*)
- *)
 
 Lemma slice_polyEq (b : base_elt) (p : wf_pair) :
   slice b 'P^=(p) `=~` 'P^=((b ||` p)%:wf).
-Admitted.
+Admitted.*)
 
 End PolyPredProperties.
 
