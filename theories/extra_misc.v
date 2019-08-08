@@ -368,8 +368,7 @@ Definition tag5 x := tag4 x.
 Canonical tag5.
 
 Canonical fsubset_expose (A : {fset K})
-          (H : expose (A `<=` S)%fset) := @FSubset (tag0 _) H.
-(*Canonical fsubset_fsetT := @FSubset (tag1 _) (fsubset_refl S).*)
+          (H : expose (A `<=` S)%fset) := @FSubset (tag1 _) H.
 Canonical fsubset_fset0 := @FSubset (tag2 _) (fsub0set S).
 
 Lemma fsubset_setUP (A B : {fset K}) :
@@ -384,13 +383,13 @@ Admitted.
 Canonical fsubset_bigU (I : finType) (P : pred I) F
           (H : expose (forall i, F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP P H).
 
+Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
 Global Instance expose_funP (T : Type) (f : T -> fsubset_t) :
   expose (forall i, f i `<=` S) := Expose (fun i => (valP (f i))).
 
 Section Test.
 Check (fset0 %:fsub).
-
 Check (S %:fsub).
 
 Variable A : {fset K}.
@@ -440,6 +439,7 @@ Local Open Scope fset_scope.
 
 Variable (K : realFieldType) (S : {fset K}).
 Check (fset0%:fsub) : {fsubset S}.
+Check (S %:fsub) : {fsubset S}.
 
 Variable A : {fset K}.
 Hypothesis (HA : (A `<=` S)).
