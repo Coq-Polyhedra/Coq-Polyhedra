@@ -57,9 +57,6 @@ Reserved Notation "\polyI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
            format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
-Class expose (P : Prop) := Expose : P.
-Hint Extern 0 (expose _) => (exact) : typeclass_instances.
-
 Module Base.
 Section Base.
 
