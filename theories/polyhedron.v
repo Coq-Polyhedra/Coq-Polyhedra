@@ -57,17 +57,9 @@ Section Wf.
 Lemma polyEq_baseP base I :
   (I `<=` base)%fset -> has_base base 'P^=(base; I).
 Proof.
-Admitted.
-(*apply/implyP => _; apply/exists_eqP => /=.
-exists [fset x in fsub p.1 p.2]%fset => /=.
-apply: congr1 => /=.
-apply: val_inj => /=.
-suff ->: [fset fsval x | x in [fset x | x in fsub p.1 p.2]]%fset = p.2.
-- by case: p => /= tp _; case: tp => p' /=; case: p'.
-- rewrite -[p.2 in RHS](fset_fsub (valP p)) /=.
-  apply: eq_imfset; try by done.
-  by move => ?; rewrite inE.
-Qed.*)
+move => Isub.
+by apply/implyP => _; apply/exists_eqP => /=; exists (I %:fsub).
+Qed.
 
 Canonical polyEq_base base I (H : expose (I `<=` base)%fset) := PolyBase (polyEq_baseP H).
 
@@ -90,13 +82,13 @@ Variable base : base_t[R,n].
 
 Variant has_base_spec (P : {poly base}) : Prop :=
 | HasBase0 of (P = (`[poly0])%:poly_base) : has_base_spec P
-| HasBaseN0 (I : base_t[R,n]) (Isub:  (I `<=` base)%fset) of (P = 'P^=(base; I)%:poly_base /\ P `>` `[poly0]) : has_base_spec P.
+| HasBaseN0 (I : {fsubset base}) of (P = 'P^=(base; I)%:poly_base /\ P `>` `[poly0]) : has_base_spec P.
 
 Lemma has_baseP (P : {poly base}) : has_base_spec P.
 Proof.
 case: (emptyP P) => [/poly_equivP/quot_equivP/val_inj -> | PN0]; first by constructor.
-move/implyP/(_ PN0)/exists_eqP: (poly_base_base P) => [I H].
-constructor 2 with I (valP I).
+move/implyP/(_ PN0)/exists_eqP: (poly_base_base P) => [I ?].
+constructor 2 with I.
 split; [exact: val_inj | done].
 Qed.
 
@@ -146,6 +138,13 @@ suff ->: 'P(base) = 'P^=(base; fset0)%:poly_base by exact: poly_base_base.
 by rewrite /= (quot_equivP polyEq0).
 Qed.
 Canonical poly_of_base_base := PolyBase (poly_of_baseP).
+
+Lemma poly_base_subset_base (P : {poly base}) :
+  P `<=` 'P(base).
+Proof.
+case/has_baseP : (P) => [->| I [-> _]];
+  [ exact: poly0_subset | exact: polyEq_antimono0].
+Qed.
 
 End Other.
 End PolyBase.
@@ -197,7 +196,7 @@ Lemma repr_active (P : {poly T, base}) :
   P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
 Proof.
 case/has_baseP: (P) => [->|]; first by rewrite poly_properxx.
-move => I Isub [P_eq _] Pprop0; apply: val_inj => /=.
+move => I [P_eq _] Pprop0; apply: val_inj => /=.
 suff ->: 'P^=(base; {eq P}) =
   \polyI_(I : {fsubset base} | P `<=` 'P^=(base; I)) 'P^= (base; I) :> {quot T}.
 - apply/quot_equivP/andP; split.
@@ -205,7 +204,7 @@ suff ->: 'P^=(base; {eq P}) =
   + rewrite P_eq; apply/big_poly_inf; exact: poly_subset_refl.
 - symmetry; apply/quot_equivP.
   rewrite /active; apply: polyEq_big_polyI.
-  apply/pred0Pn; rewrite P_eq /=; exists I%:fsub.
+  apply/pred0Pn; rewrite P_eq /=; exists I.
   exact: poly_subset_refl.
 Qed.
 
@@ -214,14 +213,14 @@ Lemma activeP (P : {poly T, base}) (I : {fsubset base}) :
 Proof.
 apply/idP/idP.
 - by move => Psub; apply/bigfcup_sup.
-- case: (emptyP P) => [ /poly_equivP/quot_equivP {2}-> _|]; first exact: poly0_subset.
-  move/repr_active => {3}-> /=.
+- case: (emptyP P) => [ /poly_equivP/quot_equivP {3}-> _|]; first exact: poly0_subset.
+  move/repr_active => {4}-> /=.
   exact: polyEq_antimono.
 Qed.
 
 Lemma repr_active_supset (P : {poly T, base}) :
   P `<=` 'P^=(base; {eq P}).
-case: (has_baseP P) => [-> /= | _ _ [_ Pprop0 /=]]; first exact: poly0_subset.
+case: (has_baseP P) => [-> /= | _ [_ Pprop0 /=]]; first exact: poly0_subset.
 rewrite {1}[P]repr_active //=; exact: poly_subset_refl.
 Qed.
 
@@ -243,10 +242,15 @@ Qed.
 Lemma in_active (P : {poly T, base}) e :
   e \in base -> (e \in ({eq P} : {fset _})) = (P `<=` `[hp e]).
 Proof.
-rewrite -fsub1set.
+rewrite -!fsub1set.
 have ->: (P `<=` (`[ hp e ])) = (P `<=` 'P^=(base; [fset e]%fset)).
-admit.
-Admitted.
+- rewrite (quot_equivP polyEq1).
+  apply/idP/poly_subsetIP => [? | [_ ?]]; last done.
+  by split; first exact: poly_base_subset_base.
+move => e_in_base.
+have ->: ([fset e] = [fset e]%:fsub)%fset by done.
+by rewrite activeP.
+Qed.
 
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 

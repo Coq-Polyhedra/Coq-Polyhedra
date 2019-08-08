@@ -378,15 +378,15 @@ Canonical fsubset_setU (A B : {fset K}) (HA : expose (A `<=` S)) (HB : expose (B
   @FSubset (tag3 _) (fsubset_setUP HA HB).
 
 Lemma fsubset_bigUP (I : finType) (P : pred I) F :
-  (forall i, F i `<=` S) -> (\bigcup_(i | P i) F i) `<=` S.
+  (forall i, P i -> F i `<=` S) -> (\bigcup_(i | P i) F i) `<=` S.
 Admitted.
 Canonical fsubset_bigU (I : finType) (P : pred I) F
-          (H : expose (forall i, F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP P H).
+          (H : expose (forall i, P i -> F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP H).
 
 Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
-Global Instance expose_funP (T : Type) (f : T -> fsubset_t) :
-  expose (forall i, f i `<=` S) := Expose (fun i => (valP (f i))).
+Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
+  expose (forall i, P i -> f i `<=` S) := Expose (fun i _ => (valP (f i))).
 
 Section Test.
 Check (fset0 %:fsub).
@@ -407,6 +407,7 @@ Abort.
 
 Variable (I : finType) (P : pred I) (F : I -> fsubset_t).
 Check (\bigcup_(i | P i) (F i))%:fsub.
+Check (\bigcup_(i | P i) A')%:fsub.
 End Test.
 
 End FSubset.
@@ -436,6 +437,8 @@ Notation "A %:fsub" := (FSubset.fsubset_of (Phantom _ A)) (at level 0).
 
 Section Test.
 Local Open Scope fset_scope.
+
+Set Typeclasses Debug.
 
 Variable (K : realFieldType) (S : {fset K}).
 Check (fset0%:fsub) : {fsubset S}.
