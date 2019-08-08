@@ -423,7 +423,6 @@ Canonical fsubset_finType.
 Canonical tag5.
 Canonical fsubset_expose.
 Canonical fsubset_fset0.
-(*Canonical fsubset_fsetT.*)
 Canonical fsubset_setU.
 Canonical fsubset_bigU.
 Coercion untag : tagged_fset >-> finset_of.

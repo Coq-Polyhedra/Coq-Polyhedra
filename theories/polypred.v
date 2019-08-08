@@ -61,150 +61,25 @@ Class expose (P : Prop) := Expose : P.
 Hint Extern 0 (expose _) => (exact) : typeclass_instances.
 
 Module Base.
-
 Section Base.
 
 Variable (R : realFieldType) (n : nat).
 
-Definition base_elt := ('cV[R]_n * R)%type.
-
-Definition opp_base_elt (b : base_elt) : base_elt := (- (fst b), - (snd b)). (* TODO: we should have a notation for that *)
-
-Notation base := {fset base_elt}.
-
-Structure tagged_pair := Tag { untag : (base * base)%type}.
-Local Coercion untag : tagged_pair >-> prod.
-Structure wf_pair := Wf { tp : tagged_pair ; _ : (tp.2 `<=` tp.1)%fset}.
-Local Coercion tp : wf_pair >-> tagged_pair.
-Canonical sub_wf_pair := [subType for tp].
-
-Definition wf_pair_of (p : wf_pair) & (phantom (base * base)%type p) : wf_pair := p.
-Notation "b %:wf" := (wf_pair_of (Phantom _ b)) (at level 0).
-
-Definition tag0 x := Tag x.
-Definition tag1 x := tag0 x.
-Definition tag2 x := tag1 x.
-Definition tag4 x := tag2 x.
-Definition tag6 x := tag4 x.
-Definition tag7 x := tag6 x.
-Definition tag3 x := tag7 x.
-Definition tag5 x := tag3 x.
-Canonical tag5.
-
-(*Lemma wfE (p : wf_pair) :
-  (p.1 `<=` p.2)%fset.
-Admitted.
-Canonical wfEP (p : wf_pair) := @Wf (tag5 (_,_)) (wfE p).
-
-Variable p : wf_pair.
-Check ((untag (tp p)) %:wf).
- *)
-
-Canonical wf_expose (b b' : base) (H : expose (b' `<=` b)%fset) := @Wf (tag0 (_, _)) H.
-
-Lemma wfTP (b : base) : (b `<=` b)%fset.
-Admitted.
-Canonical wfT (b : base) := @Wf (tag1 (_,_)) (wfTP b).
-
-Lemma wf0P (b : base) : (fset0 `<=` b)%fset.
-Admitted.
-Canonical wf0 (b : base) := @Wf (tag2 (_, _)) (wf0P b).
-
-Definition slice_pair  (e : base_elt) (p : (base * base)%type) :=
-  (e |` p.1, e |` p.2)%fset.
-Lemma wf_sliceP (e : base_elt) (x : wf_pair) : (e |` x.2 `<=` e |` x.1)%fset.
-Admitted.
-Canonical wf_slice (e : base_elt) (x : wf_pair) :=
-  @Wf (tag3 (slice_pair e x)) (wf_sliceP e x).
-
-Lemma wf_fsetvalP {b : base} (base' : {fset b}) :
-  ([fsetval x in base'] `<=` b)%fset.
-Admitted.
-Hint Resolve wf_fsetvalP.
-Canonical wf_fsetval (b : base) (base' : {fset b}) :=
-  @Wf (tag4 (_, _)) (wf_fsetvalP base').
-
-Lemma wfUP (b b1 b2 : base) :
-  (b1 `<=` b -> b2 `<=` b -> b1 `|` b2 `<=` b)%fset.
-Admitted.
-Canonical wfU (b b1 b2 : base)
-          (H1 : expose (b1 `<=` b)%fset) (H2 : expose (b2 `<=` b)%fset) := @Wf (tag6 (_, _)) (wfUP H1 H2).
-
-Lemma wf_bigUP (b : base) (I : finType) (P : pred I) F :
-  (forall i, (F i `<=` b)%fset) -> (\bigcup_(i | P i) (F i) `<=` b)%fset.
-Admitted.
-Canonical wf_bigU (b : base) (I : finType) (P : pred I) F (H : expose (forall i, (F i `<=` b)%fset)) := @Wf (tag7 (_, _)) (wf_bigUP P H).
-
-Lemma wf_eq (b b1 b2 : base) & (b1 `<=` b)%fset & (b2 `<=` b)%fset :
-   b1 = b2 -> (b, b1)%:wf = (b, b2)%:wf.
-by move => eq_b12; apply/ val_inj => /=; rewrite eq_b12.
-Qed.
-
-Section Test.
-Variable (b : base) (e : base_elt) (b' : {fset b}) (b'' : base) (b1 b2 : base).
-Check ((b, fset0)%:wf).
-Check ((b, b)%:wf).
-Check (slice_pair e (b, fset0)).
-Check ((e |` (b, fset0).1, e |` (b, fset0).2)%fset %:wf).
-(* Check ((e |` b, e |` fset0)%fset %:wf). *) (* TODO: ask Georges *)
-Check (b, [fsetval x in b']%fset)%:wf.
-Lemma foo & (b'' `<=` b)%fset : (b, b'')%:wf = (b, b'')%:wf.
-Proof.
-exact: wf_eq.
-Qed.
-Lemma foo' & (b'' `<=` b)%fset : (b, b'')%:wf = (b, [fsetval x in b']%fset)%:wf.
-apply: wf_eq => /=.
-Abort.
-Hypothesis H1 : (b1 `<=` b)%fset.
-Hypothesis H2 : (b2 `<=` b)%fset.
-Goal (b, (b1 `|` b2)%fset)%:wf = (b, b1)%:wf.
-Abort.
-Variable (I : finType) (P : pred I).
-Goal (b, (\bigcup_(i | P i) fset0)%fset)%:wf = (b, fset0)%:wf.
-Abort.
-Variable F : I -> {fset b}.
-Variable (i : I).
-Goal (b, [fsetval x in (F i)]%fset)%:wf = (b, b)%:wf.
-Abort.
-Goal (b, (\bigcup_(i | P i) [fsetval x in (F i)])%fset)%:wf = (b, b)%:wf.
-Abort.
-
-End Test.
+Definition opp_base_elt (b : ('cV[R]_n * R)%type) : ('cV[R]_n * R)%type := (- (fst b), - (snd b)).
 
 End Base.
-
-Module Import Exports.
-Canonical sub_wf_pair.
-Canonical tag5.
-Canonical wf_expose.
-Canonical wfT.
-Canonical wf0.
-Canonical wf_slice.
-Canonical wf_fsetval.
-Canonical wfU.
-Canonical wf_bigU.
-Coercion untag : tagged_pair >-> prod.
-Coercion tp : wf_pair >-> tagged_pair.
-(*Hint Resolve Base.wf_fsetvalP.*)
-End Exports.
-
 End Base.
 
-Export Base.Exports.
-
-Notation "'base_elt' [ R , n ]" := (@Base.base_elt R n) (at level 2).
+Notation "'base_elt' [ R , n ]" := ('cV[R]_n * R)%type (at level 2).
 Notation "'base_elt'" := (base_elt[_,_]) (at level 2).
 Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
 Notation "'base_t'" := (base_t[_,_]) (at level 2).
-Notation "'wf_pair' [ R , n ]" := (@Base.wf_pair R n) (at level 2).
-Notation "'wf_pair'" := (wf_pair[_,_]) (at level 2).
-Notation "e ||` x" := (Base.slice_pair e x) (at level 70).
 Notation "- e" := (Base.opp_base_elt e) : poly_scope.
-Bind Scope poly_scope with Base.base_elt.
-Notation "b %:wf" := (@Base.wf_pair_of _ _ _ (Phantom _ b)) (at level 0).
 
+(*
 Definition baseEq (R : realFieldType) (n : nat) (x : wf_pair[R,n]) : wf_pair :=
   (x.1 `|` ((@Base.opp_base_elt _ _) @` x.2), fset0)%fset %:wf.
+ *)
 
 Module ChoicePred.
 Section ClassDef.
@@ -1135,21 +1010,19 @@ Proof.
 by rewrite in_big_polyI.
 Qed.
 
-Definition polyEq (p : wf_pair) : T :=
-  (\polyI_(b : p.2) `[hp (val b)]) `&` 'P(p.1).
+Definition polyEq (base I : base_t) : T :=
+  (\polyI_(e : I) `[hp (val e)]) `&` 'P(base).
 
+Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
 
-Notation "''P^=' ( p )" := (polyEq p) : poly_scope.
-Notation "''P^=' ( base ; base' )" := (polyEq (base,base')%:wf) : poly_scope.
-
-Fact in_polyEq x (p : wf_pair) :
-  (x \in 'P^=(p)) = [forall b : p.2, x \in `[hp (val b)]] && (x \in 'P(p.1)).
+Fact in_polyEq x base I :
+  (x \in 'P^=(base; I)) = [forall e : I, x \in `[hp (val e)]] && (x \in 'P(base)).
 Proof.
 by rewrite inE in_big_polyI.
 Qed.
 
-Lemma in_polyEqP (x : 'cV[R]_n) (p : wf_pair) :
-  reflect ((forall b, b \in p.2 -> x \in `[hp b]) /\ x \in 'P(p.1)) (x \in 'P^=(p)).
+Lemma in_polyEqP x base I :
+  reflect ((forall e, e \in I -> x \in `[hp e]) /\ x \in 'P(base)) (x \in 'P^=(base; I)).
 Proof.
 Admitted.
 (*
@@ -1157,8 +1030,8 @@ by rewrite in_polyEq; apply: (equivP andP);
   split; move => [/forall_inP x_sat x_in_PAb].
 Qed.*)
 
-Lemma polyEq_eq (x : 'cV[R]_n) (b I : base_t[R,n]) (e : base_elt) & (I `<=` b)%fset :
-  x \in 'P^=(b; I) -> e \in I -> x \in `[hp e].
+Lemma polyEq_eq x base I e :
+  x \in 'P^=(base; I) -> e \in I -> x \in `[hp e].
 Proof.
 by move/in_polyEqP => [x_act _ ?]; apply: x_act.
 Qed.
@@ -1167,21 +1040,21 @@ Lemma polyEq0 {base : base_t} :
   'P^=(base; fset0) `=~` 'P(base).
 Admitted.
 
-Lemma polyEq_antimono (base I I' : base_t[R,n]) & (I `<=` base)%fset & (I' `<=` base)%fset :
+Lemma polyEq_antimono (base I I' : base_t[R,n]) :
   (I `<=` I')%fset -> 'P^=(base; I') `<=` 'P^=(base; I).
 Proof.
 Admitted.
 
-Lemma polyEq_antimono0 {base I : base_t[R,n]} & (I `<=` base)%fset :
+Lemma polyEq_antimono0 {base I : base_t[R,n]} :
   'P^=(base; I) `<=` 'P(base).
 Proof.
 Admitted.
 
-Lemma polyEq_polyI {base I I': base_t[R,n]} & (I `<=` base)%fset & (I' `<=` base)%fset :
+Lemma polyEq_polyI {base I I': base_t[R,n]} :
   'P^=(base; I) `&` 'P^=(base; I') `=~` 'P^=(base; (I `|` I')%fset).
 Admitted.
 
-Lemma polyEq_big_polyI {base: base_t[R,n]} {I : finType} {P : pred I} {F} (H : forall i, expose (F i `<=` base)%fset) :
+Lemma polyEq_big_polyI {base: base_t[R,n]} {I : finType} {P : pred I} {F}  :
   ~~ pred0b P -> \polyI_(i | P i) 'P^=(base; F i) `=~` 'P^=(base; (\bigcup_(i | P i) (F i))%fset).
 Proof.
 move/pred0Pn => [i0 Pi0].
@@ -1190,14 +1063,13 @@ apply/andP; split; last first.
 - apply/poly_subsetP => x /in_big_polyIP x_in.
   apply/in_polyEqP; split; last first.
   rewrite /=.
-  move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0 _)).
+  move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0)).
   move => e /= /bigfcupP [i [/andP [_ Pi] ?]].
   exact: (polyEq_eq (x_in _ Pi)).
 Qed.
 
-
-Lemma polyEq1 {base: base_t[R,n]} {b} & ([fset b] `<=` base)%fset :
-  'P^=(base; [fset b]%fset) `=~` 'P(base) `&` `[hp b].
+Lemma polyEq1 {base: base_t[R,n]} {e} :
+  'P^=(base; [fset e]%fset) `=~` 'P(base) `&` `[hp e].
 Proof.
 Admitted.
 
@@ -1263,8 +1135,7 @@ Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
-Notation "''P^=' ( p )" := (polyEq p) : poly_scope.
-Notation "''P^=' ( base ; base' )" := (polyEq (base,base')%:wf) : poly_scope.
+Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -1588,8 +1459,8 @@ Lemma poly_of_base_mono (base : base_t) :
   '['P(base)] = 'P(base) :> {quot T}.
 Admitted.
 
-Lemma polyEq_mono (p : wf_pair) :
-  '['P^=(p)] = 'P^=(p) :> {quot T}.
+Lemma polyEq_mono base I :
+  '['P^=(base; I)] = 'P^=(base; I) :> {quot T}.
 Admitted.
 
 End QuotientProperties.
