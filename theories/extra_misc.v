@@ -296,3 +296,165 @@ Lemma fsub_fsetval (K : choiceType) (A B : {fset K}) :
 Admitted.
 
 End ExtraFinmap.
+
+Class expose (P : Prop) := Expose : P.
+Hint Extern 0 (expose _) => (exact) : typeclass_instances.
+
+
+Module FSubset.
+Section FSubset.
+
+Local Open Scope fset_scope.
+
+Variable (K : choiceType) (S : {fset K}).
+
+Structure tagged_fset := Tag { untag : {fset K} }.
+Local Coercion untag : tagged_fset >-> finset_of.
+
+Lemma untag_inj : injective untag.
+Proof.
+move => x y; case: x => x' /= ->.
+by case: y => ? /=.
+Qed.
+
+Lemma untagK : cancel untag Tag.
+Proof.
+by move => x; apply/untag_inj.
+Qed.
+
+Definition tagged_fset_eqMixin := CanEqMixin untagK.
+Canonical tagged_fset_eqType := Eval hnf in EqType tagged_fset tagged_fset_eqMixin.
+Definition tagged_fset_choiceMixin := CanChoiceMixin untagK.
+Canonical tagged_fset_choiceType := Eval hnf in ChoiceType tagged_fset tagged_fset_choiceMixin.
+
+Record fsubset_t := FSubset { tf : tagged_fset; _ : (tf `<=` S) }.
+Local Coercion tf : fsubset_t >-> tagged_fset.
+Canonical fsubset_subType := [subType for tf].
+Definition fsubset_eqMixin := Eval hnf in [eqMixin of fsubset_t by <:].
+Canonical fsubset_eqType := Eval hnf in EqType fsubset_t fsubset_eqMixin.
+Definition fsubset_choiceMixin := [choiceMixin of fsubset_t by <:].
+Canonical fsubset_choiceType := Eval hnf in ChoiceType fsubset_t fsubset_choiceMixin.
+
+Definition fsetval_of_fsubset (A : fsubset_t) : {fset S} := [fset x : S | val x \in untag (val A)].
+
+Lemma fsubset_of_fsetvalP (A : {fset S}) : Tag [fsetval x in A] `<=` S.
+Proof.
+apply/fsubsetP => ? /imfsetP [? _ ->].
+exact: valP.
+Qed.
+Definition fsubset_of_fsetval (A : {fset S}) := FSubset (fsubset_of_fsetvalP A).
+
+Lemma fsetval_of_fsubsetK : cancel fsetval_of_fsubset fsubset_of_fsetval.
+Proof.
+move => A; apply/val_inj => /=.
+move/fsub_fsetval: (valP A) <-.
+exact: untag_inj.
+Qed.
+
+Definition fsubset_countMixin := CanCountMixin fsetval_of_fsubsetK.
+Canonical fsubset_countType := Eval hnf in CountType fsubset_t fsubset_countMixin.
+Definition fsubset_finMixin := CanFinMixin fsetval_of_fsubsetK.
+Canonical fsubset_finType := Eval hnf in FinType fsubset_t fsubset_finMixin.
+
+Definition fsubset_of (A : fsubset_t) & (phantom {fset K} A) : fsubset_t := A.
+Notation "A %:fsub" := (fsubset_of (Phantom _ A)) (at level 0).
+
+Definition tag0 x := Tag x.
+Definition tag1 x := tag0 x.
+Definition tag2 x := tag1 x.
+Definition tag3 x := tag2 x.
+Definition tag4 x := tag3 x.
+Definition tag5 x := tag4 x.
+Canonical tag5.
+
+Canonical fsubset_expose (A : {fset K})
+          (H : expose (A `<=` S)%fset) := @FSubset (tag0 _) H.
+(*Canonical fsubset_fsetT := @FSubset (tag1 _) (fsubset_refl S).*)
+Canonical fsubset_fset0 := @FSubset (tag2 _) (fsub0set S).
+
+Lemma fsubset_setUP (A B : {fset K}) :
+  A `<=` S -> B `<=` S -> A `|` B `<=` S.
+Admitted.
+Canonical fsubset_setU (A B : {fset K}) (HA : expose (A `<=` S)) (HB : expose (B `<=` S)) :=
+  @FSubset (tag3 _) (fsubset_setUP HA HB).
+
+Lemma fsubset_bigUP (I : finType) (P : pred I) F :
+  (forall i, F i `<=` S) -> (\bigcup_(i | P i) F i) `<=` S.
+Admitted.
+Canonical fsubset_bigU (I : finType) (P : pred I) F
+          (H : expose (forall i, F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP P H).
+
+Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
+Global Instance expose_funP (T : Type) (f : T -> fsubset_t) :
+  expose (forall i, f i `<=` S) := Expose (fun i => (valP (f i))).
+
+Section Test.
+Check (fset0 %:fsub).
+
+Check (S %:fsub).
+
+Variable A : {fset K}.
+Hypothesis (HA : (A `<=` S)).
+Check (A %:fsub).
+Goal (A `|` fset0)%:fsub = A%:fsub.
+Abort.
+
+Variable A' : fsubset_t.
+Goal (A' `|` fset0)%:fsub = A%:fsub.
+Abort.
+Goal (A' `|` fset0%:fsub)%:fsub = A%:fsub.
+rewrite /=; apply/val_inj/untag_inj => /=.
+Abort.
+
+Variable (I : finType) (P : pred I) (F : I -> fsubset_t).
+Check (\bigcup_(i | P i) (F i))%:fsub.
+End Test.
+
+End FSubset.
+
+Module Import Exports.
+Canonical tagged_fset_eqType.
+Canonical tagged_fset_choiceType.
+Canonical fsubset_subType.
+Canonical fsubset_eqType.
+Canonical fsubset_choiceType.
+Canonical fsubset_countType.
+Canonical fsubset_finType.
+Canonical tag5.
+Canonical fsubset_expose.
+Canonical fsubset_fset0.
+(*Canonical fsubset_fsetT.*)
+Canonical fsubset_setU.
+Canonical fsubset_bigU.
+Coercion untag : tagged_fset >-> finset_of.
+Coercion tf : fsubset_t >-> tagged_fset.
+End Exports.
+End FSubset.
+
+Export FSubset.Exports.
+
+Notation "'{fsubset'  S '}'" := (FSubset.fsubset_t S) (at level 2).
+Notation "A %:fsub" := (FSubset.fsubset_of (Phantom _ A)) (at level 0).
+
+Section Test.
+Local Open Scope fset_scope.
+
+Variable (K : realFieldType) (S : {fset K}).
+Check (fset0%:fsub) : {fsubset S}.
+
+Variable A : {fset K}.
+Hypothesis (HA : (A `<=` S)).
+Check ((A %:fsub) : {fsubset S}).
+Goal (A `|` fset0)%:fsub = A%:fsub :> {fsubset S}.
+Abort.
+
+Variable A' : {fsubset S}.
+Goal (A' `|` fset0)%:fsub = A%:fsub.
+Abort.
+Goal (A' `|` fset0%:fsub)%:fsub = A%:fsub.
+rewrite /=; apply/val_inj => /=.
+Abort.
+
+Variable (I : finType) (P : pred I) (F : I -> {fsubset S}).
+Check (\bigcup_(i | P i) (F i))%:fsub.
+End Test.
