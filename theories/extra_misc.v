@@ -291,5 +291,8 @@ Lemma imfset0 (K K' : choiceType) (f : K -> K') :
   (f @` fset0)%fset = fset0.
 Admitted.
 
+Lemma fsub_fsetval (K : choiceType) (A B : {fset K}) :
+  (A `<=` B)%fset -> A = [fsetval x in [fset x : B | val x \in A]]%fset.
+Admitted.
 
 End ExtraFinmap.
