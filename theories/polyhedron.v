@@ -350,8 +350,6 @@ Qed.
 
 End ActiveSlice.
 
-(* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
-
 Section Face.
 
 Variable (R : realFieldType) (n : nat) (T : polyPredType R n) (base : base_t[R,n]).
@@ -374,7 +372,7 @@ rewrite subset0_equiv; apply/idP/eqP => [? | -> /=].
 - exact: poly_equiv_refl.
 Qed.
 
-CoInductive face_spec (P : {poly T, base}) : {poly T, base} -> Type :=
+CoInductive face_spec (P : {poly T, base}) : {poly T, base} -> Prop :=
 | EmptyFace : face_spec P (`[poly0])%:poly_base
 | ArgMin c of (bounded P c) : face_spec P (argmin P c)%:poly_base.
 
@@ -388,30 +386,33 @@ case: (emptyP ('P(base) : {quot T}))
     move/val_inj ->; constructor.
     move: (poly_base_subset P); rewrite base_eq0 //=.
       by rewrite subset0_equiv => /quot_equivP/val_inj.
-Admitted.
-(*- move: base_prop0 P Q; case: base => A b base_prop0 P Q.
-  case/poly_baseP: Q; first constructor.
-  move => I; set Q := ('P^= (A, b; I)) %:poly_base.
-  rewrite inE; move => Q_prop0 Q_sub_P.
-  pose e : 'cV[R]_m := \col_i (if i \in I then 1 else 0).
-  have e_ge0 : e >=m 0.
-  + apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.
-    have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
-  + move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].
-  pose c := A^T *m e.
-  have c_bounded : bounded ('P(A,b) : 'poly[R]_n) c.
+- case: (poly_baseP Q) => [-> | ]; first constructor.
+  move => I [Q_eq Q_prop0].
+  rewrite inE; move => Q_sub_P.
+  pose w : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
+    [fsfun e : I => 1 | 0]%fset.
+  have w_ge0 : pweight base w.
+  admit.
+  (*have e_ge0 : e >=m 0.
+  + apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.*)
+  have w_supp : forall e, (w e > 0) = (e \in (I : {fset _})).
+  admit.
+  (*have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
+  + move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].*)
+  pose c := (combine base w).1.
+  have c_bounded : bounded ('P(base) : {quot T}) c.
   + exact: dual_sol_bounded.
   have c_bounded_P : (bounded P c).
   + apply: (bounded_mono1 c_bounded); apply/andP; split;
       [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
-  have c_argmin: argmin 'P(A,b) c = Q.
-  + apply/quot_equivP.
-    by apply: dual_sol_argmin; rewrite {Q_sub_P}.
+  have c_argmin: argmin 'P(base) c = Q.
+  + apply/quot_equivP; rewrite Q_eq in Q_prop0 *.
+    exact: dual_sol_argmin.
   suff <- : (argmin P c)%:poly_base = Q by constructor.
-  apply: val_inj; rewrite 2!SubK -c_argmin.
+  apply: val_inj => /=. rewrite -c_argmin.
   apply/quot_equivP; apply/subset_argmin; first by done.
   apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
-Qed.*)
+Admitted.
 
 Lemma face_set_of_face (P Q : {poly T, base}) :
   Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
@@ -435,6 +436,8 @@ rewrite !inE => Q_sub_P Q'_sub_P.
 by move: (polyISS Q_sub_P Q'_sub_P); rewrite (quot_equivP polyIxx).
 Qed.
 End Face.
+
+(* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 
 Section Relint.
 
