@@ -52,7 +52,9 @@ Canonical poly0_base := PolyBase poly0_baseP.
 
 End FixedBase.
 
-Section Wf.
+Notation "'{poly'  base '}'" := (poly_base base) : poly_scope.
+Definition poly_base_of base (x : {poly base}) & (phantom {quot T} x) : {poly base} := x.
+Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
 
 Lemma polyEq_baseP base I :
   (I `<=` base)%fset -> has_base base 'P^=(base; I).
@@ -62,14 +64,6 @@ by apply/implyP => _; apply/exists_eqP => /=; exists (I %:fsub).
 Qed.
 
 Canonical polyEq_base base I (H : expose (I `<=` base)%fset) := PolyBase (polyEq_baseP H).
-
-End Wf.
-
-Section Other.
-
-Notation "'{poly'  base '}'" := (poly_base base) : poly_scope.
-Definition poly_base_of base (x : {poly base}) & (phantom {quot T} x) : {poly base} := x.
-Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
 
 Section Test.
 Variable (base I : base_t[R,n]) (I' : {fsubset base}).
@@ -86,20 +80,26 @@ Variant has_base_spec (P : {poly base}) : Prop :=
 
 Lemma has_baseP (P : {poly base}) : has_base_spec P.
 Proof.
-case: (emptyP P) => [/poly_equivP/quot_equivP/val_inj -> | PN0]; first by constructor.
-move/implyP/(_ PN0)/exists_eqP: (poly_base_base P) => [I ?].
+case: (emptyP P) => [/poly_equivP/quot_equivP/val_inj -> | P_prop0]; first by constructor.
+move/implyP/(_ P_prop0)/exists_eqP: (poly_base_base P) => [I ?].
 constructor 2 with I.
 split; [exact: val_inj | done].
 Qed.
 
 Section Test.
-
 Variable P Q : {poly base}.
 Goal P = Q.
 case/has_baseP: P.
 Abort.
 
 End Test.
+
+Lemma poly_base_subset_base (P : {poly base}) :
+  P `<=` 'P(base).
+Proof.
+case/has_baseP : (P) => [->| I [-> _]];
+  [ exact: poly0_subset | exact: polyEq_antimono0].
+Qed.
 
 Definition set_of_poly_base (P : {poly base}) : option {fsubset base} :=
   if emptyP (P : {quot T}) is NonEmpty H then
@@ -145,14 +145,16 @@ Proof.
 Admitted.
 Canonical polyI_of_base P Q := PolyBase (polyI_of_baseP P Q).
 
-Lemma poly_base_subset_base (P : {poly base}) :
-  P `<=` 'P(base).
+Lemma slice_of_baseP (e : base_elt) (P : {poly base}) :
+  has_base (e +|` base) (slice e P).
 Proof.
-case/has_baseP : (P) => [->| I [-> _]];
-  [ exact: poly0_subset | exact: polyEq_antimono0].
-Qed.
+Admitted.
+(*case/poly_baseP: P => [ | I _]; first by rewrite (quot_equivP slice0); exact: poly0_baseP.
+apply/has_baseP => _.
+by exists (slice_set I); rewrite -(quot_equivP slice_polyEq).*)
 
-End Other.
+Canonical slice_of_base e P := PolyBase (slice_of_baseP e P).
+
 End PolyBase.
 
 Notation "'{poly'  T , base '}'" := (@poly_base _ _ T base) : poly_scope.
@@ -295,30 +297,25 @@ Qed.
 
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 
-Lemma slice_poly_baseP (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly base})  :
-  [ (slice c d P) has \base (slice_base c d base) ].
-Proof.
-case/poly_baseP: P => [ | I _]; first by rewrite (quot_equivP slice0); exact: poly0_baseP.
-apply/has_baseP => _.
-by exists (slice_set I); rewrite -(quot_equivP slice_polyEq).
-Qed.
-Canonical slice_poly_base (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly base})
-          := PolyBase (slice_poly_baseP c d P).
-
-Lemma active_slice (c: 'cV[R]_n) (d : R) m (base : m.-base) (P : {poly base}) :
-      (slice_set {eq P}) \subset {eq (slice c d P)%:poly_base}.
-Proof.
-rewrite -activeP -(quot_equivP slice_polyEq).
-case: (poly_base_emptyP P) => [-> /= | /= ].
-- rewrite {1}(quot_equivP slice0); exact: poly0_subset.
-- move/repr_active => {1}->.
-  exact: poly_subset_refl.
-Qed.
-
-
 End Active.
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
+
+Section ActiveSlice.
+
+Variable (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Lemma active_slice e base (P : {poly T, base}) :
+  ((e +|` {eq P}) `<=` {eq (slice e P)%:poly_base})%fset.
+Proof.
+rewrite -activeP -(quot_equivP slice_polyEq).
+case: (has_baseP P) => [-> /= | ? [_ P_prop0] /=].
+- rewrite {1}(quot_equivP (slice0 _)); exact: poly0_subset.
+- move/repr_active: P_prop0 => {1}->.
+  exact: poly_subset_refl.
+Qed.
+
+End ActiveSlice.
 
 Section Face.
 

@@ -1070,6 +1070,11 @@ Lemma polyEq1 {base: base_t[R,n]} {e} :
 Proof.
 Admitted.
 
+Lemma slice_polyEq {e : base_elt} {base I : base_t[R,n]} :
+  slice e 'P^=(base; I) `=~` 'P^=(e +|` base; e +|` I).
+Admitted.
+
+
 (*
 Lemma polyEq_of_polyEq (base base1 base2 : base_t R n) : (* quite short proof after all! *)
    exists base3, 'P^=(baseEq base base1; base2) `=~` 'P^=(base; base3).
@@ -1106,10 +1111,6 @@ apply/andP; split; apply/poly_subsetP => x x_in.
             rewrite eqr_opp; by rewrite in_nth_hp in eq.
           * by rewrite !in_nth_hp mul_col_mx !col_mxEd.
 Qed.
-Admitted.
-
-Lemma slice_polyEq (b : base_elt) (p : wf_pair) :
-  slice b 'P^=(p) `=~` 'P^=((b ||` p)%:wf).
 Admitted.*)
 
 End PolyPredProperties.
