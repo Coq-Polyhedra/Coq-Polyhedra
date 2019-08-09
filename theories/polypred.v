@@ -73,11 +73,6 @@ Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
 Notation "'base_t'" := (base_t[_,_]) (at level 2).
 Notation "- e" := (Base.opp_base_elt e) : poly_scope.
 
-(*
-Definition baseEq (R : realFieldType) (n : nat) (x : wf_pair[R,n]) : wf_pair :=
-  (x.1 `|` ((@Base.opp_base_elt _ _) @` x.2), fset0)%fset %:wf.
- *)
-
 Module ChoicePred.
 Section ClassDef.
 
@@ -1074,6 +1069,16 @@ Lemma slice_polyEq {e : base_elt} {base I : base_t[R,n]} :
   slice e 'P^=(base; I) `=~` 'P^=(e +|` base; e +|` I).
 Admitted.
 
+Definition baseEq (base I : base_t[R,n]) :=
+  (base `|` ((@Base.opp_base_elt _ _) @` I))%fset.
+
+Lemma polyEq_flatten (base : base_t[R,n]) (I : {fsubset base}) :
+  'P^=(base; I) `=~` 'P(baseEq base I)%fset.
+Admitted.
+
+Lemma polyEq_of_polyEq (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)}) :
+  exists K : {fsubset base}, 'P^=(baseEq base I; J) `=~` 'P^=(base; K).
+Admitted.
 
 (*
 Lemma polyEq_of_polyEq (base base1 base2 : base_t R n) : (* quite short proof after all! *)

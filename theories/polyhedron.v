@@ -30,7 +30,12 @@ Variable (base : base_t[R,n]).
 
 Definition has_base (P : {quot T}) :=
   (P `>` `[poly0]) ==>
-    [exists I : {fsubset base}, P == 'P^=(base; I)%fset].
+    [exists I : {fsubset base}, P == 'P^=(base; I)].
+
+
+Lemma has_baseP (P : {quot T}) :
+  reflect ((P `>` `[poly0]) -> exists I : {fsubset base}, P = 'P^=(base; I)) (has_base P).
+Admitted.
 
 Inductive poly_base := PolyBase { pval :> {quot T} ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
@@ -74,11 +79,11 @@ End Test.
 
 Variable base : base_t[R,n].
 
-Variant has_base_spec (P : {poly base}) : Prop :=
-| HasBase0 of (P = (`[poly0])%:poly_base) : has_base_spec P
-| HasBaseN0 (I : {fsubset base}) of (P = 'P^=(base; I)%:poly_base /\ P `>` `[poly0]) : has_base_spec P.
+Variant poly_base_spec (P : {poly base}) : Prop :=
+| PolyBase0 of (P = (`[poly0])%:poly_base) : poly_base_spec P
+| PolyBaseN0 (I : {fsubset base}) of (P = 'P^=(base; I)%:poly_base /\ P `>` `[poly0]) : poly_base_spec P.
 
-Lemma has_baseP (P : {poly base}) : has_base_spec P.
+Lemma poly_baseP (P : {poly base}) : poly_base_spec P.
 Proof.
 case: (emptyP P) => [/poly_equivP/quot_equivP/val_inj -> | P_prop0]; first by constructor.
 move/implyP/(_ P_prop0)/exists_eqP: (poly_base_base P) => [I ?].
@@ -89,7 +94,7 @@ Qed.
 Section Test.
 Variable P Q : {poly base}.
 Goal P = Q.
-case/has_baseP: P.
+case/poly_baseP: P.
 Abort.
 
 End Test.
@@ -97,7 +102,7 @@ End Test.
 Lemma poly_base_subset_base (P : {poly base}) :
   P `<=` 'P(base).
 Proof.
-case/has_baseP : (P) => [->| I [-> _]];
+case/poly_baseP : (P) => [->| I [-> _]];
   [ exact: poly0_subset | exact: polyEq_antimono0].
 Qed.
 
@@ -155,6 +160,38 @@ by exists (slice_set I); rewrite -(quot_equivP slice_polyEq).*)
 
 Canonical slice_of_base e P := PolyBase (slice_of_baseP e P).
 
+
+Lemma argmin_baseP (P : {poly base}) c :
+  has_base base (argmin P c).
+Proof.
+(* we first suppose that flat_prop holds, ie this is the situation in which
+ * P (here quantified as Q) would play the role of the base *)
+suff flat_prop: forall base0, bounded ('P(base0) : {quot T}) c -> has_base base0 (argmin ('P(base0) : {quot T}) c).
+- apply/has_baseP; rewrite -bounded_argminN0.
+  case/poly_baseP : (P) => [->| I [-> _]]; first by rewrite bounded_poly0.
+  rewrite /= (quot_equivP (polyEq_flatten _)) => bounded_PI.
+  move/flat_prop/has_baseP: (bounded_PI); rewrite -bounded_argminN0.
+  move => /(_ bounded_PI) => [[J] ->].
+  by move: (polyEq_of_polyEq (T := [polyPredType of {quot T}]) J)
+    => [K] /quot_equivP ->; exists K. (* TODO: ugly to specify the polyPredType *)
+- (* now this is the classic proof of Schrijver *)
+  move => base0 c_bounded.
+  move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb]. (*[u_ge0 c_eq b_u_eq_opt_val].*)
+  (*rewrite {}c_eq in c_bounded b_u_eq_opt_val *. (* dual_opt_sol is badly specified
+                                                 * we should use an inductive spec instead *)*)
+  pose I := [fset e in base0 | w e > 0]%fset.
+  have supp_w : forall e, (w e > 0) = (e \in I). admit.
+  apply/has_baseP; exists I%:fsub.
+  apply/quot_equivP.
+  move: (opt_point c_bounded) => [x x_in_P0 c_x_eq_opt_val].
+  have: x \in `[hp (combine base0 w)] : {quot T}.
+  - by rewrite inE w_comb /=; apply/eqP.
+  move/(compl_slack_cond w_ge0 supp_w x_in_P0) => x_in_P0I.
+  move: (congr1 fst w_comb) => /= <-; apply/dual_sol_argmin; try by done.
+  by apply/proper0P; exists x.
+Admitted.
+Canonical argmin_base (P : {poly base}) c := PolyBase (argmin_baseP P c).
+
 End PolyBase.
 
 Notation "'{poly'  T , base '}'" := (@poly_base _ _ T base) : poly_scope.
@@ -203,7 +240,7 @@ End Test.
 Lemma repr_active (P : {poly T, base}) :
   P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
 Proof.
-case/has_baseP: (P) => [->|]; first by rewrite poly_properxx.
+case/poly_baseP: (P) => [->|]; first by rewrite poly_properxx.
 move => I [P_eq _] Pprop0; apply: val_inj => /=.
 suff ->: 'P^=(base; {eq P}) =
   \polyI_(I : {fsubset base} | P `<=` 'P^=(base; I)) 'P^= (base; I) :> {quot T}.
@@ -228,7 +265,7 @@ Qed.
 
 Lemma repr_active_supset (P : {poly T, base}) :
   P `<=` 'P^=(base; {eq P}).
-case: (has_baseP P) => [-> /= | _ [_ Pprop0 /=]]; first exact: poly0_subset.
+case: (poly_baseP P) => [-> /= | _ [_ Pprop0 /=]]; first exact: poly0_subset.
 rewrite {1}[P]repr_active //=; exact: poly_subset_refl.
 Qed.
 
@@ -263,9 +300,9 @@ Qed.
 Lemma poly_base_subset_eq (P Q : {poly T, base}) :
     (P `<=` Q) -> (({eq Q} : {fset _}) `<=` {eq P})%fset.
 Proof.
-case: (has_baseP P) => [-> | ? [_ P_prop0]].
+case: (poly_baseP P) => [-> | ? [_ P_prop0]].
 - rewrite repr_active0 poly0_subset => _; exact: (valP {eq _}).
-- case: (has_baseP Q) => [-> | ? [_ Q_prop0]].
+- case: (poly_baseP Q) => [-> | ? [_ Q_prop0]].
   + rewrite -subset0N_proper in P_prop0.
     by move/negbTE : P_prop0 ->.
   move/repr_active: Q_prop0 => {1}->.
@@ -282,8 +319,8 @@ Qed.
 Lemma poly_base_proper (P Q : {poly T, base}) :
   ({eq Q} `<` {eq P})%fset -> P `<` Q.
 Proof.
-case: (has_baseP Q) => [->| J [Q_eq Q_prop0]]; first by rewrite repr_active0 fsubsetT_proper.
-case: (has_baseP P) => [->| I [P_eq P_prop0]]; first done.
+case: (poly_baseP Q) => [->| J [Q_eq Q_prop0]]; first by rewrite repr_active0 fsubsetT_proper.
+case: (poly_baseP P) => [->| I [P_eq P_prop0]]; first done.
 rewrite {2}[Q]repr_active // => /fproperP [/fsubsetP eq_sub] [i i_in i_notin].
 rewrite [P]repr_active //.
 apply/andP; split; first exact: polyEq_antimono.
@@ -307,7 +344,7 @@ Lemma active_slice e base (P : {poly T, base}) :
   ((e +|` {eq P}) `<=` {eq (slice e P)%:poly_base})%fset.
 Proof.
 rewrite -activeP -(quot_equivP slice_polyEq).
-case: (has_baseP P) => [-> /= | ? [_ P_prop0] /=].
+case: (poly_baseP P) => [-> /= | ? [_ P_prop0] /=].
 - rewrite {1}(quot_equivP (slice0 _)); exact: poly0_subset.
 - move/repr_active: P_prop0 => {1}->.
   exact: poly_subset_refl.
@@ -320,33 +357,6 @@ End ActiveSlice.
 Section Face.
 
 Variable (R : realFieldType) (n : nat).
-
-Lemma argmin_baseP (m : nat) (base : m.-base[R,n]) (P : {poly base}) c :
-  [(argmin P c) has \base base].
-Proof.
-(* we first suppose that flat_prop holds, ie this is the situation in which
- * P (here quantified as Q) would play the role of the base *)
-suff flat_prop: forall p (Q : p.-base), bounded ('P(Q) : 'poly[R]_n) c -> [(argmin ('P(Q) : 'poly[R]_n) c) has \base Q].
-- apply/has_baseP; rewrite -bounded_argminN0.
-  case/poly_baseP : P => [| I _]; first by rewrite bounded_poly0.
-  rewrite /= (quot_equivP polyEq_flatten) => bounded_PI.
-  move/flat_prop/has_baseP: (bounded_PI). rewrite -bounded_argminN0.
-  move => /(_ bounded_PI) => [[J] ->].
-  by move: (polyEq_of_polyEq (T := [polyPredType of 'poly[R]_n]) base J)
-    => [K] /quot_equivP ->; exists K. (* TODO: ugly to specify the polyPredType *)
-- (* now this is the classic proof of Schrijver *)
-  move => m' [A b] c_bounded.
-  move: (dual_opt_sol c_bounded) => [u] [u_ge0 c_eq b_u_eq_opt_val].
-  rewrite {}c_eq in c_bounded b_u_eq_opt_val *. (* dual_opt_sol is badly specified
-                                                 * we should use an inductive spec instead *)
-  pose I := [set i | u i 0 > 0].
-  have supp_u : forall i, (u i 0 > 0) = (i \in I) by move => i; rewrite inE.
-  apply/has_baseP; exists I; apply/quot_equivP; apply/dual_sol_argmin => //.
-  move: (opt_point c_bounded) => [x] x_in_PAb; rewrite -b_u_eq_opt_val.
-  move/(compl_slack_cond u_ge0 supp_u x_in_PAb) => x_in_PAbI.
-  by apply/proper0P; exists x.
-Qed.
-Canonical argmin_base (m : nat) (base : m.-base) (P : {poly base}) c := PolyBase (argmin_baseP P c).
 
 (*Section Test.
 
