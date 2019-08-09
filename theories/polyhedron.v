@@ -295,8 +295,6 @@ move: i_notin; rewrite in_active.
 - move: i_in; apply/fsubsetP; exact: (valP {eq _}).
 Qed.
 
-(* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
-
 End Active.
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
@@ -316,6 +314,8 @@ case: (has_baseP P) => [-> /= | ? [_ P_prop0] /=].
 Qed.
 
 End ActiveSlice.
+
+(* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 
 Section Face.
 
