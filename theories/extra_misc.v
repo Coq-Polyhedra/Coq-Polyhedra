@@ -383,6 +383,11 @@ Admitted.
 Canonical fsubset_bigU (I : finType) (P : pred I) F
           (H : expose (forall i, P i -> F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP H).
 
+Lemma fsubset_filterP (P : pred K) :
+  [fset x in S | P x] `<=` S.
+Admitted.
+Canonical fsubset_filter (P : pred K) := @FSubset (tag5 _) (fsubset_filterP P).
+
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
 Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
   expose (forall i, P i -> f i `<=` S) := Expose (fun i _ => (valP (f i))).
@@ -427,6 +432,7 @@ Canonical fsubset_expose.
 Canonical fsubset_fset0.
 Canonical fsubset_setU.
 Canonical fsubset_bigU.
+Canonical fsubset_filter.
 Coercion untag : tagged_fset >-> finset_of.
 Coercion tf : fsubset_t >-> tagged_fset.
 End Exports.
@@ -482,7 +488,7 @@ Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
 
 End FSubsetOther.
 
-Notation "e +|` A" := (fslice e A) (at level 0).
+Notation "e +|` A" := (fslice e A) (at level 52).
 
 Section Test.
 
