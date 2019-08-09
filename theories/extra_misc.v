@@ -472,4 +472,24 @@ Variable (K : choiceType) (S : {fset K}).
 Lemma fsubsetT_proper (A : {fsubset S}) : (S `<` A) = false.
 Admitted.
 
+Definition fslice e (A : {fset K}) := e |` A.
+
+Lemma fsubset_sliceP e A : A `<=` S -> fslice e A `<=` fslice e S.
+Admitted.
+
+Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
+  @FSubset.FSubset _ _ (FSubset.tag5 _) (fsubset_sliceP e H).
+
 End FSubsetOther.
+
+Notation "e +|` A" := (fslice e A) (at level 0).
+
+Section Test.
+
+Set Typeclasses Debug.
+
+Variable (K : realFieldType) (S : {fset K}) (e : K) (A : {fsubset S}).
+Check ((e +|` A)%:fsub : {fsubset (e +|` S)}).
+Check ((e +|` fset0)%:fsub : {fsubset (e +|` S)}).
+Check ((e +|` S)%:fsub : {fsubset (e +|` S)}).
+End Test.
