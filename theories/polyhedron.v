@@ -176,9 +176,7 @@ suff flat_prop: forall base0, bounded ('P(base0) : {quot T}) c -> has_base base0
     => [K] /quot_equivP ->; exists K. (* TODO: ugly to specify the polyPredType *)
 - (* now this is the classic proof of Schrijver *)
   move => base0 c_bounded.
-  move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb]. (*[u_ge0 c_eq b_u_eq_opt_val].*)
-  (*rewrite {}c_eq in c_bounded b_u_eq_opt_val *. (* dual_opt_sol is badly specified
-                                                 * we should use an inductive spec instead *)*)
+  move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb].
   pose I := [fset e in base0 | w e > 0]%fset.
   have supp_w : forall e, (w e > 0) = (e \in I). admit.
   apply/has_baseP; exists I%:fsub.
