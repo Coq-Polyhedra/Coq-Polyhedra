@@ -1469,16 +1469,21 @@ Definition quotE := (@slice_mono, @poly_of_base_mono, @polyEq_mono,
                     @argmin_mono, @pointed_mono, @hp_mono).
 
 
-(*
 Section Duality.
 
 Local Open Scope poly_scope.
 
-Variable (R : realFieldType) (n : nat) (T : polyPredType R n).
-Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
+Variable (R : realFieldType) (n : nat) (T : polyPredType R n) (base : base_t[R,n]).
 
-Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded ('P(A,b) : T) c) :
-    exists u, [/\ u >=m 0, c = A^T *m u & '[b, u] = opt_value H].
+Definition pweight (w : {fsfun base_elt[R,n] -> R for fun => 0%R}) :=
+  (finsupp w `<=` base)%fset && [forall v : base, w (val v) >= 0].
+Implicit Type w : {fsfun base_elt[R,n] -> R for fun => 0%R}.
+
+Definition combine w : base_elt :=
+  (\sum_(v <- base) (w v) *: (fst v), \sum_(v <- base) (w v) * (snd v)).
+
+Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded ('P(base) : T) c) :
+    exists2 w, pweight w & combine w = (c, opt_value H).
 Admitted.
 (*Proof.
 move: (H) => H0. (* duplicate assumption *)
@@ -1487,34 +1492,37 @@ set u := Simplex.dual_opt_point _ _ _ .
 by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
 Qed.*)
 
-Variable (u : 'cV[R]_m).
-
-Lemma dual_sol_lower_bound :
-  u >=m 0 -> ('P(A, b) : T) `<=` `[hs (A^T *m u) & '[b,u]].
+Lemma dual_sol_lower_bound w :
+  pweight w -> ('P(base) : T) `<=` `[hs (combine w)].
 Proof.
-move => u_ge0; apply/poly_subsetP => x x_in.
+Admitted.
+(*  move => u_ge0; apply/poly_subsetP => x x_in.
 by rewrite inE -vdot_mulmx vdotC; apply: vdot_lev;
   last by rewrite in_poly_of_base in x_in.
-Qed.
+Qed.*)
 
-Lemma dual_sol_bounded :
-  (('P(A, b) : T) `>` `[poly0]) -> u >=m 0 -> bounded ('P(A,b) : T) (A^T *m u).
+Lemma dual_sol_bounded w :
+  (('P(base) : T) `>` `[poly0]) -> pweight w -> bounded ('P(base) : T) (fst (combine w)).
 Proof.
-move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
+Admitted.
+(*  move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
 exists '[b,u]; exact: dual_sol_lower_bound.
-Qed.
+Qed.*)
 
-Hypothesis u_ge0 : u >=m 0.
-Variable (I : {set 'I_m}).
-Hypothesis u_supp : forall i, (u i 0 > 0) = (i \in I).
+Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
+Hypothesis w_ge0 : pweight w.
+Variable (I : {fsubset base}).
+Hypothesis w_supp : forall v, (w v > 0) = (v \in (I : {fset _})).
 
 Lemma compl_slack_cond x :
-  x \in ('P(A,b) : T) -> reflect ('[A^T *m u, x] = '[b, u]) (x \in ('P^=(A, b; I) : T)).
+  x \in ('P(base) : T) -> reflect (x \in `[hp (combine w)] : T) (x \in ('P^=(base; I) : T)).
 Admitted.
 
-Lemma dual_sol_argmin : (('P^=(A, b; I) : T) `>` `[poly0]) -> argmin ('P(A,b) : T) (A^T *m u) `=~` 'P^=(A, b; I).
+Lemma dual_sol_argmin :
+  (('P^=(base; I) : T) `>` `[poly0]) -> argmin ('P(base) : T) (fst (combine w)) `=~` 'P^=(base; I).
 Proof.
-move => PI_non_empty.
+Admitted.
+(*move => PI_non_empty.
 have P_non_empty : (('P(A,b) : T) `>` `[poly0]).
 - apply: (poly_proper_subset PI_non_empty); exact: polyEq_antimono0.
 move/proper0P : PI_non_empty => [x x_in_PI].
@@ -1539,7 +1547,7 @@ suff ->: opt_value c_bounded = '[b,u].
     move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound u_ge0).
     by rewrite inE.
 Qed.
-
+*)
 
 (*
 Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :
@@ -1564,7 +1572,7 @@ apply/(iffP idP).
 Qed.*)
 
 End Duality.
-*)
+
 
 (*
 Section ProperPolyhedron.
