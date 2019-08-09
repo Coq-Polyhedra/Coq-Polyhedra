@@ -383,10 +383,12 @@ Admitted.
 Canonical fsubset_bigU (I : finType) (P : pred I) F
           (H : expose (forall i, P i -> F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP H).
 
-Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
 Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
   expose (forall i, P i -> f i `<=` S) := Expose (fun i _ => (valP (f i))).
+
+(* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
+Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 
 Section Test.
 Check (fset0 %:fsub).
@@ -460,3 +462,14 @@ Abort.
 Variable (I : finType) (P : pred I) (F : I -> {fsubset S}).
 Check (\bigcup_(i | P i) (F i))%:fsub.
 End Test.
+
+Section FSubsetOther.
+
+Local Open Scope fset_scope.
+
+Variable (K : choiceType) (S : {fset K}).
+
+Lemma fsubsetT_proper (A : {fsubset S}) : (S `<` A) = false.
+Admitted.
+
+End FSubsetOther.
