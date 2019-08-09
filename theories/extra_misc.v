@@ -365,7 +365,8 @@ Definition tag2 x := tag1 x.
 Definition tag3 x := tag2 x.
 Definition tag4 x := tag3 x.
 Definition tag5 x := tag4 x.
-Canonical tag5.
+Definition tag6 x := tag5 x.
+Canonical tag6.
 
 Canonical fsubset_expose (A : {fset K})
           (H : expose (A `<=` S)%fset) := @FSubset (tag1 _) H.
@@ -427,7 +428,7 @@ Canonical fsubset_eqType.
 Canonical fsubset_choiceType.
 Canonical fsubset_countType.
 Canonical fsubset_finType.
-Canonical tag5.
+Canonical tag6.
 Canonical fsubset_expose.
 Canonical fsubset_fset0.
 Canonical fsubset_setU.
@@ -484,7 +485,7 @@ Lemma fsubset_sliceP e A : A `<=` S -> fslice e A `<=` fslice e S.
 Admitted.
 
 Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
-  @FSubset.FSubset _ _ (FSubset.tag5 _) (fsubset_sliceP e H).
+  @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e H).
 
 End FSubsetOther.
 
