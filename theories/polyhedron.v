@@ -99,7 +99,7 @@ Abort.
 
 End Test.
 
-Lemma poly_base_subset_base (P : {poly base}) :
+Lemma poly_base_subset (P : {poly base}) :
   P `<=` 'P(base).
 Proof.
 case/poly_baseP : (P) => [->| I [-> _]];
@@ -289,7 +289,7 @@ rewrite -!fsub1set.
 have ->: (P `<=` (`[ hp e ])) = (P `<=` 'P^=(base; [fset e]%fset)).
 - rewrite (quot_equivP polyEq1).
   apply/idP/poly_subsetIP => [? | [_ ?]]; last done.
-  by split; first exact: poly_base_subset_base.
+  by split; first exact: poly_base_subset.
 move => e_in_base.
 have ->: ([fset e] = [fset e]%:fsub)%fset by done.
 by rewrite activeP.
@@ -354,28 +354,19 @@ End ActiveSlice.
 
 Section Face.
 
-Variable (R : realFieldType) (n : nat).
+Variable (R : realFieldType) (n : nat) (T : polyPredType R n) (base : base_t[R,n]).
 
-(*Section Test.
+Definition face_set (P : {poly T, base}) : {set {poly T, base}} :=
+  [set Q : {poly T, base} | Q `<=` P].
 
-Variable (base : 'hpoly[R]_n) (P Q : {poly base}) (c : 'cV[R]_n).
-
-Set Printing All.
-Lemma foo & (infer (bounded P c)) : (argmin P c)%:poly_base = Q.
-Abort.
-End Test.*)
-
-Definition face_set m (base : m.-base[R,n]) (P : {poly base}) : {set {poly base}} :=
-  [set Q : {poly base} | Q `<=` P].
-
-Lemma face_set_self m (base : m.-base) (P : {poly base}) : P \in (face_set P).
+Lemma face_set_self (P : {poly T, base}) : P \in (face_set P).
 Proof.
 rewrite inE; exact: poly_subset_refl.
 Qed.
 
 (* TO BE FIXED : why do we need extra parenthesis for `[poly0] *)
-Lemma poly0_face_set m (base : m.-base) :
-  face_set (`[poly0]%:poly_base) = [set `[poly0]%:poly_base] :> {set {poly base}}.
+Lemma poly0_face_set :
+  face_set (`[poly0]%:poly_base) = [set `[poly0]%:poly_base] :> {set {poly T, base}}.
 Proof.
 apply/setP => P; rewrite !inE /=.
 rewrite subset0_equiv; apply/idP/eqP => [? | -> /=].
@@ -383,21 +374,22 @@ rewrite subset0_equiv; apply/idP/eqP => [? | -> /=].
 - exact: poly_equiv_refl.
 Qed.
 
-CoInductive face_spec m (base : m.-base) (P : {poly base}) : {poly base} -> Type :=
+CoInductive face_spec (P : {poly T, base}) : {poly T, base} -> Type :=
 | EmptyFace : face_spec P (`[poly0])%:poly_base
 | ArgMin c of (bounded P c) : face_spec P (argmin P c)%:poly_base.
 
-Lemma faceP m (base : m.-base) (P Q : {poly base}) :
+Lemma faceP (P Q : {poly T, base}) :
   Q \in face_set P -> face_spec P Q.
 Proof.
-case: (emptyP ('P(base) : 'poly[R]_n))
+case: (emptyP ('P(base) : {quot T}))
   => [/poly_equivP/quot_equivP base_eq0 | base_prop0].
 - suff ->: (P = (`[poly0]%:poly_base)).
   + rewrite inE subset0_equiv => /quot_equivP.
     move/val_inj ->; constructor.
     move: (poly_base_subset P); rewrite base_eq0 //=.
-    by rewrite subset0_equiv => /quot_equivP/val_inj.
-- move: base_prop0 P Q; case: base => A b base_prop0 P Q.
+      by rewrite subset0_equiv => /quot_equivP/val_inj.
+Admitted.
+(*- move: base_prop0 P Q; case: base => A b base_prop0 P Q.
   case/poly_baseP: Q; first constructor.
   move => I; set Q := ('P^= (A, b; I)) %:poly_base.
   rewrite inE; move => Q_prop0 Q_sub_P.
@@ -419,9 +411,9 @@ case: (emptyP ('P(base) : 'poly[R]_n))
   apply: val_inj; rewrite 2!SubK -c_argmin.
   apply/quot_equivP; apply/subset_argmin; first by done.
   apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
-Qed.
+Qed.*)
 
-Lemma face_set_of_face m (base : m.-base) (P Q : {poly base}) :
+Lemma face_set_of_face (P Q : {poly T, base}) :
   Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
 Proof.
 rewrite inE => Q_sub_P; apply/setP => Q'; rewrite !inE.
@@ -429,14 +421,14 @@ apply/idP/andP => [Q'_sub_Q | [_?]]; last by done.
 by split; try exact: (poly_subset_trans Q'_sub_Q).
 Qed.
 
-Corollary face_set_subset m (base : m.-base) (P Q  : {poly base}) :
+Corollary face_set_subset (P Q  : {poly T, base}) :
   Q \in face_set P -> (face_set Q \subset face_set P).
 Proof.
 move/face_set_of_face ->; apply/subsetP => Q'.
 by rewrite inE => /andP [?].
 Qed.
 
-Lemma polyI_face_set m (base : m.-base) (P Q Q' : {poly base}) :
+Lemma polyI_face_set (P Q Q' : {poly T, base}) :
   Q \in face_set P -> Q' \in face_set P -> (Q `&` Q')%:poly_base \in face_set P.
 Proof.
 rewrite !inE => Q_sub_P Q'_sub_P.
