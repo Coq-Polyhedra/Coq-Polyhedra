@@ -26,16 +26,16 @@ Section Def.
 
 Variable (R : realFieldType) (n : nat).
 
-Record hpoly := HPoly { nb_ineq : nat; _ : nb_ineq.-base[R, n] }.
-
-Definition base_to_hpoly (m : nat) (base : m.-base) := HPoly base.
+Record hpoly := HPoly {
+  nb_ineq : nat ;
+  _ : 'M[R]_(nb_ineq,n) ;
+  _ : 'cV[R]_nb_ineq
+}.
 
 End Def.
 
-Coercion base_to_hpoly : base >-> hpoly.
 Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
-Notation "'#ineq' P" := (nb_ineq P) (at level 0).
 
 Section ChoicePred.
 
@@ -43,20 +43,23 @@ Variable R : realFieldType.
 Variable n : nat.
 
 Definition mem_hpoly (P : 'hpoly[R]_n) :=
-  let: HPoly _ (A,b) := P in
+  let: HPoly _ A b := P in
     [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
 
 Canonical hpoly_predType := mkPredType mem_hpoly.
 
-Definition matrix_from_hpoly (P : 'hpoly[R]_n) : { m & m.-base } :=
-  let: HPoly _ base := P in Tagged _ base.
+Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
+  let: HPoly _ A b := P in
+    Tagged (fun m => 'M[R]_(m,n) * 'cV[R]_m)%type (A, b).
 
-Definition hpoly_from_matrix (x : { m & m.-base }) : 'hpoly[R]_n := (tagged x).
+Definition hpoly_from_matrix (M : {m : nat & 'M[R]_(m,n) * 'cV[R]_m}%type) :=
+  let: (A, b) := tagged M in
+    HPoly A b.
 
 Lemma matrix_from_hpolyK :
   cancel matrix_from_hpoly hpoly_from_matrix.
 Proof.
-by move => [m [A b]]; rewrite /matrix_from_hpoly /hpoly_from_matrix.
+by move => [m A b]; rewrite /matrix_from_hpoly /hpoly_from_matrix.
 Qed.
 
 Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
@@ -74,58 +77,58 @@ Variable n : nat.
 
 Implicit Type (P : 'hpoly[R]_n).
 
-Definition mk_hs c d : 'hpoly[R]_n := HPoly (c^T, d%:M).
+Definition mk_hs (b : base_elt[R,n]) : 'hpoly[R]_n := HPoly (b.1)^T (b.2)%:M.
 
-Lemma in_hs c d x : x \in (mk_hs c d) = ('[c,x] >= d).
+Lemma in_hs b x : x \in (mk_hs b ) = ('[b.1,x] >= b.2).
 Proof.
 rewrite inE vdotC -vdot_def.
 by apply/forallP/idP => [ /(_ 0) | H i]; rewrite ?[i]ord1_eq0 !mxE /= !mulr1n.
 Qed.
 
-Definition poly0 := mk_hs 0 1.
+Definition poly0 := mk_hs (0,1).
 
 Lemma in_poly0 : poly0 =i pred0.
 Proof.
 by move => x; rewrite in_hs vdot0l inE ler10.
 Qed.
 
-Definition polyT : 'hpoly[R]_n := HPoly (const_mx 0 : 'M_(0,n), 0).
+Definition polyT : 'hpoly[R]_n := @HPoly _ _ 0 (const_mx 0) 0.
 
 Lemma in_polyT : polyT =i predT.
 Proof.
 by move => x; rewrite !inE mul0mx lev_refl.
 Qed.
 
-Definition polyI (P Q : 'hpoly[R]_n) : 'hpoly[R]_n :=
-  let: HPoly _ base := P in
-  let: HPoly _ base' := Q in
-  HPoly (concat_base base base').
+Definition polyI P Q :=
+  let: HPoly _ A b := P in
+  let: HPoly _ A' b' := Q in
+    HPoly (col_mx A A') (col_mx b b').
 
 Lemma in_polyI P Q : (polyI P Q) =i [predI P & Q].
 Proof.
 move => x.
-case: P => mP [AP bP]; case: Q => mQ [AQ bQ].
+case: P => mP AP bP; case: Q => mQ AQ bQ.
 by rewrite !inE mul_col_mx col_mx_lev.
 Qed.
 
 Definition bounded P c :=
-  let: HPoly _ (A, b) := P in
+  let: HPoly _ A b := P in
     Simplex.bounded A b c.
 
 Definition opt_value P c :=
-  let: HPoly _ (A, b) := P in
+  let: HPoly _ A b := P in
     Simplex.opt_value A b c.
 
 Definition poly_subset P Q :=
-  let: HPoly _ (A, b) := P in
-  let: HPoly _ (A', b') := Q in
+  let: HPoly _ A b := P in
+  let: HPoly _ A' b' := Q in
     (~~ Simplex.feasible A b) ||
       [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
 
 Lemma poly_subsetP P Q :
   reflect {subset P <= Q} (poly_subset P Q).
 Proof. (* RK *)
-case: P => m [A b]; case: Q => m' [A' b'].
+case: P => m A b; case: Q => m' A' b'.
 apply: (iffP idP) => [/orP poly_subset_P_Q | subset_P_Q].
 - case: poly_subset_P_Q => [empty_P | /forallP hs_incl x x_in_P].
   + move => x x_in_P.
@@ -154,13 +157,13 @@ Qed.
 Lemma poly_subsetPn P Q :
   reflect (exists2 x, x \in P & x \notin Q) (~~ (poly_subset P Q)).
 Proof. (* RK *)
-case: P => m [A b]; case: Q => m' [A' b'].
+case: P => m A b; case: Q => m' A' b'.
 apply: (iffP idP) => [| [?] ? not_in_Q];
   last by move: not_in_Q; apply/contra; move/poly_subsetP ->.
 rewrite negb_or negbK negb_forall.
 move/andP => [feasible_P /existsP [i /nandP unbounded_or]].
 have unbounded_suff:
-  ~~ Simplex.bounded A b (row i A')^T -> exists2 x : 'cV_n, (x \in HPoly (A, b)) & (x \notin HPoly (A', b')).
+  ~~ Simplex.bounded A b (row i A')^T -> exists2 x : 'cV_n, (x \in HPoly A b) & (x \notin HPoly A' b').
   rewrite -(Simplex.unbounded_is_not_bounded _ feasible_P) => /Simplex.unboundedP unbounded_P_row_i_A'.
   move: (unbounded_P_row_i_A' (b' i 0)) => [x [x_in_P ineq]].
   exists x; try by done.
@@ -177,9 +180,9 @@ exact: ((forallP opt_point_in_Q) i).
 Qed.
 
 Lemma boundedP P c :
-  reflect (exists2 x, (x \in P) & poly_subset P (mk_hs c '[c,x])) (bounded P c).
+  reflect (exists2 x, (x \in P) & poly_subset P (mk_hs (c, '[c,x]))) (bounded P c).
 Proof. (* RK *)
-case: P => m [A b].
+case: P => m A b.
 apply/(equivP (Simplex.boundedP A b c) _);
   split => [[[x [? opt_value_eq]] opt_value_is_opt] | [x ? /poly_subsetP incl_hs]].
 - exists x; first by done.
@@ -188,21 +191,18 @@ apply/(equivP (Simplex.boundedP A b c) _);
   by apply: opt_value_is_opt.
 - have opt_value_eq: '[ c, x] = Simplex.opt_value A b c.
     apply: Simplex.opt_value_is_optimal; first by done.
-    move => y y_in_P.
-    rewrite -in_hs.
-    exact: (incl_hs _ y_in_P).
+    by move => y /incl_hs; rewrite in_hs.
   split.
   + by exists x.
-  + move => y y_in_P.
-    rewrite -in_hs -opt_value_eq.
-    exact: (incl_hs _ y_in_P).
+  + move => y /incl_hs.
+    by rewrite in_hs -opt_value_eq.
 Qed.
 
 Lemma boundedPn P c :
   ~~ (poly_subset P poly0) ->
-    reflect (forall K, ~~ (poly_subset P (mk_hs c K))) (~~ bounded P c).
+    reflect (forall K, ~~ (poly_subset P (mk_hs (c, K)))) (~~ bounded P c).
 Proof. (* RK *)
-case: P => m [A b] non_empty_P.
+case: P => m A b non_empty_P.
 have feasible_P: Simplex.feasible A b
   by move/poly_subsetPn: non_empty_P => [x ? _];
   apply/Simplex.feasibleP; exists x.
@@ -219,15 +219,15 @@ apply/(equivP (Simplex.unboundedP A b c) _);
 Qed.
 
 Definition pointed P :=
-  let: HPoly _ (A, _) := P in
+  let: HPoly _ A _ := P in
     Simplex.pointed A.
 
 Lemma pointedPn P :
   ~~ (poly_subset P poly0) ->
     reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
 Proof. (* RK *)
-case: P => m [A b] non_empty_P.
-have feasible_P: exists x, x \in HPoly (A, b)
+case: P => m A b non_empty_P.
+have feasible_P: exists x, x \in HPoly A b
   by move/poly_subsetPn: non_empty_P => [x ? _]; exists x.
 apply/(equivP (Simplex.pointedPn A) _); split =>
   [[d [? /Simplex.feasible_dirP d_feas_dir /Simplex.feasible_dirP md_feas_dir]] | [d [? d_recession_dir]]];
@@ -264,22 +264,21 @@ Definition hpoly_polyPredMixin :=
                  in_hs boundedP boundedPn pointedPn convP convexP.
 Canonical hpoly_polyPredType := PolyPredType R n hpoly_polyPredMixin.
 
-Definition poly_sort :=
-  PolyPred.sort (Quotient.quot_polyPredType hpoly_polyPredType).
+(*Definition poly_sort :=
+  PolyPred.sort (Quotient.quot_polyPredType hpoly_polyPredType).*)
 End PolyPred.
 
 Module Import Exports.
 Canonical hpoly_eqType.
-(*Canonical hpoly_predType.*)
+Canonical hpoly_predType.
 Canonical hpoly_choiceType.
 Canonical hpoly_choicePredType.
 Canonical hpoly_polyPredType.
-Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.
+(*Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.*)
 Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
-Notation "''poly[' R ]_ n" := (@poly_sort R n) (at level 8).
-Notation "''poly_' n" := 'poly[_]_n (at level 8).
-Notation "'#ineq' P" := (nb_ineq P) (at level 0).
+(*Notation "''poly[' R ]_ n" := (@poly_sort R n) (at level 8).
+Notation "''poly_' n" := 'poly[_]_n (at level 8).*)
 End Exports.
 End HPolyhedron.
 
