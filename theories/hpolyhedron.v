@@ -264,8 +264,8 @@ Definition hpoly_polyPredMixin :=
                  in_hs boundedP boundedPn pointedPn convP convexP.
 Canonical hpoly_polyPredType := PolyPredType R n hpoly_polyPredMixin.
 
-(*Definition poly_sort :=
-  PolyPred.sort (Quotient.quot_polyPredType hpoly_polyPredType).*)
+Definition poly_sort :=
+  PolyPred.sort (Quotient.quot_polyPredType hpoly_polyPredType).
 End PolyPred.
 
 Module Import Exports.
@@ -274,11 +274,11 @@ Canonical hpoly_predType.
 Canonical hpoly_choiceType.
 Canonical hpoly_choicePredType.
 Canonical hpoly_polyPredType.
-(*Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.*)
+Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
-(*Notation "''poly[' R ]_ n" := (@poly_sort R n) (at level 8).
-Notation "''poly_' n" := 'poly[_]_n (at level 8).*)
+Notation "''poly[' R ]_ n" := (@poly_sort R n) (at level 8).
+Notation "''poly_' n" := 'poly[_]_n (at level 8).
 End Exports.
 End HPolyhedron.
 
