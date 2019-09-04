@@ -10,7 +10,7 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product vector_order row_submx.
-Require Import polypred hpolyhedron.
+Require Import hpolyhedron polyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -84,7 +84,7 @@ Variant poly_base_spec (P : {poly base}) : Prop :=
 
 Lemma poly_baseP (P : {poly base}) : poly_base_spec P.
 Proof.
-case: (emptyP P) => [/poly_equivP/quot_equivP/val_inj -> | P_prop0]; first by constructor.
+case: (emptyP P) => [/poly_eqP/val_inj -> | P_prop0]; first by constructor.
 move/implyP/(_ P_prop0)/exists_eqP: (poly_base_base P) => [I ?].
 constructor 2 with I.
 split; [exact: val_inj | done].
@@ -139,7 +139,7 @@ Lemma poly_of_baseP :
   has_base base 'P(base).
 Proof.
 suff ->: 'P(base) = 'P^=(base; fset0)%:poly_base by exact: poly_base_base.
-by rewrite /= (quot_equivP polyEq0).
+by rewrite /= polyEq0.
 Qed.
 Canonical poly_of_base_base := PolyBase (poly_of_baseP).
 
@@ -168,18 +168,17 @@ Proof.
 suff flat_prop: forall base0, bounded ('P(base0) : 'poly[R]_n) c -> has_base base0 (argmin ('P(base0) : 'poly[R]_n) c).
 - apply/has_baseP; rewrite -bounded_argminN0.
   case/poly_baseP : (P) => [->| I [-> _]]; first by rewrite bounded_poly0.
-  rewrite /= (quot_equivP (polyEq_flatten _)) => bounded_PI.
+  rewrite /= (polyEq_flatten _) => bounded_PI.
   move/flat_prop/has_baseP: (bounded_PI); rewrite -bounded_argminN0.
   move => /(_ bounded_PI) => [[J] ->].
-  by move: (polyEq_of_polyEq (T := [polyPredType of 'poly[R]_n]) J)
-    => [K] /quot_equivP ->; exists K. (* TODO: ugly to specify the polyPredType *)
+  by move: (polyEq_of_polyEq J)
+    => [K] ->; exists K.
 - (* now this is the classic proof of Schrijver *)
   move => base0 c_bounded.
   move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb].
   pose I := [fset e in base0 | w e > 0]%fset.
   have supp_w : forall e, (w e > 0) = (e \in I). admit.
   apply/has_baseP; exists I%:fsub.
-  apply/quot_equivP.
   move: (opt_point c_bounded) => [x x_in_P0 c_x_eq_opt_val].
   have: x \in `[hp (combine base0 w)] : 'poly[R]_n.
   - by rewrite inE w_comb /=; apply/eqP.
