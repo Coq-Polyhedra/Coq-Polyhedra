@@ -89,14 +89,17 @@ Context {R : realFieldType} {n : nat}.
 Definition canon (P : 'hpoly[R]_n) :=
   choose (H.poly_equiv P) P.
 
-Structure quot := Poly {
+Structure poly := Poly {
   repr : 'hpoly[R]_n;
   _ : canon repr == repr;
 }.
 
+Definition mem_pred_sort P  := (repr P) : {pred 'cV[R]_n}.
+Coercion mem_pred_sort : poly >-> pred_sort.
+
 End Def.
 
-Notation "''poly[' R ]_ n" := (@quot R n) (at level 8).
+Notation "''poly[' R ]_ n" := (@poly R n) (at level 8).
 Notation "''poly_' n" := ('poly[_]_n) (at level 8).
 Notation "\repr" := (@repr _ _) (at level 0).
 
@@ -104,11 +107,11 @@ Section BasicProperties.
 
 Variables (R : realFieldType) (n : nat).
 
-Canonical quot_subType := [subType for (@repr R n)].
-Definition quot_eqMixin := Eval hnf in [eqMixin of 'poly[R]_n by <:].
-Canonical quot_eqType := Eval hnf in EqType 'poly[R]_n quot_eqMixin.
-Definition quot_choiceMixin := Eval hnf in [choiceMixin of 'poly[R]_n by <:].
-Canonical quot_choiceType := Eval hnf in ChoiceType 'poly[R]_n quot_choiceMixin.
+Canonical poly_subType := [subType for (@repr R n)].
+Definition poly_eqMixin := Eval hnf in [eqMixin of 'poly[R]_n by <:].
+Canonical poly_eqType := Eval hnf in EqType 'poly[R]_n poly_eqMixin.
+Definition poly_choiceMixin := Eval hnf in [choiceMixin of 'poly[R]_n by <:].
+Canonical poly_choiceType := Eval hnf in ChoiceType 'poly[R]_n poly_choiceMixin.
 
 Lemma repr_inj : injective (\repr : 'poly[R]_n -> 'hpoly[R]_n).
 Proof.
@@ -139,9 +142,6 @@ Lemma repr_equiv (P : 'hpoly[R]_n) : \repr '[P] =i P.
 Proof.
 by move: (chooseP (H.poly_equiv_refl P)); rewrite H.poly_equiv_sym => /H.poly_equivP.
 Qed.
-
-Definition mem_pred_sort (P : 'poly[R]_n) := (mem (\repr P)) : pred 'cV[R]_n.
-Canonical quot_predType := mkPredType mem_pred_sort.
 
 Lemma poly_eqP {P Q : 'poly[R]_n} : P =i Q <-> P = Q.
 Admitted.
@@ -243,7 +243,7 @@ Proof.
 by move => ?; rewrite repr_equiv H.in_polyT.
 Qed.
 
-Lemma poly_subsetP {P Q} : reflect {subset P <= Q} (P `<=` Q).
+Lemma poly_subsetP {P Q : 'poly[R]_n} : reflect {subset P <= Q} (P `<=` Q).
 Proof.
 apply: (iffP H.poly_subsetP) => [H x | H x]; exact: H.
 Qed.
@@ -259,10 +259,10 @@ move => P' P P'' /poly_subsetP P_eq_P' /poly_subsetP P'_eq_P''.
 by apply/poly_subsetP => x; move/P_eq_P'/P'_eq_P''.
 Qed.
 
-Lemma poly_subsetPn {P Q} :
+Lemma poly_subsetPn {P Q : 'poly[R]_n} :
   reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (P `<=` Q)).
 Proof.
-apply: (iffP H.poly_subsetPn) => [[x] H | [x] H]; exists x; by rewrite !inE in H *.
+by apply: (iffP H.poly_subsetPn) => [[x] H | [x] H]; exists x.
 Qed.
 
 Lemma in_polyI P Q x : (x \in (P `&` Q)) = ((x \in P) && (x \in Q)).
@@ -386,7 +386,7 @@ Proof.
 rewrite repr_equiv; exact: H.convP.
 Qed.
 
-Lemma convexP P (V : {fset 'cV[R]_n}) :
+Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> poly_subset (conv V) P.
 Proof.
 move => V_sub_P; apply/poly_subsetP => x.
@@ -399,7 +399,7 @@ Proof.
 by apply/poly_eqP => x; rewrite inE Bool.andb_diag. (* TODO: strange to require a cool to Bool.* *)
 Qed.
 
-Lemma poly_subset_hsP {P} {b} :
+Lemma poly_subset_hsP {P : 'poly[R]_n} {b} :
   reflect (forall x, x \in P -> '[fst b, x] >= snd b) (P `<=` `[hs b]).
 Proof.
 apply: (iffP poly_subsetP) => [sub x x_in_P | sub x x_in_P ];
@@ -453,7 +453,7 @@ Proof. (* RK *)
 by apply/negb_inj; rewrite subset0N_proper equiv0N_proper.
 Qed.
 
-CoInductive empty_spec P : bool -> bool -> bool -> Set :=
+CoInductive empty_spec (P : 'poly[R]_n) : bool -> bool -> bool -> Set :=
 | Empty of (P =i `[poly0]) : empty_spec P false true true
 | NonEmpty of (P `>` `[poly0]) : empty_spec P true false false.
 
@@ -487,7 +487,7 @@ Proof. (* RK *)
 rewrite /pick_point; case: proper0P => [? _ | _] //; exact: xchooseP.
 Qed.
 
-Lemma poly_properP {P Q} :
+Lemma poly_properP {P Q : 'poly[R]_n} :
   (* should {subset P <= Q} to (P `<=` Q) *)
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
@@ -556,7 +556,7 @@ Proof. (* RK *)
 by apply/negbTE/nandP/orP; rewrite negb_and negbK orbA orbC orbA orbN.
 Qed.
 
-Lemma boundedP {P} {c} :
+Lemma boundedP {P : 'poly[R]_n} {c} :
   reflect (exists2 x, x \in P & P `<=` `[hs (c, '[c,x])]) (bounded P c).
 Proof.
 have eq x : (P `<=` `[hs (c,'[ c, x])]) =
@@ -567,7 +567,7 @@ by apply: (sameP H.poly_subsetP);
 by apply: (iffP (H.boundedP _ _)) => [[x] H H' | [x] H H']; exists x; rewrite ?inE ?eq in H' *.
 Qed.
 
-Lemma boundedPP {P} {c} :
+Lemma boundedPP {P : 'poly[R]_n} {c} :
   reflect (exists x, (x \in P) && (P `<=` `[hs (c, '[c, x])])) (bounded P c).
 Proof.
 by apply/(iffP boundedP) => [[x] ?? | [x] /andP [??]];
@@ -826,7 +826,7 @@ rewrite !inE; apply: (iffP andP).
   exact: vnorm_ge0.
 Qed.
 
-Lemma convexP2 P (v w : 'cV[R]_n) :
+Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) :
   v \in P -> w \in P -> conv ([fset v; w]%fset) `<=` P.
 Admitted.
 
