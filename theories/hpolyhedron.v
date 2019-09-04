@@ -49,21 +49,20 @@ Record hpoly := HPoly {
   _ : 'cV[R]_nb_ineq
 }.
 
+Definition mem_hpoly P : {pred 'cV[R]_n} :=
+  let: HPoly _ A b := P in
+  [pred x : 'cV_n | (A *m x) >=m b].
+Coercion mem_hpoly : hpoly >-> pred_sort.
+
 End Def.
 
 Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
 Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
 
-Section ChoicePred.
+Section Choice.
 
 Variable R : realFieldType.
 Variable n : nat.
-
-Definition mem_hpoly (P : 'hpoly[R]_n) :=
-  let: HPoly _ A b := P in
-    [pred x : 'cV_n | (A *m x) >=m b] : pred_class.
-
-Canonical hpoly_predType := mkPredType mem_hpoly.
 
 Definition matrix_from_hpoly (P : 'hpoly[R]_n) :=
   let: HPoly _ A b := P in
@@ -84,7 +83,7 @@ Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
 Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
 Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
 
-End ChoicePred.
+End Choice.
 
 Section PolyPred.
 
@@ -140,7 +139,7 @@ Definition poly_subset P Q :=
     (~~ Simplex.feasible A b) ||
       [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
 
-Lemma poly_subsetP {P Q} :
+Lemma poly_subsetP {P Q : 'hpoly[R]_n} :
   reflect {subset P <= Q} (poly_subset P Q).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
@@ -169,7 +168,7 @@ apply: (iffP idP) => [/orP poly_subset_P_Q | subset_P_Q].
   exact: ((forallP x_in_Q) i).
 Qed.
 
-Lemma poly_subsetPn {P Q} :
+Lemma poly_subsetPn {P Q : 'hpoly[R]_n} :
   reflect (exists2 x, x \in P & x \notin Q) (~~ (poly_subset P Q)).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
@@ -194,7 +193,7 @@ rewrite -lerNgt /Simplex.opt_value row_vdot.
 exact: ((forallP opt_point_in_Q) i).
 Qed.
 
-Lemma boundedP P c :
+Lemma boundedP (P : 'hpoly[R]_n) c :
   reflect (exists2 x, (x \in P) & poly_subset P (mk_hs (c, '[c,x]))) (bounded P c).
 Proof. (* RK *)
 case: P => m A b.
@@ -276,7 +275,7 @@ Admitted.
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
 
-Lemma poly_equivP {P Q} : reflect (P =i Q) (poly_equiv P Q).
+Lemma poly_equivP {P Q : 'hpoly[R]_n} : reflect (P =i Q) (poly_equiv P Q).
 Proof.
 apply/(iffP andP) => [[/poly_subsetP P_le_Q /poly_subsetP Q_le_P] x | P_eq_Q ].
 - apply/idP/idP; [exact: P_le_Q | exact: Q_le_P].
@@ -304,7 +303,6 @@ End PolyPred.
 
 Module Import Exports.
 Canonical hpoly_eqType.
-Canonical hpoly_predType.
 Canonical hpoly_choiceType.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
 Notation "''hpoly_' n" := ('hpoly[_]_n) (at level 8).
@@ -312,3 +310,4 @@ End Exports.
 End HPolyhedron.
 
 Export HPolyhedron.Exports.
+Coercion mem_hpoly := HPolyhedron.mem_hpoly.
