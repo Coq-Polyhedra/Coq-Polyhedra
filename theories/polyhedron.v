@@ -9,857 +9,1364 @@
 (*************************************************************************)
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
-Require Import extra_misc inner_product vector_order row_submx.
-Require Import polypred hpolyhedron.
+Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
+Module H := HPolyhedron.
+
 Local Open Scope ring_scope.
-Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
-Section PolyBase.
+Reserved Notation "\polyI_ i F"
+  (at level 41, F at level 41, i at level 0,
+           format "'[' \polyI_ i '/  '  F ']'").
+Reserved Notation "\polyI_ ( i <- r | P ) F"
+  (at level 41, F at level 41, i, r at level 50,
+           format "'[' \polyI_ ( i  <-  r  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i <- r ) F"
+  (at level 41, F at level 41, i, r at level 50,
+           format "'[' \polyI_ ( i  <-  r ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( m <= i < n | P ) F"
+  (at level 41, F at level 41, i, m, n at level 50,
+           format "'[' \polyI_ ( m  <=  i  <  n  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( m <= i < n ) F"
+  (at level 41, F at level 41, i, m, n at level 50,
+           format "'[' \polyI_ ( m  <=  i  <  n ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i | P ) F"
+  (at level 41, F at level 41, i at level 50,
+           format "'[' \polyI_ ( i  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i : t | P ) F"
+  (at level 41, F at level 41, i at level 50,
+           only parsing).
+Reserved Notation "\polyI_ ( i : t ) F"
+  (at level 41, F at level 41, i at level 50,
+           only parsing).
+Reserved Notation "\polyI_ ( i < n | P ) F"
+  (at level 41, F at level 41, i, n at level 50,
+           format "'[' \polyI_ ( i  <  n  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i < n ) F"
+  (at level 41, F at level 41, i, n at level 50,
+           format "'[' \polyI_ ( i  <  n )  F ']'").
+Reserved Notation "\polyI_ ( i 'in' A | P ) F"
+  (at level 41, F at level 41, i, A at level 50,
+           format "'[' \polyI_ ( i  'in'  A  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i 'in' A ) F"
+  (at level 41, F at level 41, i, A at level 50,
+           format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
-Variable (R : realFieldType) (n : nat).
 
-Section FixedBase.
+(*
+Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
+  poly0 : T; in_poly0 : poly0 =i pred0;
+  polyT : T; in_polyT : polyT =i predT;
+  polyI : T -> T -> T;
+  in_polyI : forall (P Q : T), (polyI P Q) =i [predI P & Q];
+  poly_subset : rel T;
+  poly_subsetP : forall (P Q : T), reflect {subset P <= Q} (poly_subset P Q);
+  poly_subsetPn : forall (P Q : T), reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q));
+  mk_hs : base_elt[R,n] -> T;
+  in_hs : forall b x, x \in (mk_hs b) = ('[fst b,x] >= snd b);
+  bounded : T -> 'cV[R]_n -> bool;
+  boundedP : forall (P : T) c, reflect (exists2 x, x \in P & poly_subset P (mk_hs (c,'[c,x]))) (bounded P c);
+  boundedPn : forall (P : T) c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs (c, K)))) (~~ bounded P c);
+  pointed : pred T;
+  pointedPn : forall (P : T), ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P);
+  conv : {fset 'cV[R]_n} -> T;
+  convP : forall V x, reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V);
+  convexP : forall (P : T) (V : {fset 'cV[R]_n}), {subset V <= P} -> poly_subset (conv V) P
+}.
+ *)
 
-Variable (base : base_t[R,n]).
+Local Open Scope poly_scope.
 
-Definition has_base (P : 'poly[R]_n) :=
-  (P `>` `[poly0]) ==>
-    [exists I : {fsubset base}, P == 'P^=(base; I)].
+Section Def.
 
+Context {R : realFieldType} {n : nat}.
 
-Lemma has_baseP (P : 'poly[R]_n) :
-  reflect ((P `>` `[poly0]) -> exists I : {fsubset base}, P = 'P^=(base; I)) (has_base P).
+Definition canon (P : 'hpoly[R]_n) :=
+  choose (H.poly_equiv P) P.
+
+Structure quot := Poly {
+  repr : 'hpoly[R]_n;
+  _ : canon repr == repr;
+}.
+
+End Def.
+
+Notation "''poly[' R ]_ n" := (@quot R n) (at level 8).
+Notation "''poly_' n" := ('poly[_]_n) (at level 8).
+Notation "\repr" := (@repr _ _) (at level 0).
+
+Section BasicProperties.
+
+Variables (R : realFieldType) (n : nat).
+
+Canonical quot_subType := [subType for (@repr R n)].
+Definition quot_eqMixin := Eval hnf in [eqMixin of 'poly[R]_n by <:].
+Canonical quot_eqType := Eval hnf in EqType 'poly[R]_n quot_eqMixin.
+Definition quot_choiceMixin := Eval hnf in [choiceMixin of 'poly[R]_n by <:].
+Canonical quot_choiceType := Eval hnf in ChoiceType 'poly[R]_n quot_choiceMixin.
+
+Lemma repr_inj : injective (\repr : 'poly[R]_n -> 'hpoly[R]_n).
+Proof.
+exact: val_inj.
+Qed.
+
+Lemma canon_id (P : 'hpoly[R]_n) :
+  canon (canon P) == canon P.
+Proof.
+rewrite /canon; set Q := choose (H.poly_equiv P) P.
+have P_eq_Q: (H.poly_equiv P Q) by apply : chooseP; exact: H.poly_equiv_refl.
+suff /eq_choose ->: H.poly_equiv Q =1 H.poly_equiv P
+  by apply/eqP; apply: choose_id; try exact: H.poly_equiv_refl.
+move => x.
+by apply/idP/idP; apply: H.poly_equiv_trans; last by rewrite H.poly_equiv_sym.
+Qed.
+
+Definition class_of P := Poly (canon_id P).
+Notation "''[' P  ]" := (class_of P) (at level 0).
+
+Lemma reprK (P : 'poly[R]_n) :
+  '[\repr P] = P.
+Proof.
+case: P => [P P_eq]; apply: repr_inj; exact: eqP.
+Qed.
+
+Lemma repr_equiv (P : 'hpoly[R]_n) : \repr '[P] =i P.
+Proof.
+by move: (chooseP (H.poly_equiv_refl P)); rewrite H.poly_equiv_sym => /H.poly_equivP.
+Qed.
+
+Definition mem_pred_sort (P : 'poly[R]_n) := (mem (\repr P)) : pred 'cV[R]_n.
+Canonical quot_predType := mkPredType mem_pred_sort.
+
+Lemma poly_eqP {P Q : 'poly[R]_n} : P =i Q <-> P = Q.
 Admitted.
 
-Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.
-Canonical poly_base_subType := [subType for pval].
-Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
-Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
-Definition poly_base_choiceMixin := Eval hnf in [choiceMixin of poly_base by <:].
-Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
+Lemma quotP {P Q : 'hpoly[R]_n} : '[P] = '[Q] <-> P =i Q.
+Admitted.
 
-Lemma poly_base_base (P : poly_base) : has_base P.
+(*
+Lemma quot_eqP (P Q : {quot T}) : (P =i Q) -> (P = Q).
+Proof.
+Admitted.*)
+
+(*rewrite -[P]reprK -[Q]reprK.
+set P' := repr P; set Q' := repr Q; move => P_equiv_Q.
+have P'_equiv_Q' : P' `=~` Q'
+  by apply/poly_equivP => x; move/(_ x): P_equiv_Q; rewrite !repr_equiv.
+have chooseP'_eq_chooseQ' : poly_equiv P' =1 poly_equiv Q'.
+  by move => z; apply/idP/idP; apply/poly_equiv_trans;
+  try by rewrite poly_equiv_sym in P'_equiv_Q'.
+apply: repr_inj.
+by rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ'); apply: choose_id; try exact: poly_equiv_refl.
+Qed.*)
+
+End BasicProperties.
+
+Notation "''[' P  ]" := (class_of P) (at level 0).
+
+Section PolyPred.
+
+Context {R : realFieldType} {n : nat}.
+
+Definition poly0 : 'poly[R]_n := '[ H.poly0 ].
+Definition polyT : 'poly[R]_n := '[ H.polyT ].
+Definition polyI (P Q : 'poly[R]_n) : 'poly[R]_n := '[ H.polyI (\repr P) (\repr Q) ].
+Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (\repr P) (\repr Q).
+Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
+Definition bounded (P : 'poly[R]_n) c := H.bounded (\repr P) c.
+Definition pointed (P : 'poly[R]_n) := H.pointed (\repr P).
+Definition conv V : 'poly[R]_n := '[ (H.conv V) ].
+
+Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
+Definition poly_proper P Q := ((poly_subset P Q) && (~~ (poly_subset Q P))).
+
+Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
+Notation "'`[' 'polyT' ']'" := polyT (at level 70) : poly_scope.
+Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
+Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity, Q at next level) : poly_scope.
+Notation "P `>=` Q" := (Q `<=` P) (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `=~` Q" := (poly_equiv P Q) (at level 70, no associativity) : poly_scope.
+Notation "P `!=~` Q" := (~~ (poly_equiv P Q)) (at level 70, no associativity) : poly_scope.
+Notation "P `<` Q" := (poly_proper P Q) (at level 70, no associativity, Q at next level) : poly_scope.
+Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "'`[' 'hs'  b  ']'" := (mk_hs b%PH) (at level 70) : poly_scope.
+
+Notation "\polyI_ ( i <- r | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( i <- r ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i <- r) F%PH) : poly_scope.
+Notation "\polyI_ ( i | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i | P%B) F%PH) : poly_scope.
+Notation "\polyI_ i F" :=
+  (\big[polyI/`[polyT]%PH]_i F%PH) : poly_scope.
+Notation "\polyI_ ( i : I | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i : I | P%B) F%PH) (only parsing) : poly_scope.
+Notation "\polyI_ ( i : I ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i : I) F%PH) (only parsing) : poly_scope.
+Notation "\polyI_ ( m <= i < n | P ) F" :=
+ (\big[polyI/`[polyT]%PH]_(m <= i < n | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( m <= i < n ) F" :=
+ (\big[polyI/`[polyT]%PH]_(m <= i < n) F%PH) : poly_scope.
+Notation "\polyI_ ( i < n | P ) F" :=
+ (\big[polyI/`[polyT]%PH]_(i < n | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( i < n ) F" :=
+ (\big[polyI/`[polyT]%PH]_(i < n) F%PH) : poly_scope.
+Notation "\polyI_ ( i 'in' A | P ) F" :=
+ (\big[polyI/`[polyT]%PH]_(i in A | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( i 'in' A ) F" :=
+ (\big[polyI/`[polyT]%PH]_(i in A) F%PH) : poly_scope.
+
+Lemma poly_equivP {P Q} : P `=~` Q -> P = Q.
+Proof.
+Admitted.
+(*
+apply/(iffP andP) => [[/poly_subsetP P_le_Q /poly_subsetP Q_le_P] x | P_eq_Q ].
+- apply/idP/idP; [exact: P_le_Q | exact: Q_le_P].
+- by split; apply/poly_subsetP => x; rewrite P_eq_Q.
+Qed.*)
+
+Lemma in_poly0 : `[poly0] =i pred0.
+Proof.
+by move => ?; rewrite repr_equiv H.in_poly0.
+Qed.
+
+Lemma in_polyT : `[polyT] =i predT.
+Proof.
+by move => ?; rewrite repr_equiv H.in_polyT.
+Qed.
+
+Lemma poly_subsetP {P Q} : reflect {subset P <= Q} (P `<=` Q).
+Proof.
+apply: (iffP H.poly_subsetP) => [H x | H x]; exact: H.
+Qed.
+
+Lemma poly_subset_refl : reflexive poly_subset.
+Proof.
+by move => P; apply/poly_subsetP.
+Qed.
+
+Lemma poly_subset_trans : transitive poly_subset.
+Proof.
+move => P' P P'' /poly_subsetP P_eq_P' /poly_subsetP P'_eq_P''.
+by apply/poly_subsetP => x; move/P_eq_P'/P'_eq_P''.
+Qed.
+
+Lemma poly_subsetPn {P Q} :
+  reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (P `<=` Q)).
+Proof.
+apply: (iffP H.poly_subsetPn) => [[x] H | [x] H]; exists x; by rewrite !inE in H *.
+Qed.
+
+Lemma in_polyI P Q x : (x \in (P `&` Q)) = ((x \in P) && (x \in Q)).
+Proof.
+by rewrite !repr_equiv H.in_polyI.
+Qed.
+
+Lemma in_hs : (forall b x, x \in (`[hs b]) = ('[fst b,x] >= snd b))
+              * (forall c α x, x \in (`[hs (c, α)]) = ('[c,x] >= α)).
+Proof.
+Admitted.
+
+Lemma notin_hs :
+  (forall b x, (x \notin `[hs b]) = ('[b.1,x] < b.2))
+  * (forall c α x, (x \notin `[hs (c, α)]) = ('[c,x] < α)).
+Admitted.
+
+Definition mk_hp e := `[hs e] `&` `[hs (-e)].
+Notation "'`[' 'hp' e  ']'" := (mk_hp e%PH) (at level 70) : poly_scope.
+
+Lemma in_hp :
+  (forall b x, (x \in `[hp b]) = ('[fst b,x] == snd b))
+  * (forall c α x, (x \notin `[hp (c, α)]) = ('[c,x] == α)).
+Admitted.
+(*Proof. (* RK *)
+by rewrite in_polyI 2!in_hs vdotNl ler_oppl opprK eq_sym eqr_le.
+Qed.*)
+
+Let inE := (in_poly0, in_polyT, in_hp, in_polyI, in_hs, inE).
+
+Lemma polyI0 P : (P `&` `[poly0]) = `[poly0].
+Proof.
+by apply/poly_eqP => x; rewrite !inE andbF.
+Qed.
+
+Lemma poly0I P : (`[poly0] `&` P) = `[poly0].
+Proof.
+by apply/poly_eqP => x; rewrite !inE /=.
+Qed.
+
+Lemma poly_subsetIl P Q : P `&` Q `<=` P.
+Proof. (* RK *)
+apply/poly_subsetP => x.
+by rewrite in_polyI; move/andP => [].
+Qed.
+
+Lemma poly_subsetIr P Q : P `&` Q `<=` Q.
+Proof. (* RK *)
+apply/poly_subsetP => x.
+by rewrite in_polyI; move/andP => [_] .
+Qed.
+
+Lemma polyIS P P' Q : P `<=` P' -> Q `&` P `<=` Q `&` P'.
+Proof. (* RK *)
+move => sPP'; apply/poly_subsetP => x; rewrite !in_polyI.
+case: (x \in Q) => //; exact: poly_subsetP.
+Qed.
+
+Lemma polySI P P' Q : P `<=` P' -> P `&` Q `<=` P' `&` Q.
+Proof. (* RK *)
+move => sPP'; apply/poly_subsetP => x; rewrite !in_polyI.
+case: (x \in Q) => //; rewrite ?andbT ?andbF //; exact: poly_subsetP.
+Qed.
+
+Lemma polyISS P P' Q Q' : P `<=` P' -> Q `<=` Q' -> P `&` Q `<=` P' `&` Q'.
+Proof. (* RK *)
+move => /poly_subsetP sPP' /poly_subsetP sQQ'; apply/poly_subsetP => ?.
+by rewrite !in_polyI; move/andP => [? ?]; apply/andP; split; [apply/sPP' | apply/sQQ'].
+Qed.
+
+Lemma poly_subsetIP P Q Q' : reflect (P `<=` Q /\ P `<=` Q') (P `<=` Q `&` Q').
+Proof.
+apply: (iffP idP) => [/poly_subsetP subset_P_QIQ' | [/poly_subsetP subset_P_Q /poly_subsetP subset_P_Q']].
+- by split; apply/poly_subsetP => x x_in_P; move: (subset_P_QIQ' _ x_in_P); rewrite in_polyI; case/andP.
+- by apply/poly_subsetP => x x_in_P; rewrite in_polyI; apply/andP; split; [exact: (subset_P_Q _ x_in_P) | exact: (subset_P_Q' _ x_in_P)].
+Qed.
+
+Lemma in_big_polyIP (I : finType) (P : pred I) (F : I -> 'poly[R]_n) x :
+  reflect (forall i : I, P i -> x \in (F i)) (x \in \polyI_(i | P i) (F i)).
+Proof.
+have -> : (x \in \polyI_(i | P i) F i) = (\big[andb/true]_(i | P i) (x \in (F i))).
+  by elim/big_rec2: _ => [|i y b Pi <-]; rewrite ?in_polyT ?in_polyI.
+rewrite big_all_cond; apply: (iffP allP) => /= H i;
+have := H i _; rewrite mem_index_enum; last by move/implyP->.
+by move=> /(_ isT) /implyP.
+Qed.
+
+Lemma in_big_polyI (I : finType) (P : pred I) (F : I -> 'poly[R]_n) x :
+  (x \in \polyI_(i | P i) (F i)) = [forall i, P i ==> (x \in F i)].
+Proof.
+by apply/in_big_polyIP/forall_inP.
+Qed.
+
+Lemma big_poly_inf (I : finType) (j : I) (P : pred I) (F : I -> 'poly[R]_n) :
+  P j -> (\polyI_(i | P i) F i) `<=` F j.
+Proof. (* RK *)
+move => ?.
+apply/poly_subsetP => ? /in_big_polyIP in_polyI_cond.
+by apply: (in_polyI_cond j).
+Qed.
+
+Lemma big_polyI_min (I : finType) (j : I) Q (P : pred I) (F : I -> 'poly[R]_n) :
+  P j -> (F j `<=` Q) -> \polyI_(i | P i) F i `<=` Q.
+Proof. (* RK *)
+by move => ? ?; apply/(@poly_subset_trans (F j) _ _); [apply: big_poly_inf | done].
+Qed.
+
+Lemma big_polyIsP (I : finType) Q (P : pred I) (F : I -> 'poly[R]_n) :
+  reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \polyI_(i | P i) F i).
+Proof. (* RK *)
+apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
+- by apply/(poly_subset_trans Q_subset_polyI _)/big_poly_inf.
+- apply/poly_subsetP => x x_in_Q.
+  apply/in_big_polyIP => j P_j.
+  by move: x x_in_Q; apply/poly_subsetP; exact: forall_Q_subset.
+Qed.
+
+Lemma convP V x :
+  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Proof.
+rewrite repr_equiv; exact: H.convP.
+Qed.
+
+Lemma convexP P (V : {fset 'cV[R]_n}) :
+  {subset V <= P} -> poly_subset (conv V) P.
+Proof.
+move => V_sub_P; apply/poly_subsetP => x.
+rewrite repr_equiv; move: x; apply/(H.poly_subsetP _)/H.convexP.
+exact: V_sub_P.
+Qed.
+
+Lemma polyIxx P : P `&` P = P.
+Proof.
+by apply/poly_eqP => x; rewrite inE Bool.andb_diag. (* TODO: strange to require a cool to Bool.* *)
+Qed.
+
+Lemma poly_subset_hsP {P} {b} :
+  reflect (forall x, x \in P -> '[fst b, x] >= snd b) (P `<=` `[hs b]).
+Proof.
+apply: (iffP poly_subsetP) => [sub x x_in_P | sub x x_in_P ];
+  move/(_ _ x_in_P): sub; by rewrite in_hs.
+Qed.
+
+Lemma hs_antimono c d d' :
+  d <= d' -> `[hs (c, d')] `<=` `[hs (c, d)]. (* RK *)
+Proof.
+move => d_le_d'.
+apply/poly_subset_hsP => x.
+rewrite inE => ?.
+by apply: (ler_trans d_le_d' _).
+Qed.
+
+Lemma hp_extremeL b x y α :
+  (x \in `[hs b]) -> (y \in `[hs b]) ->
+     0 <= α < 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (x \in `[hp b]).
+Admitted.
+
+Lemma hp_extremeR b x y α :
+  (x \in `[hs b]) -> (y \in `[hs b]) ->
+     0 < α <= 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (y \in `[hp b]).
+Admitted.
+
+Lemma poly0_subset P : `[poly0] `<=` P.
+Proof.
+by apply/poly_subsetP => x; rewrite inE.
+Qed.
+
+Lemma proper0N_equiv P : ~~ (P `>` `[poly0]) = (P == `[poly0]).
+Proof. (* RK *)
+Admitted.
+(*rewrite negb_and negbK /poly_equiv !poly0_subset //=.
+by apply/idP/idP => [-> | ]; [done | case/andP].
+Qed.*)
+
+Lemma subset0N_proper P : ~~ (P `<=` `[poly0]) = (P `>` `[poly0]).
+Proof. (* RK *)
+apply/idP/idP => [? | /andP [_ ?]]; last by done.
+by apply/andP; split; [exact: poly0_subset | done].
+Qed.
+
+Lemma equiv0N_proper P : (P != `[poly0]) = (P `>` `[poly0]).
+Proof. (* RK *)
+by rewrite -proper0N_equiv negbK.
+Qed.
+
+Lemma subset0_equiv {P} : (P `<=` `[poly0]) = (P == `[poly0]).
+Proof. (* RK *)
+by apply/negb_inj; rewrite subset0N_proper equiv0N_proper.
+Qed.
+
+CoInductive empty_spec P : bool -> bool -> bool -> Set :=
+| Empty of (P =i `[poly0]) : empty_spec P false true true
+| NonEmpty of (P `>` `[poly0]) : empty_spec P true false false.
+
+Lemma emptyP P : empty_spec P (P  `>` `[poly0]) (P == `[poly0]) (P `<=` `[poly0]).
+Proof.
+case: (boolP (P  `>` `[poly0])) => [P_non_empty | P_empty].
+- rewrite -subset0N_proper in P_non_empty; move: (P_non_empty) => /negbTE ->.
+  rewrite subset0_equiv in P_non_empty; move: (P_non_empty) => /negbTE ->.
+  by constructor; rewrite equiv0N_proper in P_non_empty.
+- rewrite proper0N_equiv in P_empty; rewrite subset0_equiv P_empty.
+  by constructor; apply/poly_eqP/eqP.
+Qed.
+
+Lemma proper0P {P : 'poly[R]_n} :
+  reflect (exists x, x \in P) (P `>` `[poly0]).
+Proof.
+rewrite -[_ `<` _]negbK proper0N_equiv -subset0_equiv.
+apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in];
+  exists x; by rewrite ?inE.
+Qed.
+
+Definition pick_point P : 'cV[R]_n :=
+  match (@proper0P P) with
+  | ReflectT P_non_empty => xchoose P_non_empty
+  | ReflectF _ => 0
+  end.
+
+Lemma pick_pointP {P} :
+  (P `>` `[poly0]) -> pick_point P \in P.
+Proof. (* RK *)
+rewrite /pick_point; case: proper0P => [? _ | _] //; exact: xchooseP.
+Qed.
+
+Lemma poly_properP {P Q} :
+  (* should {subset P <= Q} to (P `<=` Q) *)
+  reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
+Proof.
+apply: (iffP andP) =>
+  [[/poly_subsetP ? /poly_subsetPn [x ??]] | [? [x ??]] ].
+- by split; [ done | exists x].
+- by split; [ apply/poly_subsetP | apply/poly_subsetPn; exists x].
+Qed.
+
+Lemma poly_subset_anti {P Q} :
+  (P `<=` Q) -> (Q `<=` P) -> (P `=~` Q).
+Admitted.
+
+Lemma poly_properEneq {P Q} :
+  (P `<` Q) = (P `<=` Q) && (P `!=~` Q).
+Proof.
+apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_neq_Q] ].
+- split; first done.
+  apply/negP => P_eq_Q; rewrite (poly_equivP P_eq_Q) in x_notin.
+  by move/negP: x_notin.
+- apply/andP; split; first done.
+  move: P_neq_Q; apply: contra.
+  exact: poly_subset_anti.
+Qed.
+
+Lemma poly_properW P Q :
+  (P `<` Q) -> (P `<=` Q).
+Admitted.
+
+Lemma poly_properxx P : (P `<` P) = false.
+Proof.
+by rewrite /poly_proper poly_subset_refl.
+Qed.
+
+Lemma poly_proper_subset P P' P'' :
+  (P `<` P') -> (P' `<=` P'') -> (P `<` P'').
+Proof. (* RK *)
+move/poly_properP => [sPP' [x ? ?]] /poly_subsetP sP'P''.
+apply/poly_properP; split; first by move => ? ?; apply/sP'P''/sPP'.
+by exists x; [apply/sP'P'' | done].
+Qed.
+
+Lemma poly_subset_proper P P' P'' :
+  (P `<=` P') -> (P' `<` P'') -> (P `<` P'').
+Proof. (* RK *)
+move => /poly_subsetP sPP' /poly_properP [sP'P'' [x ? x_notin_P']].
+apply/poly_properP; split; first by move => ? ?; apply/sP'P''/sPP'.
+by exists x; [done | move: x_notin_P'; apply/contra/sPP'].
+Qed.
+
+Lemma poly_proper_trans : transitive poly_proper.
+Proof. (* RK *)
+by move => ? ? ? /poly_properP [? _]; apply/poly_subset_proper/poly_subsetP.
+Qed.
+
+Lemma poly_proper_subsetxx P Q : (* to be compared with lter_anti *)
+  (P `<` Q `<=` P) = false.
+Proof. (* RK *)
+by apply/negbTE/nandP/orP; rewrite negb_and negbK -orbA orbC orbN.
+Qed.
+
+Lemma poly_subset_properxx P Q :
+  (P `<=` Q `<` P) = false.
+Proof. (* RK *)
+by apply/negbTE/nandP/orP; rewrite negb_and negbK orbA orbC orbA orbN.
+Qed.
+
+Lemma boundedP {P} {c} :
+  reflect (exists2 x, x \in P & P `<=` `[hs (c, '[c,x])]) (bounded P c).
+Proof.
+have eq x : (P `<=` `[hs (c,'[ c, x])]) =
+            H.poly_subset (repr P) (H.mk_hs (c, '[ c, x])).
+by apply: (sameP H.poly_subsetP);
+     apply: (iffP H.poly_subsetP) => sub z;
+     move/(_ z): sub; rewrite H.in_hs in_hs.
+by apply: (iffP (H.boundedP _ _)) => [[x] H H' | [x] H H']; exists x; rewrite ?inE ?eq in H' *.
+Qed.
+
+Lemma boundedPP {P} {c} :
+  reflect (exists x, (x \in P) && (P `<=` `[hs (c, '[c, x])])) (bounded P c).
+Proof.
+by apply/(iffP boundedP) => [[x] ?? | [x] /andP [??]];
+  exists x; first by apply/andP; split.
+Qed.
+
+Lemma boundedPn {P} {c} :
+  (P `>` `[poly0]) -> reflect (forall K, exists2 x, x \in P & '[c,x] < K) (~~ bounded P c).
+Proof.
+(*rewrite -subset0N_proper; move => P_non_empty.*)
+move => P_neq0.
+have reprP_neq0: ~~ H.poly_subset (\repr P) H.poly0.
+- move: P_neq0; rewrite -subset0N_proper.
+  apply: contraNN => /H.poly_subsetP incl.
+  by apply/poly_subsetP => x /incl; rewrite H.in_poly0.
+apply: (iffP (H.boundedPn _ reprP_neq0)) => [H K | H K]; move/(_ K): H.
+- move/H.poly_subsetPn => [x x_in_P x_not_in_hs].
+  by exists x; rewrite H.in_hs -ltrNge in x_not_in_hs.
+- move => [x x_in_P c_x_lt_K].
+  by apply/H.poly_subsetPn; exists x; rewrite ?H.in_hs -?ltrNge.
+Qed.
+
+Lemma bounded_mono1 P Q c :
+  bounded P c -> `[poly0] `<` Q `<=` P -> bounded Q c.
+Proof. (* RK *)
+move => /boundedPP [x /andP [_ /poly_subsetP sPhs]] /andP [Q_non_empty /poly_subsetP sQP].
+apply/contraT => /(boundedPn Q_non_empty) Q_unbounded.
+move: (Q_unbounded '[ c, x]) => [y y_in_Q x_y_vdot_sineq].
+suff : ('[ c, x] <= '[ c, y]) by rewrite lerNgt x_y_vdot_sineq.
+by move/sQP/sPhs : y_in_Q; rewrite in_hs.
+Qed.
+
+Lemma bounded_poly0 c : bounded (`[poly0]) c = false.
+Admitted.
+
+Definition opt_value P c (bounded_P : bounded P c) :=
+  let x := xchoose (boundedPP bounded_P) in '[c,x].
+
+Lemma opt_point P c (bounded_P : bounded P c) :
+  exists2 x, x \in P & '[c,x] = opt_value bounded_P.
+Proof.
+rewrite /opt_value; set x := xchoose _.
+exists x; last by done.
+by move: (xchooseP (boundedPP bounded_P)) => /andP [?].
+Qed.
+
+Lemma opt_value_lower_bound {P} {c} (bounded_P : bounded P c) :
+  P `<=` (`[ hs (c, opt_value bounded_P)]).
+Proof.
+by rewrite /opt_value; move/andP : (xchooseP (boundedPP bounded_P)) => [_].
+Qed.
+
+Lemma opt_value_antimono1 P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
+  Q `<=` P -> opt_value bounded_P <= opt_value bounded_Q.
+Proof. (* RK *)
+move => /poly_subsetP sQP.
+move: (opt_point bounded_Q) => [x x_in_Q <-].
+move/sQP/(poly_subsetP (opt_value_lower_bound bounded_P)) : x_in_Q.
+by rewrite in_hs.
+Qed.
+
+Definition argmin P c :=
+  if @idP (bounded P c) is ReflectT H then
+    P `&` `[hp (c, opt_value H)]
+  else
+    `[poly0].
+
+Lemma argmin_polyI P c (bounded_P : bounded P c) :
+  argmin P c = P `&` `[hp (c, opt_value bounded_P)].
+Proof.
+by rewrite /argmin; case: {-}_/idP => [b' | ?]; rewrite ?[bounded_P]eq_irrelevance.
+Qed.
+
+Lemma in_argmin P c x :
+  x \in argmin P c = (x \in P) && (P `<=` `[hs (c, '[c, x])]).
+Proof.
+rewrite /argmin; case: {-}_/idP => [| /negP c_unbounded]; last first.
+- rewrite inE; symmetry; apply: negbTE.
+  case: (emptyP P) => [-> | P_non_empty]; first by rewrite inE.
+  move/(boundedPn P_non_empty)/(_ '[c,x]): c_unbounded => [y y_in_P c_y_lt_c_x].
+  rewrite negb_and; apply/orP; right.
+  apply/poly_subsetPn; exists y; by rewrite ?notin_hs.
+- move => c_bounded; rewrite !inE; apply/andP/andP.
+  + move => [x_in_P /eqP ->]; split; by [done | exact: opt_value_lower_bound].
+  + move => [x_in_P subset]; split; first by done.
+    rewrite -lter_anti; apply/andP; split.
+    * move/opt_point : (c_bounded) => [z z_in_P <-].
+      by move/poly_subsetP/(_ _ z_in_P): subset; rewrite in_hs.
+    * rewrite -in_hs; by apply/(poly_subsetP (opt_value_lower_bound _)).
+Qed.
+
+Lemma bounded_argminN0 P c :
+  (bounded P c) = (argmin P c `>` `[poly0]).
+Proof. (* RK *)
+apply/idP/idP => [/boundedP [x ? ?] | /proper0P [x]].
+- apply/proper0P; exists x.
+  by rewrite in_argmin; apply/andP.
+- rewrite in_argmin => /andP [? ?].
+  by apply/boundedP; exists x.
+Qed.
+
+Lemma argmin_subset P c : argmin P c `<=` P.
+Proof. (* RK *)
+rewrite /argmin; case: {-}_/idP => [bounded_P | _];
+  [exact: poly_subsetIl | exact: poly0_subset].
+Qed.
+
+Lemma argmin_opt_value P c (bounded_P : bounded P c) :
+  argmin P c `<=` `[hp (c, opt_value bounded_P)].
+Proof. (* RK *)
+rewrite argmin_polyI; exact: poly_subsetIr.
+Qed.
+
+Lemma argmin_lower_bound {c x y} P :
+  x \in argmin P c -> y \in P -> '[c,x] <= '[c,y].
+Proof. (* RK *)
+by rewrite in_argmin; move/andP => [_ /poly_subset_hsP/(_ y)].
+Qed.
+
+Lemma subset_opt_value P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
+  argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q. (* RK *)
+Proof.
+move => /andP [/poly_subsetP s_argminQ_P ?].
+apply/eqP; rewrite eqr_le; apply/andP; split; last by apply: opt_value_antimono1.
+move: (opt_point bounded_Q) => [x ? x_is_opt_on_Q].
+rewrite -x_is_opt_on_Q -in_hs.
+apply/(poly_subsetP (opt_value_lower_bound bounded_P))/s_argminQ_P.
+rewrite in_argmin; apply/andP; split; first by done.
+rewrite x_is_opt_on_Q.
+exact: opt_value_lower_bound.
+Qed.
+
+Lemma subset_argmin {P Q} {c} :
+  bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c `=~` argmin Q c.
+Proof. (* RK *)
+move => bounded_Q /andP [? ?].
+rewrite {1}/argmin; case: {-}_/idP => [bounded_P | unbounded_P]; apply/andP; split.
+- rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
+  by apply/polyISS; [done | exact: poly_subset_refl].
+- apply/poly_subsetIP; split; first by done.
+  rewrite (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
+  exact: argmin_opt_value.
+- exact: poly0_subset.
+- move/negP: unbounded_P; apply/contraR.
+  rewrite subset0N_proper => non_empty_argmin_Q_c.
+  apply/(bounded_mono1 bounded_Q _)/andP; split; last by done.
+  by apply/(poly_proper_subset non_empty_argmin_Q_c _).
+Qed.
+
+Lemma argmin_eq {P} {c v x} :
+  v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
+Proof. (* RK *)
+move => v_in_argmin; rewrite in_argmin.
+apply: (iffP idP) => [/andP [? /poly_subsetP sPhs] | [? ->]].
+- split; first by done.
+  apply/eqP; rewrite eqr_le; apply/andP; split; last by apply: (argmin_lower_bound v_in_argmin _).
+  by rewrite -in_hs; apply/sPhs/(poly_subsetP (argmin_subset _ c)).
+- apply/andP; split; first by done.
+  rewrite in_argmin in v_in_argmin.
+  exact: (proj2 (andP v_in_argmin)).
+Qed.
+
+Lemma bounded_lower_bound P c :
+  (P `>` `[poly0]) -> reflect (exists d, P `<=` `[hs (c, d)]) (bounded P c).
+Proof.
+move => P_non_empty; apply: introP => [ c_bounded | /(boundedPn P_non_empty) c_unbouded ].
+- exists (opt_value c_bounded); exact: opt_value_lower_bound.
+- move => [d c_bounded]; move/(_ d): c_unbouded => [x x_in_P c_x_lt_K].
+  by move/poly_subsetP/(_ _ x_in_P): c_bounded; rewrite in_hs lerNgt => /negP.
+Qed.
+
+Definition mk_line (c Ω : 'cV[R]_n) :=
+  let S := kermx c in
+  \polyI_(i < n) `[hp ((row i S)^T, '[(row i S)^T, Ω])].
+
+Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
+
+Lemma in_lineP {c Ω x : 'cV[R]_n} :
+  reflect (exists μ, x = Ω + μ *: c) (x \in `[line c & Ω]).
+Proof.
+apply: (iffP idP); last first.
+- move => [μ ->]; apply/in_big_polyIP => [i _]; rewrite in_hp; apply/eqP.
+  rewrite vdotDr vdotZr.
+  suff /matrixP/(_ 0 0): '[ (row i (kermx c))^T, c]%:M = 0 :> 'M_1
+    by rewrite !mxE mulr1n => ->; rewrite mulr0 addr0.
+  rewrite vdot_def -trmx_mul -trmx0; apply: congr1.
+  apply/sub_kermxP; exact: row_sub.
+- move/in_big_polyIP => H.
+  pose d := x - Ω; suff /sub_rVP [μ ]: (d^T <= c^T)%MS.
+  rewrite -linearZ /= => /trmx_inj d_eq_mu_c.
+  by exists μ; rewrite -d_eq_mu_c /d addrCA addrN addr0.
+  rewrite submx_kermx !trmxK.
+  apply/row_subP => i; apply/sub_kermxP.
+  rewrite -[row _ _]trmxK -vdot_def vdotC [RHS]const_mx11; apply: congr1.
+  move/(_ i isT): H; rewrite in_hp => /eqP.
+  by rewrite /d vdotBr => ->; rewrite addrN.
+Qed.
+
+
+(*Lemma pointedPn P :
+  ~~ (poly_subset P poly0) ->
+    reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
+Proof. (* RK *)
+move=> non_empty_P.
+have P_neq0 : ~~ (`[ poly0 ]) \repr P.
+  apply/contraT; rewrite -subset0N_proper negbK => /PolyPred.poly_subsetP empty_P.
+  move/poly_subsetPn: non_empty_P => [x].
+  by move/empty_P; rewrite !inE.
+apply: (iffP (pointedPn P_neq0)) => [[c [? incl]] | [c [? incl]]];
+  exists c; split; try by done.
+- move => μ μ_in_P λ.
+  apply/(PolyPred.poly_subsetP _ _ _ (incl _ μ_in_P))/in_lineP.
+  by exists λ.
+- move => Ω Ω_in_P.
+  apply/PolyPred.poly_subsetP => x /in_lineP [μ ->].
+  exact: incl.
+Qed.*)
+
+
+Lemma pointedPn P :
+  (P `>` `[poly0]) ->
+    reflect (exists c, (c != 0) /\ (forall Ω,  Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
+(*RK : I had to add the non_emptiness assumption because now pointed only makes sense under this assumption. I also slightly modified statement*)
+Proof. (* RK *)
+Admitted.
+ (* rewrite -subset0N_proper => non_empty_P.
+apply: (iffP (PolyPred.pointedPn non_empty_P)) => [[c [? incl]] | [c [? incl]]];
+  exists c; split; try by done.
+- move => Ω Ω_in_P.
+  apply/poly_subsetP => x /in_lineP [μ ->].
+  exact: incl.
+- move => μ μ_in_P λ.
+  apply/(poly_subsetP (incl _ μ_in_P))/in_lineP.
+  by exists λ.
+Qed.*)
+
+Definition mk_hline (c Ω : 'cV[R]_n) :=
+  `[hs (c, '[c,Ω])] `&` `[line c & Ω].
+
+Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
+
+Lemma in_hlineP (c Ω x : 'cV[R]_n) :
+  reflect (exists2 μ, μ >= 0 & x = Ω + μ *: c) (x \in `[hline c & Ω]).
+Proof.
+rewrite !inE; apply: (iffP andP).
+- move => [c_x_ge_c_Ω /in_lineP [μ x_eq]].
+  rewrite x_eq in c_x_ge_c_Ω *.
+  case: (c =P 0) => [-> | c_neq0].
+  + exists 0; by rewrite ?scaler0.
+  + exists μ; last by done.
+    rewrite vdotDr ler_addl vdotZr pmulr_lge0 in c_x_ge_c_Ω; first by done.
+    by rewrite vnorm_gt0; apply/eqP.
+- move => [μ μ_ge0 ->]; split; last by apply/in_lineP; exists μ.
+  rewrite vdotDr ler_addl vdotZr.
+  apply: mulr_ge0; first by done.
+  exact: vnorm_ge0.
+Qed.
+
+Lemma convexP2 P (v w : 'cV[R]_n) :
+  v \in P -> w \in P -> conv ([fset v; w]%fset) `<=` P.
+Admitted.
+
+Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
+
+Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
+
+Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
+Proof. (* RK *)
+apply/idP/idP => [/convP [w /weightP [w_ge0 _ sum_w] ->] | /eqP ->].
+- rewrite big_seq_fset1 in sum_w.
+  by rewrite /bary big_seq_fset1 sum_w scale1r.
+- pose w := [fsfun x : [fset Ω]%fset => 1%R | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
+  have w_Ω_eq_1: w Ω = 1
+    by rewrite fsfun_ffun /=; case: insubP => [? ? ? /= | /= ]; [done | rewrite in_fset1 eq_refl].
+  apply/convP; exists w.
+  + apply/weightP; split.
+    * move => v; rewrite fsfun_ffun.
+      by case: insubP => [? _ _ /= | /= _]; [exact: ler01 | done].
+    * move => v; rewrite fsfun_ffun.
+      by case: insubP => [? -> _ /= | /= _].
+    * by rewrite big_seq_fset1.
+  + by rewrite /bary big_seq_fset1 w_Ω_eq_1 scale1r.
+Qed.
+
+Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
+Proof. (* RK *)
+by rewrite in_pt.
+Qed.
+
+Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
+Proof. (* RK *)
+apply/proper0P; exists Ω; exact: in_pt_self.
+Qed.
+
+Lemma pick_point_pt (Ω : 'cV[R]_n) :
+  pick_point (`[pt Ω]) = Ω.
+Proof. (* RK *)
+apply/eqP; rewrite -in_pt; apply/pick_pointP; exact: pt_proper0.
+Qed.
+
+Lemma pt_subset (Ω : 'cV[R]_n) P : `[pt Ω] `<=` P = (Ω \in P).
+Proof. (* RK *)
+by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
+  [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_subsetP => v; rewrite in_pt => /eqP ->].
+Qed.
+
+Lemma pt_proper (Ω : 'cV[R]_n) P : `[pt Ω] `<` P -> (Ω \in P).
+Admitted.
+
+(* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
+ * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
+Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
+  reflect (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω') (x \in conv [fset Ω; Ω']%fset).
+Proof. (* RK *)
+Admitted.
+(*
+case: (boolP (Ω == Ω')) => [/eqP -> | Ω_neq_Ω'].
+- rewrite fsetUid in_pt.
+  apply: (iffP idP) => [/eqP -> | [μ _ ->]].
+  + by exists 1; [apply/andP | rewrite scale1r subrr addr0].
+  + by rewrite subrr scaler0 addr0.
+- apply: (iffP idP) => [/convP [w /weightP [w_ge0 _ sum_w] ->] | [a /andP [? ?] ?]].
+  + have w_Ω_eq: w Ω = 1 - w Ω'.
+      rewrite -sum_w big_setU1 /=; last by rewrite in_fset1.
+      by rewrite big_seq_fset1 -addrA subrr addr0.
+    exists (w Ω').
+    * apply/andP; split; first by apply: w_ge0.
+      by rewrite -subr_ge0 -w_Ω_eq; apply: w_ge0.
+    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
+      by rewrite big_seq_fset1 w_Ω_eq scalerBl scale1r -addrA [X in _+X]addrC scalerBr.
+  + pose w := [fsfun x : [fset Ω; Ω']%fset => if (val x == Ω') then a else (1-a) | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
+    have w_Ω'_eq: w Ω' = a
+      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
+        [apply/ifT; rewrite val_y_eq | rewrite in_fset2 eq_refl negb_or /=; move/andP/proj2].
+    have w_Ω_eq: w Ω = (1 - a)
+      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
+        [apply/ifF; rewrite val_y_eq; apply/negbTE | rewrite in_fset2 eq_refl /=].
+    apply/convP; exists w.
+    * apply/weightP; split.
+      - move => y; rewrite fsfun_ffun.
+        case: insubP => [z _ _ /= | /= _]; last by done.
+        by case: (boolP (fsval z == Ω')) => [_ |_]; [done | rewrite subr_ge0].
+      - move => y; rewrite fsfun_ffun.
+        by case: insubP => [? -> _ /= | /= _].
+      - rewrite big_setU1 /=; last by rewrite in_fset1.
+        by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq subrK.
+    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
+      by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq scalerBl scale1r -addrA [X in _+X]addrC -scalerBr.
+Qed.*)
+
+Definition compact P :=
+  (*(P `>` `[poly0]) ==> *)
+  [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
+
+Lemma compactP_Linfty P :
+  (P `>` `[poly0]) ->
+  reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
+Admitted.
+
+Lemma compactP P :
+  reflect ((*(P `>` `[poly0]) -> *)
+      forall c, bounded P c) (compact P).
+Admitted.
+
+Lemma compact_pointed P :
+  (*(P `>` `[poly0]) -> *) compact P -> pointed P. (* RK *)
+Admitted.
+
+Lemma compact_conv (V : {fset 'cV[R]_n}) : (*('|V|%fset > 0)%N ->*) compact (conv V).
+Admitted.
+
+Lemma compact_pt (Ω : 'cV[R]_n) : compact (`[pt Ω]).
+Admitted.
+
+Definition slice (b : base_elt) P := `[hp b] `&` P.
+
+Lemma slice0 (b : base_elt) : slice b (`[poly0]) `=~` `[poly0].
+Admitted.
+
+(*
+Definition nth_hs (m : nat) (base: m.-base) i : T :=
+  `[hs (row i base.1)^T & (base.2 i 0)].
+
+Definition nth_hp (m : nat) (base: m.-base) i : T :=
+  `[hp (row i base.1)^T & (base.2 i 0)].
+
+Lemma in_nth_hs (m : nat) (A : 'M_(m,n)) (b : 'cV_m) i x :
+  x \in (nth_hs (A, b) i) = ((A *m x) i 0 >= b i 0).
+Proof.
+by rewrite inE /= row_vdot.
+Qed.
+
+Lemma in_nth_hp (m : nat) (A : 'M_(m,n)) (b : 'cV_m) i x :
+  x \in (nth_hp (A, b) i) = ((A *m x) i 0 == b i 0).
+Proof.
+by rewrite inE /= row_vdot.
+Qed.
+ *)
+
+Definition poly_of_base (base : base_t) :=
+  \polyI_(b : base) `[hs (val b)].
+
+Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
+
+Definition in_poly_of_base x (base : base_t) :
+  (x \in 'P(base)) = [forall b : base, x \in `[hs (val b)]].
+Proof.
+by rewrite in_big_polyI.
+Qed.
+
+Definition polyEq (base I : base_t) :=
+  (\polyI_(e : I) `[hp (val e)]) `&` 'P(base).
+
+Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
+
+Fact in_polyEq x base I :
+  (x \in 'P^=(base; I)) = [forall e : I, x \in `[hp (val e)]] && (x \in 'P(base)).
+Proof.
+by rewrite inE in_big_polyI.
+Qed.
+
+Lemma in_polyEqP x base I :
+  reflect ((forall e, e \in I -> x \in `[hp e]) /\ x \in 'P(base)) (x \in 'P^=(base; I)).
+Proof.
+Admitted.
+(*
+by rewrite in_polyEq; apply: (equivP andP);
+  split; move => [/forall_inP x_sat x_in_PAb].
+Qed.*)
+
+Lemma polyEq_eq x base I e :
+  x \in 'P^=(base; I) -> e \in I -> x \in `[hp e].
+Proof.
+by move/in_polyEqP => [x_act _ ?]; apply: x_act.
+Qed.
+
+Lemma polyEq0 {base : base_t} :
+  'P^=(base; fset0) = 'P(base).
+Admitted.
+
+Lemma polyEq_antimono (base I I' : base_t[R,n]) :
+  (I `<=` I')%fset -> 'P^=(base; I') `<=` 'P^=(base; I).
+Proof.
+Admitted.
+
+Lemma polyEq_antimono0 {base I : base_t[R,n]} :
+  'P^=(base; I) `<=` 'P(base).
+Proof.
+Admitted.
+
+Lemma polyEq_polyI {base I I': base_t[R,n]} :
+  'P^=(base; I) `&` 'P^=(base; I') = 'P^=(base; (I `|` I')%fset).
+Admitted.
+
+Lemma polyEq_big_polyI {base: base_t[R,n]} {I : finType} {P : pred I} {F}  :
+  ~~ pred0b P -> \polyI_(i | P i) 'P^=(base; F i) = 'P^=(base; (\bigcup_(i | P i) (F i))%fset).
+Proof.
+move/pred0Pn => [i0 Pi0].
+apply/poly_equivP/andP; split; last first.
+- apply/big_polyIsP => [i Pi]; apply/polyEq_antimono; exact: bigfcup_sup.
+- apply/poly_subsetP => x /in_big_polyIP x_in.
+  apply/in_polyEqP; split; last first.
+  rewrite /=.
+  move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0)).
+  move => e /= /bigfcupP [i [/andP [_ Pi] ?]].
+  exact: (polyEq_eq (x_in _ Pi)).
+Qed.
+
+Lemma polyEq1 {base: base_t[R,n]} {e} :
+  'P^=(base; [fset e]%fset) = 'P(base) `&` `[hp e].
+Proof.
+Admitted.
+
+Lemma slice_polyEq {e : base_elt} {base I : base_t[R,n]} :
+  slice e 'P^=(base; I) = 'P^=(e +|` base; e +|` I).
+Admitted.
+
+Definition baseEq (base I : base_t[R,n]) :=
+  (base `|` ((@Base.opp_base_elt _ _) @` I))%fset.
+
+Lemma polyEq_flatten (base : base_t[R,n]) (I : {fsubset base}) :
+  'P^=(base; I) = 'P(baseEq base I)%fset.
+Admitted.
+
+Lemma polyEq_of_polyEq (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)}) :
+  exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
+Admitted.
+
+(*
+Lemma polyEq_of_polyEq (base base1 base2 : base_t R n) : (* quite short proof after all! *)
+   exists base3, 'P^=(baseEq base base1; base2) `=~` 'P^=(base; base3).
+Proof.
+move: I J; case: base => [A b] I J.
+pose f (j : 'I_(#|I| + m)) :=
+  match splitP' j with
+  | SplitLo' j' _ => (enum_val j')
+  | SplitHi' k _ => k
+  end.
+pose K := I :|: (f @: J); exists K.
+apply/andP; split; apply/poly_subsetP => x x_in.
+- apply/in_polyEqP; split; last first.
+  + move/(poly_subsetP polyEq_antimono0): x_in.
+    rewrite -(poly_equivP polyEq_flatten).
+    exact: (poly_subsetP polyEq_antimono0).
+  + move => k /setUP; case.
+    * apply: polyEq_eq; rewrite (poly_equivP polyEq_flatten).
+      by move/(poly_subsetP polyEq_antimono0): x_in.
+    * move/imsetP => [j'] j'_in_J ->; rewrite /f.
+      case: (splitP' j') => [j j'_eq| j j'_eq].
+      - move/polyEq_eq/(_ j'_in_J) : x_in; rewrite j'_eq !in_nth_hp /= mul_col_mx !col_mxEu.
+        rewrite mulNmx -row_submx_mul mxE [X in _ == X]mxE 2!row_submx_mxE.
+        by rewrite eqr_opp.
+      - move/polyEq_eq/(_ j'_in_J) : x_in.
+        by rewrite j'_eq !in_nth_hp /= mul_col_mx !col_mxEd.
+      - apply/in_polyEqP; split; last first.
+        + rewrite -(poly_equivP polyEq_flatten).
+          move: x x_in; apply/poly_subsetP/polyEq_antimono; exact: subsetUl.
+        + move => j /(mem_imset f)/(subsetP (@subsetUr _ I _)) fj_in_K.
+          move/polyEq_eq/(_ fj_in_K): x_in.
+          rewrite /f; case: splitP' => [j' -> eq| j' ->].
+          * rewrite !in_nth_hp /= mul_col_mx !col_mxEu mulNmx -row_submx_mul 2![(- row_submx _ _) j' 0]mxE 2!row_submx_mxE /=.
+            rewrite eqr_opp; by rewrite in_nth_hp in eq.
+          * by rewrite !in_nth_hp mul_col_mx !col_mxEd.
+Qed.
+Admitted.*)
+
+End PolyPred.
+
+Notation "'`[' 'poly0' ']'" := poly0 (at level 70) : poly_scope.
+Notation "'`[' 'polyT' ']'" := polyT (at level 70) : poly_scope.
+Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
+Notation "P `<=` Q" := (poly_subset P Q) (at level 70, no associativity, Q at next level) : poly_scope.
+Notation "P `>=` Q" := (Q `<=` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `=~` Q" := (poly_equiv P Q) (at level 70, no associativity) : poly_scope.
+Notation "P `!=~` Q" := (~~ (poly_equiv P Q)) (at level 70, no associativity) : poly_scope.
+Notation "P `<` Q" := (poly_proper P Q) (at level 70, no associativity, Q at next level) : poly_scope.
+Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing) : poly_scope.
+Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "'`[' 'hs'  b  ']'" := (mk_hs b) (at level 70) : poly_scope.
+Notation "'`[' 'hp' b  ']'" := (mk_hp b) (at level 70) : poly_scope.
+Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
+Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
+Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
+Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
+Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
+
+Notation "\polyI_ ( i <- r | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( i <- r ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i <- r) F%PH) : poly_scope.
+Notation "\polyI_ ( i | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i | P%B) F%PH) : poly_scope.
+Notation "\polyI_ i F" :=
+  (\big[polyI/`[polyT]%PH]_i F%PH) : poly_scope.
+Notation "\polyI_ ( i : I | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i : I | P%B) F%PH) (only parsing) : poly_scope.
+Notation "\polyI_ ( i : I ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i : I) F%PH) (only parsing) : poly_scope.
+Notation "\polyI_ ( m <= i < n | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(m <= i < n | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( m <= i < n ) F" :=
+  (\big[polyI/`[polyT]%PH]_(m <= i < n) F%PH) : poly_scope.
+Notation "\polyI_ ( i < n | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i < n | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( i < n ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i < n) F%PH) : poly_scope.
+Notation "\polyI_ ( i 'in' A | P ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i in A | P%B) F%PH) : poly_scope.
+Notation "\polyI_ ( i 'in' A ) F" :=
+  (\big[polyI/`[polyT]%PH]_(i in A) F%PH) : poly_scope.
+
+Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, inE).
+
+Section Duality.
+
+Local Open Scope poly_scope.
+
+Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
+
+Definition pweight (w : {fsfun base_elt[R,n] -> R for fun => 0%R}) :=
+  (finsupp w `<=` base)%fset && [forall v : base, w (val v) >= 0].
+Implicit Type w : {fsfun base_elt[R,n] -> R for fun => 0%R}.
+
+Definition combine w : base_elt :=
+  (\sum_(v <- base) (w v) *: (fst v), \sum_(v <- base) (w v) * (snd v)).
+
+Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
+    exists2 w, pweight w & combine w = (c, opt_value H).
+Admitted.
+(*Proof.
+move: (H) => H0. (* duplicate assumption *)
+move: H; rewrite /bounded -Simplex.boundedP_cert.
+set u := Simplex.dual_opt_point _ _ _ .
+by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
+Qed.*)
+
+Lemma dual_sol_lower_bound w :
+  pweight w -> 'P(base) `<=` `[hs (combine w)].
+Proof.
+Admitted.
+(*  move => u_ge0; apply/poly_subsetP => x x_in.
+by rewrite inE -vdot_mulmx vdotC; apply: vdot_lev;
+  last by rewrite in_poly_of_base in x_in.
+Qed.*)
+
+Lemma dual_sol_bounded w :
+  ('P(base) `>` `[poly0]) -> pweight w -> bounded 'P(base) (fst (combine w)).
+Proof.
+Admitted.
+(*  move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
+exists '[b,u]; exact: dual_sol_lower_bound.
+Qed.*)
+
+Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
+Hypothesis w_ge0 : pweight w.
+Variable (I : {fsubset base}).
+Hypothesis w_supp : forall v, (w v > 0) = (v \in (I : {fset _})).
+
+Lemma compl_slack_cond x :
+  x \in 'P(base) -> reflect (x \in `[hp (combine w)]) (x \in 'P^=(base; I)).
+Admitted.
+
+Lemma dual_sol_argmin :
+  ('P^=(base; I) `>` `[poly0]) -> argmin 'P(base) (fst (combine w)) `=~` 'P^=(base; I).
+Proof.
+Admitted.
+(*move => PI_non_empty.
+have P_non_empty : (('P(A,b) : T) `>` `[poly0]).
+- apply: (poly_proper_subset PI_non_empty); exact: polyEq_antimono0.
+move/proper0P : PI_non_empty => [x x_in_PI].
+set c := _ *m _; have c_bounded := (dual_sol_bounded P_non_empty u_ge0).
+rewrite argmin_polyI.
+suff ->: opt_value c_bounded = '[b,u].
+- apply/poly_equivP => y; rewrite inE.
+  apply/andP/idP => [[y_in_P c_y_eq]| y_in_PI].
+  + apply/compl_slack_cond => //.
+    by rewrite ?inE in c_y_eq; apply/eqP.
+  + have y_in_P: y \in ('P(A,b) : T).
+    * move: y y_in_PI; apply/poly_subsetP; exact: polyEq_antimono0.
+    split; first by done.
+    by rewrite inE; apply/eqP/compl_slack_cond.
+- have x_in_P : x \in ('P(A,b) : T).
+  + move: x x_in_PI; apply/poly_subsetP; exact: polyEq_antimono0.
+  apply/eqP; rewrite eqr_le; apply/andP; split.
+  - have <- : '[c,x] = '[b,u] by apply/compl_slack_cond.
+    move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound c_bounded).
+    by rewrite inE.
+  - move: (opt_point c_bounded) => [y y_in_P <-].
+    move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound u_ge0).
+    by rewrite inE.
+Qed.
+*)
+
+(*
+Lemma opt_value_csc (m : nat) (A: 'M[R]_(m,n)) (b : 'cV[R]_m) (u : 'cV[R]_m) (x : 'cV[R]_n) :
+  u >=m 0 -> x \in 'P(A,b) ->
+    let c := A^T *m u in
+      reflect (forall i, u i 0 > 0 -> (A *m x) i 0 = b i 0)
+              ('[c,x] == '[b, u]).
+Proof.
+move => u_ge0 x_in_P /=.
+have u_in_dual : u \in Simplex.dual_polyhedron A (A^T *m u)
+ by rewrite inE eq_refl.
+rewrite -subr_eq0 (Simplex.compl_slack_cond_duality_gap_equiv x_in_P u_in_dual).
+apply/(iffP idP).
+(* stupid proof, because of the fact that compl_slack_cond has not the right formulation (and compl_slack_condP doesn't help) *)
+- move => Hcsc i u_i_gt0.
+  move/forallP/(_ i): Hcsc; rewrite inE.
+  by move/lt0r_neq0/negbTE: u_i_gt0 => -> /= /eqP.
+- move => Hcsc; apply/forallP => i; rewrite -[X in X || _]negbK.
+  have ->: (u i 0 != 0) = (u i 0 > 0)
+      by rewrite lt0r; move/gev0P/(_ i): u_ge0 ->; rewrite andbT.
+  by rewrite -implybE; apply/implyP; rewrite inE; move/Hcsc ->.
+Qed.*)
+
+End Duality.
+
+
+(*
+Section ProperPolyhedron.
+
+Local Open Scope poly_scope.
+
+Section Def.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Implicit Types phT : phant T.
+
+Inductive ppoly phT := Ppoly { ppval :> T; _ : ppval `>` `[poly0] }.
+
+End Def.
+
+Notation "'{ppoly'  T '}'" := (@ppoly _ _ _ (Phant T)) (at level 0) : poly_scope.
+(*Notation "\ptval" := (@ptval _ _ _ (Phant _)).*)
+
+Section BasicProperties.
+
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
+
+Canonical ppoly_subType := [subType for (@ppval _ _ T (Phant T))].
+Definition ppoly_eqMixin := Eval hnf in [eqMixin of {ppoly T} by <:].
+Canonical ppoly_eqType := Eval hnf in EqType {ppoly T} ppoly_eqMixin.
+Definition ppoly_choiceMixin := Eval hnf in [choiceMixin of {ppoly T} by <:].
+Canonical ppoly_choiceType := Eval hnf in ChoiceType {ppoly T} ppoly_choiceMixin.
+
+Lemma ppolyP (P : {ppoly T}) : (P `>` `[poly0]).
 Proof.
 exact: valP.
 Qed.
 
-Lemma poly0_baseP : has_base (`[poly0] : 'poly[R]_n).
-Proof.
-by rewrite /has_base poly_properxx.
-Qed.
-Canonical poly0_base := PolyBase poly0_baseP.
+End BasicProperties.
+End ProperPolyhedron.
 
-End FixedBase.
-
-Notation "'{poly'  base '}'" := (poly_base base) : poly_scope.
-Definition poly_base_of base (x : {poly base}) & (phantom 'poly[R]_n x) : {poly base} := x.
-Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
-
-Lemma polyEq_baseP base I :
-  (I `<=` base)%fset -> has_base base 'P^=(base; I).
-Proof.
-move => Isub.
-by apply/implyP => _; apply/exists_eqP => /=; exists (I %:fsub).
-Qed.
-
-Canonical polyEq_base base I (H : expose (I `<=` base)%fset) := PolyBase (polyEq_baseP H).
+Notation "'{ppoly'  T '}'" := (@ppoly _ _ _ (Phant T)) (at level 0) : poly_scope.
 
 Section Test.
-Variable (base I : base_t[R,n]) (I' : {fsubset base}).
-Hypothesis Isub : (I `<=` base)%fset.
-Check ('P^=(base; I)%:poly_base) : {poly base}.
-Check ('P^=(base; I')%:poly_base) : {poly base}.
-End Test.
 
-Variable base : base_t[R,n].
+Local Open Scope poly_scope.
 
-Variant poly_base_spec (P : {poly base}) : Prop :=
-| PolyBase0 of (P = (`[poly0])%:poly_base) : poly_base_spec P
-| PolyBaseN0 (I : {fsubset base}) of (P = 'P^=(base; I)%:poly_base /\ P `>` `[poly0]) : poly_base_spec P.
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
 
-Lemma poly_baseP (P : {poly base}) : poly_base_spec P.
-Proof.
-case: (emptyP P) => [/poly_equivP/quot_equivP/val_inj -> | P_prop0]; first by constructor.
-move/implyP/(_ P_prop0)/exists_eqP: (poly_base_base P) => [I ?].
-constructor 2 with I.
-split; [exact: val_inj | done].
-Qed.
+Definition ppoly_of (x : T) (b : (x `>` `[poly0])) & (phantom (x `>` `[poly0]) b) : {ppoly T} :=
+                               @Ppoly  _ _ _ (Phant T) x b.
+Notation "P %:ppoly" := (@ppoly_of P _ (Phantom _ _)) (at level 0) : poly_scope.
 
-Section Test.
-Variable P Q : {poly base}.
-Goal P = Q.
-case/poly_baseP: P.
-Abort.
+Class expose (P : Prop) := Expose : P.
+Hint Mode expose ! : typeclass_instances.
+Hint Extern 0 (expose _) => (exact) : typeclass_instances.
+Lemma exposeP (P : Prop) : P -> expose P. Proof. by []. Qed.
 
-End Test.
+Inductive foo := Foo { P : bool; _ : P}.
+Variable P : T.
+Hypothesis toto : (P `>` `[poly0]).
 
-Lemma poly_base_subset (P : {poly base}) :
-  P `<=` 'P(base).
-Proof.
-case/poly_baseP : (P) => [->| I [-> _]];
-  [ exact: poly0_subset | exact: polyEq_antimono0].
-Qed.
+Canonical fooT := Foo toto.
 
-Definition set_of_poly_base (P : {poly base}) : option {fsubset base} :=
-  if emptyP (P : 'poly[R]_n) is NonEmpty H then
-    let I := xchoose (existsP (implyP (poly_base_base P) H)) in
-    Some I
-  else
-    None.
-
-Definition set_of_poly_base_pinv (I : {fsubset base})  : option (poly_base base) :=
-  let P := 'P^=(base; I)%:poly_base in
-  if set_of_poly_base P == Some I then Some P else None.
-
-Lemma set_of_poly_baseK :
-  pcancel set_of_poly_base (obind set_of_poly_base_pinv).
-Proof.
-Admitted.
-(*have eq: forall P : poly_base, P `>` (`[poly0]) -> P = '['P^=(base; (set_of_poly_base P))]%:poly_base.
-- move => P; apply/val_inj => /=; apply/eqP.
-  exact: (xchooseP (existsP (poly_base_base P))).
-move => P; rewrite /set_of_poly_base_pinv.
-case: ifP; last first.
-- move/negbT/negP; by rewrite -eq.
-- by move/eqP ->; rewrite -2!eq.
+(*
+Lemma fooP P (b : foo P) : P.
+by case : b.
 Qed.*)
+Canonical bar (P : T) (b : expose (P `>` `[poly0])) := @Ppoly _ _ _ (Phant T) P b.
 
-Definition poly_base_countMixin := PcanCountMixin set_of_poly_baseK.
-Canonical poly_base_countType := Eval hnf in CountType (poly_base base) poly_base_countMixin.
-Definition poly_base_finMixin := PcanFinMixin set_of_poly_baseK.
-Canonical poly_base_finType := Eval hnf in FinType (poly_base base) poly_base_finMixin.
-Canonical poly_base_subFinType := [subFinType of (poly_base base)].
+Require Import Recdef.
 
-Lemma poly_of_baseP :
-  has_base base 'P(base).
-Proof.
-suff ->: 'P(base) = 'P^=(base; fset0)%:poly_base by exact: poly_base_base.
-by rewrite /= (quot_equivP polyEq0).
-Qed.
-Canonical poly_of_base_base := PolyBase (poly_of_baseP).
+Lemma bar' : (P%:ppoly) = P :> T.
 
-Lemma polyI_of_baseP (P Q : {poly base}) :
-  has_base base (P `&` Q).
-Proof.
-Admitted.
-Canonical polyI_of_base P Q := PolyBase (polyI_of_baseP P Q).
-
-Lemma slice_of_baseP (e : base_elt) (P : {poly base}) :
-  has_base (e +|` base) (slice e P).
-Proof.
-Admitted.
-(*case/poly_baseP: P => [ | I _]; first by rewrite (quot_equivP slice0); exact: poly0_baseP.
-apply/has_baseP => _.
-by exists (slice_set I); rewrite -(quot_equivP slice_polyEq).*)
-
-Canonical slice_of_base e P := PolyBase (slice_of_baseP e P).
+Check bar.
 
 
-Lemma argmin_baseP (P : {poly base}) c :
-  has_base base (argmin P c).
-Proof.
-(* we first suppose that flat_prop holds, ie this is the situation in which
- * P (here quantified as Q) would play the role of the base *)
-suff flat_prop: forall base0, bounded ('P(base0) : 'poly[R]_n) c -> has_base base0 (argmin ('P(base0) : 'poly[R]_n) c).
-- apply/has_baseP; rewrite -bounded_argminN0.
-  case/poly_baseP : (P) => [->| I [-> _]]; first by rewrite bounded_poly0.
-  rewrite /= (quot_equivP (polyEq_flatten _)) => bounded_PI.
-  move/flat_prop/has_baseP: (bounded_PI); rewrite -bounded_argminN0.
-  move => /(_ bounded_PI) => [[J] ->].
-  by move: (polyEq_of_polyEq (T := [polyPredType of 'poly[R]_n]) J)
-    => [K] /quot_equivP ->; exists K. (* TODO: ugly to specify the polyPredType *)
-- (* now this is the classic proof of Schrijver *)
-  move => base0 c_bounded.
-  move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb].
-  pose I := [fset e in base0 | w e > 0]%fset.
-  have supp_w : forall e, (w e > 0) = (e \in I). admit.
-  apply/has_baseP; exists I%:fsub.
-  apply/quot_equivP.
-  move: (opt_point c_bounded) => [x x_in_P0 c_x_eq_opt_val].
-  have: x \in `[hp (combine base0 w)] : 'poly[R]_n.
-  - by rewrite inE w_comb /=; apply/eqP.
-  move/(compl_slack_cond w_ge0 supp_w x_in_P0) => x_in_P0I.
-  move: (congr1 fst w_comb) => /= <-; apply/dual_sol_argmin; try by done.
-  by apply/proper0P; exists x.
-Admitted.
-Canonical argmin_base (P : {poly base}) c := PolyBase (argmin_baseP P c).
-
-End PolyBase.
-
-Notation "'{poly'  base '}'" := (@poly_base _ _ base) : poly_scope.
-Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
-Notation "'[' P 'has' '\base' base ']'" := (has_base base P) : poly_scope.
-
-Section Test.
-
-Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
-
-Variables (P Q : {poly base}) (Q' : 'poly[R]_n) (x : 'cV[R]_n).
-
-Check (P `&` Q : 'poly[R]_n).
-Check (x \in P).
-
-Goal P `<=` Q' -> forall x, x \in P -> x \in Q'.
-move/poly_subsetP => H z z_in_P.
-by move/H: z_in_P.
-Qed.
-
-Goal (P = Q' :> 'poly[R]_n) -> x \in P -> x \in Q'.
-move <-.
-done.
-Qed.
-
-Unset Printing Coercions.
+Lemma bar (b : fo := foo (P `>` `[polyØ])
 
 End Test.
-
-Section Active.
-
-Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
-
-Definition active (P : {poly base}) := (* TODO: fix broken notation *)
-  (\big[@fsetU _/fset0]_(I : {fsubset base} | (P `<=` 'P^=(base; I))) I)%:fsub.
-
-Notation "'{eq'  P }" := (active P) : poly_scope.
-
-Section Test.
-Variable (P : {poly base}).
-Check ({eq P} : {fsubset base}).
-Check 'P^=(base; {eq P}) : 'poly[R]_n.
-Check 'P^=(base; {eq P})%:poly_base : {poly base}.
-End Test.
-
-Lemma repr_active (P : {poly base}) :
-  P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
-Proof.
-case/poly_baseP: (P) => [->|]; first by rewrite poly_properxx.
-move => I [P_eq _] Pprop0; apply: val_inj => /=.
-suff ->: 'P^=(base; {eq P}) =
-  \polyI_(I : {fsubset base} | P `<=` 'P^=(base; I)) 'P^= (base; I) :> 'poly[R]_n.
-- apply/quot_equivP/andP; split.
-  + by apply/big_polyIsP.
-  + rewrite P_eq; apply/big_poly_inf; exact: poly_subset_refl.
-- symmetry; apply/quot_equivP.
-  rewrite /active; apply: polyEq_big_polyI.
-  apply/pred0Pn; rewrite P_eq /=; exists I.
-  exact: poly_subset_refl.
-Qed.
-
-Lemma activeP (P : {poly base}) (I : {fsubset base}) :
-  (P `<=` 'P^=(base; I)) = (I `<=` {eq P})%fset.
-Proof.
-apply/idP/idP.
-- by move => Psub; apply/bigfcup_sup.
-- case: (emptyP P) => [ /poly_equivP/quot_equivP -> _|]; first exact: poly0_subset.
-  move/repr_active => {2}-> /=.
-  exact: polyEq_antimono.
-Qed.
-
-Lemma repr_active_supset (P : {poly base}) :
-  P `<=` 'P^=(base; {eq P}).
-case: (poly_baseP P) => [-> /= | _ [_ Pprop0 /=]]; first exact: poly0_subset.
-rewrite {1}[P]repr_active //=; exact: poly_subset_refl.
-Qed.
-
-Lemma repr_active0 :
-  {eq (`[poly0]%:poly_base : {poly base})} = base%:fsub.
-Proof.
-set A := {eq _}.
-apply/val_inj/FSubset.untag_inj => /=.
-apply/eqP; rewrite eqEfsubset; apply/andP; split; first by move: (valP A).
-- rewrite -activeP => /=; exact: poly0_subset.
-Qed.
-
-Lemma active_polyEq (I : {fsubset base}) :
-  (I `<=` {eq 'P^=(base; I)%:poly_base})%fset.
-Proof.
-rewrite -activeP; exact: poly_subset_refl.
-Qed.
-
-Lemma in_active (P : {poly base}) e :
-  e \in base -> (e \in ({eq P} : {fset _})) = (P `<=` `[hp e]).
-Proof.
-rewrite -!fsub1set.
-have ->: (P `<=` (`[ hp e ])) = (P `<=` 'P^=(base; [fset e]%fset)).
-- rewrite (quot_equivP polyEq1).
-  apply/idP/poly_subsetIP => [? | [_ ?]]; last done.
-  by split; first exact: poly_base_subset.
-move => e_in_base.
-have ->: ([fset e] = [fset e]%:fsub)%fset by done.
-by rewrite activeP.
-Qed.
-
-Lemma poly_base_subset_eq (P Q : {poly base}) :
-    (P `<=` Q) -> (({eq Q} : {fset _}) `<=` {eq P})%fset.
-Proof.
-case: (poly_baseP P) => [-> | ? [_ P_prop0]].
-- rewrite repr_active0 poly0_subset => _; exact: (valP {eq _}).
-- case: (poly_baseP Q) => [-> | ? [_ Q_prop0]].
-  + rewrite -subset0N_proper in P_prop0.
-    by move/negbTE : P_prop0 ->.
-  move/repr_active: Q_prop0 => {1}->.
-  by rewrite activeP.
-Qed.
-
-Lemma polyI_eq (P Q : {poly base}) :
-  ({eq P} `|` {eq Q} `<=` {eq ((P `&` Q)%PH)%:poly_base})%fset.
-Proof.
-rewrite -activeP -(quot_equivP polyEq_polyI).
-by apply: polyISS; rewrite activeP.
-Qed.
-
-Lemma poly_base_proper (P Q : {poly base}) :
-  ({eq Q} `<` {eq P})%fset -> P `<` Q.
-Proof.
-case: (poly_baseP Q) => [->| J [Q_eq Q_prop0]]; first by rewrite repr_active0 fsubsetT_proper.
-case: (poly_baseP P) => [->| I [P_eq P_prop0]]; first done.
-rewrite {2}[Q]repr_active // => /fproperP [/fsubsetP eq_sub] [i i_in i_notin].
-rewrite [P]repr_active //.
-apply/andP; split; first exact: polyEq_antimono.
-apply/poly_subsetPn.
-move: i_notin; rewrite in_active.
-- move/poly_subsetPn => [x x_in_Q x_notin].
-  exists x; first by rewrite [Q]repr_active in x_in_Q.
-  move: x_notin; apply: contra => x_in; exact: (polyEq_eq x_in).
-- move: i_in; apply/fsubsetP; exact: (valP {eq _}).
-Qed.
-
-End Active.
-
-Notation "'{eq'  P }" := (active P) : poly_scope.
-
-Section ActiveSlice.
-
-Variable (R : realFieldType) (n : nat).
-
-Lemma active_slice e (base : base_t[R,n]) (P : {poly base}) :
-  ((e +|` {eq P}) `<=` {eq (slice e P)%:poly_base})%fset.
-Proof.
-rewrite -activeP -(quot_equivP slice_polyEq).
-case: (poly_baseP P) => [-> /= | ? [_ P_prop0] /=].
-- rewrite {1}(quot_equivP (slice0 _)); exact: poly0_subset.
-- move/repr_active: P_prop0 => {1}->.
-  exact: poly_subset_refl.
-Qed.
-
-End ActiveSlice.
-
-Section Face.
-
-Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
-
-Definition face_set (P : {poly base}) : {set {poly base}} :=
-  [set Q : {poly base} | Q `<=` P].
-
-Lemma face_set_self (P : {poly base}) : P \in (face_set P).
-Proof.
-rewrite inE; exact: poly_subset_refl.
-Qed.
-
-(* TO BE FIXED : why do we need extra parenthesis for `[poly0] *)
-Lemma poly0_face_set :
-  face_set (`[poly0]%:poly_base) = [set `[poly0]%:poly_base] :> {set {poly base}}.
-Proof.
-apply/setP => P; rewrite !inE /=.
-rewrite subset0_equiv; apply/idP/eqP => [? | -> /=].
-- by apply/val_inj/quot_equivP.
-- exact: poly_equiv_refl.
-Qed.
-
-CoInductive face_spec (P : {poly base}) : {poly base} -> Prop :=
-| EmptyFace : face_spec P (`[poly0])%:poly_base
-| ArgMin c of (bounded P c) : face_spec P (argmin P c)%:poly_base.
-
-Lemma faceP (P Q : {poly base}) :
-  Q \in face_set P -> face_spec P Q.
-Proof.
-case: (emptyP ('P(base) : 'poly[R]_n))
-  => [/poly_equivP/quot_equivP base_eq0 | base_prop0].
-- suff ->: (P = (`[poly0]%:poly_base)).
-  + rewrite inE subset0_equiv => /quot_equivP.
-    move/val_inj ->; constructor.
-    move: (poly_base_subset P); rewrite base_eq0 //=.
-      by rewrite subset0_equiv => /quot_equivP/val_inj.
-- case: (poly_baseP Q) => [-> | ]; first constructor.
-  move => I [Q_eq Q_prop0].
-  rewrite inE; move => Q_sub_P.
-  pose w : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
-    [fsfun e : I => 1 | 0]%fset.
-  have w_ge0 : pweight base w.
-  admit.
-  (*have e_ge0 : e >=m 0.
-  + apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.*)
-  have w_supp : forall e, (w e > 0) = (e \in (I : {fset _})).
-  admit.
-  (*have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
-  + move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].*)
-  pose c := (combine base w).1.
-  have c_bounded : bounded ('P(base) : 'poly[R]_n) c.
-  + exact: dual_sol_bounded.
-  have c_bounded_P : (bounded P c).
-  + apply: (bounded_mono1 c_bounded); apply/andP; split;
-      [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
-  have c_argmin: argmin 'P(base) c = Q.
-  + apply/quot_equivP; rewrite Q_eq in Q_prop0 *.
-    exact: dual_sol_argmin.
-  suff <- : (argmin P c)%:poly_base = Q by constructor.
-  apply: val_inj => /=. rewrite -c_argmin.
-  apply/quot_equivP; apply/subset_argmin; first by done.
-  apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
-Admitted.
-
-Lemma face_set_of_face (P Q : {poly base}) :
-  Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].
-Proof.
-rewrite inE => Q_sub_P; apply/setP => Q'; rewrite !inE.
-apply/idP/andP => [Q'_sub_Q | [_?]]; last by done.
-by split; try exact: (poly_subset_trans Q'_sub_Q).
-Qed.
-
-Corollary face_set_subset (P Q  : {poly base}) :
-  Q \in face_set P -> (face_set Q \subset face_set P).
-Proof.
-move/face_set_of_face ->; apply/subsetP => Q'.
-by rewrite inE => /andP [?].
-Qed.
-
-Lemma polyI_face_set (P Q Q' : {poly base}) :
-  Q \in face_set P -> Q' \in face_set P -> (Q `&` Q')%:poly_base \in face_set P.
-Proof.
-rewrite !inE => Q_sub_P Q'_sub_P.
-by move: (polyISS Q_sub_P Q'_sub_P); rewrite (quot_equivP polyIxx).
-Qed.
-End Face.
-
-(* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
-
-Section Relint.
-
-Variable (R : realFieldType) (n : nat).
-
-Lemma poly_base_extremeL m (base : m.-base[R,n]) (P : {poly base}) x y α :
-  x \in ('P(base) : 'poly[R]_n) -> y \in ('P(base) : 'poly[R]_n) ->
-    0 <= α < 1 -> (1-α) *: x + α *: y \in P -> x \in P.
-Proof.
-case: base P x y α => [A b] P x y α.
-set z : 'cV_n := _ + _.
-move => x_in_P y_in_P α_01 z_in_P.
-have P_prop0 : (P `>` `[poly0]) by apply/proper0P; exists z.
-rewrite [P]repr_active // in z_in_P *.
-apply/in_polyEqP; split; last done.
-move => j j_in_eq.
-apply: (hp_extremeL (y := y) (α := α)); try by done.
-- rewrite in_poly_of_base in x_in_P.
-  rewrite // !inE /= row_vdot.
-  by move/forallP: x_in_P.
-- rewrite in_poly_of_base in y_in_P.
-  rewrite // !inE /= row_vdot.
-  by move/forallP: y_in_P.
-by move/polyEq_eq/(_ j_in_eq) : z_in_P.
-Qed.
-
-Lemma poly_base_extremeR m (base : m.-base[R,n]) (P : {poly base}) x y α :
-  x \in ('P(base) : 'poly[R]_n) -> y \in ('P(base) : 'poly[R]_n) ->
-    0 < α <= 1 -> (1-α) *: x + α *: y \in P -> y \in P.
-Proof.
-case: base P x y α => [A b] P x y α.
-set z : 'cV_n := _ + _.
-move => x_in_P y_in_P α_01 z_in_P.
-have P_prop0 : (P `>` `[poly0]) by apply/proper0P; exists z.
-rewrite [P]repr_active // in z_in_P *.
-apply/in_polyEqP; split; last done.
-move => j j_in_eq.
-apply: (hp_extremeR (x := x) (α := α)); try by done.
-- rewrite in_poly_of_base in x_in_P.
-  rewrite // !inE /= row_vdot.
-  by move/forallP: x_in_P.
-- rewrite in_poly_of_base in y_in_P.
-  rewrite // !inE /= row_vdot.
-  by move/forallP: y_in_P.
-by move/polyEq_eq/(_ j_in_eq) : z_in_P.
-Qed.
-
-Definition relint m (base : m.-base[R,n]) (P : {poly base}) :=
-  [predI P & [pred x | [forall Q : {poly base}, (Q `<` P) ==> (x \notin Q)]]].
-
-Lemma in_relintP m (base : m.-base) (P : {poly base}) x :
-  reflect (x \in P /\ (forall Q : {poly base}, (Q `<` P) -> x \notin Q)) (x \in relint P).
-Admitted.
-
-Lemma notin_relintP m (base : m.-base) (P Q : {poly base}) x :
-  Q `<` P -> x \in Q -> x \notin relint P.
-Admitted.
-
-Lemma relint_subset m (base : m.-base) (P : {poly base}) :
-  {subset (relint P) <= P}.
-Admitted.
-
-Lemma relint_activeP m (base : m.-base) (P : {poly base}) x :
-  reflect (x \in P /\ (forall k, k \notin {eq P} -> x \notin (nth_hp base k : 'poly[R]_n))) (x \in relint P).
-Proof.
-Admitted.
-
-Lemma relint_open_convexL m (base : m.-base) (P : {poly base}) x y α :
-  x \in P -> y \in relint P -> 0 < α <= 1 -> (1-α) *: x + α *: y \in relint P.
-Proof.
-set z : 'cV_n := _ + _.
-move => x_in_P y_in_relint α_01.
-have y_in_P: y \in P by rewrite relint_subset.
-apply/in_relintP; split.
-have : z \in (conv ([fset x; y]%fset) : 'poly[R]_n).
-- apply/in_segmP; exists α; [by apply/lt_leW | done].
-  by apply/poly_subsetP/convexP2.
-- move => Q Q_prop_P.
-  move/in_relintP: (y_in_relint) => [_ /(_ _ Q_prop_P)].
-  apply: contra.
-  have Q_face : Q \in face_set P by rewrite inE poly_properW.
-  move/faceP : Q_face => [Q_eq0 | c c_bounded].
-  + by rewrite /= inE in Q_eq0.
-  + rewrite /= argmin_polyI // inE => /andP [_ z_in_hp].
-    rewrite inE y_in_P /=.
-    apply: (hp_extremeR (x := x) (α := α)); try done.
-    * move: (x) x_in_P; apply/poly_subsetP.
-      exact: opt_value_lower_bound.
-    * move: (y) y_in_P; apply/poly_subsetP.
-      exact: opt_value_lower_bound.
-Qed.
-
-Lemma relint_open_convexR m (base : m.-base) (P : {poly base}) x y α :
-  x \in relint P -> y \in P -> 0 <= α < 1 -> (1-α) *: x + α *: y \in relint P.
-Proof.
-set z : 'cV_n := _ + _.
-move => x_in_relint y_in_P α_01.
-have x_in_P: x \in P by rewrite relint_subset.
-apply/in_relintP; split.
-have : z \in (conv ([fset x; y]%fset) : 'poly[R]_n).
-- apply/in_segmP; exists α; [by apply/ltW_le | done].
-  by apply/poly_subsetP/convexP2.
-- move => Q Q_prop_P.
-  move/in_relintP: (x_in_relint) => [_ /(_ _ Q_prop_P)].
-  apply: contra.
-  have Q_face : Q \in face_set P by rewrite inE poly_properW.
-  move/faceP : Q_face => [Q_eq0 | c c_bounded].
-  + by rewrite /= inE in Q_eq0.
-  + rewrite /= argmin_polyI // inE => /andP [_ z_in_hp].
-    rewrite inE x_in_P /=.
-    apply: (hp_extremeL (y := y) (α := α)); try done.
-    * move: (x) x_in_P; apply/poly_subsetP.
-      exact: opt_value_lower_bound.
-    * move: (y) y_in_P; apply/poly_subsetP.
-      exact: opt_value_lower_bound.
-Qed.
-
-End Relint.
-
-Section AffineHull.
-
-Variable (R : realFieldType) (n : nat).
-
-Definition hull (m : nat) (base : m.-base[R,n]) (P : {poly base}) :=
-  kermx (row_submx base.1 {eq P})^T.
-
-(*
-Lemma in_hullP (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) (d : 'cV[R]_n) :
-  reflect (forall j, j \in {eq P} -> (A *m d) j 0 = 0) (d^T <= hull P)%MS.
-Proof.
-apply: (equivP sub_kermxP); rewrite -trmx_mul -{1}[0]trmx0; split.
-- by move/trmx_inj; rewrite -row_submx_mul => /row_submx_col0P.
-- by move => ?; apply/congr1; rewrite -row_submx_mul; apply/row_submx_col0P.
-Qed.
- *)
-
-Definition Sdim (m : nat) (base : m.-base[R,n]) (P : {poly base}) :=
-  if (P == (`[poly0]) :> 'poly[R]_n) then 0%N else ((\rank (hull P)).+1).
-
-(*
-Fact relint_key : unit. Proof. by []. Qed.
-Definition relint_pt base (P : {poly base}) : 'cV[R]_n := locked_with relint_key 0.
-
-Lemma relint_pt_in_poly base (P : {poly base}) : relint_pt P \in P.
-Admitted.
-
-Lemma relint_pt_ineq (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m) (P : {poly 'P(A,b)}) i :
-  i \notin {eq P} -> relint_pt P \notin (`[hp (row i A)^T & b i 0] : 'poly[R]_n).
-Admitted.
-
-Lemma hull_relintP base (P : {poly base}) d :
-  reflect (exists eps, eps > 0 /\ relint_pt P + eps *: d \in P)
-                             ((d^T <= hull P)%MS).
-Admitted.
-
-Lemma hullP base (P : {poly base}) d :
-   reflect (exists x y, [/\ x \in P, y \in P & ((x-y)^T :=: d^T)%MS])
-                              (d^T <= hull P)%MS.
-Admitted.
- *)
-
-(* TO BE FIXED : why do we need extra parenthesis for `[pt x] ? *)
-Lemma Sdim1P (m : nat) (base : m.-base) (P : {poly base}) :
-  reflect (exists x, (P = (`[pt x]) :> 'poly[R]_n)) (Sdim P == 1%N).
-Admitted.
-
-Lemma relint_non_empty (m : nat) (base : m.-base) (P : {poly base}) :
-  reflect (exists x, x \in relint P) (Sdim P > 1)%N.
-Admitted.
-
-Lemma Sdim_homo (m : nat) (base : m.-base) :
-  {homo (Sdim (base := base)) : x y / (x `<=` y) >-> (x <= y)%N }.
-Admitted.
-
-Lemma dim_homo_proper (m : nat) (base : m.-base) (P Q : {poly base}) :
-  P `<` Q -> (Sdim P < Sdim Q)%N.
-Admitted.
-
-End AffineHull.
-
-Section Vertex.
-
-Variable (R : realFieldType) (n : nat) (m : nat) (base : m.-base[R,n]).
-
-Definition fvertex := [set F : {poly base} | (Sdim F == 0)%N].
-
-Definition vertex :=
-  ((fun (F : {poly base}) => pick_point F) @` fvertex)%fset.
-
-CoInductive fvertex_spec : {poly base} -> 'cV[R]_n -> Prop :=
-| FVertex x (H : has_base base (`[pt x])) : fvertex_spec (PolyBase H) x.
-
-Notation "'`[' 'pt'  x  ']%:poly_base'" := (@PolyBase _ _ _ _ (`[pt x]) _).
-
-Lemma fvertexP (F : {poly base}) :
-  F \in fvertex -> fvertex_spec F (pick_point F).
-Admitted.
-
-Lemma fvertex_baseP (F : {poly base}) :
-  reflect (exists2 x, (x \in vertex) & F = (`[pt x]) :> 'poly[R]_n) (F \in fvertex).
-Admitted.
-
-(*Lemma dim_vertex x : (x \in vertex_base) ->
-  Sdim (`[pt x]%:poly_base) = 0%N.
-Admitted.*)
-
-Definition fvertex_set (P : {poly base}) := [set F in fvertex | F `<=` P].
-Definition vertex_set (P : {poly base}) := [fset x in vertex | x \in P]%fset.
-
-Lemma mink (P : {poly base}) :
-  P = conv (vertex_set P) :> 'poly[R]_n.
-Admitted.
-
-Lemma vertex_set_mono (P Q : {poly base}) :
-  ((P `<=` Q) = (vertex_set P `<=` vertex_set Q)%fset)
-* ((P `<` Q) = (vertex_set P `<` vertex_set Q)%fset).
-Admitted.
-
-Lemma vertex_set_subset (P : {poly base}) :
-  {subset (vertex_set P) <= P}.
-Admitted.
-
-End Vertex.
-
-Notation "x '%:pt'" := (pick_point x) (at level 0).
-
-Section VertexFigure.
-
-Variable (R : realFieldType) (n : nat).
-Variable (m : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
-
-Variable (c : 'cV[R]_n) (d : R).
-Variable (v : {poly (A,b)}).
-Hypothesis v_vtx : (v \in fvertex (A,b)).
-Hypothesis c_v : '[c, v%:pt] < d.
-
-Section SliceFace.
-
-Variable P : {poly (A,b)}.
-Hypothesis P_prop : v `<` P.
-Hypothesis c_sep : forall w, w \in fvertex_set P -> w != v -> '[c, w%:pt] > d.
-
-(*Fact other_vtx : exists2 w, (w \in vertex_set P) & '[c,w] > d.
-Proof.
-move: P_prop; rewrite vertex_set_mono => /fproperP [_] [w w_in /= w_neq_v].
-rewrite vertex_set1 inE in w_neq_v.
-by exists w; try exact: c_sep.
-Qed.
 *)
 
-Lemma foo x y : '[c,x] < d < '[c, y] ->
-                exists2 α, (0 < α < 1) & '[c, (1-α) *: x + α *: y] = d.
-Admitted.
 
-(*Lemma slice_face_proper0 : slice c d P `>` `[poly0].
-Proof.
-move: other_vtx => [w w_in c_w].
-have [x x_in c_x] : exists2 x, (x \in (conv [fset v; w]%fset : 'poly[R]_n)) & '[c,x] = d.
-- move/andP: (conj c_v c_w) => /foo [α α_0_1].
-  set x : 'cV_n := (X in '[c,X] = d) => c_x; exists x; last done.
-  admit.
-apply/proper0P; exists x; rewrite inE; apply/andP; split; last by rewrite c_x.
-move: x_in; apply/poly_subsetP; apply: convexP2;
-  [ exact: pt_proper | exact: vertex_set_subset ].
-Admitted.*)
-
-Lemma active_slice_eq : slice_set {eq P} = {eq (slice c d P) %:poly_base}.
-Proof.
-apply/eqP; rewrite eqEsubset; apply/andP; split; first exact: active_slice.
-apply/subsetP => i; case: (split1P i) => [_ | k].
-- by rewrite inE in_set1.
-- rewrite in_active nth_hp_slice => slice_sub.
-  apply/setU1P; right; apply: mem_imset; move: slice_sub; apply: contraTT => k_notin_eqP.
-  suff [y y_relint c_y]: exists2 y, y \in relint P & '[c,y] = d.
-  + move/in_relintP : y_relint => [y_in_P].
-    pose Q := ('P^=(A, b; (k |: {eq P})))%:poly_base.
-    have Q_prop_P : Q `<` P.
-    * admit.
-    move/(_ _ Q_prop_P) => y_notin_Q.
-    apply/poly_subsetPn; exists y; rewrite //=.
-    by rewrite inE; apply/andP; split; rewrite ?c_y.
-    Admitted.
-(*
-  [y /in_relintP [y_in_P /(_ _ k_notin_eqP) H] c_y]
-  + apply/poly_subsetPn; exists y; rewrite //=.
-    by rewrite inE; apply/andP; split; rewrite ?c_y.
-  + have /relint_non_empty [x x_in] : (dim P > 0)%N.
-      by move/dim_homo_proper: P_prop; rewrite dim_vertex.
-    case: (ltrgtP '[c,x] d) => [c_x | c_x | ? ]; last by exists x.
-    - move: other_vtx => [w w_in c_w].
-      move/andP : (conj c_x c_w) => /foo [α α_0_1].
-      set y : 'cV_n := (X in '[c,X] = d) => c_y; exists y; last done.
-      apply: relint_open_convexR;
-        [ done | exact: vertex_set_subset | exact: ltW_lt ].
-    - move/andP : (conj c_v c_x) => /foo [α α_0_1].
-      set y : 'cV_n := (X in '[c,X] = d) => c_y; exists y; last done.
-      apply: relint_open_convexL;
-        [ by move/pt_proper : P_prop | done | exact: lt_ltW ].
-Qed.*)
-
-Lemma dim_slice : Sdim (slice c d P) %:poly_base = (Sdim P - 1)%N.
-Admitted.
-
-End SliceFace.
 
 (*
-Section SliceFaceSet.
+Section OtherProperties.
 
-Variable P : {poly 'P(A,b)}.
-Hypothesis P_prop : `[pt v]%:poly_base `<` P.
-Hypothesis c_sep : forall w, w \in vertex_set P -> w != v -> '[c, w] > d.
+Variables (R : realFieldType) (n : nat) (T : polyPredType R n).
 
-Fact sep_face F :
-  F \in face_set P -> forall w, w \in vertex_set F -> w != v -> '[c, w] > d.
-Proof.
-rewrite inE vertex_set_mono => [/fsubsetP vtx_sub] w ??.
-by apply: c_sep; try exact: vtx_sub.
-Qed.
 
-Local Instance slice_face_proper0' F : F \in face_set P -> infer (slice c d F `>` `[poly0]).
+
+
+
+Canonical polyt_pt (Ω : 'cV[R]_n) := Polyt (Phant T) (compact_pt Ω).
+Canonical polyt_conv (V : {fset 'cV[R]_n}) := Polyt (Phant T) (compact_conv V).
+Canonical polyt_class (P : {polyt T}) :=
+  Polyt (Phant 'poly[R]_n) (eq_imply2 (compact_mono P) (polytP P)).
+Definition polyt_of (P : T) (b : (compact P) ) & (phantom (compact P) b) := Polyt (Phant T) b.
+Notation "P %:polyt" := (@polyt_of P _ (Phantom (compact P) _)) (at level 0) : poly_scope.
+
+Variable is_face : T -> bool.
+ Instance foo (P : T) (b : is_face P) : expose (compact P).
 Admitted.
-
-Definition slice_face (F : {poly 'P(A, b)}) :
-  (`[pt v]%:poly_base `<` F) -> (F \in face_set P) -> (slice c d F)%:poly_base `<=` (slice c d P)%:poly_base.
-
-
+Canonical fooP P (b : is_face P) := Polyt (Phant _) (foo b).
+Variable P : T.
+Hypothesis (b : compact P).
+Let ph := Phantom (compact P) b.
 Set Printing All.
-Lemma active_slice_eq.
+Goal (P%:polyt `>` `[poly0]).
+apply: polyt_proper0.
 
 
+Variable (P : T).
+Hypothesis b : is_face P.
+Eval simpl in (val (fooP b)).
 
-End VertexFigure.
- *)
+Goal (P `>` `[poly0]).
+apply: polyt_proper0.
 
-(*
+Instance b' : expose (compact P). exact: exposeP. Qed.
+Check (P %:polyt).
 
-
-Section VertexBase.
-
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
-
-Inductive vertex_base := VertexBase { pt_val :> 'cV[R]_n; _ : [ `[pt pt_val] has \base base] }.
-Canonical vertex_base_subType := [subType for pt_val].
-Definition vertex_base_eqMixin := Eval hnf in [eqMixin of vertex_base by <:].
-Canonical vertex_base_eqType := Eval hnf in EqType vertex_base vertex_base_eqMixin.
-Definition vertex_base_choiceMixin := Eval hnf in [choiceMixin of vertex_base by <:].
-Canonical vertex_base_choiceType := Eval hnf in ChoiceType vertex_base vertex_base_choiceMixin.
-
-Lemma vertex_base_baseP (v : vertex_base) : [ `[pt v] has \base base].
-Proof.
-exact : (valP v).
+Goal ('[ P%:polyt ] `>` `[poly0]).
+exact: polyt_proper0.
 Qed.
 
-Canonical vertex_base_poly (v : vertex_base) := PolyBase (vertex_base_baseP v).
-
-Lemma poly_base_vertexP (P : {poly base}) :
-  P `>` (`[poly0]) -> (dim P == 0%N) -> [ `[pt (pick_point P)] has \base base].
-Admitted.
-
-Definition poly_base_vertex (P : {poly base}) :=
-  if @idP (P `>` (`[poly0])) is ReflectT P_prop0 then
-    if @idP (dim P == 0%N) is ReflectT P_dim0 then
-      Some (VertexBase (poly_base_vertexP P_prop0 P_dim0))
-    else None
-  else None.
-
-Lemma vertex_poly_baseK : pcancel vertex_base_poly poly_base_vertex.
-Admitted.
-
-Definition vertex_base_countMixin := PcanCountMixin vertex_poly_baseK.
-Canonical vertex_base_countType := Eval hnf in CountType vertex_base vertex_base_countMixin.
-Definition vertex_base_finMixin := PcanFinMixin vertex_poly_baseK.
-Canonical vertex_base_finType := Eval hnf in FinType vertex_base vertex_base_finMixin.
-
-End VertexBase.
-
-Notation "'{vertex'  base '}'" := (vertex_base base) : poly_scope.
-
-Section Vertex.
-
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
-
-Definition vertex_set (P : {poly base}) := [set v : {vertex base} | (v : 'cV__) \in P].
-
-Lemma vertexP (P : {poly base}) (v : {vertex base}) :
-  (v \in vertex_set P) = (`[pt v]%:poly_base \in face_set P).
-Proof.
-by rewrite inE [RHS]inE pt_proper0 pt_subset.
-Qed.
-
-End Vertex.
-
+End BasicProperties.
 *)
-
-(*
-Section Vertex.
-
-Variable (R : realFieldType) (n : nat) (base : 'hpoly[R]_n).
-
-Implicit Types (P Q F : {poly base}).
-
-Definition fvertex_set P := [set F in face_set P | dim F == 0%N].
-
-Definition vertex_set P :=
-  ((fun (F : {poly base}) => pick_point F) @` (fvertex_set P))%fset.
-
-Lemma vertex_has_baseP P x (H : x \in vertex_set P) : [ `[pt x] has \base base].
-Proof.
-move/imfsetP: H => [fx /=]; rewrite inE => /andP [fx_face].
-have fx_non_empty: (fx `>` `[poly0]) by move: fx_face; rewrite inE => /andP [].
-move/(dim0P fx_non_empty) => [x'] fx_eq.
-rewrite fx_eq pick_point_pt => ->; rewrite -fx_eq.
-exact: poly_base_base.
-Qed.
-Canonical vertex_poly_base P x (H : x \in vertex_set P) := PolyBase (vertex_has_baseP H).
-
-Lemma vertex_in_face_set P x (H : x \in vertex_set P) : vertex_poly_base H \in face_set P.
-Admitted.
-(*Variable (P : {poly base}) (x : 'cV[R]_n).
-  Check (`[pt x]%:poly_base).*)
-
-
-End Vertex.
-*)
-End VertexFigure.
