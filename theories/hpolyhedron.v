@@ -10,15 +10,32 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
-Require Import simplex barycenter polypred.
+Require Import simplex barycenter.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
-Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
+
+Delimit Scope poly_scope with PH.
+
+Module Base.
+Section Base.
+
+Variable (R : realFieldType) (n : nat).
+
+Definition opp_base_elt (b : ('cV[R]_n * R)%type) : ('cV[R]_n * R)%type := (- (fst b), - (snd b)).
+
+End Base.
+End Base.
+
+Notation "'base_elt' [ R , n ]" := ('cV[R]_n * R)%type (at level 2).
+Notation "'base_elt'" := (base_elt[_,_]) (at level 2).
+Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
+Notation "'base_t'" := (base_t[_,_]) (at level 2).
+Notation "- e" := (Base.opp_base_elt e) : poly_scope.
 
 Module HPolyhedron.
 
@@ -66,14 +83,12 @@ Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
 Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
 Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
 Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
-Canonical hpoly_choicePredType := ChoicePredType _ 'hpoly[R]_n.
 
 End ChoicePred.
 
 Section PolyPred.
 
-Variable R : realFieldType.
-Variable n : nat.
+Context {R : realFieldType} {n : nat}.
 
 Implicit Type (P : 'hpoly[R]_n).
 
@@ -125,7 +140,7 @@ Definition poly_subset P Q :=
     (~~ Simplex.feasible A b) ||
       [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
 
-Lemma poly_subsetP P Q :
+Lemma poly_subsetP {P Q} :
   reflect {subset P <= Q} (poly_subset P Q).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
@@ -154,7 +169,7 @@ apply: (iffP idP) => [/orP poly_subset_P_Q | subset_P_Q].
   exact: ((forallP x_in_Q) i).
 Qed.
 
-Lemma poly_subsetPn P Q :
+Lemma poly_subsetPn {P Q} :
   reflect (exists2 x, x \in P & x \notin Q) (~~ (poly_subset P Q)).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
@@ -259,26 +274,40 @@ Lemma convexP P (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> poly_subset (conv V) P.
 Admitted.
 
-Definition hpoly_polyPredMixin :=
-  PolyPred.Mixin in_poly0 in_polyT in_polyI poly_subsetP poly_subsetPn
-                 in_hs boundedP boundedPn pointedPn convP convexP.
-Canonical hpoly_polyPredType := PolyPredType R n hpoly_polyPredMixin.
+Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
 
-Definition poly_sort :=
-  PolyPred.sort (Quotient.quot_polyPredType hpoly_polyPredType).
+Lemma poly_equivP {P Q} : reflect (P =i Q) (poly_equiv P Q).
+Proof.
+apply/(iffP andP) => [[/poly_subsetP P_le_Q /poly_subsetP Q_le_P] x | P_eq_Q ].
+- apply/idP/idP; [exact: P_le_Q | exact: Q_le_P].
+- by split; apply/poly_subsetP => x; rewrite P_eq_Q.
+Qed.
+
+Lemma poly_equiv_refl : reflexive poly_equiv.
+Proof.
+by move => P; apply/poly_equivP.
+Qed.
+
+Lemma poly_equiv_sym : symmetric poly_equiv.
+Proof.
+by move => P Q; apply: (sameP poly_equivP);
+   apply: (iffP poly_equivP) => [H x | H x]; rewrite H.
+Qed.
+
+Lemma poly_equiv_trans : transitive poly_equiv.
+Proof.
+move => P' P P'' /poly_equivP P_eq_P' /poly_equivP P'_eq_P''.
+by apply/poly_equivP => x; rewrite P_eq_P'.
+Qed.
+
 End PolyPred.
 
 Module Import Exports.
 Canonical hpoly_eqType.
 Canonical hpoly_predType.
 Canonical hpoly_choiceType.
-Canonical hpoly_choicePredType.
-Canonical hpoly_polyPredType.
-Identity Coercion poly_sort_to_polypred: poly_sort >-> PolyPred.sort.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
-Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
-Notation "''poly[' R ]_ n" := (@poly_sort R n) (at level 8).
-Notation "''poly_' n" := 'poly[_]_n (at level 8).
+Notation "''hpoly_' n" := ('hpoly[_]_n) (at level 8).
 End Exports.
 End HPolyhedron.
 
