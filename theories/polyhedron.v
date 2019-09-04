@@ -498,20 +498,21 @@ apply: (iffP andP) =>
 Qed.
 
 Lemma poly_subset_anti {P Q} :
-  (P `<=` Q) -> (Q `<=` P) -> (P `=~` Q).
+  (P `<=` Q) -> (Q `<=` P) -> P = Q.
 Admitted.
 
 Lemma poly_properEneq {P Q} :
-  (P `<` Q) = (P `<=` Q) && (P `!=~` Q).
+  (P `<` Q) = (P `<=` Q) && (P != Q).
 Proof.
-apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_neq_Q] ].
+Admitted.
+(*apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_neq_Q] ].
 - split; first done.
   apply/negP => P_eq_Q; rewrite (poly_equivP P_eq_Q) in x_notin.
   by move/negP: x_notin.
 - apply/andP; split; first done.
   move: P_neq_Q; apply: contra.
   exact: poly_subset_anti.
-Qed.
+Qed.*)
 
 Lemma poly_properW P Q :
   (P `<` Q) -> (P `<=` Q).
@@ -700,9 +701,9 @@ exact: opt_value_lower_bound.
 Qed.
 
 Lemma subset_argmin {P Q} {c} :
-  bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c `=~` argmin Q c.
+  bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c = argmin Q c.
 Proof. (* RK *)
-move => bounded_Q /andP [? ?].
+move => bounded_Q /andP [? ?]; apply/poly_equivP.
 rewrite {1}/argmin; case: {-}_/idP => [bounded_P | unbounded_P]; apply/andP; split.
 - rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
   by apply/polyISS; [done | exact: poly_subset_refl].
@@ -943,7 +944,7 @@ Admitted.
 
 Definition slice (b : base_elt) P := `[hp b] `&` P.
 
-Lemma slice0 (b : base_elt) : slice b (`[poly0]) `=~` `[poly0].
+Lemma slice0 (b : base_elt) : slice b (`[poly0]) = `[poly0].
 Admitted.
 
 (*
@@ -1192,7 +1193,7 @@ Lemma compl_slack_cond x :
 Admitted.
 
 Lemma dual_sol_argmin :
-  ('P^=(base; I) `>` `[poly0]) -> argmin 'P(base) (fst (combine w)) `=~` 'P^=(base; I).
+  ('P^=(base; I) `>` `[poly0]) -> argmin 'P(base) (fst (combine w)) = 'P^=(base; I).
 Proof.
 Admitted.
 (*move => PI_non_empty.
