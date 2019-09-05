@@ -144,26 +144,19 @@ by move: (chooseP (H.poly_equiv_refl P)); rewrite H.poly_equiv_sym => /H.poly_eq
 Qed.
 
 Lemma poly_eqP {P Q : 'poly[R]_n} : P =i Q <-> P = Q.
-Admitted.
-
-Lemma quotP {P Q : 'hpoly[R]_n} : '[P] = '[Q] <-> P =i Q.
-Admitted.
-
-(*
-Lemma quot_eqP (P Q : {quot T}) : (P =i Q) -> (P = Q).
 Proof.
-Admitted.*)
-
-(*rewrite -[P]reprK -[Q]reprK.
+split; last by move ->.
 set P' := repr P; set Q' := repr Q; move => P_equiv_Q.
-have P'_equiv_Q' : P' `=~` Q'
-  by apply/poly_equivP => x; move/(_ x): P_equiv_Q; rewrite !repr_equiv.
-have chooseP'_eq_chooseQ' : poly_equiv P' =1 poly_equiv Q'.
-  by move => z; apply/idP/idP; apply/poly_equiv_trans;
-  try by rewrite poly_equiv_sym in P'_equiv_Q'.
+have P'_equiv_Q' : H.poly_equiv P' Q' by apply/H.poly_equivP.
+have chooseP'_eq_chooseQ' : H.poly_equiv P' =1 H.poly_equiv Q'.
+  by move => z; apply/idP/idP; apply/H.poly_equiv_trans;
+  try by rewrite H.poly_equiv_sym in P'_equiv_Q'.
 apply: repr_inj.
-by rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ'); apply: choose_id; try exact: poly_equiv_refl.
-Qed.*)
+move: (valP P) => /eqP <-.
+move: (valP Q) => /eqP <-.
+rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ').
+by apply: choose_id; try exact: H.poly_equiv_refl.
+Qed.
 
 End BasicProperties.
 
@@ -224,14 +217,6 @@ Notation "\polyI_ ( i 'in' A | P ) F" :=
 Notation "\polyI_ ( i 'in' A ) F" :=
  (\big[polyI/`[polyT]%PH]_(i in A) F%PH) : poly_scope.
 
-Lemma poly_equivP {P Q} : P `=~` Q -> P = Q.
-Proof.
-Admitted.
-(*
-apply/(iffP andP) => [[/poly_subsetP P_le_Q /poly_subsetP Q_le_P] x | P_eq_Q ].
-- apply/idP/idP; [exact: P_le_Q | exact: Q_le_P].
-- by split; apply/poly_subsetP => x; rewrite P_eq_Q.
-Qed.*)
 
 Lemma in_poly0 : `[poly0] =i pred0.
 Proof.
@@ -263,6 +248,13 @@ Lemma poly_subsetPn {P Q : 'poly[R]_n} :
   reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (P `<=` Q)).
 Proof.
 by apply: (iffP H.poly_subsetPn) => [[x] H | [x] H]; exists x.
+Qed.
+
+Lemma poly_equivP {P Q} : P `=~` Q -> P = Q.
+Proof.
+move/andP => [/poly_subsetP P_le_Q /poly_subsetP Q_le_P].
+apply/poly_eqP => x.
+by apply/idP/idP; [exact: P_le_Q | exact: Q_le_P].
 Qed.
 
 Lemma in_polyI P Q x : (x \in (P `&` Q)) = ((x \in P) && (x \in Q)).
