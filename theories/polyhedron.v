@@ -262,26 +262,36 @@ Proof.
 by rewrite !repr_equiv H.in_polyI.
 Qed.
 
-Lemma in_hs : (forall b x, x \in (`[hs b]) = ('[fst b,x] >= snd b))
+Lemma in_hs : (forall b x, x \in (`[hs b]) = ('[b.1,x] >= b.2))
               * (forall c α x, x \in (`[hs (c, α)]) = ('[c,x] >= α)).
 Proof.
-Admitted.
+set t := (forall b, _).
+suff Ht: t by split; [ | move => c α x; rewrite Ht ].
+by move => b x; rewrite repr_equiv H.in_hs.
+Qed.
 
 Lemma notin_hs :
   (forall b x, (x \notin `[hs b]) = ('[b.1,x] < b.2))
   * (forall c α x, (x \notin `[hs (c, α)]) = ('[c,x] < α)).
-Admitted.
+Proof.
+set t := (forall b, _).
+suff Ht: t by split; [ | move => c α x; rewrite Ht ].
+by move => b x; rewrite in_hs ltrNge.
+Qed.
 
 Definition mk_hp e := `[hs e] `&` `[hs (-e)].
 Notation "'`[' 'hp' e  ']'" := (mk_hp e%PH) (at level 70) : poly_scope.
 
 Lemma in_hp :
-  (forall b x, (x \in `[hp b]) = ('[fst b,x] == snd b))
-  * (forall c α x, (x \notin `[hp (c, α)]) = ('[c,x] == α)).
-Admitted.
-(*Proof. (* RK *)
-by rewrite in_polyI 2!in_hs vdotNl ler_oppl opprK eq_sym eqr_le.
-Qed.*)
+  (forall b x, (x \in `[hp b]) = ('[b.1,x] == b.2))
+  * (forall c α x, (x \in `[hp (c, α)]) = ('[c,x] == α)).
+Proof.
+set t := (forall b, _).
+suff Ht: t by split; [ | move => c α x; rewrite Ht ].
+move => b x; rewrite in_polyI.
+rewrite [X in X && _]in_hs [X in _ && X]in_hs. (* TODO: remove the [X in ...] makes Coq loop *)
+by rewrite vdotNl ler_oppl opprK eq_sym eqr_le.
+Qed.
 
 Let inE := (in_poly0, in_polyT, in_hp, in_polyI, in_hs, inE).
 
@@ -422,12 +432,19 @@ Proof.
 by apply/poly_subsetP => x; rewrite inE.
 Qed.
 
+Lemma subset0_equiv {P} : (P `<=` `[poly0]) = (P == `[poly0]).
+Proof.
+apply/idP/eqP => [| ->]; last exact: poly_subset_refl.
+move/poly_subsetP => P_sub0; apply/poly_eqP => x.
+rewrite !inE; apply: negbTE.
+by apply/negP; move/P_sub0; rewrite !inE.
+Qed.
+
 Lemma proper0N_equiv P : ~~ (P `>` `[poly0]) = (P == `[poly0]).
 Proof. (* RK *)
-Admitted.
-(*rewrite negb_and negbK /poly_equiv !poly0_subset //=.
-by apply/idP/idP => [-> | ]; [done | case/andP].
-Qed.*)
+rewrite negb_and negbK !poly0_subset //=.
+exact: subset0_equiv.
+Qed.
 
 Lemma subset0N_proper P : ~~ (P `<=` `[poly0]) = (P `>` `[poly0]).
 Proof. (* RK *)
@@ -438,11 +455,6 @@ Qed.
 Lemma equiv0N_proper P : (P != `[poly0]) = (P `>` `[poly0]).
 Proof. (* RK *)
 by rewrite -proper0N_equiv negbK.
-Qed.
-
-Lemma subset0_equiv {P} : (P `<=` `[poly0]) = (P == `[poly0]).
-Proof. (* RK *)
-by apply/negb_inj; rewrite subset0N_proper equiv0N_proper.
 Qed.
 
 CoInductive empty_spec (P : 'poly[R]_n) : bool -> bool -> bool -> Set :=
