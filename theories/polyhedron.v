@@ -396,6 +396,10 @@ rewrite repr_equiv; move: x; apply/(H.poly_subsetP _)/H.convexP.
 exact: V_sub_P.
 Qed.
 
+Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
+  v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
+Admitted.
+
 Lemma polyIxx P : P `&` P = P.
 Proof.
 by apply/poly_eqP => x; rewrite inE Bool.andb_diag. (* TODO: strange to require a cool to Bool.* *)
@@ -419,13 +423,42 @@ Qed.
 
 Lemma hp_extremeL b x y α :
   (x \in `[hs b]) -> (y \in `[hs b]) ->
-     0 <= α < 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (x \in `[hp b]).
-Admitted.
+  0 <= α < 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (x \in `[hp b]).
+Proof.
+rewrite !inE.
+move => x_in y_in /andP [α_ge0 α_lt1].
+case: (α =P 0) => [->| /eqP α_neq0].
+- by rewrite subr0 scale0r scale1r addr0.
+- have α_gt0 : α > 0
+    by rewrite lt0r; apply/andP; split.
+  rewrite {α_ge0} vdotDr 2!vdotZr.
+  apply: contraTT => x_notin_hp.
+  have x_notin_hp' : '[ b.1, x] > b.2.
+  + by rewrite ltr_def; apply/andP; split.
+  have bary_in_hs : (1-α) *: x + α *: y \in `[hs b].
+  + apply: convexP2; try by rewrite inE.
+    * by apply/andP; split; apply: ltrW.
+  rewrite (* inE *) in_hs vdotDr 2!vdotZr in bary_in_hs. (* TODO: here, rewrite inE loops, why? *)
+  suff: b.2 < (1 - α) * '[ b.1, x] + α * '[b.1, y].
+  + by rewrite ltr_def bary_in_hs andbT.
+  have ->: b.2 = (1 - α) * b.2 + α * b.2.
+  + by rewrite mulrBl -addrA addNr mul1r addr0.
+    by apply: ltr_le_add; rewrite ?ler_pmul2l ?ltr_pmul2l //; rewrite subr_gt0.
+Qed.
 
 Lemma hp_extremeR b x y α :
   (x \in `[hs b]) -> (y \in `[hs b]) ->
-     0 < α <= 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (y \in `[hp b]).
-Admitted.
+  0 < α <= 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (y \in `[hp b]).
+Proof.
+move => x_in y_in /andP [α_ge0 α_lt1].
+set bary := _ + _.
+have ->: bary = (1 - (1 - α)) *: y + (1 - α) *: x.
+- by rewrite subKr addrC.
+apply: hp_extremeL; try by done.
+apply/andP; split.
+- by rewrite subr_cp0.
+- by rewrite cpr_add oppr_lt0.
+Qed.
 
 Lemma poly0_subset P : `[poly0] `<=` P.
 Proof.
@@ -829,10 +862,6 @@ rewrite !inE; apply: (iffP andP).
   apply: mulr_ge0; first by done.
   exact: vnorm_ge0.
 Qed.
-
-Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) :
-  v \in P -> w \in P -> conv ([fset v; w]%fset) `<=` P.
-Admitted.
 
 Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
 
