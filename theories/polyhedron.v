@@ -525,7 +525,7 @@ rewrite /pick_point; case: proper0P => [? _ | _] //; exact: xchooseP.
 Qed.
 
 Lemma poly_properP {P Q : 'poly[R]_n} :
-  (* should {subset P <= Q} to (P `<=` Q) *)
+  (* TODO: should {subset P <= Q} to (P `<=` Q) ? *)
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
 apply: (iffP andP) =>
@@ -536,24 +536,29 @@ Qed.
 
 Lemma poly_subset_anti {P Q} :
   (P `<=` Q) -> (Q `<=` P) -> P = Q.
-Admitted.
+Proof.
+move => /poly_subsetP P_le_Q /poly_subsetP Q_le_P.
+apply/poly_eqP => x; apply/idP/idP => ?;
+ [ exact : P_le_Q | exact : Q_le_P].
+Qed.
 
 Lemma poly_properEneq {P Q} :
   (P `<` Q) = (P `<=` Q) && (P != Q).
 Proof.
-Admitted.
-(*apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_neq_Q] ].
+apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_neq_Q] ].
 - split; first done.
-  apply/negP => P_eq_Q; rewrite (poly_equivP P_eq_Q) in x_notin.
+  apply/eqP => P_eq_Q; rewrite P_eq_Q in x_notin.
   by move/negP: x_notin.
 - apply/andP; split; first done.
-  move: P_neq_Q; apply: contra.
+  move: P_neq_Q; apply: contra => ?; apply/eqP.
   exact: poly_subset_anti.
-Qed.*)
+Qed.
 
 Lemma poly_properW P Q :
   (P `<` Q) -> (P `<=` Q).
-Admitted.
+Proof.
+by rewrite poly_properEneq => /andP [].
+Qed.
 
 Lemma poly_properxx P : (P `<` P) = false.
 Proof.
@@ -638,7 +643,9 @@ by move/sQP/sPhs : y_in_Q; rewrite in_hs.
 Qed.
 
 Lemma bounded_poly0 c : bounded (`[poly0]) c = false.
-Admitted.
+Proof.
+by apply: (introF idP); move/boundedP => [x]; rewrite inE.
+Qed.
 
 Definition opt_value P c (bounded_P : bounded P c) :=
   let x := xchoose (boundedPP bounded_P) in '[c,x].
@@ -908,7 +915,9 @@ by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
 Qed.
 
 Lemma pt_proper (Ω : 'cV[R]_n) P : `[pt Ω] `<` P -> (Ω \in P).
-Admitted.
+Proof.
+by move/poly_properW; rewrite pt_subset.
+Qed.
 
 (* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
  * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
@@ -979,26 +988,6 @@ Definition slice (b : base_elt) P := `[hp b] `&` P.
 
 Lemma slice0 (b : base_elt) : slice b (`[poly0]) = `[poly0].
 Admitted.
-
-(*
-Definition nth_hs (m : nat) (base: m.-base) i : T :=
-  `[hs (row i base.1)^T & (base.2 i 0)].
-
-Definition nth_hp (m : nat) (base: m.-base) i : T :=
-  `[hp (row i base.1)^T & (base.2 i 0)].
-
-Lemma in_nth_hs (m : nat) (A : 'M_(m,n)) (b : 'cV_m) i x :
-  x \in (nth_hs (A, b) i) = ((A *m x) i 0 >= b i 0).
-Proof.
-by rewrite inE /= row_vdot.
-Qed.
-
-Lemma in_nth_hp (m : nat) (A : 'M_(m,n)) (b : 'cV_m) i x :
-  x \in (nth_hp (A, b) i) = ((A *m x) i 0 == b i 0).
-Proof.
-by rewrite inE /= row_vdot.
-Qed.
- *)
 
 Definition poly_of_base (base : base_t) :=
   \polyI_(b : base) `[hs (val b)].
