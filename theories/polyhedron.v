@@ -57,29 +57,6 @@ Reserved Notation "\polyI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
            format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
-
-(*
-Structure mixin_of (T : choicePredType 'cV[R]_n) := Mixin {
-  poly0 : T; in_poly0 : poly0 =i pred0;
-  polyT : T; in_polyT : polyT =i predT;
-  polyI : T -> T -> T;
-  in_polyI : forall (P Q : T), (polyI P Q) =i [predI P & Q];
-  poly_subset : rel T;
-  poly_subsetP : forall (P Q : T), reflect {subset P <= Q} (poly_subset P Q);
-  poly_subsetPn : forall (P Q : T), reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (poly_subset P Q));
-  mk_hs : base_elt[R,n] -> T;
-  in_hs : forall b x, x \in (mk_hs b) = ('[fst b,x] >= snd b);
-  bounded : T -> 'cV[R]_n -> bool;
-  boundedP : forall (P : T) c, reflect (exists2 x, x \in P & poly_subset P (mk_hs (c,'[c,x]))) (bounded P c);
-  boundedPn : forall (P : T) c, ~~ (poly_subset P poly0) -> reflect (forall K, ~~ (poly_subset P (mk_hs (c, K)))) (~~ bounded P c);
-  pointed : pred T;
-  pointedPn : forall (P : T), ~~ (poly_subset P poly0) -> reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P);
-  conv : {fset 'cV[R]_n} -> T;
-  convP : forall V x, reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V);
-  convexP : forall (P : T) (V : {fset 'cV[R]_n}), {subset V <= P} -> poly_subset (conv V) P
-}.
- *)
-
 Local Open Scope poly_scope.
 
 Section Def.
@@ -402,7 +379,7 @@ Admitted.
 
 Lemma polyIxx P : P `&` P = P.
 Proof.
-by apply/poly_eqP => x; rewrite inE Bool.andb_diag. (* TODO: strange to require a cool to Bool.* *)
+by apply/poly_eqP => x; rewrite inE andbb.
 Qed.
 
 Lemma poly_subset_hsP {P : 'poly[R]_n} {b} :
@@ -834,11 +811,14 @@ Qed.*)
 Lemma pointedPn P :
   (P `>` `[poly0]) ->
     reflect (exists c, (c != 0) /\ (forall Ω,  Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
-(*RK : I had to add the non_emptiness assumption because now pointed only makes sense under this assumption. I also slightly modified statement*)
-Proof. (* RK *)
-Admitted.
- (* rewrite -subset0N_proper => non_empty_P.
-apply: (iffP (PolyPred.pointedPn non_empty_P)) => [[c [? incl]] | [c [? incl]]];
+Proof.
+move => P_neq0.
+have reprP_neq0 : ~~ (H.poly_subset (repr P) H.poly0).
+- move: P_neq0; rewrite -subset0N_proper; apply: contraNN.
+  move/H.poly_subsetP => reprP_le0.
+  apply/poly_subsetP => x; rewrite -[P]reprK repr_equiv => /reprP_le0.
+  by rewrite H.in_poly0.
+apply: (iffP (H.pointedPn reprP_neq0)) => [[c [? incl]] | [c [? incl]]];
   exists c; split; try by done.
 - move => Ω Ω_in_P.
   apply/poly_subsetP => x /in_lineP [μ ->].
@@ -846,7 +826,7 @@ apply: (iffP (PolyPred.pointedPn non_empty_P)) => [[c [? incl]] | [c [? incl]]];
 - move => μ μ_in_P λ.
   apply/(poly_subsetP (incl _ μ_in_P))/in_lineP.
   by exists λ.
-Qed.*)
+Qed.
 
 Definition mk_hline (c Ω : 'cV[R]_n) :=
   `[hs (c, '[c,Ω])] `&` `[line c & Ω].
