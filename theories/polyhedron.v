@@ -1002,7 +1002,7 @@ rewrite vdotDr vdotZr mulfVK; last by apply: lt0r_neq0; rewrite vnorm_gt0.
 by rewrite addrCA addrN addr0 cpr_add ltrN10.
 Qed.
 
-Lemma compact_conv (V : {fset 'cV[R]_n}) : (*('|V|%fset > 0)%N ->*) compact (conv V).
+Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
 Admitted.
 
 Lemma compact_pt (Ω : 'cV[R]_n) : compact (`[pt Ω]).
@@ -1011,7 +1011,9 @@ Admitted.
 Definition slice (b : base_elt) P := `[hp b] `&` P.
 
 Lemma slice0 (b : base_elt) : slice b (`[poly0]) = `[poly0].
-Admitted.
+Proof.
+by rewrite /slice polyI0.
+Qed.
 
 Definition poly_of_base (base : base_t) :=
   \polyI_(b : base) `[hs (val b)].
