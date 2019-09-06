@@ -420,7 +420,7 @@ case: (α =P 0) => [->| /eqP α_neq0].
   + by rewrite ltr_def bary_in_hs andbT.
   have ->: b.2 = (1 - α) * b.2 + α * b.2.
   + by rewrite mulrBl -addrA addNr mul1r addr0.
-    by apply: ltr_le_add; rewrite ?ler_pmul2l ?ltr_pmul2l //; rewrite subr_gt0.
+    by apply: ltr_le_add; rewrite lter_pmul2l //; rewrite subr_gt0.
 Qed.
 
 Lemma hp_extremeR b x y α :
@@ -810,7 +810,7 @@ Qed.*)
 
 Lemma pointedPn P :
   (P `>` `[poly0]) ->
-    reflect (exists c, (c != 0) /\ (forall Ω,  Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
+    reflect (exists c, (c != 0) /\ (forall Ω, Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
 Proof.
 move => P_neq0.
 have reprP_neq0 : ~~ (H.poly_subset (repr P) H.poly0).
@@ -941,8 +941,8 @@ case: (boolP (Ω == Ω')) => [/eqP -> | Ω_neq_Ω'].
 Qed.*)
 
 Definition compact P :=
-  (*(P `>` `[poly0]) ==> *)
-  [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
+  (P `>` `[poly0]) ==>
+    [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
 
 Lemma compactP_Linfty P :
   (P `>` `[poly0]) ->
