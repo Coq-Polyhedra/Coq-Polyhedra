@@ -233,6 +233,7 @@ apply/(equivP (Simplex.unboundedP A b c) _);
 Qed.
 
 Definition pointed P :=
+  ~~ (poly_subset P poly0) ==>
   let: HPoly _ A _ := P in
     Simplex.pointed A.
 
@@ -241,8 +242,9 @@ Lemma pointedPn P :
     reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
 Proof. (* RK *)
 case: P => m A b non_empty_P.
+rewrite /pointed non_empty_P /=.
 have feasible_P: exists x, x \in HPoly A b
-  by move/poly_subsetPn: non_empty_P => [x ? _]; exists x.
+    by move/poly_subsetPn: non_empty_P => [x ? _]; exists x.
 apply/(equivP (Simplex.pointedPn A) _); split =>
   [[d [? /Simplex.feasible_dirP d_feas_dir /Simplex.feasible_dirP md_feas_dir]] | [d [? d_recession_dir]]];
     exists d; split; try by done.

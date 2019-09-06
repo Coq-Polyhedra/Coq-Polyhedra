@@ -194,7 +194,6 @@ Notation "\polyI_ ( i 'in' A | P ) F" :=
 Notation "\polyI_ ( i 'in' A ) F" :=
  (\big[polyI/`[polyT]%PH]_(i in A) F%PH) : poly_scope.
 
-
 Lemma in_poly0 : `[poly0] =i pred0.
 Proof.
 by move => ?; rewrite repr_equiv H.in_poly0.
@@ -787,26 +786,12 @@ apply: (iffP idP); last first.
   by rewrite /d vdotBr => ->; rewrite addrN.
 Qed.
 
-
-(*Lemma pointedPn P :
-  ~~ (poly_subset P poly0) ->
-    reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
-Proof. (* RK *)
-move=> non_empty_P.
-have P_neq0 : ~~ (`[ poly0 ]) \repr P.
-  apply/contraT; rewrite -subset0N_proper negbK => /PolyPred.poly_subsetP empty_P.
-  move/poly_subsetPn: non_empty_P => [x].
-  by move/empty_P; rewrite !inE.
-apply: (iffP (pointedPn P_neq0)) => [[c [? incl]] | [c [? incl]]];
-  exists c; split; try by done.
-- move => μ μ_in_P λ.
-  apply/(PolyPred.poly_subsetP _ _ _ (incl _ μ_in_P))/in_lineP.
-  by exists λ.
-- move => Ω Ω_in_P.
-  apply/PolyPred.poly_subsetP => x /in_lineP [μ ->].
-  exact: incl.
-Qed.*)
-
+Lemma pointed0 : pointed (`[poly0]).
+Proof.
+rewrite /pointed /H.pointed.
+suff ->: H.poly_subset (\repr (`[ poly0 ])) H.poly0 by done.
+by apply/H.poly_subsetP => x; rewrite repr_equiv.
+Qed.
 
 Lemma pointedPn P :
   (P `>` `[poly0]) ->
@@ -944,19 +929,78 @@ Definition compact P :=
   (P `>` `[poly0]) ==>
     [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
 
-Lemma compactP_Linfty P :
-  (P `>` `[poly0]) ->
+Lemma compact0 : compact (`[poly0]).
+Proof.
+by rewrite /compact poly_properxx.
+Qed.
+
+Lemma compactP_Linfty (P : 'poly[R]_n) :
   reflect (exists K, forall x, x \in P -> forall i, `|x i 0| <= K) (compact P).
-Admitted.
+Proof.
+rewrite /compact implybE.
+case: (emptyP P) => [| P_neq0 ]; last first.
+- apply: (iffP idP) => [/forallP ei_mei | [K H]].
+  + pose ei i := (andP (ei_mei i)).1.
+    pose mei i := (andP (ei_mei i)).2.
+    set K := (-(min_seq [
+      seq Num.min (opt_value (ei i))
+      (opt_value (mei i)) | i :'I_n] 0))%R.
+    exists K; move => x x_in_P i.
+    suff: ('[delta_mx i 0, x] >= -K /\ '[-(delta_mx i 0), x] >= -K)%R.
+    * rewrite vdotNl vdotl_delta_mx ler_opp2 => /andP.
+      by rewrite ler_norml.
+    * split; rewrite opprK; [ pose f := (ei i) | pose f := (mei i) ];
+      move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound f); rewrite inE /=;
+      apply: ler_trans; set v := (X in _ <= X);
+      suff: Num.min (opt_value (ei i)) (opt_value (mei i)) <= v
+        by apply: ler_trans; apply: min_seq_ler; apply: map_f; rewrite mem_enum.
+      - rewrite ler_minl; apply/orP; left; exact: lerr.
+      - rewrite ler_minl; apply/orP; right; exact: lerr.
+  + apply/forallP => i; apply/andP; split;
+      [pose v := (delta_mx i 0):'cV[R]_n | pose v := (-(delta_mx i 0):'cV[R]_n)%R];
+    apply/bounded_lower_bound => //; exists (-K)%R;
+    apply/poly_subsetP => x x_in_P; move/(_ _ x_in_P i): H;
+    rewrite inE /=  ?vdotNl vdotl_delta_mx ?ler_opp2;
+    by rewrite ler_norml; move/andP => [? ?].
+- move/poly_eqP -> => /=; constructor.
+  by exists 0; move => x; rewrite inE.
+Qed.
 
 Lemma compactP P :
-  reflect ((*(P `>` `[poly0]) -> *)
-      forall c, bounded P c) (compact P).
-Admitted.
+  (P `>` `[poly0]) -> reflect (forall c, bounded P c) (compact P).
+Proof.
+move => P_neq0.
+apply: (iffP idP) => [/compactP_Linfty [K H] c | ?].
+- pose v := (- \sum_i `|c i 0| * K)%R.
+  suff foo: P `<=` `[hs (c, v)].
+  + apply/bounded_lower_bound => //.
+    by exists v.
+  + apply/poly_subsetP => x x_in_P.
+    have: `|'[c,x]| <= \sum_i `|c i 0| * K.
+    suff: \sum_i `|c i 0 * x i 0| <= \sum_i `|c i 0| * K.
+    * apply: ler_trans; rewrite /vdot; exact: ler_norm_sum.
+    apply: ler_sum => i _; rewrite normrM.
+    apply: ler_wpmul2l; [ exact: normr_ge0 | exact: H ].
+    by rewrite ler_norml => /andP [? _]; rewrite inE.
+- rewrite /compact P_neq0 /=.
+  by apply/forallP => i; apply/andP; split.
+Qed.
 
 Lemma compact_pointed P :
-  (*(P `>` `[poly0]) -> *) compact P -> pointed P. (* RK *)
-Admitted.
+  compact P -> pointed P.
+Proof.
+case: (emptyP P) => [/poly_eqP ->| P_neq0 P_compact]; first by rewrite pointed0.
+apply: contraT => /(pointedPn P_neq0) [c] [c_neq0 hl_sub].
+suff: ~~ (bounded P c).
+  by move/(compactP P_neq0)/(_ c) : P_compact => ->.
+apply/boundedPn => //.
+move/proper0P: P_neq0 => [Ω Ω_in_P].
+move/(_ _ Ω_in_P): hl_sub => /poly_subsetP hl_sub K.
+pose μ := ((K - 1 - '[c,Ω])/'[| c |]^2)%R.
+exists (Ω + μ *: c); first by apply: hl_sub; apply/in_lineP; exists μ.
+rewrite vdotDr vdotZr mulfVK; last by apply: lt0r_neq0; rewrite vnorm_gt0.
+by rewrite addrCA addrN addr0 cpr_add ltrN10.
+Qed.
 
 Lemma compact_conv (V : {fset 'cV[R]_n}) : (*('|V|%fset > 0)%N ->*) compact (conv V).
 Admitted.
