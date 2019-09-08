@@ -1204,9 +1204,36 @@ Implicit Type w : {fsfun base_elt[R,n] -> R for fun => 0%R}.
 Definition combine w : base_elt :=
   (\sum_(v <- base) (w v) *: (fst v), \sum_(v <- base) (w v) * (snd v)).
 
-Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
-    exists2 w, pweight w & combine w = (c, opt_value H).
+Lemma farkas (e : base_elt) :
+  ('P(base) `<=` `[hs e]) ->
+  exists2 w, pweight w & ((combine w).1 = e.1 /\ (combine w).2 >= e.2).
 Admitted.
+
+
+Lemma dual_sol_lower_bound w :
+  pweight w -> 'P(base) `<=` `[hs (combine w)].
+Proof.
+move => w_weight.
+apply/poly_subsetP => x; rewrite inE in_poly_of_base /=.
+rewrite 2!big_seq vdot_sumDl => /forallP H.
+apply: ler_sum => i i_in_base.
+move/(_ ([` i_in_base]%fset)): H; rewrite inE /=.
+rewrite vdotZl; apply: ler_wpmul2l.
+admit.
+Admitted.
+
+Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
+  exists2 w, pweight w & combine w = (c, opt_value H).
+Proof.
+move/farkas: (opt_value_lower_bound H) => [w] [w_weight [w_comb1 w_comb2]].
+exists w; first done.
+apply: injective_projections; first done.
+apply: ler_anti; apply/andP; split; last done.
+move: (opt_point H) => [x] [x_in_P <-].
+move/poly_subsetP/(_ _ x_in_P): (dual_sol_lower_bound w_weight).
+by rewrite inE w_comb1.
+Qed.
+
 (*Proof.
 move: (H) => H0. (* duplicate assumption *)
 move: H; rewrite /bounded -Simplex.boundedP_cert.
@@ -1214,19 +1241,10 @@ set u := Simplex.dual_opt_point _ _ _ .
 by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exists u.
 Qed.*)
 
-Lemma dual_sol_lower_bound w :
-  pweight w -> 'P(base) `<=` `[hs (combine w)].
-Proof.
-Admitted.
-(*  move => u_ge0; apply/poly_subsetP => x x_in.
-by rewrite inE -vdot_mulmx vdotC; apply: vdot_lev;
-  last by rewrite in_poly_of_base in x_in.
-Qed.*)
-
 Lemma dual_sol_bounded w :
   ('P(base) `>` `[poly0]) -> pweight w -> bounded 'P(base) (fst (combine w)).
 Proof.
-Admitted.
+
 (*  move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
 exists '[b,u]; exact: dual_sol_lower_bound.
 Qed.*)
