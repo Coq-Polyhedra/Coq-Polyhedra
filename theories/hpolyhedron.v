@@ -337,29 +337,34 @@ Fact valP' (v : base) : v \in (xpredT : pred base).
 by [].
 Qed.
 
-Definition vect_to_pweigth (w : 'cV[R]_m) :=
+Definition vect_to_pweight (w : 'cV[R]_m) :=
   [fsfun v : base => w (enum_rank_in (valP' v) v) 0] : {fsfun base_elt[R,n] -> R for fun => 0%R}.
 
-Lemma vect_to_pweigthP (w : 'cV[R]_m) :
-  w >=m 0 -> pweight base (vect_to_pweigth w).
-Admitted.
+Lemma vect_to_pweightP (w : 'cV[R]_m) :
+  w >=m 0 -> pweight base (vect_to_pweight w).
+Proof.
+move/gev0P => w_pos.
+apply/andP; split; first exact: finsupp_sub.
+apply/forallP => e; rewrite fsfun_ffun /= insubT; first exact: fsvalP.
+move => ? /=; exact: w_pos.
+Qed.
 
 Lemma combineE w :
-  (A^T *m w = (combine base (vect_to_pweigth w)).1)
-  * ('[b, w] = (combine base (vect_to_pweigth w)).2).
+  (A^T *m w = (combine base (vect_to_pweight w)).1)
+  * ('[b, w] = (combine base (vect_to_pweight w)).2).
 Proof.
 split.
 - rewrite /=; apply/colP => i; rewrite mxE summxE.
   rewrite (reindex (@enum_val _ base)) /=.
   + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
-    rewrite /vect_to_pweigth fsfun_ffun /= insubT; first exact: fsvalP.
+    rewrite /vect_to_pweight fsfun_ffun /= insubT; first exact: fsvalP.
     move => H /=; apply: congr2; last done.
       by rewrite fsetsubE enum_valK_in.
   + apply: onW_bij; exact: enum_val_bij.
 - rewrite /= /vdot.
   rewrite (reindex (@enum_val _ base)) /=.
   + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
-    rewrite /vect_to_pweigth fsfun_ffun /= insubT; first exact: fsvalP.
+    rewrite /vect_to_pweight fsfun_ffun /= insubT; first exact: fsvalP.
     move => H /=; apply: congr2; last done.
       by rewrite fsetsubE enum_valK_in.
   + apply: onW_bij; exact: enum_val_bij.
@@ -371,14 +376,39 @@ move => x.
 have -> : (x \in P) = (\big[andb/true]_(b : base) ('[(val b).1, x] >= (val b).2)).
 by rewrite /P; elim/big_rec2: _ => [|i y b' Pi <-];
   rewrite ?in_polyT ?in_polyI ?inE; last by rewrite lev_scalar_mx vdotC vdot_def.
-rewrite inE.
-Admitted.
+rewrite inE big_andE.
+apply/forall_inP/forallP => [H i | H e _].
+- move/(_ (enum_val i) isT): H => /=.
+  by rewrite -row_vdot rowK trmxK mxE.
+- move/(_ (enum_rank_in (valP' e) e)): H.
+  rewrite -row_vdot rowK trmxK mxE.
+  by rewrite /nth_fset enum_rankK_in.
+Qed.
 
 Lemma farkas (e : base_elt) :
-  (poly_subset (\big[polyI/poly0]_(b : base) (mk_hs (val b))) (mk_hs e)) ->
+  ~~ (poly_subset P poly0) -> (poly_subset P (mk_hs e)) ->
   exists2 w, (pweight base w) & ((combine base w).1 = e.1 /\ (combine base w).2 >= e.2).
 Proof.
-Admitted.
+move => P_neq0 /poly_subsetP incl.
+have incl' : poly_subset (HPoly A b) (mk_hs e).
+- by apply/poly_subsetP => x; rewrite -memP; apply/incl.
+case: (Simplex.simplexP A b e.1).
+- move => ? /(intro_existsT (Simplex.infeasibleP _ _)).
+  suff -> : Simplex.feasible A b by done.
+  apply/Simplex.feasibleP.
+  move/poly_subsetPn: P_neq0 => [x] [x_in_P _].
+  by exists x; rewrite inE; rewrite memP in x_in_P.
+- move => ? /(intro_existsT (Simplex.unboundedP_cert _ _ _))/Simplex.unboundedP/(_ e.2)
+    [x [x_in_PAb ineq]].
+  have /incl: x \in P by rewrite memP inE.
+  by rewrite in_hs; move/(ltr_le_trans ineq); rewrite ltrr.
+- move => [x w] [x_feas w_feas csc].
+  rewrite inE /= in w_feas; move/andP: w_feas => [/eqP w_feas1 w_pos].
+    exists (vect_to_pweight w).
+  + exact: vect_to_pweightP.
+  + rewrite -2!combineE; split; first done.
+    by rewrite -csc /=; rewrite -in_hs; apply/incl; rewrite memP inE.
+Qed.
 
 End Farkas.
 
