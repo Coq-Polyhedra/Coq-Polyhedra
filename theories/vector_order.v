@@ -8,7 +8,7 @@
 (**************************************************************************)
 
 From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix fingroup perm.
-Require Import inner_product.
+Require Import extra_misc inner_product.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -338,6 +338,12 @@ apply/forallP => i.
 - rewrite !summxE.
   apply: ler_sum => j Hj.
   + by move/(_ _ Hj)/forallP/(_ i): H.
+Qed.
+
+Lemma lev_scalar_mx (a b : R) : (a <= b) = ((a%:M) <=m (b%:M)).
+Proof.
+apply/idP/forallP => [? i| /(_ ord0)];
+  by rewrite !mxE ?[i]ord1_eq0 /= !mulr1n.
 Qed.
 
 End ExtraOrder.

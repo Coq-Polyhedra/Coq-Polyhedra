@@ -37,6 +37,18 @@ Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
 Notation "'base_t'" := (base_t[_,_]) (at level 2).
 Notation "- e" := (Base.opp_base_elt e) : poly_scope.
 
+Section PWeight.
+
+Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
+
+Definition pweight (w : {fsfun base_elt[R,n] -> R for fun => 0%R}) :=
+  (finsupp w `<=` base)%fset && [forall v : base, w (val v) >= 0].
+
+Definition combine w : base_elt :=
+  (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
+
+End PWeight.
+
 Module HPolyhedron.
 
 Section Def.
@@ -300,6 +312,75 @@ Proof.
 move => P' P P'' /poly_equivP P_eq_P' /poly_equivP P'_eq_P''.
 by apply/poly_equivP => x; rewrite P_eq_P'.
 Qed.
+
+Section Farkas.
+
+Variable (base : base_t[R,n]).
+
+Let P := \big[polyI/polyT]_(b : base) (mk_hs (val b)).
+
+Definition nth_fset (K : choiceType) (V : {fset K}) (i : 'I_#|predT : pred V|) :=
+  val (enum_val i).
+
+Lemma nth_fsetP (K : choiceType) (V : {fset K}) (i : 'I_#|predT : pred V|) :
+  nth_fset i \in V.
+Proof.
+rewrite /nth_fset; exact: fsvalP.
+Qed.
+
+Notation m := #| xpredT : pred base |.
+
+Let A := \matrix_(i < m) ((nth_fset i).1)^T.
+Let b := \col_(i < m) ((nth_fset i).2).
+
+Fact valP' (v : base) : v \in (xpredT : pred base).
+by [].
+Qed.
+
+Definition vect_to_pweigth (w : 'cV[R]_m) :=
+  [fsfun v : base => w (enum_rank_in (valP' v) v) 0] : {fsfun base_elt[R,n] -> R for fun => 0%R}.
+
+Lemma vect_to_pweigthP (w : 'cV[R]_m) :
+  w >=m 0 -> pweight base (vect_to_pweigth w).
+Admitted.
+
+Lemma combineE w :
+  (A^T *m w = (combine base (vect_to_pweigth w)).1)
+  * ('[b, w] = (combine base (vect_to_pweigth w)).2).
+Proof.
+split.
+- rewrite /=; apply/colP => i; rewrite mxE summxE.
+  rewrite (reindex (@enum_val _ base)) /=.
+  + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
+    rewrite /vect_to_pweigth fsfun_ffun /= insubT; first exact: fsvalP.
+    move => H /=; apply: congr2; last done.
+      by rewrite fsetsubE enum_valK_in.
+  + apply: onW_bij; exact: enum_val_bij.
+- rewrite /= /vdot.
+  rewrite (reindex (@enum_val _ base)) /=.
+  + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
+    rewrite /vect_to_pweigth fsfun_ffun /= insubT; first exact: fsvalP.
+    move => H /=; apply: congr2; last done.
+      by rewrite fsetsubE enum_valK_in.
+  + apply: onW_bij; exact: enum_val_bij.
+Qed.
+
+Lemma memP : P =i HPoly A b.
+Proof.
+move => x.
+have -> : (x \in P) = (\big[andb/true]_(b : base) ('[(val b).1, x] >= (val b).2)).
+by rewrite /P; elim/big_rec2: _ => [|i y b' Pi <-];
+  rewrite ?in_polyT ?in_polyI ?inE; last by rewrite lev_scalar_mx vdotC vdot_def.
+rewrite inE.
+Admitted.
+
+Lemma farkas (e : base_elt) :
+  (poly_subset (\big[polyI/poly0]_(b : base) (mk_hs (val b))) (mk_hs e)) ->
+  exists2 w, (pweight base w) & ((combine base w).1 = e.1 /\ (combine base w).2 >= e.2).
+Proof.
+Admitted.
+
+End Farkas.
 
 End PolyPred.
 

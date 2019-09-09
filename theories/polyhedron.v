@@ -1197,33 +1197,27 @@ Local Open Scope poly_scope.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
 
-Definition pweight (w : {fsfun base_elt[R,n] -> R for fun => 0%R}) :=
-  (finsupp w `<=` base)%fset && [forall v : base, w (val v) >= 0].
 Implicit Type w : {fsfun base_elt[R,n] -> R for fun => 0%R}.
-
-Definition combine w : base_elt :=
-  (\sum_(v <- base) (w v) *: (fst v), \sum_(v <- base) (w v) * (snd v)).
 
 Lemma farkas (e : base_elt) :
   ('P(base) `<=` `[hs e]) ->
-  exists2 w, pweight w & ((combine w).1 = e.1 /\ (combine w).2 >= e.2).
+  exists2 w, pweight base w & ((combine base w).1 = e.1 /\ (combine base w).2 >= e.2).
 Admitted.
 
-
 Lemma dual_sol_lower_bound w :
-  pweight w -> 'P(base) `<=` `[hs (combine w)].
+  pweight base w -> 'P(base) `<=` `[hs (combine base w)].
 Proof.
 move => w_weight.
 apply/poly_subsetP => x; rewrite inE in_poly_of_base /=.
-rewrite 2!big_seq vdot_sumDl => /forallP H.
-apply: ler_sum => i i_in_base.
-move/(_ ([` i_in_base]%fset)): H; rewrite inE /=.
+rewrite vdot_sumDl => /forallP H.
+apply: ler_sum => i _.
 rewrite vdotZl; apply: ler_wpmul2l.
 admit.
+by move/(_ i): H; rewrite inE.
 Admitted.
 
 Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
-  exists2 w, pweight w & combine w = (c, opt_value H).
+  exists2 w, pweight base w & combine base w = (c, opt_value H).
 Proof.
 move/farkas: (opt_value_lower_bound H) => [w] [w_weight [w_comb1 w_comb2]].
 exists w; first done.
@@ -1242,24 +1236,24 @@ by move/and3P => [opt_point_in_P /andP [/eqP Au_eq_c u_le0] /eqP eq_value]; exis
 Qed.*)
 
 Lemma dual_sol_bounded w :
-  ('P(base) `>` `[poly0]) -> pweight w -> bounded 'P(base) (fst (combine w)).
+  ('P(base) `>` `[poly0]) -> pweight base w -> bounded 'P(base) (fst (combine base w)).
 Proof.
-
+Admitted.
 (*  move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
 exists '[b,u]; exact: dual_sol_lower_bound.
 Qed.*)
 
 Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
-Hypothesis w_ge0 : pweight w.
+Hypothesis w_ge0 : pweight base w.
 Variable (I : {fsubset base}).
 Hypothesis w_supp : forall v, (w v > 0) = (v \in (I : {fset _})).
 
 Lemma compl_slack_cond x :
-  x \in 'P(base) -> reflect (x \in `[hp (combine w)]) (x \in 'P^=(base; I)).
+  x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; I)).
 Admitted.
 
 Lemma dual_sol_argmin :
-  ('P^=(base; I) `>` `[poly0]) -> argmin 'P(base) (fst (combine w)) = 'P^=(base; I).
+  ('P^=(base; I) `>` `[poly0]) -> argmin 'P(base) (fst (combine base w)) = 'P^=(base; I).
 Proof.
 Admitted.
 (*move => PI_non_empty.

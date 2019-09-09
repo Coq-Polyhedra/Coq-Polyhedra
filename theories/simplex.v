@@ -2023,3 +2023,5 @@ case: pointed_simplexP =>
 Qed.
 
 End GeneralSimplex.
+
+End Simplex.
