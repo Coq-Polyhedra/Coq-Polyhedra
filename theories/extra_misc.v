@@ -161,6 +161,11 @@ Import GRing.Theory Num.Theory.
 Variable R : realFieldType.
 Variable m n : nat.
 
+Lemma ltr_neq (x y : R) : x < y -> x != y.
+Proof.
+by rewrite ltr_neqAle => /andP [].
+Qed.
+
 Lemma addr_ltr_le0 (x y : R) :
   x < 0 -> y <= 0 -> x + y < 0.
 Proof.
