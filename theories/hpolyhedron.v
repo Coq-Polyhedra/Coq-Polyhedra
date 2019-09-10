@@ -56,7 +56,7 @@ apply/(iffP forallP) => [H e e_in_base | H e].
 - by apply: H; exact: fsvalP.
 Qed.
 
-Definition supp w := [fset e in finsupp w | w e > 0]%fset.
+Definition supp w := [fset e in base | w e > 0]%fset.
 
 Definition combine w : base_elt :=
   (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
@@ -78,10 +78,7 @@ Qed.
 
 Lemma supp_subset : (supp w `<=` base)%fset.
 Proof.
-suff supp_sub: (supp w `<=` finsupp w)%fset.
-- apply: (fsubset_trans supp_sub).
-  by move/pweightP : w_pweight => [].
-- exact: fset_sub.
+exact: fset_sub.
 Qed.
 
 CoInductive supp_spec e : R -> bool -> Type :=
@@ -96,6 +93,7 @@ case: (boolP (e \in supp w)) => [e_in | e_notin].
 - case: finsuppP => [| e_in_finsupp]; rewrite ?ltrr; first by constructor.
   suff ->: w e = 0 by rewrite ltrr; constructor.
   apply/eqP; move: e_notin; apply: contraR => w_e_neq0.
+  have e_in_base : e \in base by exact: (fsubsetP finsupp_subset).
   suff w_e_gt0: w e > 0 by rewrite !inE; apply/andP; split.
   by rewrite ltr_def; apply/andP; split; last exact: pweight_ge0.
 Qed.

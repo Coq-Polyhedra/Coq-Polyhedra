@@ -176,16 +176,14 @@ suff flat_prop: forall base0, bounded ('P(base0) : 'poly[R]_n) c -> has_base bas
 - (* now this is the classic proof of Schrijver *)
   move => base0 c_bounded.
   move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb].
-  pose I := [fset e in base0 | w e > 0]%fset.
-  have supp_w : forall e, (w e > 0) = (e \in I). admit.
-  apply/has_baseP; exists I%:fsub.
+  apply/has_baseP; exists (supp base0 w)%:fsub.
   move: (opt_point c_bounded) => [x x_in_P0 c_x_eq_opt_val].
   have: x \in `[hp (combine base0 w)] : 'poly[R]_n.
   - by rewrite inE w_comb /=; apply/eqP.
-  move/(compl_slack_cond w_ge0 supp_w x_in_P0) => x_in_P0I.
+  move/(compl_slack_cond w_ge0 x_in_P0) => x_in_P0I.
   move: (congr1 fst w_comb) => /= <-; apply/dual_sol_argmin; try by done.
   by apply/proper0P; exists x.
-Admitted.
+Qed.
 Canonical argmin_base (P : {poly base}) c := PolyBase (argmin_baseP P c).
 
 End PolyBase.
