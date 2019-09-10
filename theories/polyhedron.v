@@ -270,7 +270,7 @@ by rewrite vdotNl ler_oppl opprK eq_sym eqr_le.
 Qed.
 
 Lemma notin_hp b x :
-  (x \in `[hs b]) -> (x \notin `[hp b]) = ('[b.1, x] < b.2).
+  (x \in `[hs b]) -> (x \notin `[hp b]) = ('[b.1, x] > b.2).
 Admitted.
 
 Let inE := (in_poly0, in_polyT, in_hp, in_polyI, in_hs, inE).
@@ -1252,32 +1252,36 @@ Qed.
 
 Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
 Hypothesis w_pweight : pweight base w.
-Variable (I : {fsubset base}).
-Hypothesis w_supp : (finsupp w = I).
 
 Lemma compl_slack_cond x :
-  x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; I)).
+  x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; supp w)).
 Proof.
 move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
 - rewrite in_hp vdot_sumDl; apply/eqP.
   apply: eq_bigr => i _.
-  case: finsuppP; first by rewrite scale0r vdot0l mul0r.
-  by rewrite w_supp; move/in_hps; rewrite inE vdotZl => /eqP <-.
+  case: (suppP w_pweight); first by rewrite scale0r vdot0l mul0r.
+  by move/in_hps; rewrite inE vdotZl => /eqP <-.
 - rewrite in_hp vdot_sumDl => in_comb_hp.
   apply/in_polyEqP; split; last done.
-  move => e e_in_I; move: in_comb_hp; apply: contraTT.
+  move => e e_in_supp; move: in_comb_hp; apply: contraTT.
   rewrite notin_hp; last first.
   + move: x x_in_P; apply/poly_subsetP/poly_base_subset.
-    move: e e_in_I; apply/fsubsetP; exact: (valP I).
-  + move => notin_hp; apply/ltr_neq.
+    exact: (fsubsetP (supp_subset w_pweight)).
+  + move => notin_hp; rewrite eq_sym; apply/ltr_neq.
     apply: sumr_ltrP => [i| ].
     * rewrite vdotZl; apply/ler_wpmul2l; first exact : (pweight_ge0 w_pweight).
-Admitted.
+      move/(poly_subsetP (poly_base_subset (fsvalP i))): x_in_P.
+      by rewrite inE /=.
+    * have e_in_base : e \in base by apply/(fsubsetP (supp_subset w_pweight)).
+      exists [` e_in_base]%fset.
+      rewrite vdotZl ltr_pmul2l; first done.
+      by rewrite -(pweight_gt0 w_pweight).
+Qed.
 
 Lemma dual_sol_argmin :
-  ('P^=(base; I) `>` `[poly0]) -> argmin 'P(base) (fst (combine base w)) = 'P^=(base; I).
+  ('P^=(base; supp w) `>` `[poly0]) -> argmin 'P(base) (fst (combine base w)) = 'P^=(base; supp w).
 Proof.
-have PI_sub_P : 'P^=(base; I) `<=` 'P(base) by exact: polyEq_antimono0.
+have PI_sub_P : 'P^=(base; supp w) `<=` 'P(base) by exact: polyEq_antimono0.
 move => PI_neq0.
 have P_neq0 : ('P(base) `>` `[poly0]) by exact: (poly_proper_subset PI_neq0).
 move/proper0P : PI_neq0 => [x x_in_PI].
