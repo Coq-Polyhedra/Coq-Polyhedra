@@ -47,6 +47,16 @@ Definition pweight (w : {fsfun base_elt[R,n] -> R for fun => 0%R}) :=
 Definition combine w : base_elt :=
   (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
 
+Lemma pweight_ge0 w : pweight w -> forall e, w e >= 0.
+Proof.
+move/andP => [w_supp /forallP w_ge0] e.
+case: finsuppP => [| e_in_supp]; first done.
+suff e_in_base: e \in base.
+- pose v := [`e_in_base]%fset.
+  by move/(_ v): w_ge0.
+- by move: e e_in_supp; apply/fsubsetP.
+Qed.
+
 End PWeight.
 
 Module HPolyhedron.
