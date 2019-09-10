@@ -41,20 +41,68 @@ Section PWeight.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
 
-Definition pweight (w : {fsfun base_elt[R,n] -> R for fun => 0%R}) :=
-  (finsupp w `<=` base)%fset && [forall v : base, w (val v) >= 0].
+Implicit Type (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
+
+Definition pweight w :=
+  (finsupp w `<=` base)%fset && [forall e : base, w (val e) >= 0].
+
+Lemma pweightP w :
+  reflect ((finsupp w `<=` base)%fset /\ (forall e, e \in base -> w e >= 0)) (pweight w).
+Proof.
+suff equiv : reflect (forall e, e \in base -> w e >= 0) [forall e : base, w (val e) >= 0]
+  by apply/(iffP andP) => [[? /equiv ?] | [? /equiv ?]].
+apply/(iffP forallP) => [H e e_in_base | H e].
+- by move/(_ [` e_in_base]%fset): H.
+- by apply: H; exact: fsvalP.
+Qed.
+
+Definition supp w := [fset e in finsupp w | w e > 0]%fset.
 
 Definition combine w : base_elt :=
   (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
 
-Lemma pweight_ge0 w : pweight w -> forall e, w e >= 0.
+Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
+Hypothesis w_pweight : pweight w.
+
+Lemma finsupp_subset : (finsupp w `<=` base)%fset.
 Proof.
-move/andP => [w_supp /forallP w_ge0] e.
+by move/pweightP : w_pweight => [].
+Qed.
+
+Lemma pweight_ge0 e : w e >= 0.
+Proof.
 case: finsuppP => [| e_in_supp]; first done.
-suff e_in_base: e \in base.
-- pose v := [`e_in_base]%fset.
-  by move/(_ v): w_ge0.
-- by move: e e_in_supp; apply/fsubsetP.
+move/pweightP : w_pweight => [_ H]; apply: H.
+exact: (fsubsetP finsupp_subset).
+Qed.
+
+Lemma supp_subset : (supp w `<=` base)%fset.
+Proof.
+suff supp_sub: (supp w `<=` finsupp w)%fset.
+- apply: (fsubset_trans supp_sub).
+  by move/pweightP : w_pweight => [].
+- exact: fset_sub.
+Qed.
+
+CoInductive supp_spec e : R -> bool -> Type :=
+  | SuppOut : e \notin supp w -> supp_spec e 0 false
+  | SuppIn of (e \in supp w) : supp_spec e (w e) true.
+
+Lemma suppP e : supp_spec e (w e) (w e > 0).
+Proof.
+case: (boolP (e \in supp w)) => [e_in | e_notin].
+- suff ->: w e > 0 by constructor.
+  by move: e_in; rewrite 2!inE => /andP [_].
+- case: finsuppP => [| e_in_finsupp]; rewrite ?ltrr; first by constructor.
+  suff ->: w e = 0 by rewrite ltrr; constructor.
+  apply/eqP; move: e_notin; apply: contraR => w_e_neq0.
+  suff w_e_gt0: w e > 0 by rewrite !inE; apply/andP; split.
+  by rewrite ltr_def; apply/andP; split; last exact: pweight_ge0.
+Qed.
+
+Lemma pweight_gt0 e : (e \in supp w) = (w e > 0).
+Proof.
+by case: suppP; first exact: negbTE.
 Qed.
 
 End PWeight.
@@ -354,9 +402,8 @@ Lemma vect_to_pweightP (w : 'cV[R]_m) :
   w >=m 0 -> pweight base (vect_to_pweight w).
 Proof.
 move/gev0P => w_pos.
-apply/andP; split; first exact: finsupp_sub.
-apply/forallP => e; rewrite fsfun_ffun /= insubT; first exact: fsvalP.
-move => ? /=; exact: w_pos.
+apply/pweightP; split; first exact: finsupp_sub.
+move => ? ?; rewrite fsfun_ffun insubT /=; exact: w_pos.
 Qed.
 
 Lemma combineE w :
