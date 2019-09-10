@@ -1254,7 +1254,7 @@ Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
 Hypothesis w_pweight : pweight base w.
 
 Lemma compl_slack_cond x :
-  x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; supp w)).
+  x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; supp base w)).
 Proof.
 move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
 - rewrite in_hp vdot_sumDl; apply/eqP.
@@ -1266,22 +1266,22 @@ move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
   move => e e_in_supp; move: in_comb_hp; apply: contraTT.
   rewrite notin_hp; last first.
   + move: x x_in_P; apply/poly_subsetP/poly_base_subset.
-    exact: (fsubsetP (supp_subset w_pweight)).
+    exact: (fsubsetP (supp_subset _ w)).
   + move => notin_hp; rewrite eq_sym; apply/ltr_neq.
     apply: sumr_ltrP => [i| ].
     * rewrite vdotZl; apply/ler_wpmul2l; first exact : (pweight_ge0 w_pweight).
       move/(poly_subsetP (poly_base_subset (fsvalP i))): x_in_P.
       by rewrite inE /=.
-    * have e_in_base : e \in base by apply/(fsubsetP (supp_subset w_pweight)).
+    * have e_in_base : e \in base by apply/(fsubsetP (supp_subset _ w)).
       exists [` e_in_base]%fset.
       rewrite vdotZl ltr_pmul2l; first done.
       by rewrite -(pweight_gt0 w_pweight).
 Qed.
 
 Lemma dual_sol_argmin :
-  ('P^=(base; supp w) `>` `[poly0]) -> argmin 'P(base) (fst (combine base w)) = 'P^=(base; supp w).
+  ('P^=(base; supp base w) `>` `[poly0]) -> argmin 'P(base) (fst (combine base w)) = 'P^=(base; supp base w).
 Proof.
-have PI_sub_P : 'P^=(base; supp w) `<=` 'P(base) by exact: polyEq_antimono0.
+have PI_sub_P : 'P^=(base; supp base w) `<=` 'P(base) by exact: polyEq_antimono0.
 move => PI_neq0.
 have P_neq0 : ('P(base) `>` `[poly0]) by exact: (poly_proper_subset PI_neq0).
 move/proper0P : PI_neq0 => [x x_in_PI].
