@@ -269,6 +269,10 @@ rewrite [X in X && _]in_hs [X in _ && X]in_hs. (* TODO: remove the [X in ...] ma
 by rewrite vdotNl ler_oppl opprK eq_sym eqr_le.
 Qed.
 
+Lemma notin_hp b x :
+  (x \in `[hs b]) -> (x \notin `[hp b]) = ('[b.1, x] < b.2).
+Admitted.
+
 Let inE := (in_poly0, in_polyT, in_hp, in_polyI, in_hs, inE).
 
 Lemma polyI0 P : (P `&` `[poly0]) = `[poly0].
@@ -1027,11 +1031,15 @@ Definition poly_of_base (base : base_t) :=
 
 Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
 
-Definition in_poly_of_base x (base : base_t) :
+Lemma in_poly_of_base x (base : base_t) :
   (x \in 'P(base)) = [forall b : base, x \in `[hs (val b)]].
 Proof.
 by rewrite in_big_polyI.
 Qed.
+
+Lemma poly_base_subset {base : base_t} {e : base_elt} :
+  e \in base -> 'P(base) `<=` `[hs e].
+Admitted.
 
 Definition polyEq (base I : base_t) :=
   (\polyI_(e : I) `[hp (val e)]) `&` 'P(base).
@@ -1245,12 +1253,25 @@ Qed.
 Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
 Hypothesis w_pweight : pweight base w.
 Variable (I : {fsubset base}).
-Hypothesis w_supp : forall v, (w v > 0) = (v \in (I : {fset _})).
+Hypothesis w_supp : (finsupp w = I).
 
 Lemma compl_slack_cond x :
   x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; I)).
 Proof.
-move => x_in_P; apply: (iffP idP).
+move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
+- rewrite in_hp vdot_sumDl; apply/eqP.
+  apply: eq_bigr => i _.
+  case: finsuppP; first by rewrite scale0r vdot0l mul0r.
+  by rewrite w_supp; move/in_hps; rewrite inE vdotZl => /eqP <-.
+- rewrite in_hp vdot_sumDl => in_comb_hp.
+  apply/in_polyEqP; split; last done.
+  move => e e_in_I; move: in_comb_hp; apply: contraTT.
+  rewrite notin_hp; last first.
+  + move: x x_in_P; apply/poly_subsetP/poly_base_subset.
+    move: e e_in_I; apply/fsubsetP; exact: (valP I).
+  + move => notin_hp; apply/ltr_neq.
+    apply: sumr_ltrP => [i| ].
+    * rewrite vdotZl; apply/ler_wpmul2l; first exact : (pweight_ge0 w_pweight).
 Admitted.
 
 Lemma dual_sol_argmin :
