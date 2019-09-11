@@ -103,6 +103,22 @@ Proof.
 by case: suppP; first exact: negbTE.
 Qed.
 
+Definition uniform_pweight (I : {fsubset base}) : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
+  [fsfun e : I => 1 | 0]%fset.
+
+Lemma uniform_pweightP I : pweight (uniform_pweight I).
+Proof.
+rewrite /uniform_pweight.
+apply/pweightP; split.
+- apply: (fsubset_trans (y := I)); first exact: finsupp_sub.
+  exact: (valP I).
+- move => e _.
+  by rewrite fsfun_ffun; case: insubP => [?|?] /=; rewrite ?ler01.
+Qed.
+
+Lemma uniform_supp (I : {fsubset base}) : supp (uniform_pweight I) = I.
+Admitted.
+
 End PWeight.
 
 Module HPolyhedron.
