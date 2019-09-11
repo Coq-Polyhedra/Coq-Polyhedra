@@ -385,25 +385,16 @@ case: (emptyP ('P(base) : 'poly[R]_n))
 - case: (poly_baseP Q) => [-> | ]; first constructor.
   move => I [Q_eq Q_prop0].
   rewrite inE; move => Q_sub_P.
-  pose w : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
-    [fsfun e : I => 1 | 0]%fset.
-  have w_ge0 : pweight base w.
-  admit.
-  (*have e_ge0 : e >=m 0.
-  + apply/gev0P => i; rewrite mxE; case: ifP => _ //=; first exact: ler01.*)
-  have w_supp : forall e, (w e > 0) = (e \in (I : {fset _})).
-  admit.
-  (*have e_gt0 : forall i, (e i 0 > 0) = (i \in I).
-  + move => i; rewrite mxE; case: (i \in I); [exact: ltr01 | exact: ltrr].*)
+  pose w := uniform_pweight I.
   pose c := (combine base w).1.
   have c_bounded : bounded ('P(base) : 'poly[R]_n) c.
-  + exact: dual_sol_bounded.
+  + by apply: dual_sol_bounded; try exact: uniform_pweightP.
   have c_bounded_P : (bounded P c).
   + apply: (bounded_mono1 c_bounded); apply/andP; split;
       [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
   have c_argmin: argmin 'P(base) c = Q.
   + rewrite Q_eq in Q_prop0 *.
-    exact: dual_sol_argmin.
+    (*exact: dual_sol_argmin.*) admit.
   suff <- : (argmin P c)%:poly_base = Q by constructor.
   apply: val_inj => /=. rewrite -c_argmin.
   apply/subset_argmin; first by done.
