@@ -209,6 +209,14 @@ Proof.
 apply: (iffP H.poly_subsetP) => [H x | H x]; exact: H.
 Qed.
 
+Lemma poly_subset_mono (P Q : 'hpoly[R]_n) : ('[P] `<=` '[Q]) = (H.poly_subset P Q).
+Proof.
+apply/poly_subsetP/H.poly_subsetP => [H | H] x x_in_P.
+- have /H: x \in '[P] by rewrite repr_equiv.
+  by rewrite repr_equiv.
+- rewrite !repr_equiv in x_in_P *; exact: H.
+Qed.
+
 Lemma poly_subset_refl : reflexive poly_subset.
 Proof.
 by move => P; apply/poly_subsetP.
@@ -236,6 +244,21 @@ Qed.
 Lemma in_polyI P Q x : (x \in (P `&` Q)) = ((x \in P) && (x \in Q)).
 Proof.
 by rewrite !repr_equiv H.in_polyI.
+Qed.
+
+Lemma polyI_mono (P Q : 'hpoly[R]_n) : '[P] `&` '[Q] = '[H.polyI P Q].
+Proof.
+apply/poly_eqP => x.
+by rewrite in_polyI !repr_equiv H.in_polyI.
+Qed.
+
+Lemma big_polyI_mono (I : finType) (P : pred I) (F : I -> 'hpoly[R]_n) :
+  \polyI_(i | P i) '[F i] = '[\big[H.polyI/H.polyT]_(i | P i) (F i)].
+Proof.
+have class_of_morph : {morph (@class_of R n) : x y / H.polyI x y >-> polyI x y}.
+- by move => Q Q'; rewrite polyI_mono.
+have polyT_mono : '[H.polyT] = polyT by done.
+by rewrite (@big_morph _ _ _ _ _ _ _ class_of_morph polyT_mono).
 Qed.
 
 Lemma in_hs : (forall b x, x \in (`[hs b]) = ('[b.1,x] >= b.2))
@@ -271,7 +294,10 @@ Qed.
 
 Lemma notin_hp b x :
   (x \in `[hs b]) -> (x \notin `[hp b]) = ('[b.1, x] > b.2).
-Admitted.
+Proof.
+rewrite ltr_def in_hs => ->.
+by rewrite in_hp andbT.
+Qed.
 
 Let inE := (in_poly0, in_polyT, in_hp, in_polyI, in_hs, inE).
 
@@ -1039,7 +1065,11 @@ Qed.
 
 Lemma poly_base_subset {base : base_t} {e : base_elt} :
   e \in base -> 'P(base) `<=` `[hs e].
-Admitted.
+Proof.
+move => e_in_base.
+pose e' := [`e_in_base]%fset; have ->: e = fsval e' by done.
+exact: big_poly_inf.
+Qed.
 
 Definition polyEq (base I : base_t) :=
   (\polyI_(e : I) `[hp (val e)]) `&` 'P(base).
@@ -1217,7 +1247,10 @@ Implicit Type w : {fsfun base_elt[R,n] -> R for fun => 0%R}.
 Lemma farkas (e : base_elt) :
   ('P(base) `>` `[poly0]) -> ('P(base) `<=` `[hs e]) ->
   exists2 w, pweight base w & ((combine base w).1 = e.1 /\ (combine base w).2 >= e.2).
-Admitted.
+Proof.
+rewrite /poly_of_base big_polyI_mono -subset0N_proper 2!poly_subset_mono.
+exact: H.farkas.
+Qed.
 
 Lemma dual_sol_lower_bound w :
   pweight base w -> 'P(base) `<=` `[hs (combine base w)].
@@ -1226,10 +1259,9 @@ move => w_weight.
 apply/poly_subsetP => x; rewrite inE in_poly_of_base /=.
 rewrite vdot_sumDl => /forallP H.
 apply: ler_sum => i _.
-rewrite vdotZl; apply: ler_wpmul2l.
-admit.
+rewrite vdotZl; apply: ler_wpmul2l; first exact: (pweight_ge0 w_weight).
 by move/(_ i): H; rewrite inE.
-Admitted.
+Qed.
 
 Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
   exists2 w, pweight base w & combine base w = (c, opt_value H).
