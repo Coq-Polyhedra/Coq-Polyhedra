@@ -388,18 +388,19 @@ case: (emptyP ('P(base) : 'poly[R]_n))
   pose w := uniform_pweight I.
   pose c := (combine base w).1.
   have c_bounded : bounded ('P(base) : 'poly[R]_n) c.
-  + by apply: dual_sol_bounded; try exact: uniform_pweightP.
+  + apply: dual_sol_bounded => //; exact: uniform_pweightP.
   have c_bounded_P : (bounded P c).
   + apply: (bounded_mono1 c_bounded); apply/andP; split;
       [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
   have c_argmin: argmin 'P(base) c = Q.
   + rewrite Q_eq in Q_prop0 *.
-    (*exact: dual_sol_argmin.*) admit.
+    rewrite dual_sol_argmin /=; rewrite ?/w ?uniform_supp //.
+    exact: uniform_pweightP.
   suff <- : (argmin P c)%:poly_base = Q by constructor.
   apply: val_inj => /=. rewrite -c_argmin.
   apply/subset_argmin; first by done.
   apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
-Admitted.
+Qed.
 
 Lemma face_set_of_face (P Q : {poly base}) :
   Q \in face_set P -> face_set Q = [set Q' in face_set P | (Q' `<=` Q)].

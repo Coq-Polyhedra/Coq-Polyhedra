@@ -61,6 +61,29 @@ Definition supp w := [fset e in base | w e > 0]%fset.
 Definition combine w : base_elt :=
   (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
 
+Definition uniform_pweight (I : {fsubset base}) : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
+  [fsfun e : I => 1 | 0]%fset.
+
+Lemma uniform_pweightP I : pweight (uniform_pweight I).
+Proof.
+rewrite /uniform_pweight.
+apply/pweightP; split.
+- apply: (fsubset_trans (y := I)); first exact: finsupp_sub.
+  exact: (valP I).
+- move => e _.
+  by rewrite fsfun_ffun; case: insubP => [?|?] /=; rewrite ?ler01.
+Qed.
+
+Lemma uniform_supp (I : {fsubset base}) : supp (uniform_pweight I) = I.
+Proof.
+apply/fsetP => e.
+rewrite /supp !inE /uniform_pweight fsfun_ffun.
+case: insubP => [? -> <- /=| /negbTE -> /=].
+- rewrite ltr01 andbT.
+  by apply/(fsubsetP (valP I)).
+- by rewrite ltrr andbF.
+Qed.
+
 Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
 Hypothesis w_pweight : pweight w.
 
@@ -102,22 +125,6 @@ Lemma pweight_gt0 e : (e \in supp w) = (w e > 0).
 Proof.
 by case: suppP; first exact: negbTE.
 Qed.
-
-Definition uniform_pweight (I : {fsubset base}) : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
-  [fsfun e : I => 1 | 0]%fset.
-
-Lemma uniform_pweightP I : pweight (uniform_pweight I).
-Proof.
-rewrite /uniform_pweight.
-apply/pweightP; split.
-- apply: (fsubset_trans (y := I)); first exact: finsupp_sub.
-  exact: (valP I).
-- move => e _.
-  by rewrite fsfun_ffun; case: insubP => [?|?] /=; rewrite ?ler01.
-Qed.
-
-Lemma uniform_supp (I : {fsubset base}) : supp (uniform_pweight I) = I.
-Admitted.
 
 End PWeight.
 
