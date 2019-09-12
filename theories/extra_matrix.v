@@ -317,6 +317,28 @@ rewrite mxE summxE.
 by apply/eq_bigr => i; rewrite !mxE mulrC.
 Qed.
 
+Lemma mulmx_col'_row' (R : realFieldType) (m n p : nat) (A : 'M[R]_(m, n)) (B : 'M[R]_(n, p)) (i : 'I_n) (j : 'I_m) (h : 'I_p) :
+  (A *m B) j h = A j i * B i h + ((col' i A) *m (row' i B)) j h.
+Proof.
+rewrite !mxE.
+suff ->: \sum_(j0 < n.-1) (col' i A) j j0 * (row' i B) j0 h = \sum_(j0 < n | j0 != i) A j j0 * B j0 h
+  by rewrite (bigID (xpred1 i)) big_pred1_eq.
+have ->: \sum_(j0 < n.-1) (col' i A) j j0 * (row' i B) j0 h = \sum_(j0 < n.-1) (A j (lift i j0)) * (B (lift i j0) h).
+  by apply: eq_bigr => k _; rewrite !mxE.
+rewrite -[RHS]big_filter.
+suff ->: [seq i0 <- index_enum (ordinal_finType n) | i0 != i] = map (lift i) [seq _ <- index_enum (ordinal_finType n.-1) | true]
+  by rewrite big_map big_filter.
+rewrite filter_predT /index_enum -!enumT.
+exact: predC1_enum.
+Qed.
+
+Lemma row'_eq (R : realFieldType) (n : nat) (x : 'cV[R]_n.-1) (i : 'I_n) (K : R) :
+  let: y := \col_(k < n) match (unlift i k) with | Some j => x j 0 | None => K end in
+    row' i y = x.
+Proof.
+by apply/colP => k; rewrite !mxE (liftK i).
+Qed.
+
 End ExtraMx.
 
 Section QuasiInverse.

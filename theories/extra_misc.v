@@ -107,6 +107,126 @@ Proof.
 by apply/negbTE/negP; move/properP => [_ [i _]]; rewrite inE.
 Qed.
 
+Lemma size_enum_predC1 (n : nat) (i : 'I_n) :
+  size [seq i0 <- enum 'I_n | i0 != i] = n.-1.
+Proof.
+move/eqP: (count_predC (xpred1 i) (enum (ordinal_finType n))).
+rewrite size_enum_ord count_uniq_mem; last by apply: enum_uniq.
+rewrite mem_enum /= => ?.
+apply/eqP.
+rewrite size_filter -(eqn_add2r 1) addnC addn1 prednK //.
+apply: contraT.
+rewrite -(ltn0 i) -leqNgt => ?.
+by apply: (leq_trans (ltn_ord i)).
+Qed.
+
+Lemma predC1_take_enum (n : nat) (i : 'I_n) :
+  [seq i0 <- take i (enum 'I_n) | i0 != i] = take i (enum 'I_n).
+Proof.
+apply/all_filterP/allP => j j_in_take.
+apply: contraT; rewrite negbK => /eqP j_eq_i.
+move: (nth_index i j_in_take).
+rewrite -index_mem size_take size_enum_ord (ltn_ord i) in j_in_take.
+rewrite nth_take //.
+move: (ltn_trans j_in_take (ltn_ord i)) => index_j_lt_n.
+rewrite -{2}j_eq_i in j_in_take.
+have ->: nth i (enum 'I_n) (index j (take i (enum 'I_n))) = Ordinal index_j_lt_n
+  by apply: ord_inj; rewrite (nth_enum_ord _ index_j_lt_n).
+move => index_eq_j.
+by rewrite -(ltnn j) -{1}index_eq_j.
+Qed.
+
+Lemma take_val_predC1_enum (n : nat) (i : 'I_n) :
+  take i (map val [seq i0 <- enum 'I_n | i0 != i]) = iota 0 i.
+Proof.
+rewrite -[enum 'I_n](cat_take_drop i) filter_cat predC1_take_enum map_cat -map_take take_size_cat;
+  last by rewrite !size_map size_take -enumT size_enum_ord (ltn_ord i).
+apply: (@eq_from_nth _ 0 _ _ _).
+- by rewrite !size_map size_take -enumT size_enum_ord (ltn_ord i) size_iota.
+- move => k k_lt_size.
+  have k_lt_i: (k < i)%N by rewrite !size_map size_take -enumT size_enum_ord (ltn_ord i) in k_lt_size.
+  rewrite (@nth_map _ i _ 0); last by rewrite size_map in k_lt_size.
+  rewrite nth_iota // add0n (@nth_map _ i _ i); last by rewrite !size_map in k_lt_size.
+  rewrite nth_take //= -enumT nth_enum_ord //.
+  exact: (ltn_trans k_lt_i (ltn_ord i)).
+Qed.
+
+Lemma predC1_drop_enum (n : nat) (i : 'I_n) :
+  [seq i0 <- drop i (enum 'I_n) | i0 != i] = drop i.+1 (enum 'I_n).
+Proof.
+have i_lt_size_enum : (i < size (enum 'I_n))%N
+  by rewrite size_enum_ord (ltn_ord i).
+rewrite (drop_nth i i_lt_size_enum) /= nth_ord_enum eq_refl /=.
+apply/all_filterP.
+rewrite all_count -(@count_predC _ (pred1 i)).
+suff ->: (count_mem i) (drop i.+1 (enum 'I_n)) = 0 by rewrite add0n.
+suff H: (count_mem i) (take i.+1 (enum 'I_n)) = 1
+  by move/eqP: (count_uniq_mem i (enum_uniq 'I_n));
+  rewrite -{1}[(enum 'I_n)](cat_take_drop i.+1) mem_enum /= count_cat H -[X in _ == X]addn0 eqn_add2l => /eqP <-.
+have uniq_take: uniq (take i.+1 (enum 'I_n))
+  by apply: (@subseq_uniq _ _ (enum 'I_n) _ (enum_uniq 'I_n));
+  rewrite -{2}[(enum 'I_n)](cat_take_drop i.+1);
+  exact: prefix_subseq.
+rewrite (count_uniq_mem i uniq_take) -index_mem.
+move: (@nth_take i.+1 _ i i (ltnSn i) (enum 'I_n)); rewrite nth_ord_enum => nth_eq_i.
+have i_lt: i < (if i.+1 < n then i.+1 else n)
+  by case: (boolP (i.+1 < n)%N); [rewrite ltnSn | rewrite (ltn_ord i)].
+by rewrite size_take size_enum_ord -{1}nth_eq_i (index_uniq _ _ uniq_take) ?size_take ?size_enum_ord !i_lt.
+Qed.
+
+Lemma drop_enum_predC1 (n : nat) (i : 'I_n) :
+  drop i (map val [seq i0 <- enum 'I_n | i0 != i]) = (iota i.+1 (n-i.+1)%N).
+Proof.
+rewrite -[enum 'I_n](cat_take_drop i) filter_cat predC1_take_enum map_cat drop_size_cat;
+  last by rewrite !size_map size_take size_enum_ord (ltn_ord i).
+rewrite predC1_drop_enum map_drop val_enum_ord.
+apply: (@eq_from_nth _ 0 _ _ _).
+- by rewrite size_drop !size_iota.
+- move => k k_lt_size.
+  rewrite size_drop size_iota in k_lt_size.
+  rewrite nth_drop nth_iota; last by rewrite -ltn_subRL.
+  by rewrite add0n nth_iota //.
+Qed.
+
+Lemma nth_predC1_enum (n k : nat) (i : 'I_n) :
+  (k < n.-1) -> nat_of_ord (nth i [seq i0 <- enum 'I_n | i0 != i] k) = (i <= k) + k.
+Proof.
+move => k_lt_n_minus_1.
+rewrite -(@nth_map _ _ _ 0); last by rewrite size_enum_predC1.
+have ->: map val [seq i0 <- enum 'I_n | i0 != i] = (iota 0 i) ++ (iota i.+1 (n-i.+1)%N)
+  by rewrite -[LHS](cat_take_drop (val i)) take_val_predC1_enum drop_enum_predC1.
+rewrite nth_cat size_iota (leqNgt i k).
+case: (boolP (k < i)) => [? /= | i_leq_k /=]; first by rewrite nth_iota.
+rewrite -leqNgt in i_leq_k.
+rewrite nth_iota; first by rewrite -addn1 [X in X+_]addnC -addnA (subnKC i_leq_k).
+have k_lt_n: (k < n)%N by apply: (leq_trans _ (leq_pred n)).
+rewrite -[X in n - X]addn1 addnC subnDA subn1.
+apply: (ltn_sub2r _ k_lt_n_minus_1).
+by apply: (leq_ltn_trans i_leq_k).
+Qed.
+
+Lemma predC1_enum (n : nat) (i : 'I_n) :
+  [seq i0 <- enum (ordinal_finType n) | i0 != i] = [seq lift i i0 | i0 <- enum (ordinal_finType n.-1)].
+Proof.
+have size_eq: size [seq i0 <- enum (ordinal_finType n) | i0 != i] = size [seq lift i i0 | i0 <- enum (ordinal_finType n.-1)]
+  by rewrite size_map size_enum_ord size_enum_predC1.
+apply: (@eq_from_nth _ i _ _ size_eq) => k k_lt_size.
+have k_lt_size': (k < size (enum (ordinal_finType n.-1)))%N by rewrite size_eq size_map in k_lt_size.
+have k_lt_n_minus_1: (k < n.-1)%N by rewrite size_enum_ord in k_lt_size'.
+rewrite (@nth_map _ (Ordinal k_lt_n_minus_1) _ i (lift i) _ _ k_lt_size') /=.
+apply: ord_inj.
+have ->: nth (Ordinal k_lt_n_minus_1) (enum 'I_n.-1) k = (Ordinal k_lt_n_minus_1)
+  by apply: ord_inj; exact: (@nth_enum_ord _ (Ordinal k_lt_n_minus_1) _ k_lt_n_minus_1).
+rewrite /= /bump.
+by apply: nth_predC1_enum.
+Qed.
+
+Lemma ltn_divLR' m p d : (d > 0)%N -> (m < p * d)%N -> (m %/ d < p)%N.
+Proof.
+by move => H ?; rewrite (ltn_divLR _ _ H).
+Qed.
+
+
 End Basic.
 
 Section Big.
