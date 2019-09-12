@@ -150,6 +150,7 @@ Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (\repr P) (\repr Q).
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
 Definition bounded (P : 'poly[R]_n) c := H.bounded (\repr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (\repr P).
+Definition proj (P : 'poly[R]_n) i : 'poly[R]_(n.-1) := '[ H.proj (\repr P) i].
 Definition conv V : 'poly[R]_n := '[ (H.conv V) ].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
@@ -388,7 +389,17 @@ apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
   by move: x x_in_Q; apply/poly_subsetP; exact: forall_Q_subset.
 Qed.
 
-Lemma convP V x :
+Lemma projP (P : 'poly[R]_n) i x :
+  reflect (exists2 y, x = row' i y & y \in P) (x \in proj P i).
+Proof.
+rewrite repr_equiv; apply: (iffP idP) => [ /H.projP [y -> y_in_P] | [y -> y_in_P]].
+- by exists y.
+- by apply/H.projP; exists y.
+Qed.
+
+Section ConvexHull.
+
+Lemma convP (V : {fset 'cV[R]_n}) x :
   reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
 Proof.
 rewrite repr_equiv; exact: H.convP.
@@ -405,6 +416,8 @@ Qed.
 Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
   v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
 Admitted.
+
+End ConvexHull.
 
 Lemma polyIxx P : P `&` P = P.
 Proof.

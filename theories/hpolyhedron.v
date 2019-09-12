@@ -8,7 +8,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap div.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter.
 
@@ -491,6 +491,214 @@ Qed.
 End Farkas.
 
 End PolyPred.
+
+Section Projection.
+
+Variable (R : realFieldType) (n : nat).
+
+Definition proj (P : 'hpoly[R]_n) i :=
+  let: HPoly _ A b := P in
+  let Jeq0 := [set j | A j i == 0] in
+  let Jlt0 := [set j | A j i < 0] in
+  let Jgt0 := [set j | A j i > 0] in
+  let bJeq0 := row_submx b Jeq0 in
+  match (@idP (#|Jlt0| > 0)%N) with
+  | ReflectT Jlt0_not_empty =>
+    if (#|Jgt0| > 0)%N then
+      let AJlt0 := row_submx A Jlt0 in
+      let AJgt0 := row_submx A Jgt0 in
+      let AJlt0i := row_submx (col' i A) Jlt0 in
+      let AJgt0i := row_submx (col' i A) Jgt0 in
+      let AJeq0i := row_submx (col' i A) Jeq0 in
+      let bJlt0 := row_submx b Jlt0 in
+      let bJgt0 := row_submx b Jgt0 in
+      let q := (#|Jgt0| * #|Jlt0|)%N in
+      let b'' := \matrix_(h < q , j < 1) ((bJlt0 (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) j)
+                                         * (AJgt0 (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) i)
+                                         - (bJgt0 (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) j)
+                                           * (AJlt0 (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) i)) in
+      let A'' := \matrix_(h < q , j < n.-1) ((AJlt0i (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) j)
+                                            * (AJgt0 (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) i)
+                                            - (AJgt0i (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) j)
+                                              * (AJlt0 (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) i)) in
+      HPoly (col_mx A'' AJeq0i) (col_mx b'' bJeq0)
+    else
+      HPoly (row_submx (col' i A) Jeq0) bJeq0
+  | _ =>
+    if (#|Jgt0| > 0)%N then
+      HPoly (row_submx (col' i A) Jeq0) bJeq0
+    else
+      HPoly (col' i A) b
+  end.
+
+Theorem projP (P : 'hpoly[R]_n) i x :
+  reflect (exists2 y, x = row' i y & y \in P) (x \in proj P i).
+Proof.
+case: P => m A b.
+rewrite /proj.
+set Jeq0 := [set j | A j i == 0].
+set Jlt0 := [set j | A j i < 0].
+set Jgt0 := [set j | A j i > 0].
+set bJeq0 := row_submx b Jeq0.
+case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
+  case: (boolP (#|Jgt0| > 0)%N) => [Jgt0_not_empty | Jgt0_empty].
+- set AJlt0 := row_submx A Jlt0.
+  set AJgt0 := row_submx A Jgt0.
+  set AJlt0i := row_submx (col' i A) Jlt0.
+  set AJgt0i := row_submx (col' i A) Jgt0.
+  set AJeq0i := row_submx (col' i A) Jeq0.
+  set bJlt0 := row_submx b Jlt0.
+  set bJgt0 := row_submx b Jgt0.
+  set q := (#|Jgt0| * #|Jlt0|)%N.
+  set b'' := \matrix_(h < q , j < 1) ((bJlt0 (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) j)
+                                        * (AJgt0 (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) i)
+                                      - (bJgt0 (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) j)
+                                        * (AJlt0 (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) i)).
+  set A'' := \matrix_(h < q , j < n.-1) ((AJlt0i (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) j)
+                                        * (AJgt0 (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) i)
+                                      - (AJgt0i (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord h) )) j)
+                                        * (AJlt0 (Ordinal (ltn_pmod (nat_of_ord h) Jlt0_not_empty)) i)).
+  apply/(iffP idP) => [x_in_proj | [y -> y_in]].
+  + set S := [seq ((col' i A *m x) k 0 - b k 0)/(- A k i) | k <- (enum Jlt0)].
+    set y := \col_(k < n) match (unlift i k) with | Some j => x j 0 | None => (min_seq S 0) end.
+    exists y; first by rewrite row'_eq.
+    apply/forallP => k.
+    case: (boolP (k \in (Jlt0 :|: Jgt0))) => [/setUP k_in_U | k_not_in_U].
+    * case: k_in_U => [k_in_Jlt0 | k_in_Jgt0].
+      - rewrite (mulmx_col'_row' A y i) [y i 0]mxE unlift_none addrC -ler_sub_addr -ler_subr_addl -mulNr mulrC row'_eq -ler_pdivl_mulr;
+          last by rewrite inE -oppr_gt0 in k_in_Jlt0.
+        by apply: min_seq_ler; apply: map_f; rewrite mem_enum.
+      - rewrite (mulmx_col'_row' A y i) addrC -ler_sub_addr -ler_subr_addl -mulNr mulrC row'_eq [y i 0]mxE unlift_none.
+        have min_seq_at: has [pred i | min_seq S 0 == i] S.
+          apply/min_seq_eq/contraT; rewrite negbK => /eqP S_nil.
+          have Jlt0_non_empty: exists j, j \in Jlt0 by apply/card_gt0P.
+          move: Jlt0_non_empty => [j j_in_Jlt0].
+          suff : ((col' i A *m x) j 0 - b j 0)/(- A j i) \in S by rewrite S_nil in_nil.
+          by apply: map_f; rewrite mem_enum.
+        move/hasP: min_seq_at => [? /mapP [j j_in_S ->] /= /eqP ->].
+        rewrite -mulrA [X in _*X]mulrC mulrA ler_pdivr_mulr;
+          last by rewrite mem_enum inE -oppr_gt0 in j_in_S.
+        rewrite 2!mulrBl !mulrN 2!opprK -ler_sub_addr -addrA addrC lter_sub_addl.
+        have HcastJlt0: (#|(enum Jlt0)| = #|Jlt0|)%N
+          by rewrite cardE; apply: card_uniqP; exact: enum_uniq.
+        set j' := (enum_rank_in j_in_S j).
+        set k' := (enum_rank_in k_in_Jgt0 k).
+        set r := (k' * #|Jlt0| + j')%N.
+        have r_lt_q: (r < q)%N by apply: (@leq_trans ((k'.+1)* #|Jlt0|)%N);
+          [rewrite -[k'.+1]addn1 mulnDl mul1n ltn_add2l; move: (ltn_ord j'); rewrite -HcastJlt0
+            | rewrite (leq_pmul2r Jlt0_not_empty); exact: ltn_ord].
+        move: ((forallP x_in_proj) (lshift #|Jeq0| (Ordinal r_lt_q))).
+        rewrite mul_col_mx 2!col_mxEu 5!mxE.
+        have k_eq: k = (enum_val (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord (Ordinal r_lt_q))))).
+          have ->: (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord (Ordinal r_lt_q)))) = k'
+            by apply: ord_inj; rewrite /= (divnMDl _ _ Jlt0_not_empty) -HcastJlt0 (divn_small (ltn_ord j')) addn0.
+          by rewrite enum_rankK_in.
+        have j_eq: j = (enum_val (Ordinal (ltn_pmod (Ordinal r_lt_q) Jlt0_not_empty))).
+          have ->: (Ordinal (ltn_pmod (k' * #|Jlt0| + j') Jlt0_not_empty)) = cast_ord HcastJlt0 j'
+            by apply: ord_inj; rewrite /= modnMDl -HcastJlt0; apply: modn_small; exact: ltn_ord.
+          rewrite -((enum_rankK_in j_in_S) j j_in_S) (enum_val_nth (enum_val (enum_rank_in j_in_S j)))
+                     [RHS](enum_val_nth (enum_val (enum_rank_in j_in_S j))).
+          have ->: (enum (enum Jlt0)) = enum Jlt0 by apply: eq_enum; exact: mem_enum.
+          by apply/eqP; rewrite (nth_uniq _ _ _ (enum_uniq (mem Jlt0))) // -cardE -?HcastJlt0; exact: ltn_ord.
+        suff ->: (A'' *m x) (Ordinal r_lt_q) 0 = (col' i A *m x) j 0 * A k i - (col' i A *m x) k 0 * A j i by rewrite -k_eq -j_eq.
+        rewrite !mxE 2!mulr_suml -sumrB.
+        apply: eq_bigr => h _.
+        by rewrite !mxE k_eq j_eq -[X in _ = X - _]mulrA -[X in _ = _ - X]mulrA [X in _ = _*X - _]mulrC
+             [X in _ =  _ -_*X]mulrC [X in _ = X - _]mulrA [X in _ = _ - X]mulrA mulrBl.
+    * have k_in_Jeq0: k \in Jeq0
+        by rewrite inE; move: k_not_in_U; apply/contraR; rewrite neqr_lt in_setU !inE.
+      move: ((forallP x_in_proj) (rshift q (enum_rank_in k_in_Jeq0 k))).
+      rewrite mul_col_mx 2!col_mxEd -row_submx_mul 2!mxE enum_rankK_in // (mulmx_col'_row' A y i) row'_eq.
+      rewrite inE in k_in_Jeq0.
+      by rewrite (eqP k_in_Jeq0) mul0r add0r.
+  + apply/forallP => j.
+    case: (splitP' j) => [k -> | k ->].
+    * set k' := (Ordinal (ltn_pmod k Jlt0_not_empty)).
+      move: (enum_valP k'); rewrite inE => ?.
+      set k'' := (Ordinal (ltn_divLR' Jlt0_not_empty (ltn_ord k))).
+      move: (enum_valP k''); rewrite inE => ?.
+      have ->: ((col_mx A'' AJeq0i) *m row' i y) (lshift #|Jeq0| k) 0 = (AJlt0i *m row' i y) k' 0 * AJgt0 k'' i  - (AJgt0i *m row' i y) k'' 0 * AJlt0 k' i.
+        rewrite mul_col_mx col_mxEu !mxE /= 2!mulr_suml -sumrB.
+        apply: eq_bigr => h _.
+        by rewrite !mxE mulrBl [X in X * y _ _]mulrC -[X in X-_]mulrA mulrC -[X in _ - X]mulrA [X in _ - _*X]mulrC [X in _ - X]mulrA.
+      rewrite col_mxEu mxE -2!row_submx_mul !row_submx_mxE ler_subl_addr -[X in _ <= X]addrA -ler_subl_addl [X in _ <= X]addrC -2!mulrBl
+          -ler_pdivl_mulr // -[X in _ <= X]mulrA [X in _ <= _ * X]mulrC [X in _ <= X]mulrA -[X in _ <= X]opprK -mulrN -mulNr -ler_pdivr_mulr;
+            last by rewrite oppr_gt0.
+      rewrite ler_oppr.
+      apply: (@ler_trans _ (y i 0)).
+      - rewrite ler_pdivr_mulr // mulrC ler_subl_addr -mulmx_col'_row'.
+        by apply: (forallP y_in).
+      - rewrite ler_oppr ler_pdivr_mulr; last by rewrite oppr_gt0.
+        rewrite mulrNN mulrC ler_subl_addr -mulmx_col'_row'.
+        by apply: (forallP y_in).
+    * suff ->: ((col_mx A'' AJeq0i) *m row' i y) (rshift q k) 0 = (A *m y) (enum_val k) 0
+        by rewrite col_mxEd mxE; apply: (forallP y_in).
+      rewrite mul_col_mx col_mxEd -row_submx_mul row_submx_mxE (mulmx_col'_row' A y i).
+      by move: (enum_valP k); rewrite inE => /eqP ->; rewrite mul0r add0r.
+- apply: (iffP idP) => [x_in_proj | [y -> y_in]].
+  + set S := [seq ((col' i A *m x) k 0 - b k 0)/(- A k i) | k <- (enum Jlt0)].
+    set y := \col_(k < n) match (unlift i k) with | Some j => x j 0 | None => (min_seq S 0) end.
+    exists y; first by rewrite row'_eq.
+    apply/forallP => k.
+    case: (boolP (k \in Jlt0)) => [k_in_Jlt0 | k_not_in_Jlt0].
+    * rewrite (mulmx_col'_row' A y i) [y i 0]mxE unlift_none addrC -ler_sub_addr -ler_subr_addl -mulNr mulrC row'_eq -ler_pdivl_mulr;
+        last by rewrite inE -oppr_gt0 in k_in_Jlt0.
+      by apply: min_seq_ler; apply: map_f; rewrite mem_enum.
+    * have k_in_Jeq0: k \in Jeq0.
+        rewrite inE; move/norP: (conj k_not_in_Jlt0 Jgt0_empty).
+        apply/contraR; rewrite neqr_lt !inE; move/orP.
+        case => [k_in_Jlt0 | ?]; apply/orP; first by left.
+        by right; rewrite card_gt0; apply/set0Pn; exists k; rewrite inE.
+      move: ((forallP x_in_proj) (enum_rank_in k_in_Jeq0 k)).
+      rewrite -row_submx_mul 2!mxE enum_rankK_in // (mulmx_col'_row' A y i) row'_eq.
+      rewrite inE in k_in_Jeq0.
+      by rewrite (eqP k_in_Jeq0) mul0r add0r.
+  + apply/forallP => j.
+    rewrite -row_submx_mul 2!mxE.
+    have ->: (col' i A *m row' i y) (enum_val j) 0 = (A *m y) (enum_val j) 0 - A (enum_val j) i * y i 0
+      by rewrite (mulmx_col'_row' A y i) [X in _ = X -_]addrC -addrA subrr addr0.
+    move: (enum_valP j); rewrite inE => /eqP ->.
+    by rewrite mul0r subr0; apply: (forallP y_in).
+- apply: (iffP idP) => [x_in_proj | [y -> y_in]].
+  + set S := [seq ((col' i A *m x) k 0 - b k 0)/(A k i) | k <- (enum Jgt0)].
+    set y := \col_(k < n) match (unlift i k) with | Some j => x j 0 | None => (- min_seq S 0) end.
+    exists y; first by rewrite row'_eq.
+    apply/forallP => k.
+    case: (boolP (k \in Jgt0)) => [k_in_Jgt0 | k_not_in_Jgt0].
+    * rewrite (mulmx_col'_row' A y i) [y i 0]mxE unlift_none addrC -ler_sub_addr -ler_subr_addl -mulrN mulrC row'_eq opprK -ler_pdivl_mulr;
+        last by rewrite inE in k_in_Jgt0.
+      by apply: min_seq_ler; apply: map_f; rewrite mem_enum.
+    * have k_in_Jeq0: k \in Jeq0.
+        rewrite inE; move/norP: (conj k_not_in_Jgt0 Jlt0_empty).
+        apply/contraR; rewrite neqr_lt !inE; move/orP.
+        case => [k_in_Jlt0 | ?]; apply/orP; last by left.
+        by right; rewrite card_gt0; apply/set0Pn; exists k; rewrite inE.
+      move: ((forallP x_in_proj) (enum_rank_in k_in_Jeq0 k)).
+      rewrite -row_submx_mul 2!mxE enum_rankK_in // (mulmx_col'_row' A y i) row'_eq.
+      rewrite inE in k_in_Jeq0.
+      by rewrite (eqP k_in_Jeq0) mul0r add0r.
+  + apply/forallP => j.
+    rewrite -row_submx_mul 2!mxE.
+    have ->: (col' i A *m row' i y) (enum_val j) 0 = (A *m y) (enum_val j) 0 - A (enum_val j) i * y i 0
+      by rewrite (mulmx_col'_row' A y i) [X in _ = X -_]addrC -addrA subrr addr0.
+    move: (enum_valP j); rewrite inE => /eqP ->.
+    by rewrite mul0r subr0; apply: (forallP y_in).
+- apply: (iffP idP) => [x_in_proj | [y -> y_in]].
+  + set y := \col_(k < n) match (unlift i k) with | Some j => x j 0 | None => 0 end.
+    exists y; first by rewrite row'_eq.
+    apply/forallP => k.
+    rewrite (mulmx_col'_row' A y i) row'_eq [y i 0]mxE unlift_none mulr0 add0r.
+    exact: ((forallP x_in_proj) k).
+  + apply/forallP => j.
+    have ->: (col' i A *m row' i y) j 0 = (A *m y) j 0 - A j i * y i 0
+      by rewrite (mulmx_col'_row' A y i) [X in _ = X -_]addrC -addrA subrr addr0.
+    suff ->: A j i = 0 by rewrite mul0r subr0; exact: ((forallP y_in) j).
+    apply/eqP; move/norP: (conj Jlt0_empty Jgt0_empty).
+    apply/contraR; rewrite neqr_lt; move/orP.
+    by case => [? | ?]; apply/orP; [left | right]; rewrite card_gt0; apply/set0Pn; exists j; rewrite inE.
+Qed.
+
+End Projection.
 
 Module Import Exports.
 Canonical hpoly_eqType.
