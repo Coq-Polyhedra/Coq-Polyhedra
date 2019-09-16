@@ -302,6 +302,16 @@ Qed.
 
 Let inE := (in_poly0, in_polyT, in_hp, in_polyI, in_hs, inE).
 
+Lemma hs_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs x].
+Proof. by rewrite !inE => /eqP->. Qed.
+
+Lemma hsN_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs -x].
+Proof. by rewrite !inE => /eqP /= <-; rewrite vdotNl. Qed.
+
+Lemma hpE c (x : base_elt[R, n]) :
+  (c \in `[hp x]) = (c \in (`[hs x])) && (c \in (`[hs -x])).
+Proof. by rewrite /mk_hp inE. Qed.
+
 Lemma polyI0 P : (P `&` `[poly0]) = `[poly0].
 Proof.
 by apply/poly_eqP => x; rewrite !inE andbF.
@@ -1162,10 +1172,40 @@ apply/forallP/idP => /= [h| c_in_e]; first by apply: (h [` fset11 e]%fset).
 by case=> /= e'; rewrite in_fset1 => /eqP->.
 Qed.
 
+Lemma in_slice (e : base_elt) (P : 'poly_n) c :
+  c \in slice e P = (c \in `[hp e]) && (c \in P).
+Proof. by apply: in_polyI. Qed.
+
+Lemma in_fslice {T : choiceType} (x : T) (A : {fset T}) y :
+  y \in (x +|` A) = (y == x) || (y \in A).
+Proof. by apply: in_fset1U. Qed.
+
+Lemma nmono_in_poly_of_base (P Q : base_t[R,n]) :
+  (Q `<=` P)%fset -> 'P(P) `<=` 'P(Q).
+Proof.
+move=> /fsubsetP leQP; apply/poly_subsetP=> x; rewrite !in_poly_of_base.
+move/forallP=> /= hP; apply/forallP=> -[/= q].
+by move/leQP => qP; apply: (hP [`qP]%fset).
+Qed.
+
 Lemma slice_polyEq {e : base_elt} {base I : base_t[R,n]} :
   slice e 'P^=(base; I) = 'P^=(e +|` base; e +|` I).
 Proof.
-Admitted.
+apply/poly_eqP=> c; rewrite in_slice; apply/andP/idP.
++ case=> ce cP; apply/in_polyEqP; split.
+  - move=> b; rewrite in_fslice=> /orP[/eqP->//|bI].
+    by case/in_polyEqP: cP => /(_ _ bI).
+  - rewrite in_poly_of_base; apply/forallP => -[/= b].
+    rewrite in_fslice => /orP[/eqP->|]; first by apply: hs_hp.
+    move=> bb; case/in_polyEqP: cP => _.
+    by rewrite in_poly_of_base => /forallP /= /(_ [`bb]%fset).
++ case/in_polyEqP => ceI cPeb; split.
+  - by apply: ceI; rewrite in_fslice eqxx.
+  apply/in_polyEqP; split; last first.
+  - move: {ceI} c cPeb; apply/poly_subsetP.
+    by apply/nmono_in_poly_of_base/fsubsetU1.
+  by move=> b bI; apply: ceI; rewrite in_fslice bI orbT.
+Qed.
 
 Local Notation "\- I" := ((@Base.opp_base_elt _ _) @` I)%fset
   (at level 2).
@@ -1178,16 +1218,6 @@ Proof. apply/imfsetP/idP => /=.
 + by case=> y yI /oppr_inj ->.
 + by move=> xI; exists x.
 Qed.
-
-Lemma hs_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs x].
-Proof. by rewrite !inE => /eqP->. Qed.
-
-Lemma hsN_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs -x].
-Proof. by rewrite !inE => /eqP /= <-; rewrite vdotNl. Qed.
-
-Lemma hpE c (x : base_elt[R, n]) :
-  (c \in `[hp x]) = (c \in (`[hs x])) && (c \in (`[hs -x])).
-Proof. by rewrite /mk_hp inE. Qed.
 
 Lemma in_baseEq (base I : base_t[R,n]) c :
   c \in baseEq base I = (c \in base) || (c \in \- I).
@@ -1230,7 +1260,6 @@ Lemma polyEq_of_polyEq
 :
   exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
 Proof.
-
 Admitted.
 
 (*
