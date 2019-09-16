@@ -1260,6 +1260,7 @@ Lemma polyEq_of_polyEq
 :
   exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
 Proof.
+
 Admitted.
 
 (*
