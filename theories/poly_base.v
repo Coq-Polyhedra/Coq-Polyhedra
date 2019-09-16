@@ -43,6 +43,8 @@ Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
 Definition poly_base_choiceMixin := Eval hnf in [choiceMixin of poly_base by <:].
 Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
 
+
+
 Lemma poly_base_base (P : poly_base) : has_base P.
 Proof.
 exact: valP.

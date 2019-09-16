@@ -1167,13 +1167,63 @@ Lemma slice_polyEq {e : base_elt} {base I : base_t[R,n]} :
 Proof.
 Admitted.
 
-Definition baseEq (base I : base_t[R,n]) :=
-  (base `|` ((@Base.opp_base_elt _ _) @` I))%fset.
+Local Notation "\- I" := ((@Base.opp_base_elt _ _) @` I)%fset
+  (at level 2).
+
+Definition baseEq (base I : base_t[R,n]) := (base `|` \- I)%fset.
+
+Lemma in_oppbase (I: base_t[R,n]) x :
+  (-x \in \- I) = (x \in I).
+Proof. apply/imfsetP/idP => /=.
++ by case=> y yI /oppr_inj ->.
++ by move=> xI; exists x.
+Qed.
+
+Lemma hs_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs x].
+Proof. by rewrite !inE => /eqP->. Qed.
+
+Lemma hsN_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs -x].
+Proof. by rewrite !inE => /eqP /= <-; rewrite vdotNl. Qed.
+
+Lemma hpE c (x : base_elt[R, n]) :
+  (c \in `[hp x]) = (c \in (`[hs x])) && (c \in (`[hs -x])).
+Proof. by rewrite /mk_hp inE. Qed.
+
+Lemma in_baseEq (base I : base_t[R,n]) c :
+  c \in baseEq base I = (c \in base) || (c \in \- I).
+Proof. by rewrite /baseEq in_fsetU. Qed.
+
+Lemma in_baseEqP (base I : base_t[R,n]) c :
+  reflect (c \in base \/ c \in \- I) (c \in baseEq base I).
+Proof. by rewrite in_baseEq; apply/orP. Qed.
+
+Lemma in_poly_of_baseP (x : 'cV_n) (base : base_t) :
+  reflect (forall b, b \in base -> x \in `[hs b]) (x \in 'P(base)).
+Proof.
+rewrite in_poly_of_base. apply: (iffP forallP) => /= h.
++ by move=> b bb; apply: (h [` bb]%fset).
++ by move=> b; apply: h.
+Qed.
+
+Lemma fsubset_incl {T : choiceType} (E : {fset T}) (I : {fsubset E}) (x : T) :
+  x \in FSubset.untag I -> x \in E.
+Proof. by case: I => /= tf /fsubsetP le /le. Qed.
 
 Lemma polyEq_flatten (base : base_t[R,n]) (I : {fsubset base}) :
   'P^=(base; I) = 'P(baseEq base I)%fset.
 Proof.
-Admitted.
+apply/poly_eqP=> c; rewrite !in_polyEq; apply/andP/idP.
++ case=> /forallP /= chp cPb; rewrite in_poly_of_base.
+  apply/forallP=> -[/= x /in_baseEqP[]]; last first.
+  - case/imfsetP=> /= y yI -> {x}; apply: hsN_hp.
+    by apply: (chp [`yI]%fset).
+  - by move=> xb; move/in_poly_of_baseP: cPb; apply.
++ move/in_poly_of_baseP => /= h; split.
+  - apply/forallP=> /= -[b bI]; rewrite hpE 2?{1}h {h} //= in_baseEq.
+    * by rewrite in_oppbase bI orbT.
+    * by rewrite (fsubset_incl bI).
+  - by apply/in_poly_of_baseP=> /= b bb; rewrite h // in_baseEq bb.
+Qed.
 
 Lemma polyEq_of_polyEq (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)}) :
   exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
