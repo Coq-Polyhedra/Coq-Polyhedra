@@ -648,7 +648,7 @@ Qed.
 Lemma boundedN0 {P : 'poly[R]_n} {c} :
   bounded P c -> P `>` `[poly0].
 Proof.
-move/boundedP => [x] [x_in_P _].
+case/boundedP=> [x x_in_P _].
 by apply/proper0P; exists x.
 Qed.
 
@@ -1160,7 +1160,7 @@ apply/poly_equivP/andP; split; last first.
   apply/in_polyEqP; split; last first.
   rewrite /=.
   move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0)).
-  move => e /= /bigfcupP [i [/andP [_ Pi] ?]].
+  move => e /= /bigfcupP [i /andP [_ Pi] ?].
   exact: (polyEq_eq (x_in _ Pi)).
 Qed.
 
@@ -1379,11 +1379,12 @@ Qed.
 Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
   exists2 w, pweight base w & combine base w = (c, opt_value H).
 Proof.
-move/(farkas (boundedN0 H)): (opt_value_lower_bound H) => [w] [w_weight [w_comb1 w_comb2]].
+move/(farkas (boundedN0 H)): (opt_value_lower_bound H).
+case=> [w w_weight [w_comb1 w_comb2]].
 exists w; first done.
 apply: injective_projections; first done.
 apply: ler_anti; apply/andP; split; last done.
-move: (opt_point H) => [x] [x_in_P <-].
+move: (opt_point H) => [x x_in_P <-].
 move/poly_subsetP/(_ _ x_in_P): (dual_sol_lower_bound w_weight).
 by rewrite inE w_comb1.
 Qed.
