@@ -1255,51 +1255,66 @@ apply/poly_eqP=> c; rewrite !in_polyEq; apply/andP/idP.
   - by apply/in_poly_of_baseP=> /= b bb; rewrite h // in_baseEq bb.
 Qed.
 
+Lemma imfsetU {T U : choiceType} (f : T -> U) (A B : {fset T}) :
+  (f @` (A `|` B) = (f @` A) `|` (f @` B))%fset.
+Proof.
+apply/fsetP=> x; rewrite in_fsetE; apply/idP/idP.
++ case/imfsetP=> /= y yAB ->; apply/orP; move: yAB.
+  rewrite in_fsetU => /orP[yA|yB]; [left | right];
+    by apply/imfsetP; exists y.
++ case/orP => /imfsetP[] /= y hy ->; apply/imfsetP;
+    by exists y => //=; rewrite in_fsetU hy ?orbT.
+Qed.
+
+Lemma baseEq_comp (base I J : base_t[R,n]) :
+  baseEq (baseEq base I) J = baseEq base (I `|` J)%fset.
+Proof.
+by apply/fsetP=> c; rewrite !in_baseEq imfsetU in_fsetU orbA.
+Qed.
+
+Lemma baseEq_eqR (base I J : base_t[R,n]) :
+     (I `\` \- base)%fset = (J `\` \- base)%fset
+  -> baseEq base I = baseEq base J.
+Proof.
+move/fsetP => eq; apply/fsetP => c; rewrite !in_baseEq.
+case/boolP: (c \in base) => //= cNb; move/(_ (-c)): eq.
+rewrite !in_fsetE in_oppbase (negbTE cNb) /=.
+by rewrite -(in_oppbase I) -(in_oppbase J) /= oppbK.
+Qed.
+
+Lemma in_imfset {T U : choiceType} (f : T -> U) (A : {fset T}) x :
+  x \in A -> f x \in (f @` A)%fset.
+Proof. by move=> xA; apply/imfsetP; exists x. Qed.
+
 Lemma polyEq_of_polyEq
   (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)})
 :
   exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
 Proof.
-
-Admitted.
-
-(*
-Lemma polyEq_of_polyEq (base base1 base2 : base_t R n) : (* quite short proof after all! *)
-   exists base3, 'P^=(baseEq base base1; base2) `=~` 'P^=(base; base3).
-Proof.
-move: I J; case: base => [A b] I J.
-pose f (j : 'I_(#|I| + m)) :=
-  match splitP' j with
-  | SplitLo' j' _ => (enum_val j')
-  | SplitHi' k _ => k
-  end.
-pose K := I :|: (f @: J); exists K.
-apply/andP; split; apply/poly_subsetP => x x_in.
-- apply/in_polyEqP; split; last first.
-  + move/(poly_subsetP polyEq_antimono0): x_in.
-    rewrite -(poly_equivP polyEq_flatten).
-    exact: (poly_subsetP polyEq_antimono0).
-  + move => k /setUP; case.
-    * apply: polyEq_eq; rewrite (poly_equivP polyEq_flatten).
-      by move/(poly_subsetP polyEq_antimono0): x_in.
-    * move/imsetP => [j'] j'_in_J ->; rewrite /f.
-      case: (splitP' j') => [j j'_eq| j j'_eq].
-      - move/polyEq_eq/(_ j'_in_J) : x_in; rewrite j'_eq !in_nth_hp /= mul_col_mx !col_mxEu.
-        rewrite mulNmx -row_submx_mul mxE [X in _ == X]mxE 2!row_submx_mxE.
-        by rewrite eqr_opp.
-      - move/polyEq_eq/(_ j'_in_J) : x_in.
-        by rewrite j'_eq !in_nth_hp /= mul_col_mx !col_mxEd.
-      - apply/in_polyEqP; split; last first.
-        + rewrite -(poly_equivP polyEq_flatten).
-          move: x x_in; apply/poly_subsetP/polyEq_antimono; exact: subsetUl.
-        + move => j /(mem_imset f)/(subsetP (@subsetUr _ I _)) fj_in_K.
-          move/polyEq_eq/(_ fj_in_K): x_in.
-          rewrite /f; case: splitP' => [j' -> eq| j' ->].
-          * rewrite !in_nth_hp /= mul_col_mx !col_mxEu mulNmx -row_submx_mul 2![(- row_submx _ _) j' 0]mxE 2!row_submx_mxE /=.
-            rewrite eqr_opp; by rewrite in_nth_hp in eq.
-          * by rewrite !in_nth_hp mul_col_mx !col_mxEd.
-Qed.
-Admitted.*)
+pose vI := FSubset.untag I; pose vJ := FSubset.untag J.
+pose  L := ((vI `|` vJ) `&` base)%fset.
+pose vK := [fset x | x : base & fsval x \in L]%fset.
+pose  K := FSubset.fsubset_of_fsetval vK.
+exists K; rewrite !polyEq_flatten baseEq_comp.
+congr ('P (_)); apply: baseEq_eqR.
+apply/fsetP=> c; apply/idP/idP; last first.
++ rewrite in_fsetD => /andP[cNb cK]; rewrite in_fsetD cNb /=.
+  case/imfsetP: cK => /= y /imfsetP[] /= -[/= z zb] zL -> ->.
+  by move: zL; rewrite inE 2!in_fsetE /= zb andbT.
+rewrite 2!in_fsetE => /andP[Ncb] /orP[cI|cJ].
++ rewrite in_fsetD Ncb /=; apply/imfsetP => /=.
+  have cb: c \in base by apply/(fsubsetP (valP I)).
+  exists [`cb]%fset => //; apply/imfsetP => /=.
+  by exists [`cb]%fset => //; rewrite inE 2!in_fsetE /= cI cb.
++ have: c \in baseEq base I by apply/(fsubsetP (valP J)).
+  case/in_baseEqP => [cb|cNb].
+  - rewrite inE Ncb /=; apply/imfsetP => //=.
+    exists [`cb]%fset => //; apply/imfsetP => //=.
+    by exists [`cb]%fset => //; rewrite inE 2!in_fsetE /= cJ cb orbT.
+  - move: cNb; rewrite -{1}[c]oppbK (in_oppbase I).
+    move/(fsubsetP (valP I)) => /(in_imfset (@Base.opp_base_elt _ _)).
+    by rewrite oppbK (negbTE Ncb).
+Qed.                            (* FIXME: QED is too long! *)
 
 End PolyPred.
 
