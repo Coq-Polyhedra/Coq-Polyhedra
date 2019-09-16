@@ -1098,11 +1098,10 @@ Qed.
 Lemma in_polyEqP x base I :
   reflect ((forall e, e \in I -> x \in `[hp e]) /\ x \in 'P(base)) (x \in 'P^=(base; I)).
 Proof.
-Admitted.
-(*
-by rewrite in_polyEq; apply: (equivP andP);
-  split; move => [/forall_inP x_sat x_in_PAb].
-Qed.*)
+rewrite in_polyEq; apply: (equivP andP); split.
++ by case=> /forallP /= h ->; split=> // e eI; apply: (h [` eI]%fset).
++ by case=> h ->; split=> //; apply/forallP=> -[/= e eI_]; apply/h.
+Qed.
 
 Lemma polyEq_eq x base I e :
   x \in 'P^=(base; I) -> e \in I -> x \in `[hp e].
@@ -1112,21 +1111,34 @@ Qed.
 
 Lemma polyEq0 {base : base_t} :
   'P^=(base; fset0) = 'P(base).
-Admitted.
+Proof.
+apply/poly_eqP=> c; rewrite !in_polyEq; apply: andb_idl.
+by move=> _; apply/forallP=> /=; case.
+Qed.
 
 Lemma polyEq_antimono (base I I' : base_t[R,n]) :
   (I `<=` I')%fset -> 'P^=(base; I') `<=` 'P^=(base; I).
 Proof.
-Admitted.
+move=> leI; apply/poly_subsetP=> c; rewrite !in_polyEq.
+case/andP=> [/forallP /= h ->]; rewrite andbT; apply/forallP=> /=.
+by move=> e; apply: (h (fincl leI e)).
+Qed.
 
 Lemma polyEq_antimono0 {base I : base_t[R,n]} :
   'P^=(base; I) `<=` 'P(base).
-Proof.
-Admitted.
+Proof. by rewrite -polyEq0; apply: polyEq_antimono. Qed.
 
 Lemma polyEq_polyI {base I I': base_t[R,n]} :
   'P^=(base; I) `&` 'P^=(base; I') = 'P^=(base; (I `|` I')%fset).
-Admitted.
+Proof.
+apply/poly_eqP=> c; rewrite in_polyI!in_polyEq andbACA andbb.
+congr (_ && _); apply/andP/forallP => /=.
++ case=> /forallP /= hI /forallP /= hI' -[/= e]; rewrite in_fsetU => /orP.
+  by case=> [eI|eI']; [apply: (hI [`eI]%fset) | apply: (hI' [`eI']%fset)].
++ move=> h; split; apply/forallP=> /= e.
+  * by apply: (h (fincl (fsubsetUl I I') e)).
+  * by apply: (h (fincl (fsubsetUr I I') e)).
+Qed.
 
 Lemma polyEq_big_polyI {base: base_t[R,n]} {I : finType} {P : pred I} {F}  :
   ~~ pred0b P -> \polyI_(i | P i) 'P^=(base; F i) = 'P^=(base; (\bigcup_(i | P i) (F i))%fset).
@@ -1145,10 +1157,14 @@ Qed.
 Lemma polyEq1 {base: base_t[R,n]} {e} :
   'P^=(base; [fset e]%fset) = 'P(base) `&` `[hp e].
 Proof.
-Admitted.
+apply/poly_eqP=> c; rewrite in_polyI !in_polyEq andbC; congr (_ && _).
+apply/forallP/idP => /= [h| c_in_e]; first by apply: (h [` fset11 e]%fset).
+by case=> /= e'; rewrite in_fset1 => /eqP->.
+Qed.
 
 Lemma slice_polyEq {e : base_elt} {base I : base_t[R,n]} :
   slice e 'P^=(base; I) = 'P^=(e +|` base; e +|` I).
+Proof.
 Admitted.
 
 Definition baseEq (base I : base_t[R,n]) :=
@@ -1156,10 +1172,12 @@ Definition baseEq (base I : base_t[R,n]) :=
 
 Lemma polyEq_flatten (base : base_t[R,n]) (I : {fsubset base}) :
   'P^=(base; I) = 'P(baseEq base I)%fset.
+Proof.
 Admitted.
 
 Lemma polyEq_of_polyEq (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)}) :
   exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
+Proof.
 Admitted.
 
 (*
