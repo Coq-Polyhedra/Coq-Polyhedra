@@ -1,15 +1,18 @@
 # Coq-Polyhedra
+
 Formalizing convex polyhedra in Coq
 
 ## Installation
+
 ### Prerequisites
-* [Coq](https://coq.inria.fr) (&ge; 8.5)
-* The [Mathematical Components](https://github.com/math-comp/math-comp) library (&ge; 1.6)
+
+* [Coq](https://coq.inria.fr) (>= 8.9)
+* The [Mathematical Components](https://github.com/math-comp/math-comp) library (>= 1.9)
+* The [Mathematical Components Finite Map](https://github.com/math-comp/finmap) library (= dev)
 
 ### Compilation
-```bash
-./configure.sh && make
-```
+
+We provide a Makefile. Simply type `make`.
 
 ## Authors
 
