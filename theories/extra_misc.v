@@ -410,15 +410,28 @@ Section ExtraFinmap.
 
 Lemma fproperP (K : choiceType) (A B : {fset K}) :
   reflect ({subset A <= B} /\ exists2 x, x \in B & x \notin A) (A `<` B)%fset.
-Admitted.
+Proof. apply: (iffP idP).
++ move=> ltAB; split; first by apply/fsubsetP/fproper_sub.
+  suff: exists x, x \in (B `\` A)%fset.
+  - by case=> x; rewrite inE => /andP[??]; exists x.
+  apply/fset0Pn; rewrite -cardfs_gt0 cardfsDS 1?fproper_sub //.
+  by rewrite subn_gt0 fproper_ltn_card.
++ case=> /fsubsetP leAB [x xB xNA]; rewrite fproperEcard.
+  rewrite leAB /= -subn_gt0 -cardfsDS // cardfs_gt0.
+  by apply/fset0Pn; exists x; rewrite inE xB xNA.
+Qed.
 
 Lemma imfset0 (K K' : choiceType) (f : K -> K') :
   (f @` fset0)%fset = fset0.
-Admitted.
+Proof. by apply/fsetP=> x; rewrite !inE; apply/negP => /imfsetP[]. Qed.
 
 Lemma fsub_fsetval (K : choiceType) (A B : {fset K}) :
   (A `<=` B)%fset -> A = [fsetval x in [fset x : B | val x \in A]]%fset.
-Admitted.
+Proof.
+move=> leAB; apply/fsetP=> x; apply/idP/imfsetP => /=.
++ by move=> xA; exists (fincl leAB [`xA])%fset; rewrite ?inE.
++ by case=> b; rewrite !inE /= => bA ->.
+Qed.
 
 End ExtraFinmap.
 
@@ -604,12 +617,19 @@ Local Open Scope fset_scope.
 Variable (K : choiceType) (S : {fset K}).
 
 Lemma fsubsetT_proper (A : {fsubset S}) : (S `<` A) = false.
-Admitted.
+Proof.
+apply/negP; case: A => /= A leAS /(fsub_proper_trans leAS).
+by apply/negP/fproper_irrefl.
+Qed.
 
 Definition fslice e (A : {fset K}) := e |` A.
 
 Lemma fsubset_sliceP e A : A `<=` S -> fslice e A `<=` fslice e S.
-Admitted.
+Proof.
+move=> /fsubsetP leAS; apply/fsubsetP=> x; rewrite !in_fset1U.
+case/orP=> [/eqP->|]; first by rewrite eqxx.
+by move/leAS=> ->; rewrite orbT.
+Qed.
 
 Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
   @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e H).

@@ -1225,9 +1225,12 @@ apply/poly_eqP=> c; rewrite !in_polyEq; apply/andP/idP.
   - by apply/in_poly_of_baseP=> /= b bb; rewrite h // in_baseEq bb.
 Qed.
 
-Lemma polyEq_of_polyEq (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)}) :
+Lemma polyEq_of_polyEq
+  (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)})
+:
   exists K : {fsubset base}, 'P^=(baseEq base I; J) = 'P^=(base; K).
 Proof.
+
 Admitted.
 
 (*
