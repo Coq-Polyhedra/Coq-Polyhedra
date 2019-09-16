@@ -540,6 +540,7 @@ Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
 (* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
 Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 
+(*
 Section Test.
 Check (fset0 %:fsub).
 Check (S %:fsub).
@@ -561,6 +562,7 @@ Variable (I : finType) (P : pred I) (F : I -> fsubset_t).
 Check (\bigcup_(i | P i) (F i))%:fsub.
 Check (\bigcup_(i | P i) A')%:fsub.
 End Test.
+*)
 
 End FSubset.
 
