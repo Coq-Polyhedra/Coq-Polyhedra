@@ -37,6 +37,9 @@ Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
 Notation "'base_t'" := (base_t[_,_]) (at level 2).
 Notation "- e" := (Base.opp_base_elt e) : poly_scope.
 
+Lemma oppbK {R n} : involutive (@Base.opp_base_elt R n).
+Proof. by case=> a b; rewrite /Base.opp_base_elt /= !opprK. Qed.
+
 Section PWeight.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
