@@ -1,13 +1,9 @@
-*.vo
+*.aux
 *.glob
+*.vo
 *.v.d
+#*.v#
 .coqdeps.d
 
-# Created by configure.sh
-Makefile*
-
-# Remove theories/*.aux files generated after compilation
-theories/.*aux
-
-# Ignore CoqIDE swap files
-theories/#*.v#
+Makefile.coq
+Makefile.coq.conf
