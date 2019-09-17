@@ -737,6 +737,20 @@ Qed.
 
 End Projection.
 
+Section Lift.
+
+Variable (R : realFieldType) (n k : nat).
+
+Definition lift_poly (P : 'hpoly[R]_n) : 'hpoly[R]_(n+k) :=
+  let: HPoly _ A b := P in
+  HPoly (row_mx A 0) b.
+
+Lemma lift_polyP (P : 'hpoly[R]_n) x :
+  (x \in lift_poly P) = (usubmx x \in P).
+Admitted.
+
+End Lift.
+
 Module Import Exports.
 Canonical hpoly_eqType.
 Canonical hpoly_choiceType.
