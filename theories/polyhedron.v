@@ -8,7 +8,9 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
+From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
+
 Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter hpolyhedron.
 
 Set Implicit Arguments.
@@ -18,6 +20,9 @@ Unset Printing Implicit Defensive.
 Module H := HPolyhedron.
 
 Local Open Scope ring_scope.
+Local Open Scope quotient_scope.
+Local Open Scope poly_scope.
+
 Import GRing.Theory Num.Theory.
 
 Reserved Notation "\polyI_ i F"
@@ -57,87 +62,78 @@ Reserved Notation "\polyI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
            format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
-Local Open Scope poly_scope.
+Reserved Notation "''poly[' R ]_ n"
+  (at level 8, n at level 2, format "''poly[' R ]_ n").
+Reserved Notation "''poly[' R ]"
+  (at level 8, format "''poly[' R ]").
+Reserved Notation "''poly_' n"
+  (at level 8, format "''poly_' n").
+Reserved Notation "\repr"
+  (at level 0).
+Reserved Notation "''[' P ]"
+  (at level 0, format "''[' P ]").
 
 Section Def.
 
-Context {R : realFieldType} {n : nat}.
+Context {R : realFieldType} (n : nat).
 
-Definition canon (P : 'hpoly[R]_n) :=
-  choose (H.poly_equiv P) P.
+Canonical poly_equiv_equiv :=
+  EquivRel (@H.poly_equiv R n)
+    H.poly_equiv_refl H.poly_equiv_sym H.poly_equiv_trans.
 
-Structure poly := Poly {
-  repr : 'hpoly[R]_n;
-  _ : canon repr == repr;
-}.
+Definition type := {eq_quot H.poly_equiv}.
+Definition type_of of phant R := type.
 
-Definition mem_pred_sort P  := (repr P) : {pred 'cV[R]_n}.
-Coercion mem_pred_sort : poly >-> pred_sort.
+Notation  "''poly[' R ]" := (type_of (Phant R)).
 
+Canonical poly_quotType := [quotType of type].
+Canonical poly_eqType := [eqType of type].
+Canonical poly_choiceType := [choiceType of type].
+Canonical poly_eqQuotType := [eqQuotType H.poly_equiv of type].
+
+Canonical poly_of_quotType := [quotType of 'poly[R]].
+Canonical poly_of_eqType := [eqType of 'poly[R]].
+Canonical poly_of_choiceType := [choiceType of 'poly[R]].
+Canonical poly_of_eqQuotType := [eqQuotType H.poly_equiv of 'poly[R]].
+
+Identity Coercion type_of_type : type_of >-> type.
+
+Definition mem_pred_sort (P : type) := (repr P) : {pred 'cV[R]_n}.
+Coercion mem_pred_sort : type >-> pred_sort.
+
+Definition mk_poly (P : 'hpoly[R]_n) : 'poly[R] := \pi P.
 End Def.
 
-Notation "''poly[' R ]_ n" := (@poly R n) (at level 8).
-Notation "''poly_' n" := ('poly[_]_n) (at level 8).
-Notation "\repr" := (@repr _ _) (at level 0).
+Notation "''poly[' R ]_ n" := (type_of n (Phant R)).
+Notation "''poly[' R ]" := (type_of _ (Phant R)).
+Notation "''poly_' n" := (type_of n _).
+Notation "\repr" := (@Repr.f (H.hpoly _ _) _).
+Notation "''[' P ]" := (mk_poly P).
 
 Section BasicProperties.
 
-Variables (R : realFieldType) (n : nat).
+Context {R : realFieldType} (n : nat).
 
-Canonical poly_subType := [subType for (@repr R n)].
-Definition poly_eqMixin := Eval hnf in [eqMixin of 'poly[R]_n by <:].
-Canonical poly_eqType := Eval hnf in EqType 'poly[R]_n poly_eqMixin.
-Definition poly_choiceMixin := Eval hnf in [choiceMixin of 'poly[R]_n by <:].
-Canonical poly_choiceType := Eval hnf in ChoiceType 'poly[R]_n poly_choiceMixin.
+Lemma polyW (P : 'poly[R]_n -> Type) :
+  (forall p : 'hpoly[R]_n, P '[p]) -> forall p : 'poly[R]_n, P p.
+Proof. by exact: quotW. Qed.
 
-Lemma repr_inj : injective (\repr : 'poly[R]_n -> 'hpoly[R]_n).
-Proof.
-exact: val_inj.
-Qed.
-
-Lemma canon_id (P : 'hpoly[R]_n) :
-  canon (canon P) == canon P.
-Proof.
-rewrite /canon; set Q := choose (H.poly_equiv P) P.
-have P_eq_Q: (H.poly_equiv P Q) by apply : chooseP; exact: H.poly_equiv_refl.
-suff /eq_choose ->: H.poly_equiv Q =1 H.poly_equiv P
-  by apply/eqP; apply: choose_id; try exact: H.poly_equiv_refl.
-move => x.
-by apply/idP/idP; apply: H.poly_equiv_trans; last by rewrite H.poly_equiv_sym.
-Qed.
-
-Definition class_of P := Poly (canon_id P).
-Notation "''[' P  ]" := (class_of P) (at level 0).
-
-Lemma reprK (P : 'poly[R]_n) :
-  '[\repr P] = P.
-Proof.
-case: P => [P P_eq]; apply: repr_inj; exact: eqP.
-Qed.
+Lemma mem_polyE {P : 'poly[R]_n} x : (x \in P) = (x \in \repr P).
+Proof. by []. Qed.
 
 Lemma repr_equiv (P : 'hpoly[R]_n) : \repr '[P] =i P.
-Proof.
-by move: (chooseP (H.poly_equiv_refl P)); rewrite H.poly_equiv_sym => /H.poly_equivP.
-Qed.
+Proof. by apply/H.poly_equivP/eqmodP => /=; rewrite reprK. Qed.
 
-Lemma poly_eqP {P Q : 'poly[R]_n} : P =i Q <-> P = Q.
-Proof.
-split; last by move ->.
-set P' := repr P; set Q' := repr Q; move => P_equiv_Q.
-have P'_equiv_Q' : H.poly_equiv P' Q' by apply/H.poly_equivP.
-have chooseP'_eq_chooseQ' : H.poly_equiv P' =1 H.poly_equiv Q'.
-  by move => z; apply/idP/idP; apply/H.poly_equiv_trans;
-  try by rewrite H.poly_equiv_sym in P'_equiv_Q'.
-apply: repr_inj.
-move: (valP P) => /eqP <-.
-move: (valP Q) => /eqP <-.
-rewrite /= /canon -(eq_choose chooseP'_eq_chooseQ').
-by apply: choose_id; try exact: H.poly_equiv_refl.
-Qed.
+Lemma mem_mk_poly {P : 'hpoly[R]_n} x : (x \in '[P]) = (x \in P).
+Proof. by rewrite mem_polyE repr_equiv. Qed.
 
+Lemma poly_eqP {P Q : 'poly[R]_n} : (P =i Q) <-> (P = Q).
+Proof.
+split=> [|->//]; elim/polyW: P => P; elim/polyW: Q => Q /=.
+move=> eq_PQ; apply/eqmodP/H.poly_equivP => /= x.
+by move/(_ x): eq_PQ; rewrite !mem_mk_poly.
+Qed.
 End BasicProperties.
-
-Notation "''[' P  ]" := (class_of P) (at level 0).
 
 Section PolyPred.
 
@@ -256,7 +252,7 @@ Qed.
 Lemma big_polyI_mono (I : finType) (P : pred I) (F : I -> 'hpoly[R]_n) :
   \polyI_(i | P i) '[F i] = '[\big[H.polyI/H.polyT]_(i | P i) (F i)].
 Proof.
-have class_of_morph : {morph (@class_of R n) : x y / H.polyI x y >-> polyI x y}.
+have class_of_morph : {morph (@mk_poly R n) : x y / H.polyI x y >-> polyI x y}.
 - by move => Q Q'; rewrite polyI_mono.
 have polyT_mono : '[H.polyT] = polyT by done.
 by rewrite (@big_morph _ _ _ _ _ _ _ class_of_morph polyT_mono).
