@@ -42,9 +42,9 @@ Proof. by case=> a b; rewrite /Base.opp_base_elt /= !opprK. Qed.
 
 Section PWeight.
 
-Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
+Variable (R : realFieldType) (K : choiceType) (base : {fset K}).
 
-Implicit Type (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
+Implicit Type (w : {fsfun K -> R for fun => 0%R}).
 
 Definition pweight w :=
   (finsupp w `<=` base)%fset && [forall e : base, w (val e) >= 0].
@@ -61,10 +61,7 @@ Qed.
 
 Definition supp w := [fset e in base | w e > 0]%fset.
 
-Definition combine w : base_elt :=
-  (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
-
-Definition uniform_pweight (I : {fsubset base}) : {fsfun base_elt[R,n] -> R for fun => 0%R} :=
+Definition uniform_pweight (I : {fsubset base}) : {fsfun K -> R for fun => 0%R} :=
   [fsfun e : I => 1 | 0]%fset.
 
 Lemma uniform_pweightP I : pweight (uniform_pweight I).
@@ -87,7 +84,9 @@ case: insubP => [? -> <- /=| /negbTE -> /=].
 - by rewrite ltrr andbF.
 Qed.
 
-Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
+Section Extra.
+
+Variable (w : {fsfun K -> R for fun => 0%R}).
 Hypothesis w_pweight : pweight w.
 
 Lemma finsupp_subset : (finsupp w `<=` base)%fset.
@@ -129,7 +128,29 @@ Proof.
 by case: suppP; first exact: negbTE.
 Qed.
 
+End Extra.
+
+Fact valP' (v : base) : v \in (xpredT : pred base).
+by [].
+Qed.
+
+Notation m := #| predT : pred base|.
+
+Definition vect_to_pweight (y : 'cV[R]_m) :=
+  [fsfun v : base => y (enum_rank_in (valP' v) v) 0] : {fsfun K -> R for fun => 0%R}.
+
+Lemma vect_to_pweightP (w : 'cV[R]_m) :
+  w >=m 0 -> pweight (vect_to_pweight w).
+Proof.
+move/gev0P => w_pos.
+apply/pweightP; split; first exact: finsupp_sub.
+move => ? ?; rewrite fsfun_ffun insubT /=; exact: w_pos.
+Qed.
+
 End PWeight.
+
+Definition combine (R : realFieldType) (n : nat) (base : base_t[R,n])  w : base_elt :=
+  (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
 
 Module HPolyhedron.
 
@@ -437,21 +458,6 @@ Notation m := #| xpredT : pred base |.
 
 Let A := \matrix_(i < m) ((nth_fset i).1)^T.
 Let b := \col_(i < m) ((nth_fset i).2).
-
-Fact valP' (v : base) : v \in (xpredT : pred base).
-by [].
-Qed.
-
-Definition vect_to_pweight (w : 'cV[R]_m) :=
-  [fsfun v : base => w (enum_rank_in (valP' v) v) 0] : {fsfun base_elt[R,n] -> R for fun => 0%R}.
-
-Lemma vect_to_pweightP (w : 'cV[R]_m) :
-  w >=m 0 -> pweight base (vect_to_pweight w).
-Proof.
-move/gev0P => w_pos.
-apply/pweightP; split; first exact: finsupp_sub.
-move => ? ?; rewrite fsfun_ffun insubT /=; exact: w_pos.
-Qed.
 
 Lemma combineE w :
   (A^T *m w = (combine base (vect_to_pweight w)).1)
