@@ -425,26 +425,10 @@ rewrite repr_equiv; move: x; apply/(H.poly_subsetP _)/H.convexP.
 exact: V_sub_P.
 Qed.
 
-Definition hpoly_c (P : 'hpoly[R]_n) : nat
-  := let: H.HPoly c A b := P in c.
-
-Definition hpoly_A (P : 'hpoly[R]_n) :'M_(hpoly_c P, _)
-  := let: H.HPoly c A b := P in A.
-
-Definition hpoly_b (P : 'hpoly[R]_n) :'cV_(hpoly_c P)
-  := let: H.HPoly c A b := P in b.
-
-Notation "P .`c" := (hpoly_c P) (at level 2, format "P .`c").
-Notation "P .`A" := (hpoly_A P) (at level 2, format "P .`A").
-Notation "P .`b" := (hpoly_b P) (at level 2, format "P .`b").
-
-Lemma in_hpolyE (P : 'hpoly[R]_n) x : (x \in P) = (P.`A *m x) >=m (P.`b).
-Proof. by case: P. Qed.
-
 Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
   v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
 Proof.
-elim/polyW: P => P; rewrite !mem_mk_poly !in_hpolyE => vP wP.
+elim/polyW: P => P; rewrite !mem_mk_poly !H.in_hpolyE => vP wP.
 case/andP => [gt0_a lt1_a]; rewrite mulmxDr -!scalemxAr.
 rewrite -[P.`b]scale1r -{1}[1](subrK α) scalerDl.
 by rewrite lev_add // lev_wpscalar // subr_ge0.

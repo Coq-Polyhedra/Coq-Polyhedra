@@ -34,6 +34,9 @@ Definition has_base (P : 'poly[R]_n) :=
 
 Lemma has_baseP (P : 'poly[R]_n) :
   reflect ((P `>` `[poly0]) -> exists I : {fsubset base}, P = 'P^=(base; I)) (has_base P).
+Proof.
+
+
 Admitted.
 
 Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.

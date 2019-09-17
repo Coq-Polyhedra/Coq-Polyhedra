@@ -185,6 +185,22 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Type (P : 'hpoly[R]_n).
 
+Definition hpoly_c (P : 'hpoly[R]_n) : nat
+  := let: HPoly c A b := P in c.
+
+Definition hpoly_A (P : 'hpoly[R]_n) :'M_(hpoly_c P, _)
+  := let: HPoly c A b := P in A.
+
+Definition hpoly_b (P : 'hpoly[R]_n) :'cV_(hpoly_c P)
+  := let: HPoly c A b := P in b.
+
+Notation "P .`c" := (hpoly_c P) (at level 2, format "P .`c").
+Notation "P .`A" := (hpoly_A P) (at level 2, format "P .`A").
+Notation "P .`b" := (hpoly_b P) (at level 2, format "P .`b").
+
+Lemma in_hpolyE (P : 'hpoly[R]_n) x : (x \in P) = (P.`A *m x) >=m (P.`b).
+Proof. by case: P. Qed.
+
 Definition mk_hs (b : base_elt[R,n]) : 'hpoly[R]_n := HPoly (b.1)^T (b.2)%:M.
 
 Lemma in_hs b x : x \in (mk_hs b ) = ('[b.1,x] >= b.2).
@@ -361,13 +377,20 @@ Definition conv (V : {fset 'cV[R]_n}) := locked_with conv_key poly0.
 
 Lemma convP V x :
   reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Proof.
 Admitted. (* cannot be proved yet *)
 
-(* In contrast, convexP can be proved immediately,
-   this follows from the convexity of halfspaces *)
 Lemma convexP P (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> poly_subset (conv V) P.
-Admitted.
+Proof.
+move=> leVP; apply/poly_subsetP=> x /convP[w wV ->] {x}.
+case/weightP: wV => ge0_w supp_w eq1_w; rewrite /bary in_hpolyE mulmx_sumr.
+rewrite (eq_bigr (fun v => w v *: (P.`A *m v))) /=; last first.
++ by move=> v _; rewrite scalemxAr.
+rewrite -[P.`b]scale1r -[in X in X <=m _]eq1_w scaler_suml.
+rewrite !big_seq lev_sum //= => v vV; rewrite lev_wpscalar //.
+by rewrite -in_hpolyE; apply: leVP.
+Qed.
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
 
@@ -756,6 +779,9 @@ Canonical hpoly_eqType.
 Canonical hpoly_choiceType.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
 Notation "''hpoly_' n" := ('hpoly[_]_n) (at level 8).
+Notation "P .`c" := (hpoly_c P) (at level 2, format "P .`c").
+Notation "P .`A" := (hpoly_A P) (at level 2, format "P .`A").
+Notation "P .`b" := (hpoly_b P) (at level 2, format "P .`b").
 End Exports.
 End HPolyhedron.
 
