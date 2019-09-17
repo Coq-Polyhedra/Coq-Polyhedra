@@ -512,19 +512,25 @@ Canonical fsubset_fset0 := @FSubset (tag2 _) (fsub0set S).
 
 Lemma fsubset_setUP (A B : {fset K}) :
   A `<=` S -> B `<=` S -> A `|` B `<=` S.
-Admitted.
-Canonical fsubset_setU (A B : {fset K}) (HA : expose (A `<=` S)) (HB : expose (B `<=` S)) :=
+Proof. by move=> leAS leBS; rewrite -[S]fsetUid fsetUSS. Qed.
+
+Canonical fsubset_setU
+  (A B : {fset K}) (HA : expose (A `<=` S)) (HB : expose (B `<=` S))
+:=
   @FSubset (tag3 _) (fsubset_setUP HA HB).
 
 Lemma fsubset_bigUP (I : finType) (P : pred I) F :
   (forall i, P i -> F i `<=` S) -> (\bigcup_(i | P i) F i) `<=` S.
-Admitted.
-Canonical fsubset_bigU (I : finType) (P : pred I) F
-          (H : expose (forall i, P i -> F i `<=` S)) := @FSubset (tag4 _) (fsubset_bigUP H).
+Proof. by move=> le_FS; apply/bigfcupsP=> i _; apply: le_FS. Qed.
 
-Lemma fsubset_filterP (P : pred K) :
-  [fset x in S | P x] `<=` S.
-Admitted.
+Canonical fsubset_bigU
+  (I : finType) (P : pred I) F (H : expose (forall i, P i -> F i `<=` S))
+:=
+  @FSubset (tag4 _) (fsubset_bigUP H).
+
+Lemma fsubset_filterP (P : pred K) : [fset x in S | P x] `<=` S.
+Proof. by apply/fsubsetP=> x; rewrite !inE /= => /andP[]. Qed.
+
 Canonical fsubset_filter (P : pred K) := @FSubset (tag5 _) (fsubset_filterP P).
 
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
@@ -534,6 +540,7 @@ Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
 (* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
 Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 
+(*
 Section Test.
 Check (fset0 %:fsub).
 Check (S %:fsub).
@@ -555,6 +562,7 @@ Variable (I : finType) (P : pred I) (F : I -> fsubset_t).
 Check (\bigcup_(i | P i) (F i))%:fsub.
 Check (\bigcup_(i | P i) A')%:fsub.
 End Test.
+*)
 
 End FSubset.
 

@@ -1,0 +1,3 @@
+# -*- Makefile -*-
+
+include Makefile.common
