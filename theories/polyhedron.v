@@ -150,7 +150,6 @@ Definition bounded (P : 'poly[R]_n) c := H.bounded (\repr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (\repr P).
 Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (\repr P)].
 Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (\repr P)].
-
 Definition conv V : 'poly[R]_n := '[ (H.conv V) ].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
@@ -399,12 +398,12 @@ apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
   by move: x x_in_Q; apply/poly_subsetP; exact: forall_Q_subset.
 Qed.
 
-Lemma projP (k : nat) (P : 'poly[R]_(k+n)) x :
+Lemma projP {k : nat} {P : 'poly[R]_(k+n)} {x} :
   reflect (exists y, col_mx y x \in P) (x \in proj P).
 Proof.
 Admitted.
 
-Lemma lift_polyP (k : nat) (P : 'poly[R]_n) x :
+Lemma in_lift_poly (k : nat) (P : 'poly[R]_n) x :
   (x \in lift_poly k P) = (usubmx x \in P).
 Proof.
 Admitted.
@@ -1400,20 +1399,99 @@ Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 
 Let A' := row_mx (-A) (1%:M).
 
-Lemma foo x y :
-  (col_mx x y \in vect A') = (y == A *m x).
-Admitted.
-
 Definition map_poly (P : 'poly_n) :=
   proj ((lift_poly k P) `&` (vect A')).
 
 Lemma in_map_polyP (P : 'poly_n) x :
   reflect (exists2 y, x = A*m y & y \in P) (x \in map_poly P).
 Proof.
-apply: (iffP (projP _ _)).
-Admitted.
+have in_vectA' y z : (col_mx y z \in (vect A')) = (z == A *m y).
+- rewrite in_vect mul_row_col mul1mx mulNmx.
+  by rewrite (can2_eq (addKr _) (addNKr _)) opprK addr0.
+apply: (iffP projP) => [[y] | [y -> y_in_P]].
+- rewrite in_polyI in_lift_poly in_vectA' col_mxKu => /andP [? /eqP ->].
+  by exists y.
+- exists y; rewrite in_polyI in_lift_poly in_vectA' col_mxKu.
+  by apply/andP; split.
+Qed.
 
 End Map.
+
+Section Hull.
+
+Variable (R : realFieldType) (n : nat) .
+
+Definition nth_fset (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) := val (enum_val i).
+
+Lemma nth_fsetP (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) :
+  nth_fset i \in V.
+Proof.
+rewrite /nth_fset; exact: fsvalP.
+Qed.
+
+Definition mat_fset (V : {fset 'cV[R]_n}) :=
+  (\matrix_(i < #|predT : pred V|) (nth_fset i)^T)^T.
+
+Fact col_mat_fset V i : col i (mat_fset V) = nth_fset i .
+Proof.
+by rewrite -tr_row rowK trmxK.
+Qed.
+
+Definition vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :=
+  \col_(i < #|predT : pred V|) (w (nth_fset i)).
+
+Lemma sum_vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :
+  \sum_(v <- V) (w v) = '[const_mx 1, vect_fset V w].
+Proof.
+rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
+- apply: eq_bigr => i _.
+  by rewrite !mxE mul1r.
+- apply: onW_bij; exact: enum_val_bij.
+Qed.
+
+Lemma baryE V w : bary V w = (mat_fset V) *m (vect_fset V w).
+Proof.
+rewrite /bary mulmx_sum_col.
+rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
+- apply: eq_bigr => i _.
+  by rewrite col_mat_fset /vect_fset mxE.
+- apply: onW_bij; exact: enum_val_bij.
+Qed.
+
+Definition cone V := map_poly (mat_fset V) orthant.
+
+Lemma in_coneP V x :
+  reflect (exists2 w, pweight V w & x = \bary[w] V) (x \in cone V).
+Proof.
+apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w /pweight_ge0 w_ge0 ->]].
+- rewrite in_orthant => y_ge0.
+  pose w := vect_to_pweight y; exists w; first exact: vect_to_pweightP.
+  suff ->: y = vect_fset V w by rewrite baryE.
+  apply/colP => i; rewrite mxE fsfun_ffun insubT ?nth_fsetP //.
+  by move => ?; rewrite /= fsetsubE enum_valK_in.
+- exists (vect_fset V w); first exact: baryE.
+  by rewrite in_orthant; apply/gev0P => i; rewrite mxE; exact: w_ge0.
+Qed.
+
+Definition conv' V := (* TODO: conv' should replaced conv *)
+  map_poly (mat_fset V) (orthant `&` `[hp (const_mx 1, 1)]).
+
+Lemma in_conv'P V x :
+  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv' V).
+Proof.
+apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w w_weight ->]].
+- rewrite in_polyI in_orthant in_hp => /andP [y_ge0 /eqP Σy_eq_1].
+  pose w := vect_to_pweight y; exists w; first admit.
+  suff ->: y = vect_fset V w by rewrite baryE.
+  apply/colP => i; rewrite mxE fsfun_ffun insubT ?nth_fsetP //.
+  by move => ?; rewrite /= fsetsubE enum_valK_in.
+- exists (vect_fset V w); first exact: baryE.
+  rewrite in_polyI; apply/andP; split.
+  + by rewrite in_orthant; apply/gev0P => i; rewrite mxE; apply/weight_ge0: w_weight.
+  + by rewrite in_hp -sum_vect_fset; apply/eqP/weight_sum1.
+Admitted.
+
+End Hull.
 
 Section Duality.
 

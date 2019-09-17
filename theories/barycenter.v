@@ -110,36 +110,6 @@ Lemma weight_subset (R : realFieldType) n (V V' : {fset 'cV[R]_n}) w :
 Admitted.
 
 (*
-Definition bary (V : {fset 'cV[R]_n}) w : 'cV[R]_n := \sum_(v <- V) (w v) *: v.
-
-Definition nth_fset (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) := val (enum_val i).
-
-Lemma nth_fsetP (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) :
-  nth_fset i \in V.
-Proof.
-rewrite /nth_fset; exact: fsvalP.
-Qed.
-
-Definition mat_fset (V : {fset 'cV[R]_n}) :=
-  (\matrix_(i < #|predT : pred V|) (nth_fset i)^T)^T.
-
-Fact col_mat_fset V i : col i (mat_fset V) = nth_fset i .
-Proof.
-by rewrite -tr_row rowK trmxK.
-Qed.
-
-Definition vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :=
-  \col_(i < #|predT : pred V|) (w (nth_fset i)).
-
-Lemma baryE V w : bary V w = (mat_fset V) *m (vect_fset V w).
-Proof.
-rewrite /bary mulmx_sum_col.
-rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
-- apply: eq_bigr => i _.
-  by rewrite col_mat_fset /vect_fset mxE.
-- apply: onW_bij; exact: enum_val_bij.
-Qed.
-
 Lemma sum_vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :
   \sum_(v <- V) (w v) = '[const_mx 1, vect_fset V w].
 Proof.
