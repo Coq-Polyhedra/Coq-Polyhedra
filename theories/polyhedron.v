@@ -425,7 +425,7 @@ Qed.
 Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
   v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
 Proof.
-elim/polyW: P => P; rewrite !mem_mk_poly !in_hpolyE => vP wP.
+elim/polyW: P => P; rewrite !mem_mk_poly !H.in_hpolyE => vP wP.
 case/andP => [gt0_a lt1_a]; rewrite mulmxDr -!scalemxAr.
 rewrite -[P.`b]scale1r -{1}[1](subrK α) scalerDl.
 by rewrite lev_add // lev_wpscalar // subr_ge0.
