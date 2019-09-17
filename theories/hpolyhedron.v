@@ -492,11 +492,13 @@ End Farkas.
 
 End PolyPred.
 
-Section Projection.
+
+Section Proj1.
 
 Variable (R : realFieldType) (n : nat).
 
-Definition proj (P : 'hpoly[R]_n) i :=
+(* TODO: simplify proj1 to set to a situation in which i = ord0 and P : 'hpoly[R]_(n.+1) *)
+Definition proj1 i (P : 'hpoly[R]_n) :=
   let: HPoly _ A b := P in
   let Jeq0 := [set j | A j i == 0] in
   let Jlt0 := [set j | A j i < 0] in
@@ -531,11 +533,11 @@ Definition proj (P : 'hpoly[R]_n) i :=
       HPoly (col' i A) b
   end.
 
-Theorem projP (P : 'hpoly[R]_n) i x :
-  reflect (exists2 y, x = row' i y & y \in P) (x \in proj P i).
+Theorem proj1P i (P : 'hpoly[R]_n) x :
+  reflect (exists2 y, x = row' i y & y \in P) (x \in proj1 i P).
 Proof.
 case: P => m A b.
-rewrite /proj.
+rewrite /proj1.
 set Jeq0 := [set j | A j i == 0].
 set Jlt0 := [set j | A j i < 0].
 set Jgt0 := [set j | A j i > 0].
@@ -696,6 +698,38 @@ case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
     apply/eqP; move/norP: (conj Jlt0_empty Jgt0_empty).
     apply/contraR; rewrite neqr_lt; move/orP.
     by case => [? | ?]; apply/orP; [left | right]; rewrite card_gt0; apply/set0Pn; exists j; rewrite inE.
+Qed.
+
+End Proj1.
+
+Section Projection.
+
+Variable (R : realFieldType) (n : nat).
+
+Fixpoint proj (k : nat) : 'hpoly[R]_(k+n) -> 'hpoly[R]_n :=
+  match k with
+  | 0 => id
+  | (km1.+1)%N as k => (proj (k := km1)) \o (proj1 ord0)
+  end.
+
+Lemma projP (k : nat) (P : 'hpoly[R]_(k+n)) x :
+  reflect (exists y, col_mx y x \in P) (x \in proj P).
+Proof.
+elim: k P => [ P | k Hind P].
+- apply: (iffP idP) => [x_in_proj | [?]].
+  + by exists 0; rewrite col_mx0l.
+  + by rewrite col_mx0l.
+- apply: (iffP (Hind _)) => [[y H] | [y H]].
+  + move/(proj1P (n := k.+1+n)): H => [y' eq y'_in_P]. (* TODO: n needs to be explicitly specified *)
+    exists (usubmx y'); suff ->: x = dsubmx y' by rewrite vsubmxK.
+    apply/colP => i.
+    move/colP/(_ (@rshift k n i)): eq; rewrite !mxE.
+    case: splitP'; last first.
+    * move => ? /rshift_inj <- ->; apply: congr2; last done.
+      by apply/ord_inj => /=.
+    * move => ? /eqP; by rewrite eq_sym (negbTE (lrshift_distinct _ _)).
+  + exists (row' ord0 y); apply/(proj1P (n := (k.+1+n))).
+    exists (col_mx y x); by rewrite -?row'Ku.
 Qed.
 
 End Projection.
