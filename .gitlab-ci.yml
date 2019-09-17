@@ -1,0 +1,21 @@
+image: docker:latest
+
+variables:
+  DOCKER_DRIVER: overlay
+  DOCKER_TLS_CERTDIR: ""
+
+services:
+- docker:dind
+
+before_script:
+- docker info
+- docker pull coqpolyhedra/build-box
+
+.tests:
+  script:
+  - >-
+    docker run -v $PWD:/home/ci/coqdev coqpolyhedra/build-box
+    sh -c 'cd coqdev && find . && opam config exec -- make'
+
+polyhedra:
+  extends: .tests

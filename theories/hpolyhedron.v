@@ -37,6 +37,9 @@ Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
 Notation "'base_t'" := (base_t[_,_]) (at level 2).
 Notation "- e" := (Base.opp_base_elt e) : poly_scope.
 
+Lemma oppbK {R n} : involutive (@Base.opp_base_elt R n).
+Proof. by case=> a b; rewrite /Base.opp_base_elt /= !opprK. Qed.
+
 Section PWeight.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
@@ -474,7 +477,7 @@ case: (Simplex.simplexP A b e.1).
 - move => ? /(intro_existsT (Simplex.infeasibleP _ _)).
   suff -> : Simplex.feasible A b by done.
   apply/Simplex.feasibleP.
-  move/poly_subsetPn: P_neq0 => [x] [x_in_P _].
+  move/poly_subsetPn: P_neq0 => [x x_in_P _].
   by exists x; rewrite inE; rewrite memP in x_in_P.
 - move => ? /(intro_existsT (Simplex.unboundedP_cert _ _ _))/Simplex.unboundedP/(_ e.2)
     [x [x_in_PAb ineq]].
