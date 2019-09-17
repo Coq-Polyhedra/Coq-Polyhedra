@@ -149,6 +149,8 @@ Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
 Definition bounded (P : 'poly[R]_n) c := H.bounded (\repr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (\repr P).
 Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (\repr P)].
+Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (\repr P)].
+
 Definition conv V : 'poly[R]_n := '[ (H.conv V) ].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
@@ -397,14 +399,15 @@ apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
   by move: x x_in_Q; apply/poly_subsetP; exact: forall_Q_subset.
 Qed.
 
-(*
-Lemma projP (P : 'poly[R]_n) i x :
-  reflect (exists2 y, x = row' i y & y \in P) (x \in proj P i).
+Lemma projP (k : nat) (P : 'poly[R]_(k+n)) x :
+  reflect (exists y, col_mx y x \in P) (x \in proj P).
 Proof.
-rewrite repr_equiv; apply: (iffP idP) => [ /H.projP [y -> y_in_P] | [y -> y_in_P]].
-- by exists y.
-- by apply/H.projP; exists y.
-Qed.*)
+Admitted.
+
+Lemma lift_polyP (k : nat) (P : 'poly[R]_n) x :
+  (x \in lift_poly k P) = (usubmx x \in P).
+Proof.
+Admitted.
 
 Section ConvexHull.
 
