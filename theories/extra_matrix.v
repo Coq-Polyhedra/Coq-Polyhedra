@@ -20,6 +20,13 @@ Import GRing.Theory Num.Theory.
 
 Section ExtraMx.
 
+Lemma col_mx0l (R : comRingType) (n : nat) (x : 'cV[R]_n) (y : 'cV[R]_0) : col_mx y x = x.
+Proof.
+apply/ colP => i; rewrite !mxE; case: splitP => [j | j i_eq_0j]; first by move: (valP j).
+suff <-: (i = j) by done.
+  exact: ord_inj.
+Qed.
+
 Lemma col0P (R: comRingType) (m: nat) (u: 'cV[R]_m) : u^~ 0 =1 (fun _ => 0) <-> u = 0.
 Proof.
 split => H.
