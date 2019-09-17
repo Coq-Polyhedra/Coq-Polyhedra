@@ -1093,6 +1093,27 @@ Proof.
 by rewrite in_big_polyI.
 Qed.
 
+Lemma in_poly_of_baseP (x : 'cV_n) (base : base_t) :
+  reflect (forall b, b \in base -> x \in `[hs b]) (x \in 'P(base)).
+Proof.
+rewrite in_poly_of_base. apply: (iffP forallP) => /= h.
++ by move=> b bb; apply: (h [` bb]%fset).
++ by move=> b; apply: h.
+Qed.
+
+Definition orthant :=
+  let base := ((fun i => ((delta_mx i 0), 0)) @` 'I_n)%fset in
+  'P(base).
+
+Lemma in_orthant x :
+  (x \in orthant) = (x >=m 0).
+Proof.
+apply/in_poly_of_baseP/gev0P => [H i | H e /imfsetP [i /= _ ->]].
+- move/(_ ((delta_mx i 0), 0)) : H; rewrite in_hs vdotl_delta_mx /= => H.
+  by apply/H/in_imfset. (* TODO: in_imfset doesn't work if it is replaced by the lemma below *)
+- rewrite in_hs vdotl_delta_mx; exact: H.
+Qed.
+
 Lemma poly_base_subset {base : base_t} {e : base_elt} :
   e \in base -> 'P(base) `<=` `[hs e].
 Proof.
@@ -1217,6 +1238,15 @@ Qed.
 Local Notation "\- I" := ((@Base.opp_base_elt _ _) @` I)%fset
   (at level 2).
 
+
+Definition vect (m : nat) (A : 'M_(m,n)) :=
+  let base := [fset ((row i A)^T, 0) | i : 'I_m]%fset in
+  'P(base).
+
+Lemma in_vect m (A : 'M_(m,n)) x : x \in (vect A) = (A *m x == 0).
+Proof.
+Admitted.
+
 Definition baseEq (base I : base_t[R,n]) := (base `|` \- I)%fset.
 
 Lemma in_oppbase (I: base_t[R,n]) x :
@@ -1233,14 +1263,6 @@ Proof. by rewrite /baseEq in_fsetU. Qed.
 Lemma in_baseEqP (base I : base_t[R,n]) c :
   reflect (c \in base \/ c \in \- I) (c \in baseEq base I).
 Proof. by rewrite in_baseEq; apply/orP. Qed.
-
-Lemma in_poly_of_baseP (x : 'cV_n) (base : base_t) :
-  reflect (forall b, b \in base -> x \in `[hs b]) (x \in 'P(base)).
-Proof.
-rewrite in_poly_of_base. apply: (iffP forallP) => /= h.
-+ by move=> b bb; apply: (h [` bb]%fset).
-+ by move=> b; apply: h.
-Qed.
 
 Lemma fsubset_incl {T : choiceType} (E : {fset T}) (I : {fsubset E}) (x : T) :
   x \in FSubset.untag I -> x \in E.
@@ -1371,6 +1393,27 @@ Notation "\polyI_ ( i 'in' A ) F" :=
   (\big[polyI/`[polyT]%PH]_(i in A) F%PH) : poly_scope.
 
 Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, inE).
+
+Section Map.
+
+Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
+
+Let A' := row_mx (-A) (1%:M).
+
+Lemma foo x y :
+  (col_mx x y \in vect A') = (y == A *m x).
+Admitted.
+
+Definition map_poly (P : 'poly_n) :=
+  proj ((lift_poly k P) `&` (vect A')).
+
+Lemma in_map_polyP (P : 'poly_n) x :
+  reflect (exists2 y, x = A*m y & y \in P) (x \in map_poly P).
+Proof.
+apply: (iffP (projP _ _)).
+Admitted.
+
+End Map.
 
 Section Duality.
 
