@@ -35,9 +35,9 @@ Definition has_base (P : 'poly[R]_n) :=
 Lemma has_baseP (P : 'poly[R]_n) :
   reflect ((P `>` `[poly0]) -> exists I : {fsubset base}, P = 'P^=(base; I)) (has_base P).
 Proof.
-
-
-Admitted.
+by apply/(iffP implyP) => [H /H /exists_eqP [I ->]| H /H [I ->]];
+  [|apply/exists_eqP]; exists I.
+Qed.
 
 Inductive poly_base := PolyBase { pval :> 'poly[R]_n ; _ : has_base pval}.
 Canonical poly_base_subType := [subType for pval].
@@ -45,8 +45,6 @@ Definition poly_base_eqMixin := Eval hnf in [eqMixin of poly_base by <:].
 Canonical poly_base_eqType := Eval hnf in EqType poly_base poly_base_eqMixin.
 Definition poly_base_choiceMixin := Eval hnf in [choiceMixin of poly_base by <:].
 Canonical poly_base_choiceType := Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
-
-
 
 Lemma poly_base_base (P : poly_base) : has_base P.
 Proof.
@@ -89,7 +87,7 @@ Variant poly_base_spec (P : {poly base}) : Prop :=
 
 Lemma poly_baseP (P : {poly base}) : poly_base_spec P.
 Proof.
-case: (emptyP P) => [/poly_eqP/val_inj -> | P_prop0]; first by constructor.
+case: (emptyP P) => [/val_inj -> | P_prop0]; first by constructor.
 move/implyP/(_ P_prop0)/exists_eqP: (poly_base_base P) => [I ?].
 constructor 2 with I.
 split; [exact: val_inj | done].
@@ -124,6 +122,8 @@ Definition set_of_poly_base_pinv (I : {fsubset base})  : option (poly_base base)
 Lemma set_of_poly_baseK :
   pcancel set_of_poly_base (obind set_of_poly_base_pinv).
 Proof.
+move => P.
+rewrite /set_of_poly_base.
 Admitted.
 (*have eq: forall P : poly_base, P `>` (`[poly0]) -> P = '['P^=(base; (set_of_poly_base P))]%:poly_base.
 - move => P; apply/val_inj => /=; apply/eqP.
@@ -258,7 +258,7 @@ Lemma activeP (P : {poly base}) (I : {fsubset base}) :
 Proof.
 apply/idP/idP.
 - by move => Psub; apply/bigfcup_sup.
-- case: (emptyP P) => [ /poly_eqP -> _|]; first exact: poly0_subset.
+- case: (emptyP P) => [-> _|]; first exact: poly0_subset.
   move/repr_active => {2}-> /=.
   exact: polyEq_antimono.
 Qed.
@@ -381,7 +381,7 @@ Lemma faceP (P Q : {poly base}) :
   Q \in face_set P -> face_spec P Q.
 Proof.
 case: (emptyP ('P(base) : 'poly[R]_n))
-  => [/poly_eqP base_eq0 | base_prop0].
+  => [base_eq0 | base_prop0].
 - suff ->: (P = (`[poly0]%:poly_base)).
   + rewrite inE subset0_equiv => /eqP.
     move/val_inj ->; constructor.
@@ -390,7 +390,7 @@ case: (emptyP ('P(base) : 'poly[R]_n))
 - case: (poly_baseP Q) => [-> | ]; first constructor.
   move => I [Q_eq Q_prop0].
   rewrite inE; move => Q_sub_P.
-  pose w := uniform_pweight I.
+  pose w := uniform_pweight R I.
   pose c := (combine base w).1.
   have c_bounded : bounded ('P(base) : 'poly[R]_n) c.
   + apply: dual_sol_bounded => //; exact: uniform_pweightP.

@@ -504,7 +504,7 @@ by rewrite -proper0N_equiv negbK.
 Qed.
 
 CoInductive empty_spec (P : 'poly[R]_n) : bool -> bool -> bool -> Set :=
-| Empty of (P =i `[poly0]) : empty_spec P false true true
+| Empty of (P = `[poly0]) : empty_spec P false true true
 | NonEmpty of (P `>` `[poly0]) : empty_spec P true false false.
 
 Lemma emptyP P : empty_spec P (P  `>` `[poly0]) (P == `[poly0]) (P `<=` `[poly0]).
@@ -514,7 +514,7 @@ case: (boolP (P  `>` `[poly0])) => [P_non_empty | P_empty].
   rewrite subset0_equiv in P_non_empty; move: (P_non_empty) => /negbTE ->.
   by constructor; rewrite equiv0N_proper in P_non_empty.
 - rewrite proper0N_equiv in P_empty; rewrite subset0_equiv P_empty.
-  by constructor; apply/poly_eqP/eqP.
+  by constructor; apply/eqP.
 Qed.
 
 Lemma proper0P {P : 'poly[R]_n} :
@@ -916,7 +916,7 @@ case: (emptyP P) => [| P_neq0 ]; last first.
     apply/poly_subsetP => x x_in_P; move/(_ _ x_in_P i): H;
     rewrite inE /=  ?vdotNl vdotl_delta_mx ?ler_opp2;
     by rewrite ler_norml; move/andP => [? ?].
-- move/poly_eqP -> => /=; constructor.
+- move => -> /=; constructor.
   by exists 0; move => x; rewrite inE.
 Qed.
 
@@ -943,7 +943,7 @@ Qed.
 Lemma compact_pointed P :
   compact P -> pointed P.
 Proof.
-case: (emptyP P) => [/poly_eqP ->| P_neq0 P_compact]; first by rewrite pointed0.
+case: (emptyP P) => [->| P_neq0 P_compact]; first by rewrite pointed0.
 apply: contraT => /(pointedPn P_neq0) [c] [c_neq0 hl_sub].
 suff: ~~ (bounded P c).
   by move/(compactP P_neq0)/(_ c) : P_compact => ->.
@@ -1586,15 +1586,13 @@ Section Separation.
 
 Variable (R : realFieldType) (n : nat) (V : {fset 'cV[R]_n}) (x : 'cV[R]_n).
 
-Let homogenize v : base_elt[R,n+1] := (col_mx v (1%:M), 0).
-
-Let baseV : base_t[R,n+1] := (homogenize @`  V)%fset.
-
 Lemma separation :
   x \notin conv V -> exists2 e, x \notin `[hs e] & (conv V `<=` `[hs e]).
 Proof.
+pose homogenize v : base_elt[R,n+1] := (col_mx v (1%:M), 0).
+pose base : base_t[R,n+1] := (homogenize @` V)%fset.
 move => x_notin.
-suff: ~~ ('P(baseV) `<=` `[hs (homogenize x)]).
+suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
 - move/poly_subsetPn => [z z_in z_notin].
   pose e := (usubmx z, - ((dsubmx z) 0 0))%R.
   exists e.
@@ -1603,13 +1601,13 @@ suff: ~~ ('P(baseV) `<=` `[hs (homogenize x)]).
     rewrite -{3}[z]vsubmxK vdot_col_mx vdot1 vdotC.
     by rewrite -lter_sub_addr add0r.
   + apply/convexP => v v_in_V; rewrite in_hs /=.
-    have: homogenize v \in baseV by exact: in_imfset.
+    have: homogenize v \in base by exact: in_imfset.
     move/poly_base_subset/poly_subsetP/(_ _ z_in).
     rewrite in_hs /= -{1}[z]vsubmxK vdot_col_mx vdot1 vdotC.
       (* TODO: redundant with what's above *)
     by rewrite -lter_sub_addr add0r.
 - move: x_notin; apply: contraNN.
-  have non_empty: 'P(baseV) `>` `[poly0].
+  have non_empty: 'P(base) `>` `[poly0].
   + apply/proper0P; exists 0.
     apply/in_poly_of_baseP => ? /imfsetP [v _ ->].
     by rewrite in_hs /= vdot0r.
