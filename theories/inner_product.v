@@ -195,4 +195,10 @@ apply: eq_bigr => j _.
 by rewrite !mxE.
 Qed.
 
+Lemma vdot1 (v: 'cV[R]_1) : '[1%:M, v] = v 0 0.
+Proof.
+apply/(scalar_mx_inj (ltn0Sn 0)).
+by rewrite vdotC vdot_def trmx1 mul1mx -mx11_scalar.
+Qed.
+
 End Extra.

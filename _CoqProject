@@ -2,9 +2,9 @@
 -arg -w -arg -notation-overridden
 -arg -w -arg -redundant-canonical-projection
 theories/extra_misc.v
-theories/vector_order.v
 theories/extra_matrix.v
 theories/inner_product.v
+theories/vector_order.v
 theories/row_submx.v
 theories/simplex.v
 theories/barycenter.v
