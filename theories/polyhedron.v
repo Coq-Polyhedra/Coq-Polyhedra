@@ -1380,7 +1380,7 @@ by move/eqP: w_weight; rewrite eq_sym oner_eq0.
 Qed.
 
 Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
-  {subset V <= P} -> poly_subset (conv V) P.
+  {subset V <= P} -> (conv V) `<=` P.
 Proof.
 Admitted.
 
@@ -1581,3 +1581,48 @@ suff ->: opt_value c_bounded = (combine base w).2.
 Qed.
 
 End Duality.
+
+Section Separation.
+
+Variable (R : realFieldType) (n : nat) (V : {fset 'cV[R]_n}) (x : 'cV[R]_n).
+
+Let homogenize v : base_elt[R,n+1] := (col_mx v (1%:M), 0).
+
+Let baseV : base_t[R,n+1] := (homogenize @`  V)%fset.
+
+Lemma separation :
+  x \notin conv V -> exists2 e, x \notin `[hs e] & (conv V `<=` `[hs e]).
+Proof.
+move => x_notin.
+suff: ~~ ('P(baseV) `<=` `[hs (homogenize x)]).
+- move/poly_subsetPn => [z z_in z_notin].
+  pose e := (usubmx z, - ((dsubmx z) 0 0))%R.
+  exists e.
+  + move: z_notin; apply: contraNN.
+    rewrite !in_hs /=.
+    rewrite -{3}[z]vsubmxK vdot_col_mx vdot1 vdotC.
+    by rewrite -lter_sub_addr add0r.
+  + apply/convexP => v v_in_V; rewrite in_hs /=.
+    have: homogenize v \in baseV by exact: in_imfset.
+    move/poly_base_subset/poly_subsetP/(_ _ z_in).
+    rewrite in_hs /= -{1}[z]vsubmxK vdot_col_mx vdot1 vdotC.
+      (* TODO: redundant with what's above *)
+    by rewrite -lter_sub_addr add0r.
+- move: x_notin; apply: contraNN.
+  have non_empty: 'P(baseV) `>` `[poly0].
+  + apply/proper0P; exists 0.
+    apply/in_poly_of_baseP => ? /imfsetP [v _ ->].
+    by rewrite in_hs /= vdot0r.
+  move/(farkas non_empty) => [w w_pweight [combine_eq _]].
+  apply/in_convP.
+  pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v : V => w (homogenize (val v))]%fset.
+  suff /eq_col_mx [<- /(scalar_mx_inj (ltnSn 0)) sum_eq1]:
+    col_mx (\bary[w'] V) (\sum_(v <- V) (w' v))%:M = col_mx x 1%:M.
+  + exists w'; last done.
+    * admit.
+  + rewrite raddf_sum /= /bary.
+    (*rewrite -sum_col_mx.*)
+    admit.
+Admitted.
+
+End Separation.
