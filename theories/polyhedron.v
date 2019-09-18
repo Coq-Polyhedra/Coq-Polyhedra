@@ -150,7 +150,6 @@ Definition bounded (P : 'poly[R]_n) c := H.bounded (\repr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (\repr P).
 Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (\repr P)].
 Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (\repr P)].
-Definition conv V : 'poly[R]_n := '[ (H.conv V) ].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
 Definition poly_proper P Q := ((poly_subset P Q) && (~~ (poly_subset Q P))).
@@ -408,32 +407,11 @@ Lemma in_lift_poly (k : nat) (P : 'poly[R]_n) x :
 Proof.
 Admitted.
 
-Section ConvexHull.
-
-Lemma convP (V : {fset 'cV[R]_n}) x :
-  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
-Proof.
-rewrite repr_equiv; exact: H.convP.
-Qed.
-
-Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
-  {subset V <= P} -> poly_subset (conv V) P.
-Proof.
-move => V_sub_P; apply/poly_subsetP => x.
-rewrite repr_equiv; move: x; apply/(H.poly_subsetP _)/H.convexP.
-exact: V_sub_P.
-Qed.
-
 Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
   v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
 Proof.
-elim/polyW: P => P; rewrite !mem_mk_poly !H.in_hpolyE => vP wP.
-case/andP => [gt0_a lt1_a]; rewrite mulmxDr -!scalemxAr.
-rewrite -[P.`b]scale1r -{1}[1](subrK α) scalerDl.
-by rewrite lev_add // lev_wpscalar // subr_ge0.
+exact: H.convexP2.
 Qed.
-
-End ConvexHull.
 
 Lemma polyIxx P : P `&` P = P.
 Proof.
@@ -901,96 +879,6 @@ rewrite !inE; apply: (iffP andP).
   exact: vnorm_ge0.
 Qed.
 
-Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
-
-Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
-
-Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
-Proof. (* RK *)
-apply/idP/idP => [/convP [w /weightP [w_ge0 _ sum_w] ->] | /eqP ->].
-- rewrite big_seq_fset1 in sum_w.
-  by rewrite /bary big_seq_fset1 sum_w scale1r.
-- pose w := [fsfun x : [fset Ω]%fset => 1%R | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-  have w_Ω_eq_1: w Ω = 1
-    by rewrite fsfun_ffun /=; case: insubP => [? ? ? /= | /= ]; [done | rewrite in_fset1 eq_refl].
-  apply/convP; exists w.
-  + apply/weightP; split.
-    * move => v; rewrite fsfun_ffun.
-      by case: insubP => [? _ _ /= | /= _]; [exact: ler01 | done].
-    * move => v; rewrite fsfun_ffun.
-      by case: insubP => [? -> _ /= | /= _].
-    * by rewrite big_seq_fset1.
-  + by rewrite /bary big_seq_fset1 w_Ω_eq_1 scale1r.
-Qed.
-
-Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
-Proof. (* RK *)
-by rewrite in_pt.
-Qed.
-
-Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
-Proof. (* RK *)
-apply/proper0P; exists Ω; exact: in_pt_self.
-Qed.
-
-Lemma pick_point_pt (Ω : 'cV[R]_n) :
-  pick_point (`[pt Ω]) = Ω.
-Proof. (* RK *)
-apply/eqP; rewrite -in_pt; apply/pick_pointP; exact: pt_proper0.
-Qed.
-
-Lemma pt_subset (Ω : 'cV[R]_n) P : `[pt Ω] `<=` P = (Ω \in P).
-Proof. (* RK *)
-by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
-  [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_subsetP => v; rewrite in_pt => /eqP ->].
-Qed.
-
-Lemma pt_proper (Ω : 'cV[R]_n) P : `[pt Ω] `<` P -> (Ω \in P).
-Proof.
-by move/poly_properW; rewrite pt_subset.
-Qed.
-
-(* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
- * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
-Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
-  reflect (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω') (x \in conv [fset Ω; Ω']%fset).
-Proof. (* RK *)
-Admitted.
-(*
-case: (boolP (Ω == Ω')) => [/eqP -> | Ω_neq_Ω'].
-- rewrite fsetUid in_pt.
-  apply: (iffP idP) => [/eqP -> | [μ _ ->]].
-  + by exists 1; [apply/andP | rewrite scale1r subrr addr0].
-  + by rewrite subrr scaler0 addr0.
-- apply: (iffP idP) => [/convP [w /weightP [w_ge0 _ sum_w] ->] | [a /andP [? ?] ?]].
-  + have w_Ω_eq: w Ω = 1 - w Ω'.
-      rewrite -sum_w big_setU1 /=; last by rewrite in_fset1.
-      by rewrite big_seq_fset1 -addrA subrr addr0.
-    exists (w Ω').
-    * apply/andP; split; first by apply: w_ge0.
-      by rewrite -subr_ge0 -w_Ω_eq; apply: w_ge0.
-    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
-      by rewrite big_seq_fset1 w_Ω_eq scalerBl scale1r -addrA [X in _+X]addrC scalerBr.
-  + pose w := [fsfun x : [fset Ω; Ω']%fset => if (val x == Ω') then a else (1-a) | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-    have w_Ω'_eq: w Ω' = a
-      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
-        [apply/ifT; rewrite val_y_eq | rewrite in_fset2 eq_refl negb_or /=; move/andP/proj2].
-    have w_Ω_eq: w Ω = (1 - a)
-      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
-        [apply/ifF; rewrite val_y_eq; apply/negbTE | rewrite in_fset2 eq_refl /=].
-    apply/convP; exists w.
-    * apply/weightP; split.
-      - move => y; rewrite fsfun_ffun.
-        case: insubP => [z _ _ /= | /= _]; last by done.
-        by case: (boolP (fsval z == Ω')) => [_ |_]; [done | rewrite subr_ge0].
-      - move => y; rewrite fsfun_ffun.
-        by case: insubP => [? -> _ /= | /= _].
-      - rewrite big_setU1 /=; last by rewrite in_fset1.
-        by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq subrK.
-    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
-      by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq scalerBl scale1r -addrA [X in _+X]addrC -scalerBr.
-Qed.*)
-
 Definition compact P :=
   (P `>` `[poly0]) ==>
     [forall i, (bounded P (delta_mx i 0)) && (bounded P (-(delta_mx i 0)))].
@@ -1067,12 +955,6 @@ exists (Ω + μ *: c); first by apply: hl_sub; apply/in_lineP; exists μ.
 rewrite vdotDr vdotZr mulfVK; last by apply: lt0r_neq0; rewrite vnorm_gt0.
 by rewrite addrCA addrN addr0 cpr_add ltrN10.
 Qed.
-
-Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
-Admitted.
-
-Lemma compact_pt (Ω : 'cV[R]_n) : compact (`[pt Ω]).
-Admitted.
 
 Definition slice (b : base_elt) P := `[hp b] `&` P.
 
@@ -1237,7 +1119,6 @@ Qed.
 Local Notation "\- I" := ((@Base.opp_base_elt _ _) @` I)%fset
   (at level 2).
 
-
 Definition vect (m : nat) (A : 'M_(m,n)) :=
   let base := [fset ((row i A)^T, 0) | i : 'I_m]%fset in
   'P(base).
@@ -1362,7 +1243,6 @@ Notation "'`[' 'hs'  b  ']'" := (mk_hs b) (at level 70) : poly_scope.
 Notation "'`[' 'hp' b  ']'" := (mk_hp b) (at level 70) : poly_scope.
 Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
-Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
 Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
 
@@ -1473,11 +1353,11 @@ apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w /pweight_ge0 w_ge0 ->]].
   by rewrite in_orthant; apply/gev0P => i; rewrite mxE; exact: w_ge0.
 Qed.
 
-Definition conv' V := (* TODO: conv' should replaced conv *)
+Definition conv V :=
   map_poly (mat_fset V) (orthant `&` `[hp (const_mx 1, 1)]).
 
-Lemma in_conv'P V x :
-  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv' V).
+Lemma in_convP V x :
+  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
 Proof.
 apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w w_weight ->]].
 - rewrite in_polyI in_orthant in_hp => /andP [y_ge0 /eqP Σy_eq_1].
@@ -1491,7 +1371,115 @@ apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w w_weight ->]].
   + by rewrite in_hp -sum_vect_fset; apply/eqP/weight_sum1.
 Admitted.
 
+Lemma conv0 : conv fset0 = `[poly0].
+Proof.
+apply/eqP; rewrite -subset0_equiv.
+apply/poly_subsetP => x /in_convP [w /weight_sum1 w_weight _].
+rewrite big_seq big_pred0 // in w_weight.
+by move/eqP: w_weight; rewrite eq_sym oner_eq0.
+Qed.
+
+Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
+  {subset V <= P} -> poly_subset (conv V) P.
+Proof.
+Admitted.
+
+Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
+
+Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
+
+Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
+Proof. (* RK *)
+apply/idP/idP => [/in_convP [w /weightP [w_ge0 _ sum_w] ->] | /eqP ->].
+- rewrite big_seq_fset1 in sum_w.
+  by rewrite /bary big_seq_fset1 sum_w scale1r.
+- pose w := [fsfun x : [fset Ω]%fset => 1%R | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
+  have w_Ω_eq_1: w Ω = 1
+    by rewrite fsfun_ffun /=; case: insubP => [? ? ? /= | /= ]; [done | rewrite in_fset1 eq_refl].
+  apply/in_convP; exists w.
+  + apply/weightP; split.
+    * move => v; rewrite fsfun_ffun.
+      by case: insubP => [? _ _ /= | /= _]; [exact: ler01 | done].
+    * move => v; rewrite fsfun_ffun.
+      by case: insubP => [? -> _ /= | /= _].
+    * by rewrite big_seq_fset1.
+  + by rewrite /bary big_seq_fset1 w_Ω_eq_1 scale1r.
+Qed.
+
+Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
+Proof. (* RK *)
+by rewrite in_pt.
+Qed.
+
+Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
+Proof. (* RK *)
+apply/proper0P; exists Ω; exact: in_pt_self.
+Qed.
+
+Lemma pick_point_pt (Ω : 'cV[R]_n) :
+  pick_point (`[pt Ω]) = Ω.
+Proof. (* RK *)
+apply/eqP; rewrite -in_pt; apply/pick_pointP; exact: pt_proper0.
+Qed.
+
+Lemma pt_subset (Ω : 'cV[R]_n) P : `[pt Ω] `<=` P = (Ω \in P).
+Proof. (* RK *)
+by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
+  [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_subsetP => v; rewrite in_pt => /eqP ->].
+Qed.
+
+Lemma pt_proper (Ω : 'cV[R]_n) P : `[pt Ω] `<` P -> (Ω \in P).
+Proof.
+by move/poly_properW; rewrite pt_subset.
+Qed.
+
+(* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
+ * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
+Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
+  reflect (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω') (x \in conv [fset Ω; Ω']%fset).
+Proof. (* RK *)
+Admitted.
+(*
+case: (boolP (Ω == Ω')) => [/eqP -> | Ω_neq_Ω'].
+- rewrite fsetUid in_pt.
+  apply: (iffP idP) => [/eqP -> | [μ _ ->]].
+  + by exists 1; [apply/andP | rewrite scale1r subrr addr0].
+  + by rewrite subrr scaler0 addr0.
+- apply: (iffP idP) => [/convP [w /weightP [w_ge0 _ sum_w] ->] | [a /andP [? ?] ?]].
+  + have w_Ω_eq: w Ω = 1 - w Ω'.
+      rewrite -sum_w big_setU1 /=; last by rewrite in_fset1.
+      by rewrite big_seq_fset1 -addrA subrr addr0.
+    exists (w Ω').
+    * apply/andP; split; first by apply: w_ge0.
+      by rewrite -subr_ge0 -w_Ω_eq; apply: w_ge0.
+    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
+      by rewrite big_seq_fset1 w_Ω_eq scalerBl scale1r -addrA [X in _+X]addrC scalerBr.
+  + pose w := [fsfun x : [fset Ω; Ω']%fset => if (val x == Ω') then a else (1-a) | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
+    have w_Ω'_eq: w Ω' = a
+      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
+        [apply/ifT; rewrite val_y_eq | rewrite in_fset2 eq_refl negb_or /=; move/andP/proj2].
+    have w_Ω_eq: w Ω = (1 - a)
+      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
+        [apply/ifF; rewrite val_y_eq; apply/negbTE | rewrite in_fset2 eq_refl /=].
+    apply/convP; exists w.
+    * apply/weightP; split.
+      - move => y; rewrite fsfun_ffun.
+        case: insubP => [z _ _ /= | /= _]; last by done.
+        by case: (boolP (fsval z == Ω')) => [_ |_]; [done | rewrite subr_ge0].
+      - move => y; rewrite fsfun_ffun.
+        by case: insubP => [? -> _ /= | /= _].
+      - rewrite big_setU1 /=; last by rewrite in_fset1.
+        by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq subrK.
+    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
+      by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq scalerBl scale1r -addrA [X in _+X]addrC -scalerBr.
+Qed.*)
+
+Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
+Admitted.
+
 End Hull.
+
+Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 
 Section Duality.
 

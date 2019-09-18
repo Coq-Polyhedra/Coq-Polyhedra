@@ -392,25 +392,15 @@ apply/(equivP (Simplex.pointedPn A) _); split =>
   by apply: d_recession_dir.
 Qed.
 
-(* TO BE FIXED. The lock is here to prevent unfolding the definition. *)
-Fact conv_key : unit. by []. Qed.
-Definition conv (V : {fset 'cV[R]_n}) := locked_with conv_key poly0.
 
-Lemma convP V x :
-  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Lemma convexP2 (P : 'hpoly[R]_n) (v w : 'cV[R]_n) α :
+  v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
 Proof.
-Admitted. (* cannot be proved yet *)
-
-Lemma convexP P (V : {fset 'cV[R]_n}) :
-  {subset V <= P} -> poly_subset (conv V) P.
-Proof.
-move=> leVP; apply/poly_subsetP=> x /convP[w wV ->] {x}.
-case/weightP: wV => ge0_w supp_w eq1_w; rewrite /bary in_hpolyE mulmx_sumr.
-rewrite (eq_bigr (fun v => w v *: (P.`A *m v))) /=; last first.
-+ by move=> v _; rewrite scalemxAr.
-rewrite -[P.`b]scale1r -[in X in X <=m _]eq1_w scaler_suml.
-rewrite !big_seq lev_sum //= => v vV; rewrite lev_wpscalar //.
-by rewrite -in_hpolyE; apply: leVP.
+case: P => m A b.
+rewrite !inE => vP wP.
+case/andP => [gt0_a lt1_a]; rewrite mulmxDr -!scalemxAr.
+rewrite -[b]scale1r -{1}[1](subrK α) scalerDl.
+by rewrite lev_add // lev_wpscalar // subr_ge0.
 Qed.
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
