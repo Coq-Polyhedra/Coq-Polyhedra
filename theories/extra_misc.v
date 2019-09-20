@@ -433,6 +433,29 @@ move=> leAB; apply/fsetP=> x; apply/idP/imfsetP => /=.
 + by case=> b; rewrite !inE /= => bA ->.
 Qed.
 
+Lemma fsubsizeP {K : choiceType} (S : {fset K}) :
+  size S == #|` S |.
+by [].
+Qed.
+Canonical fsubsize {K : choiceType} (S : {fset K}) := Tuple (fsubsizeP S).
+
+Definition fnth (K : choiceType) (S : {fset K}) i := tnth [tuple of S] i.
+
+Lemma fnthP (K : choiceType) (S : {fset K}) (i : 'I_#|`S|) :
+  fnth i \in S.
+Proof.
+by apply/(tnthP [tuple of S]); exists i.
+Qed.
+
+Lemma fset_fnth (K : choiceType) (S : {fset K}) :
+  S = [fset fnth i | i in 'I_#|`S|]%fset.
+Proof.
+apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/fsubsetP => [x].
+- move/(tnthP [tuple of S]) => [i ->].
+  by rewrite in_imfset.
+- move/imfsetP => [i _ ->]; exact: fnthP.
+Qed.
+
 End ExtraFinmap.
 
 Class expose (P : Prop) := Expose : P.
