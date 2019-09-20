@@ -430,6 +430,37 @@ by move: (polyISS Q_sub_P Q'_sub_P); rewrite polyIxx.
 Qed.
 End Face.
 
+Section Dimension.
+
+Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
+
+Definition proj_norm (e : base_elt[R,n]) := e.1.
+
+Definition poly_dim (P : {poly base}) :=
+  if (P `>` `[poly0]) then
+    (\dim (<< (proj_norm @` ({eq P} : {fset _}))%fset >>%VS)).+1%N
+  else 0%N.
+
+Lemma poly_dim0 : poly_dim (`[poly0]%:poly_base) = 0%N.
+Proof.
+by rewrite /poly_dim ifF // poly_properxx.
+Qed.
+
+Lemma poly_dimN0 (P : {poly base}) : (P `>` `[poly0]) = (poly_dim P > 0)%N.
+Proof.
+case/emptyP : (P) => [/val_inj -> | ? ]; first by rewrite poly_dim0 ltnn.
+by rewrite /poly_dim ifT.
+Qed.
+
+Lemma poly_homo (P Q : {poly base}) : P `<=` Q -> (poly_dim P <= poly_dim Q)%N.
+Admitted.
+
+Lemma poly_base_eq_dim (P Q : {poly base}) :
+  P `<=` Q -> poly_dim P = poly_dim Q -> P = Q.
+Admitted.
+
+End Dimension.
+
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 
 Section Relint.
