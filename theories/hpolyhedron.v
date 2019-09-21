@@ -8,7 +8,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap div.
+From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter.
 
@@ -21,25 +21,164 @@ Import GRing.Theory Num.Theory.
 
 Delimit Scope poly_scope with PH.
 
-Module Base.
+(* -------------------------------------------------------------------- *)
+Reserved Notation "'base_elt' [ R , n ]"
+  (at level 8, format "'base_elt' [ R , n ]").
+
+Reserved Notation "'base_elt'"
+  (at level 8).
+
+Reserved Notation "'base_t' [ R , n ]"
+  (at level 8, format "'base_t' [ R , n ]").
+
+Reserved Notation "'base_t'"
+  (at level 8).
+
+Reserved Notation "[< A , b >]"
+  (at level 8, format "[< A ,  b >]").
+
+Reserved Notation "''hpoly[' R ]_ n"
+  (at level 8, format "''hpoly[' R ]_ n").
+
+Reserved Notation "''hpoly_' n"
+  (at level 8, format "''hpoly_' n").
+
+Reserved Notation "P .`c" (at level 2, format "P .`c").
+Reserved Notation "P .`A" (at level 2, format "P .`A").
+Reserved Notation "P .`b" (at level 2, format "P .`b").
+
+(* -------------------------------------------------------------------- *)
 Section Base.
+Context {R : Type} (n : nat).
 
-Variable (R : realFieldType) (n : nat).
+Variant base_elt_type : predArgType := BaseElt of ('cV[R]_n * R).
 
-Definition opp_base_elt (b : ('cV[R]_n * R)%type) : ('cV[R]_n * R)%type := (- (fst b), - (snd b)).
+Coercion base_elt_val b := let: BaseElt b := b in b.
 
+Canonical base_elt_subType := Eval hnf in [newType for base_elt_val].
 End Base.
-End Base.
 
-Notation "'base_elt' [ R , n ]" := ('cV[R]_n * R)%type (at level 2).
-Notation "'base_elt'" := (base_elt[_,_]) (at level 2).
-Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]} (at level 2).
-Notation "'base_t'" := (base_t[_,_]) (at level 2).
-Notation "- e" := (Base.opp_base_elt e) : poly_scope.
+Notation "'base_elt' [ R , n ]" := (@base_elt_type R n).
+Notation "'base_elt'" := (base_elt[_,_]).
+Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]}.
+Notation "'base_t'" := (base_t[_,_]).
+Notation "[< A , b >]" := (BaseElt (A, b)).
 
-Lemma oppbK {R n} : involutive (@Base.opp_base_elt R n).
-Proof. by case=> a b; rewrite /Base.opp_base_elt /= !opprK. Qed.
+(* -------------------------------------------------------------------- *)
+Definition be_eqMixin (R : eqType) n :=
+  Eval hnf in [eqMixin of base_elt[R,n] by <:].
+Canonical be_eqType (R : eqType) n:=
+  Eval hnf in EqType base_elt[R,n]  (be_eqMixin R n).
+Definition be_choiceMixin (R : choiceType) n :=
+  [choiceMixin of base_elt[R,n] by <:].
+Canonical be_choiceType (R : choiceType) n :=
+  Eval hnf in ChoiceType base_elt[R,n] (be_choiceMixin R n).
+Definition be_countMixin (R : countType) n :=
+  [countMixin of base_elt[R,n] by <:].
+Canonical be_countType (R : countType) n :=
+  Eval hnf in CountType base_elt[R,n] (be_countMixin R n).
+Canonical be_subCountType (R : countType) n :=
+  Eval hnf in [subCountType of base_elt[R,n]].
+Definition be_finMixin (R : finType) n :=
+  [finMixin of base_elt[R,n] by <:].
+Canonical be_finType (R : finType) n :=
+  Eval hnf in FinType base_elt[R,n] (be_finMixin R n).
+Canonical be_subFinType (R : finType) n :=
+  Eval hnf in [subFinType of base_elt[R,n]].
 
+(* -------------------------------------------------------------------- *)
+Section BaseTheory.
+Context (R : Type) (n : nat).
+
+Lemma beW (P : base_elt[R,n] -> Prop) :
+  (forall A b, P [<A, b>]) -> (forall b, P b).
+Proof. by move=> ih [[]]. Qed.
+
+Lemma beE (b : base_elt[R,n]) : [<b.1, b.2>] = b.
+Proof. by elim/beW: b. Qed.
+End BaseTheory.
+
+Lemma be_eqE (R : eqType) n (b1 b2 : base_elt[R,n]) :
+  (b1 == b2) = [&& b1.1 == b2.1 & b1.2 == b2.2].
+Proof. by []. Qed.
+
+Lemma be_eqP (R : eqType) n (b1 b2 : base_elt[R,n]) :
+  reflect (b1.1 = b2.1 /\ b1.2 = b2.2) (b1 == b2).
+Proof.
+rewrite be_eqE; apply: (iffP andP).
++ by case=> [/eqP-> /eqP->]. + by case=> -> ->.
+Qed.
+
+(* -------------------------------------------------------------------- *)
+Section BaseZmod.
+Context {R : zmodType} (n : nat).
+
+Implicit Types (b : base_elt[R,n]).
+
+Definition be0         := [< (0 : 'cV[R]_n), (0 : R) >].
+Definition beadd b1 b2 := [< b1.1 + b2.1, b1.2 + b2.2 >].
+Definition beopp b     := [< -b.1, -b.2 >].
+
+Lemma be_zmod_mixin :
+  [/\ associative beadd
+    , commutative beadd
+    , left_id be0 beadd
+    & left_inverse be0 beopp beadd].
+Proof. split.
++ by move=> b1 b2 b3; rewrite /beadd 2!addrA.
++ by move=> b1 b2; rewrite /beadd [b2.1 + _]addrC [b2.2 + _]addrC.
++ by move=> b; rewrite /beadd 2!add0r beE.
++ by move=> b; rewrite /beadd 2!addNr.
+Qed.
+
+Let beaddA  := let: And4 h _ _ _ := be_zmod_mixin in h.
+Let beaddC  := let: And4 _ h _ _ := be_zmod_mixin in h.
+Let beadd0r := let: And4 _ _ h _ := be_zmod_mixin in h.
+Let beaddNr := let: And4 _ _ _ h := be_zmod_mixin in h.
+
+Definition be_zmodMixin := ZmodMixin beaddA beaddC beadd0r beaddNr.
+Canonical be_zmodType := Eval hnf in ZmodType base_elt be_zmodMixin.
+
+Lemma beaddE b1 b2 : b1 + b2 = [< b1.1 + b2.1, b1.2 + b2.2 >].
+Proof. by []. Qed.
+
+Lemma beoppE b : -b = [< -b.1, -b.2 >].
+Proof. by []. Qed.
+End BaseZmod.
+
+(* -------------------------------------------------------------------- *)
+Section BaseLmod.
+Context {R : ringType} (n : nat).
+
+Implicit Types (b : base_elt[R,n]).
+
+Definition bescale c b := [< c *: b.1, c * b.2 >].
+
+Lemma be_lmod_mixin :
+  [/\ forall c1 c2 b, bescale c1 (bescale c2 b) = bescale (c1 * c2) b
+    , left_id 1 bescale
+    , right_distributive bescale +%R
+    & forall b, {morph bescale^~ b : x y / x + y}].
+Proof. split.
++ by move=> c1 c2 b; rewrite /bescale scalerA mulrA.
++ by move=> b; rewrite /bescale scale1r mul1r beE.
++ by move=> c b1 b2; rewrite /bescale scalerDr !beaddE mulrDr.
++ by move=> b c1 c2; rewrite /bescale beaddE scalerDl mulrDl.
+Qed.
+
+Let bescaleA  := let: And4 h _ _ _ := be_lmod_mixin in h.
+Let bescale1  := let: And4 _ h _ _ := be_lmod_mixin in h.
+Let bescaleDr := let: And4 _ _ h _ := be_lmod_mixin in h.
+Let bescaleDl := let: And4 _ _ _ h := be_lmod_mixin in h.
+
+Definition be_lmodMixin := LmodMixin bescaleA bescale1 bescaleDr bescaleDl.
+Canonical be_lmodType := Eval hnf in LmodType R base_elt be_lmodMixin.
+
+Lemma bescaleE c b : c *: b = [< c *: b.1, c * b.2 >].
+Proof. by []. Qed.
+End BaseLmod.
+
+(* -------------------------------------------------------------------- *)
 Section PWeight.
 
 Variable (R : realFieldType) (K : choiceType) (base : {fset K}).
@@ -150,7 +289,8 @@ Qed.
 End PWeight.
 
 Definition combine (R : realFieldType) (n : nat) (base : base_t[R,n])  w : base_elt :=
-  (\sum_(v : base) (w (val v)) *: (fst (val v)), \sum_(v : base) (w (val v)) * (snd (val v))).
+  [< \sum_(v : base) (w (val v)) *: (fst (val v)) ,
+     \sum_(v : base) (w (val v)) * (snd (val v))  >].
 
 Module HPolyhedron.
 
@@ -171,8 +311,8 @@ Coercion mem_hpoly : hpoly >-> pred_sort.
 
 End Def.
 
-Notation "''hpoly[' R ]_ n" := (hpoly R n) (at level 8).
-Notation "''hpoly_' n" := (hpoly _ n) (at level 8).
+Notation "''hpoly[' R ]_ n" := (hpoly R n).
+Notation "''hpoly_' n" := (hpoly _ n).
 
 Section Choice.
 
@@ -215,9 +355,9 @@ Definition hpoly_A (P : 'hpoly[R]_n) :'M_(hpoly_c P, _)
 Definition hpoly_b (P : 'hpoly[R]_n) :'cV_(hpoly_c P)
   := let: HPoly c A b := P in b.
 
-Notation "P .`c" := (hpoly_c P) (at level 2, format "P .`c").
-Notation "P .`A" := (hpoly_A P) (at level 2, format "P .`A").
-Notation "P .`b" := (hpoly_b P) (at level 2, format "P .`b").
+Notation "P .`c" := (hpoly_c P).
+Notation "P .`A" := (hpoly_A P).
+Notation "P .`b" := (hpoly_b P).
 
 Lemma in_hpolyE (P : 'hpoly[R]_n) x : (x \in P) = (P.`A *m x) >=m (P.`b).
 Proof. by case: P. Qed.
@@ -230,7 +370,7 @@ rewrite inE vdotC -vdot_def.
 by apply/forallP/idP => [ /(_ 0) | H i]; rewrite ?[i]ord1_eq0 !mxE /= !mulr1n.
 Qed.
 
-Definition poly0 := mk_hs (0,1).
+Definition poly0 := mk_hs [<0,1>].
 
 Lemma in_poly0 : poly0 =i pred0.
 Proof.
@@ -325,7 +465,7 @@ exact: ((forallP opt_point_in_Q) i).
 Qed.
 
 Lemma boundedP (P : 'hpoly[R]_n) c :
-  reflect (exists2 x, (x \in P) & poly_subset P (mk_hs (c, '[c,x]))) (bounded P c).
+  reflect (exists2 x, (x \in P) & poly_subset P (mk_hs [<c, '[c,x]>])) (bounded P c).
 Proof. (* RK *)
 case: P => m A b.
 apply/(equivP (Simplex.boundedP A b c) _);
@@ -345,7 +485,7 @@ Qed.
 
 Lemma boundedPn P c :
   ~~ (poly_subset P poly0) ->
-    reflect (forall K, ~~ (poly_subset P (mk_hs (c, K)))) (~~ bounded P c).
+    reflect (forall K, ~~ (poly_subset P (mk_hs [<c, K>]))) (~~ bounded P c).
 Proof. (* RK *)
 case: P => m A b non_empty_P.
 have feasible_P: Simplex.feasible A b
