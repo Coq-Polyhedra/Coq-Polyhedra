@@ -1502,7 +1502,7 @@ Lemma dual_sol_lower_bound w :
 Proof.
 move => w_weight.
 apply/poly_subsetP => x; rewrite inE in_poly_of_base /=.
-rewrite vdot_sumDl => /forallP H.
+rewrite !combineE vdot_sumDl => /forallP H.
 apply: ler_sum => i _.
 rewrite vdotZl; apply: ler_wpmul2l; first exact: (pweight_ge0 w_weight).
 by move/(_ i): H; rewrite inE.
@@ -1535,11 +1535,11 @@ Lemma compl_slack_cond x :
   x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; supp base w)).
 Proof.
 move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
-- rewrite in_hp vdot_sumDl; apply/eqP.
+- rewrite in_hp !combineE vdot_sumDl; apply/eqP.
   apply: eq_bigr => i _.
   case: (suppP w_pweight); first by rewrite scale0r vdot0l mul0r.
   by move/in_hps; rewrite inE vdotZl => /eqP <-.
-- rewrite in_hp vdot_sumDl => in_comb_hp.
+- rewrite in_hp !combineE vdot_sumDl => in_comb_hp.
   apply/in_polyEqP; split; last done.
   move => e e_in_supp; move: in_comb_hp; apply: contraTT.
   rewrite notin_hp; last first.
