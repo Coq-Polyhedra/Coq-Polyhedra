@@ -111,7 +111,7 @@ Qed.
 
 (* -------------------------------------------------------------------- *)
 Section BaseZmod.
-Context {R : zmodType} (n : nat).
+Context {R : zmodType} {n : nat}.
 
 Implicit Types (b : base_elt[R,n]).
 
@@ -148,7 +148,7 @@ End BaseZmod.
 
 (* -------------------------------------------------------------------- *)
 Section BaseLmod.
-Context {R : ringType} (n : nat).
+Context {R : ringType} {n : nat}.
 
 Implicit Types (b : base_elt[R,n]).
 
@@ -177,6 +177,19 @@ Canonical be_lmodType := Eval hnf in LmodType R base_elt be_lmodMixin.
 Lemma bescaleE c b : c *: b = [< c *: b.1, c * b.2 >].
 Proof. by []. Qed.
 End BaseLmod.
+
+(* -------------------------------------------------------------------- *)
+Section BaseMorph.
+Context {R : zmodType} {n : nat}.
+
+Implicit Types (b : base_elt[R,n]).
+
+Lemma beadd_p1E b1 b2 : (b1 + b2).1 = b1.1 + b2.1.
+Proof. by []. Qed.
+
+Lemma beadd_p2E b1 b2 : (b1 + b2).2 = b1.2 + b2.2.
+Proof. by []. Qed.
+End BaseMorph.
 
 (* -------------------------------------------------------------------- *)
 Section PWeight.
@@ -288,9 +301,20 @@ Qed.
 
 End PWeight.
 
-Definition combine (R : realFieldType) (n : nat) (base : base_t[R,n])  w : base_elt :=
-  [< \sum_(v : base) (w (val v)) *: (fst (val v)) ,
-     \sum_(v : base) (w (val v)) * (snd (val v))  >].
+Section Combine.
+Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
+
+Definition combine (w : base_elt -> R) : base_elt :=
+  \sum_(v : base) w (val v) *: (val v).
+
+Lemma combine1E w : (combine w).1 = \sum_(v : base) w (val v) *: (val v).1.
+Proof. by apply (big_morph (fst \o val) beadd_p1E). Qed.
+
+Lemma combine2E w : (combine w).2 = \sum_(v : base) w (val v) * (val v).2.
+Proof. by apply (big_morph (snd \o val) beadd_p2E). Qed.
+
+Definition combineE := (combine1E, combine2E).
+End Combine.
 
 Module HPolyhedron.
 
@@ -589,11 +613,11 @@ Notation m := #| xpredT : pred base |.
 Let A := \matrix_(i < m) ((nth_fset i).1)^T.
 Let b := \col_(i < m) ((nth_fset i).2).
 
-Lemma combineE w :
+Lemma combinemE w :
   (A^T *m w = (combine base (vect_to_pweight w)).1)
   * ('[b, w] = (combine base (vect_to_pweight w)).2).
 Proof.
-split.
+split; rewrite combineE.
 - rewrite /=; apply/colP => i; rewrite mxE summxE.
   rewrite (reindex (@enum_val _ base)) /=.
   + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
@@ -646,7 +670,7 @@ case: (Simplex.simplexP A b e.1).
   rewrite inE /= in w_feas; move/andP: w_feas => [/eqP w_feas1 w_pos].
     exists (vect_to_pweight w).
   + exact: vect_to_pweightP.
-  + rewrite -2!combineE; split; first done.
+  + rewrite -2!combinemE; split; first done.
     by rewrite -csc /=; rewrite -in_hs; apply/incl; rewrite memP inE.
 Qed.
 
