@@ -1,6 +1,7 @@
 -R theories Polyhedra
 -arg -w -arg -notation-overridden
 -arg -w -arg -redundant-canonical-projection
+-arg -w -arg -projection-no-head-constant
 theories/extra_misc.v
 theories/extra_matrix.v
 theories/inner_product.v
