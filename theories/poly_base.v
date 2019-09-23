@@ -333,6 +333,14 @@ move: i_notin; rewrite in_active.
 - move: i_in; apply/fsubsetP; exact: (valP {eq _}).
 Qed.
 
+Lemma dim_le (P : {poly base}) :
+  P `>` (`[poly0]) -> (\dim << {eq P} >>%VS <= n)%N.
+Proof.
+move => P_prop0.
+move/proper0P : (P_prop0) => [x].
+rewrite (repr_active P_prop0).
+Admitted.
+
 End Active.
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
