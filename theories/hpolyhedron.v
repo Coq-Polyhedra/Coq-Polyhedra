@@ -192,6 +192,37 @@ Proof. by []. Qed.
 End BaseMorph.
 
 (* -------------------------------------------------------------------- *)
+Section BaseVect.
+
+Context {R : fieldType} {n : nat}.
+
+Fact be_vect_iso : Vector.axiom (n+1) base_elt[R,n].
+  (* there should be a way to exploit the connection betwseen base_elt and 'cV[R]_n * R^o
+   * for which there is a canonical vectType structure                                    *)
+Proof.
+pose f (e : base_elt[R,n]) := (col_mx e.1 (e.2%:M))^T.
+exists f.
+- move => ???; by rewrite /f raddfD /= -add_col_mx linearD /= -scale_scalar_mx -scale_col_mx linearZ.
+- pose g (x : 'rV_(n+1)) := [< (lsubmx x)^T, (rsubmx x) 0 0 >] : (base_elt[R,n]).
+  exists g; move => x.
+  + apply/eqP/be_eqP; split; rewrite /f /=.
+    * by rewrite tr_col_mx row_mxKl trmxK.
+    * by rewrite tr_col_mx row_mxKr tr_scalar_mx /= mxE mulr1n.
+  + apply/rowP => i; case: (splitP' i) => [i' ->| i' ->].
+    * by rewrite /f mxE col_mxEu !mxE.
+    * by rewrite /f mxE col_mxEd mxE [i']ord1_eq0 mulr1n /= mxE.
+Qed.
+Definition be_vectMixin := VectMixin be_vect_iso.
+Canonical be_vectType := VectType R base_elt[R,n] be_vectMixin.
+
+Lemma base_vect_subset (I I' : base_t[R,n]) :
+  (I `<=` I')%fset -> (<< I >> <= << I' >>)%VS.
+Proof.
+by move => ?; apply/sub_span/fsubsetP.
+Qed.
+End BaseVect.
+
+(* -------------------------------------------------------------------- *)
 Section PWeight.
 
 Variable (R : realFieldType) (K : choiceType) (base : {fset K}).
