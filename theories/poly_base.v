@@ -186,7 +186,8 @@ suff flat_prop: forall base0, bounded ('P(base0) : 'poly[R]_n) c -> has_base bas
   have: x \in `[hp (combine base0 w)] : 'poly[R]_n.
   - by rewrite inE w_comb /=; apply/eqP.
   move/(compl_slack_cond w_ge0 x_in_P0) => x_in_P0I.
-  move: (congr1 fst w_comb) => /= <-; apply/dual_sol_argmin; try by done.
+  have ->: c = (combine base0 w).1 by rewrite w_comb.
+  apply/dual_sol_argmin; try by done.
   by apply/proper0P; exists x.
 Qed.
 Canonical argmin_base (P : {poly base}) c := PolyBase (argmin_baseP P c).
@@ -434,11 +435,9 @@ Section Dimension.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
 
-Definition proj_norm (e : base_elt[R,n]) := e.1.
-
 Definition poly_dim (P : {poly base}) :=
   if (P `>` `[poly0]) then
-    (\dim (<< (proj_norm @` ({eq P} : {fset _}))%fset >>%VS)).+1%N
+    (n-\dim << {eq P} >>%VS).+1%N
   else 0%N.
 
 Lemma poly_dim0 : poly_dim (`[poly0]%:poly_base) = 0%N.
@@ -452,8 +451,26 @@ case/emptyP : (P) => [/val_inj -> | ? ]; first by rewrite poly_dim0 ltnn.
 by rewrite /poly_dim ifT.
 Qed.
 
-Lemma poly_homo (P Q : {poly base}) : P `<=` Q -> (poly_dim P <= poly_dim Q)%N.
-Admitted.
+Variant poly_dim_spec (P : {poly base}) : nat -> bool -> Prop :=
+| PolyDimEmpty of (P = `[poly0]%:poly_base) : poly_dim_spec P 0 false
+| PolyDimNonEmpty of (P `>` `[poly0]) : poly_dim_spec P (n - \dim << {eq P} >>%VS).+1%N true.
+
+Lemma poly_dimP P : poly_dim_spec P (poly_dim P) (poly_dim P > 0)%N.
+Proof.
+case: (poly_baseP P) => [->| I /= [-> P_prop0]].
+- by rewrite poly_dim0 ltnn; constructor.
+- rewrite -poly_dimN0 P_prop0.
+  by rewrite /poly_dim ifT //; constructor.
+Qed.
+
+Lemma poly_dimS (P Q : {poly base}) : P `<=` Q -> (poly_dim P <= poly_dim Q)%N.
+Proof.
+case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
+- by rewrite subset0_equiv => /eqP /val_inj ->; rewrite poly_dim0.
+- case: (poly_dimP P) => [//= | P_prop0].
+  rewrite ltnS; move/poly_base_subset_eq/base_vect_subset/dimvS: P_sub_Q.
+  exact: leq_sub2l.
+Qed.
 
 Lemma poly_base_eq_dim (P Q : {poly base}) :
   P `<=` Q -> poly_dim P = poly_dim Q -> P = Q.
