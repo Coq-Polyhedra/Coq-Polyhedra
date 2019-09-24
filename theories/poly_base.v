@@ -254,6 +254,14 @@ suff ->: 'P^=(base; {eq P}) =
   exact: poly_subset_refl.
 Qed.
 
+Lemma mem_repr_active (P : {poly base}) x :
+  (x \in P) -> (x \in ('P^=(base; {eq P}))%:poly_base).
+Proof.
+move => x_in_P.
+have h: P `>` (`[poly0]) by apply/proper0P; exists x.
+by rewrite [P]repr_active in x_in_P.
+Qed.
+
 Lemma activeP (P : {poly base}) (I : {fsubset base}) :
   (P `<=` 'P^=(base; I)) = (I `<=` {eq P})%fset.
 Proof.
@@ -264,10 +272,11 @@ apply/idP/idP.
   exact: polyEq_antimono.
 Qed.
 
-Lemma repr_active_supset (P : {poly base}) :
+Lemma repr_active_supset {P : {poly base}} :
   P `<=` 'P^=(base; {eq P}).
-case: (poly_baseP P) => [-> /= | _ [_ Pprop0 /=]]; first exact: poly0_subset.
-rewrite {1}[P]repr_active //=; exact: poly_subset_refl.
+apply/poly_subsetP => x x_in_P.
+have h: P `>` (`[poly0]) by apply/proper0P; exists x.
+by rewrite [P]repr_active in x_in_P.
 Qed.
 
 Lemma repr_active0 :
@@ -328,19 +337,29 @@ apply/andP; split; first exact: polyEq_antimono.
 apply/poly_subsetPn.
 move: i_notin; rewrite in_active.
 - move/poly_subsetPn => [x x_in_Q x_notin].
-  exists x; first by rewrite [Q]repr_active in x_in_Q.
+  exists x; first by move/(poly_subsetP repr_active_supset): x_in_Q.
   move: x_notin; apply: contra => x_in; exact: (polyEq_eq x_in).
 - move: i_in; apply/fsubsetP; exact: fsubset_subP.
 Qed.
 
 Lemma dim_le (P : {poly base}) :
-  P `>` (`[poly0]) -> (\dim << {eq P} >>%VS <= n)%N.
+  P `>` (`[poly0]) -> (\dim << {eq P} >> <= n)%N.
 Proof.
-Admitted.
-(*
-move => P_prop0.
-move/proper0P : (P_prop0) => [x].
-rewrite (repr_active P_prop0).*)
+move => /proper0P [x x_in_P].
+have f_linear : lmorphism (fun (v : base_elt[R,n]) => v.1) by done.
+pose f := Linear f_linear.
+pose linfun_f := linfun f.
+have /limg_dim_eq <-: (<<{eq P}>> :&: lker linfun_f)%VS = 0%VS.
+- apply/eqP; rewrite -subv0.
+  apply/subvP => e; rewrite memv_cap memv_ker memv0 => /andP [e_in /eqP f_e_eq0].
+  have e1_eq0 : e.1 = 0 by rewrite lfunE in f_e_eq0.
+  apply/be_eqP => /=; split; first done.
+  move/(poly_subsetP repr_active_supset): x_in_P.
+  rewrite polyEq_affine in_polyI => /andP [_ /in_affine/(_ _ e_in)].
+  by rewrite in_hp e1_eq0 vdot0l => /eqP.
+- apply/(leq_trans (n := \dim fullv)); first by apply/dimvS/subvf.
+  by rewrite dimvf /Vector.dim /= muln1.
+Qed.
 
 End Active.
 
