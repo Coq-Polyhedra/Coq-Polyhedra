@@ -381,6 +381,31 @@ Notation "0 %:PFS" := conicf0 : conicfun_scope.
 Notation "f + g" := (conicfD f g) : conicfun_scope.
 
 (* -------------------------------------------------------------------- *)
+Section ConicUniform.
+Context {T : choiceType} {R : numDomainType}.
+
+Implicit Type S : {fset T}.
+
+Lemma fconicu_r S : @conic T R [fsfun _ in S => 1].
+Proof.
+apply/conicP=> x /(fsubsetP (finsupp_sub _ _ _)) x_in.
+by rewrite fsfunE ifT.
+Qed.
+
+Definition fconicu : {fset T} -> {conic T ~> R} :=
+  nosimpl (fun S => mkConicFun (fconicu_r S)).
+
+Lemma fconicuE S x : fconicu S x = (x \in S)%:R.
+Proof. by rewrite fsfunE; case: ifP. Qed.
+
+Lemma finsupp_fconicu S : finsupp (fconicu S) = S.
+Proof.
+apply/fsetP => y; rewrite mem_finsupp fconicuE.
+by rewrite pnatr_eq0 eqb0 negbK.
+Qed.
+End ConicUniform.
+
+(* -------------------------------------------------------------------- *)
 Section SubConvex.
 Context {T : choiceType} {R : numDomainType}.
 
@@ -454,7 +479,7 @@ End SubConvexTheory.
 
 (* -------------------------------------------------------------------- *)
 Section CvxDirac.
-Context {T : choiceType} {R : numDomainType}.
+Context {T : choiceType} {R : realDomainType}.
 
 Lemma fcvx1_r x : @convex T R [fsfun _ in [fset x]%fset => 1].
 Proof. apply/convexP; split=> /=.
@@ -479,46 +504,118 @@ Qed.
 
 Lemma mem_fcvx1 x y : (y \in finsupp (fcvx1 x)) = (y == x).
 Proof. by rewrite finsupp_fcvx1 in_fset1. Qed.
+
+Lemma fcvx1E_finsupp (w : {convex T ~> R}) x y :
+  (finsupp w `<=` [fset x])%fset -> w y = (y == x)%:R.
+Proof.
+rewrite fsubset1 fconvex_insupp_neq0 orbF => /eqP fw.
+case: finsuppP; rewrite fw in_fset1; first by move=> /negbTE->.
+move=> /eqP ->; move: (wgt1_fconvex w); rewrite weightE eqxx /=.
+by rewrite fw big_fset1 /=.
+Qed.
 End CvxDirac.
 
-(* -------------------------------------------------------------------- *)
+(*-------------------------------------------------------------------- *)
 Section CvxDiracCombine.
-Context {R : numDomainType} {L : lmodType R}.
+Context {R : realDomainType} {L : lmodType R}.
 
-Lemma combine_fcvx1 x : combine (@fcvx1 L R x) = x.
+Lemma combine_fcvx1 (x : L) : combine (fcvx1 x) = x.
 Proof.
 by rewrite combineE finsupp_fcvx1 big_fset1 fcvx1E eqxx scale1r.
 Qed.
 End CvxDiracCombine.
 
 (* -------------------------------------------------------------------- *)
-Section ConicUniform.
-Context {T : choiceType} {R : numDomainType}.
+Section CvxSegment.
+Context {R : realDomainType} {L : lmodType R}.
 
-Implicit Type S : {fset T}.
+Definition clamp a : R :=
+  if 0 <= a <= 1 then a else 0.
 
-Lemma fconicu_r S : @conic T R [fsfun _ in S => 1].
+Lemma clamp_id a : 0 <= a <= 1 -> clamp a = a.
+Proof. by rewrite /clamp => ->. Qed.
+
+Lemma rg01_clamp a : 0 <= clamp a <= 1.
 Proof.
-apply/conicP=> x /(fsubsetP (finsupp_sub _ _ _)) x_in.
-by rewrite fsfunE ifT.
+by rewrite /clamp; case: ifP => // _; rewrite lerr ler01.
 Qed.
 
-Definition fconicu : {fset T} -> {conic T ~> R} :=
-  nosimpl (fun S => mkConicFun (fconicu_r S)).
+Lemma ge0_clamp a : 0 <= clamp a.
+Proof. by case/andP: (rg01_clamp a). Qed.
 
-Lemma fconicuE S x : fconicu S x = (x \in S)%:R.
-Proof. by rewrite fsfunE; case: ifP. Qed.
+Lemma le1_clamp a : clamp a <= 1.
+Proof. by case/andP: (rg01_clamp a). Qed.
 
-Lemma finsupp_fconicu S : finsupp (fconicu S) = S.
-Proof.
-apply/fsetP => y; rewrite mem_finsupp fconicuE.
-by rewrite pnatr_eq0 eqb0 negbK.
+Lemma ge0_1Bclamp a : 0 <= 1 - clamp a.
+Proof. by rewrite subr_ge0 le1_clamp. Qed.
+
+Lemma le1_1Bclamp a : 1 - clamp a <= 1.
+Proof. by rewrite ler_subl_addr ler_addl ge0_clamp. Qed.
+
+Lemma fseg_r a x y :
+  @convex L R [fsfun z in [fset x; y]%fset =>
+     (z == x)%:R * (1 - clamp a) + (z == y)%:R * clamp a].
+Proof. apply/convexP; split=> /=.
++ move=> z _; rewrite fsfunE; case: ifP => // _.
+  by rewrite addr_ge0 // mulr_ge0 // (ler0n, ge0_clamp, ge0_1Bclamp).
++ rewrite (@weightwE _ _ [fset x; y]%fset) ?finsupp_sub //.
+  case: (x =P y) => [->|/eqP ne_xy]; first rewrite fsetUid big_fset1.
+  - by rewrite fsfunE /= fset11 eqxx !mul1r addrNK.
+  rewrite -(big_seq_fsetE _ _ predT) /= big_setU1 ?in_fset1 //=.
+  rewrite big_seq_fset1 !fsfunE !(fset21, fset22) [y == x]eq_sym.
+  by rewrite !(eqxx, negbTE ne_xy) !Monoid.simpm /= addrNK.
 Qed.
-End ConicUniform.
+
+Definition fseg : _ -> _ -> _ -> {convex L ~> R} :=
+  nosimpl (fun a x y => mkConvexfun (fseg_r a x y)).
+
+Lemma fsegE a x y z :
+  fseg a x y z = (z == x)%:R * (1 - clamp a) + (z == y)%:R * clamp a.
+Proof.
+rewrite fsfunE in_fset2; do! case: (z =P _) => //= _.
+by rewrite !mul0r addr0.
+Qed.
+
+Lemma finsupp_fseg a x y : (finsupp (fseg a x y) `<=` [fset x; y])%fset.
+Proof. by apply: finsupp_sub. Qed.
+
+Lemma combine_fseg a x y :
+  combine (fseg a x y) = (1 - clamp a) *: x + clamp a *: y.
+Proof.
+rewrite (combinewE (finsupp_fseg a x y)); case: (x =P y) => [<-|].
++ by rewrite fsetUid big_fset1 fsegE /= eqxx !mul1r -scalerDl.
+move/eqP => ne_xy; pose F z := fseg a x y z *: z.
+rewrite -(big_seq_fsetE _ _ predT F) {}/F /=.
+rewrite finmap.big_setU1 ?in_fset1 //= big_seq_fset1 !fsegE.
+by rewrite [y == x]eq_sym !(eqxx, negbTE ne_xy) !Monoid.simpm.
+Qed.
+
+Lemma cvxsegP x p q :
+      (exists2 a, 0 <= a <= 1 & x = (1 - a) *: p + a *: q)
+  <-> (exists2 w : {convex L ~> R},
+         (finsupp w `<=` [fset p; q])%fset & x = combine w).
+Proof. split.
++ case=> a rg01_a ->; exists (fseg a p q).
+  - by apply: finsupp_fseg.
+  - by rewrite combine_fseg clamp_id.
++ case=> w le_w_pq ->; rewrite (combinewE le_w_pq); exists (w q).
+  - by rewrite ge0_fconvex le1_fconvex.
+  case: (p =P q) le_w_pq => [<-|/eqP nz_pq] le_w_pq.
+  - rewrite fsetUid big_fset1 /= -scalerDl subrK scale1r.
+    suff ->: w p = 1 by rewrite scale1r.  
+    move: le_w_pq; rewrite fsetUid => /fcvx1E_finsupp.
+    by move=> ->; rewrite eqxx.
+  pose F x := w x *: x; rewrite -(big_seq_fsetE _ _ predT F) /=.
+  rewrite finmap.big_setU1 ?in_fset1 //= big_seq_fset1 {}/F.
+  move: (weightwE le_w_pq); rewrite -(big_seq_fsetE _ _ predT) /=.
+  rewrite finmap.big_setU1 ?in_fset1 // big_seq_fset1 /=.
+  by rewrite wgt1_fconvex => ->; rewrite addrK.
+Qed.  
+End CvxSegment.
 
 (* -------------------------------------------------------------------- *)
 Section Bary.
-Context {R : numDomainType} {L : lmodType R}.
+Context {R : realDomainType} {L : lmodType R}.
 
 Implicit Types (V : {fset L}) (w : {convex L ~> R}).
 
