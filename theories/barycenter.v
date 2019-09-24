@@ -491,6 +491,7 @@ by rewrite combineE finsupp_fcvx1 big_fset1 fcvx1E eqxx scale1r.
 Qed.
 End CvxDiracCombine.
 
+(* -------------------------------------------------------------------- *)
 Section ConicUniform.
 Context {T : choiceType} {R : numDomainType}.
 
@@ -498,9 +499,8 @@ Implicit Type S : {fset T}.
 
 Lemma fconicu_r S : @conic T R [fsfun _ in S => 1].
 Proof.
-apply/conicP.
-move => x /(fsubsetP (finsupp_sub _ _ _)) x_in;
-  rewrite fsfunE ifT //.
+apply/conicP=> x /(fsubsetP (finsupp_sub _ _ _)) x_in.
+by rewrite fsfunE ifT.
 Qed.
 
 Definition fconicu : {fset T} -> {conic T ~> R} :=
@@ -514,7 +514,6 @@ Proof.
 apply/fsetP => y; rewrite mem_finsupp fconicuE.
 by rewrite pnatr_eq0 eqb0 negbK.
 Qed.
-
 End ConicUniform.
 
 (* -------------------------------------------------------------------- *)
