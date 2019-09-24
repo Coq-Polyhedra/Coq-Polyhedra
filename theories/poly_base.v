@@ -72,12 +72,14 @@ Qed.
 
 Canonical polyEq_base base I (H : expose (I `<=` base)%fset) := PolyBase (polyEq_baseP H).
 
+(*
 Section Test.
 Variable (base I : base_t[R,n]) (I' : {fsubset base}).
 Hypothesis Isub : (I `<=` base)%fset.
 Check ('P^=(base; I)%:poly_base) : {poly base}.
 Check ('P^=(base; I')%:poly_base) : {poly base}.
 End Test.
+ *)
 
 Variable base : base_t[R,n].
 
@@ -93,6 +95,7 @@ constructor 2 with I.
 split; [exact: val_inj | done].
 Qed.
 
+(*
 Section Test.
 Variable P Q : {poly base}.
 Goal P = Q.
@@ -100,6 +103,7 @@ case/poly_baseP: P.
 Abort.
 
 End Test.
+*)
 
 Lemma poly_base_subset (P : {poly base}) :
   P `<=` 'P(base).
@@ -198,6 +202,7 @@ Notation "'{poly'  base '}'" := (@poly_base _ _ base) : poly_scope.
 Notation "P %:poly_base" := (poly_base_of (Phantom _ P)) (at level 0) : poly_scope.
 Notation "'[' P 'has' '\base' base ']'" := (has_base base P) : poly_scope.
 
+(*
 Section Test.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
@@ -222,6 +227,7 @@ Qed.
 Unset Printing Coercions.
 
 End Test.
+*)
 
 Section Active.
 
@@ -232,12 +238,14 @@ Definition active (P : {poly base}) := (* TODO: fix broken notation *)
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
 
+(*
 Section Test.
 Variable (P : {poly base}).
 Check ({eq P} : {fsubset base}).
 Check 'P^=(base; {eq P}) : 'poly[R]_n.
 Check 'P^=(base; {eq P})%:poly_base : {poly base}.
 End Test.
+*)
 
 Lemma repr_active (P : {poly base}) :
   P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
@@ -468,14 +476,14 @@ Definition poly_dim (P : {poly base}) :=
     (n-\dim << {eq P} >>%VS).+1%N
   else 0%N.
 
-Lemma poly_dim0 : poly_dim (`[poly0]%:poly_base) = 0%N.
+Lemma dim_poly0 : poly_dim (`[poly0]%:poly_base) = 0%N.
 Proof.
 by rewrite /poly_dim ifF // poly_properxx.
 Qed.
 
 Lemma poly_dimN0 (P : {poly base}) : (P `>` `[poly0]) = (poly_dim P > 0)%N.
 Proof.
-case/emptyP : (P) => [/val_inj -> | ? ]; first by rewrite poly_dim0 ltnn.
+case/emptyP : (P) => [/val_inj -> | ? ]; first by rewrite dim_poly0 ltnn.
 by rewrite /poly_dim ifT.
 Qed.
 
@@ -486,24 +494,31 @@ Variant poly_dim_spec (P : {poly base}) : nat -> bool -> Prop :=
 Lemma poly_dimP P : poly_dim_spec P (poly_dim P) (poly_dim P > 0)%N.
 Proof.
 case: (poly_baseP P) => [->| I /= [-> P_prop0]].
-- by rewrite poly_dim0 ltnn; constructor.
+- by rewrite dim_poly0 ltnn; constructor.
 - rewrite -poly_dimN0 P_prop0.
   by rewrite /poly_dim ifT //; constructor.
+Qed.
+
+
+Lemma poly_dim0 (P : {poly base}) : poly_dim P = 0%N -> P = `[poly0]%:poly_base.
+Proof.
+by case: (poly_dimP P).
 Qed.
 
 Lemma poly_dimS (P Q : {poly base}) : P `<=` Q -> (poly_dim P <= poly_dim Q)%N.
 Proof.
 case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
-- by rewrite subset0_equiv => /eqP /val_inj ->; rewrite poly_dim0.
+- by rewrite subset0_equiv => /eqP /val_inj ->; rewrite dim_poly0.
 - case: (poly_dimP P) => [//= | P_prop0].
   rewrite ltnS; move/poly_base_subset_eq/base_vect_subset/dimvS: P_sub_Q.
   exact: leq_sub2l.
 Qed.
 
-Lemma poly_base_eq_dim (P Q : {poly base}) :
-  P `<=` Q -> poly_dim P = poly_dim Q -> P = Q.
-Proof.
-case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
+Lemma poly_dim_leqif_eq (P Q : {poly base}) :
+  (P `<=` Q)%VS -> (poly_dim P <= poly_dim Q ?= iff (P == Q))%N.
+Proof. move => P_sub_Q; split; first exact: poly_dimS.
+apply/eqP/eqP; last by move => ->.
+case: (poly_dimP Q) P_sub_Q => [-> | Q_prop0 P_sub_Q ].
 - by rewrite subset0_equiv => /eqP /val_inj ->.
 - case: (poly_dimP P) => [//= | P_prop0].
   move/succn_inj/(congr1 (addn^~ (\dim <<{eq P}>>%VS))).
@@ -522,6 +537,7 @@ Qed.
 
 End Dimension.
 
+(*
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
 
 Section Relint.
@@ -948,3 +964,4 @@ Admitted.
 End Vertex.
 *)
 End VertexFigure.
+*)
