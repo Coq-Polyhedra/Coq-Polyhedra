@@ -563,6 +563,11 @@ Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
 (* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
 Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 
+Lemma fsubset_eqW (A B : fsubset_t) : (A = B :> {fset K}) -> A = B.
+Proof.
+by move => /untag_inj ?; apply/val_inj => /=.
+Qed.
+
 (*
 Section Test.
 Check (fset0 %:fsub).
@@ -612,6 +617,12 @@ Export FSubset.Exports.
 
 Notation "'{fsubset'  S '}'" := (FSubset.fsubset_t S) (at level 2).
 Notation "A %:fsub" := (FSubset.fsubset_of (Phantom _ A)) (at level 0).
+
+Lemma fsubset_inj (K : choiceType) (S : {fset K}) (A B : {fsubset S}) :
+  (A = B :> {fset K}) -> A = B.
+Proof.
+by move => /FSubset.untag_inj ?; apply/val_inj => /=.
+Qed.
 
 (*
 Section Test.

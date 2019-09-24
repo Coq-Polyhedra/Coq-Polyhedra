@@ -251,8 +251,8 @@ apply/poly_eqP => x.
 by rewrite in_polyI !repr_equiv H.in_polyI.
 Qed.
 
-Lemma big_polyI_mono (I : finType) (P : pred I) (F : I -> 'hpoly[R]_n) :
-  \polyI_(i | P i) '[F i] = '[\big[H.polyI/H.polyT]_(i | P i) (F i)].
+Lemma big_polyI_mono (I : Type) (r : seq I) (P : pred I) (F : I -> 'hpoly[R]_n) :
+  \polyI_(i <- r | P i) '[F i] = '[\big[H.polyI/H.polyT]_(i <- r | P i) (F i)].
 Proof.
 have class_of_morph : {morph (@mk_poly R n) : x y / H.polyI x y >-> polyI x y}.
 - by move => Q Q'; rewrite polyI_mono.
@@ -320,6 +320,11 @@ Proof.
 by apply/poly_eqP => x; rewrite !inE /=.
 Qed.
 
+Lemma polyIC : commutative polyI.
+Proof.
+by move => P Q; apply/poly_eqP => x; rewrite !in_polyI andbC.
+Qed.
+
 Lemma poly_subsetIl P Q : P `&` Q `<=` P.
 Proof. (* RK *)
 apply/poly_subsetP => x.
@@ -362,10 +367,19 @@ Lemma in_big_polyIP (I : finType) (P : pred I) (F : I -> 'poly[R]_n) x :
 Proof.
 have -> : (x \in \polyI_(i | P i) F i) = (\big[andb/true]_(i | P i) (x \in (F i))).
   by elim/big_rec2: _ => [|i y b Pi <-]; rewrite ?in_polyT ?in_polyI.
-rewrite big_all_cond; apply: (iffP allP) => /= H i;
-have := H i _; rewrite mem_index_enum; last by move/implyP->.
-by move=> /(_ isT) /implyP.
+by rewrite big_all_cond; apply: (iffP allP) => /= [H i | H i ?];
+  apply/implyP/H; exact: mem_index_enum.
 Qed.
+
+(*
+Lemma in_big_polyIP_seq (I : eqType) (r : seq I) (P : pred I) (F : I -> 'poly[R]_n) x :
+  reflect (forall i : I, i \in r -> P i -> x \in (F i)) (x \in \polyI_(i <- r | P i) (F i)).
+Proof.
+have -> : (x \in \polyI_(i <- r | P i) F i) = (\big[andb/true]_(i <- r | P i) (x \in (F i))).
+  by elim/big_rec2: _ => [|i y b Pi <-]; rewrite ?in_polyT ?in_polyI.
+by rewrite big_all_cond; apply: (iffP allP) => /= h i i_in_r;
+  apply/implyP/h.
+Qed.*)
 
 Lemma in_big_polyI (I : finType) (P : pred I) (F : I -> 'poly[R]_n) x :
   (x \in \polyI_(i | P i) (F i)) = [forall i, P i ==> (x \in F i)].
@@ -826,7 +840,7 @@ apply: (iffP idP); last first.
   rewrite submx_kermx !trmxK.
   apply/row_subP => i; apply/sub_kermxP.
   rewrite -[row _ _]trmxK -vdot_def vdotC [RHS]const_mx11; apply: congr1.
-  move/(_ i isT): H; rewrite in_hp => /eqP.
+  move/(_ i isT) : H; rewrite in_hp => /eqP.
   by rewrite /d vdotBr => ->; rewrite addrN.
 Qed.
 
