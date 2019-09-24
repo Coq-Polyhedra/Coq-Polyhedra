@@ -1,400 +1,510 @@
-(*************************************************************************)
-(* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
-(*                                                                       *)
-(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
-(*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
-(* All rights reserved.                                                  *)
-(* You may distribute this file under the terms of the CeCILL-B license  *)
-(*************************************************************************)
+(* -------------------------------------------------------------------- *)
+From mathcomp Require Import all_ssreflect all_algebra finmap.
 
-From mathcomp
-     Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector perm finmap.
-Require Import extra_misc inner_product vector_order extra_matrix row_submx.
-
-Set Implicit Arguments.
+Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+Unset SsrOldRewriteGoalsOrder.
 
-Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Reserved Notation "[ w '\weight' 'over' V ]" (at level 0, format "[ w  '\weight'  'over'  V ]").
-Reserved Notation "\bary[ w ] V " (at level 70, format "\bary[ w ]  V").
+Local Open Scope ring_scope.
 
+(* -------------------------------------------------------------------- *)
+Reserved Notation "{ 'fsfun' T ~> R }"
+  (at level 0, format "{ 'fsfun'  T  ~>  R }").
+
+Reserved Notation "{ 'conic' T ~> R }"
+  (at level 0, format "{ 'conic'  T  ~>  R }").
+
+Reserved Notation "{ 'convex' T ~> R }"
+  (at level 0, format "{ 'convex'  T  ~>  R }").
+
+Reserved Notation "0 %:FS"
+  (at level 2, format "0 %:FS").
+
+Reserved Notation "0 %:PFS"
+  (at level 1, format "0 %:PFS").
+
+Reserved Notation "x \bary V"
+  (at level 70, format "x  \bary  V").
+
+(* -------------------------------------------------------------------- *)
+Notation "{ 'fsfun' T ~> R }" := {fsfun T -> R for fun => 0} : type_scope.
+
+(* -------------------------------------------------------------------- *)
+Section FsFunZmod.
+Context {T : choiceType} {R : zmodType}.
+
+Implicit Types f g h : {fsfun T ~> R}.
+
+Definition fs0 : {fsfun T ~> R} := [fsfun].
+
+Definition fsopp f : {fsfun T ~> R} :=
+  [fsfun x in finsupp f => -f x].
+
+Definition fsadd f g : {fsfun T ~> R} :=
+  [fsfun x in (finsupp f `|` finsupp g)%fset => f x + g x].
+
+Notation "0 %:FS" := fs0 : fsfun_scope.
+Notation "- f"    := (fsopp f)  : fsfun_scope.
+Notation "f + g"  := (fsadd f g) : fsfun_scope.
+
+Lemma fs0E x : (0%:FS x)%fsfun = 0.
+Proof. by rewrite fsfunE. Qed.
+
+Lemma fsoppE f x : (- f)%fsfun x = -(f x).
+Proof. by rewrite fsfunE; case: finsuppP => // _; rewrite oppr0. Qed.
+
+Lemma fsaddE f g x : (f + g)%fsfun x = (f x + g x).
+Proof.
+by rewrite fsfunE in_fsetU; (do 2! case: finsuppP => ? //=); rewrite addr0.
+Qed.
+
+Let fsfunwE := (fs0E, fsoppE, fsaddE).
+
+Lemma fsfun_zmod :
+  [/\ associative fsadd
+    , commutative fsadd
+    , left_id fs0 fsadd
+    & left_inverse fs0 fsopp fsadd].
+Proof. split.
++ by move=> f g h; apply/fsfunP=> x /=; rewrite !fsfunwE addrA.
++ by move=> f g; apply/fsfunP=> x /=; rewrite !fsfunwE addrC.
++ by move=> f; apply/fsfunP=> x /=; rewrite !fsfunwE add0r.
++ by move=> f; apply/fsfunP=> x /=; rewrite !fsfunwE addNr.
+Qed.
+
+Let addfA := let: And4 h _ _ _ := fsfun_zmod in h.
+Let addfC := let: And4 _ h _ _ := fsfun_zmod in h.
+Let add0f := let: And4 _ _ h _ := fsfun_zmod in h.
+Let addNf := let: And4 _ _ _ h := fsfun_zmod in h.
+
+Definition fsfun_zmodMixin := ZmodMixin addfA addfC add0f addNf.
+Canonical fsfun_zmodType := Eval hnf in ZmodType {fsfun T ~> R} fsfun_zmodMixin.
+
+Lemma supp_fs0 : finsupp 0%R = fset0.
+Proof. by rewrite finsupp0. Qed.
+
+Lemma supp_fsN f : finsupp (-f)%fsfun = finsupp f.
+Proof.
+by apply/fsetP=> x; rewrite !mem_finsupp fsfunwE oppr_eq0.
+Qed.
+
+Lemma supp_fsD f g :
+  (finsupp (f + g)%R `<=` finsupp f `|` finsupp g)%fset.
+Proof.
+apply/fsubsetP=> x; rewrite in_fsetU !mem_finsupp !fsfunwE.
+case: (f x =P 0) => //= ->; case: (g x =P 0) => //= ->.
+by rewrite addr0 eqxx.
+Qed.
+Lemma mem_fsN x f : (x \in finsupp (-f)%R) -> x \in finsupp f.
+Proof. by rewrite supp_fsN. Qed.
+
+Lemma mem_fsD x f g :
+  x \in finsupp (f + g)%R -> x \in finsupp f \/ x \in finsupp g.
+Proof.
+by move/(fsubsetP (supp_fsD _ _)); rewrite in_fsetU (rwP orP).
+Qed.
+End FsFunZmod.
+
+(* -------------------------------------------------------------------- *)
+Section FsFunLmod.
+Context {T : choiceType} {R : ringType}.
+
+Implicit Types (c : R) (f g h : {fsfun T ~> R}).
+
+Definition fsscale c f : {fsfun T ~> R} :=
+  [fsfun x in finsupp f => c * f x].
+
+Notation "c *: f" := (fsscale c f) : fsfun_scope.
+
+Lemma fsscaleE c f x : (c *: f)%fsfun x = c * f x.
+Proof.
+by rewrite fsfunE; case: finsuppP => // _; rewrite mulr0.
+Qed.
+
+Let fsfunwE := (@fs0E, @fsoppE, @fsaddE, fsscaleE).
+
+Lemma fsfun_lmod :
+  [/\ forall c1 c2 f, fsscale c1 (fsscale c2 f) = fsscale (c1 * c2) f
+    , left_id 1 fsscale
+    , right_distributive fsscale +%R
+    & forall f, {morph fsscale^~ f : c1 c2 / c1 + c2}].
+Proof. split.
++ by move=> c1 c2 f; apply/fsfunP=> x /=; rewrite !fsfunwE mulrA.
++ by move=> f; apply/fsfunP=> x /=; rewrite !fsfunwE mul1r.
++ by move=> c f g; apply/fsfunP=> x /=; rewrite !fsfunwE mulrDr.
++ by move=> f c1 c2; apply/fsfunP=> x /=; rewrite !fsfunwE mulrDl.
+Qed.
+
+Let scale_fsfunA  := let: And4 h _ _ _ := fsfun_lmod in h.
+Let scale_fsfun1  := let: And4 _ h _ _ := fsfun_lmod in h.
+Let scale_fsfunDr := let: And4 _ _ h _ := fsfun_lmod in h.
+Let scale_fsfunDl := let: And4 _ _ _ h := fsfun_lmod in h.
+
+Definition fsfun_lmodMixin :=
+  LmodMixin scale_fsfunA scale_fsfun1 scale_fsfunDr scale_fsfunDl.
+Canonical fsfun_lmodType :=
+  Eval hnf in LmodType R {fsfun T ~> R} fsfun_lmodMixin.
+End FsFunLmod.
+
+(* -------------------------------------------------------------------- *)
+Section FsFunLmodId.
+Context {T : choiceType} {R : idomainType}.
+
+Implicit Types (c : R) (f g h : {fsfun T ~> R}).
+
+Lemma supp_fsZ c f : c != 0 -> finsupp (c *: f)%fsfun = finsupp f.
+Proof.
+move=> nz_c; apply/fsetP => x; rewrite !mem_finsupp fsscaleE.
+by rewrite mulf_eq0 (negbTE nz_c).
+Qed.
+
+Lemma mem_fsZ x c f : c != 0 -> x \in finsupp (c *: f)%R -> x \in finsupp f.
+Proof. by move/supp_fsZ=> ->. Qed.
+End FsFunLmodId.
+
+(* -------------------------------------------------------------------- *)
+Definition fsfunwE := (@fs0E, @fsaddE, @fsoppE, @fsscaleE).
+
+(* -------------------------------------------------------------------- *)
+Section Combine.
+Context {R : ringType} {L : lmodType R}.
+
+Implicit Types (f g h : {fsfun L ~> R}).
+
+Definition combine f : L := \sum_(x : finsupp f) f (val x) *: val x.
+
+Lemma combinewE E f : (finsupp f `<=` E)%fset ->
+  combine f = \sum_(x : E) f (val x) *: (val x).
+Proof.
+move=> leEw; pose F x := f x *: x; rewrite /combine.
+rewrite -!(big_seq_fsetE _ _ predT F) /= {}/F.
+have /permEl h := perm_filterC (mem (finsupp f)) E.
+rewrite -{h}(perm_big _ h) big_cat /= 2![X in _+X](big_seq, big1) 1?addr0.
++ move=> x; rewrite mem_filter inE memNfinsupp.
+  by case/andP=> [/eqP->]; rewrite scale0r.
+apply/perm_big/uniq_perm; rewrite ?(fset_uniq, filter_uniq) //.
+by move=> x; rewrite mem_filter inE andb_idr // => /(fsubsetP leEw).
+Qed.
+
+Lemma combineE f : combine f = \sum_(x : finsupp f) f (val x) *: (val x).
+Proof. by []. Qed.
+End Combine.
+
+(* -------------------------------------------------------------------- *)
 Section Weight.
+Context {T : choiceType} {R : zmodType}.
 
-Variable R : realFieldType.
-Variable n : nat.
+Implicit Types (f g h : {fsfun T ~> R}).
 
-Definition weight (V : {fset 'cV[R]_n}) (w : {fsfun 'cV[R]_n -> R for fun => 0%R}) :=
-  [&& (finsupp w `<=` V)%fset, [forall v : V, w (val v) >= 0] & (\sum_(v : V) w (val v) == 1)].
+Definition weight f := \sum_(x : finsupp f) f (val x).
 
-Notation "[ w '\weight' 'over' V ]" := (weight V w).
-
-Variable V : {fset 'cV[R]_n}.
-Variable w : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-(*Hypothesis w_weight_over_V : [ w \weight over V ].*)
-
-Implicit Type v : 'cV[R]_n.
-
-Lemma weight_ge0 v : [ w \weight over V ] -> w v >= 0.
+Lemma weightwE E w : (finsupp w `<=` E)%fset ->
+  weight w = \sum_(x : E) w (val x).
 Proof.
-move => w_weight_over_V.
-case: finsuppP; first done.
-move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl /forallP w_ge0 _].
-move/supp_incl => v_in_V.
-pose v' := [`v_in_V]%fset.
-have ->: v = val v' by done.
-exact: w_ge0.
+move=> leEw; rewrite /weight -!(big_seq_fsetE _ _ predT) /=.
+have /permEl h := perm_filterC (mem (finsupp w)) E.
+rewrite -{h}(perm_big _ h) big_cat /= 2![X in _+X](big_seq, big1).
++ by move=> x; rewrite mem_filter inE memNfinsupp => /andP[/eqP->].
+rewrite addr0; apply/perm_big/uniq_perm; rewrite ?filter_uniq //.
+by move=> x; rewrite mem_filter inE andb_idr // => /(fsubsetP leEw).
 Qed.
 
-Lemma weight_eq0 v : [ w \weight over V ] -> v \notin V -> w v = 0.
+Lemma weightE f : weight f = \sum_(x : finsupp f) f (val x).
+Proof. by []. Qed.
+
+Lemma weight0 : weight 0 = 0.
+Proof. by apply: big1 => -[/= x _ _]; rewrite fsfunwE. Qed.
+
+Lemma weightD f g : weight (f + g) = weight f + weight g.
 Proof.
-move => w_weight_over_V v_notin_V; apply: fsfun_dflt.
-move: v_notin_V; apply: contra.
-move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl _ _].
-exact: supp_incl.
+pose E := (finsupp f `|` finsupp g)%fset.
+rewrite !(@weightwE E) 1?(fsubsetUl, fsubsetUr, supp_fsD) // {}/E.
+by rewrite -big_split /=; apply: eq_bigr=> -[/= x _ _]; rewrite fsaddE.
 Qed.
-
-Lemma weight_gt0 v : [ w \weight over V ] -> w v > 0 -> v \in V.
-Proof.
-move => w_weight_over_V w_v_gt0.
-suff: v \in finsupp w.
-- move/and3P: (w_weight_over_V) => [/fsubsetP supp_incl _ _]; exact: supp_incl.
-- rewrite mem_finsupp; exact: lt0r_neq0.
-Qed.
-
-Lemma weight_sum1 : [ w \weight over V ] -> \sum_(v <- V) w v = 1.
-Proof.
-move => w_weight_over_V.
-rewrite big_seq_fsetE /=.
-by move/and3P: (w_weight_over_V) => [_ _ /eqP].
-Qed.
-
-Lemma weightP :
-  reflect [/\ (forall v, w v >= 0), (forall v, v \notin V -> w v = 0) & (\sum_(v <- V) w v = 1)]
-          [w \weight over V].
-Proof.
-apply: (iffP idP).
-- move => w_weight; split;
-    [move => v; exact: weight_ge0 | move => v; exact: weight_eq0 | exact: weight_sum1].
-- move => [w_ge0 w_supp sum_w].
-  apply/and3P; split.
-  + apply/fsubsetP => v.
-    by apply: contraTT; move/w_supp/eqP; rewrite memNfinsupp.
-  + apply/forallP => v; apply: w_ge0.
-  + by apply/eqP; move: sum_w; rewrite big_seq_fsetE.
-Qed.
-
-Definition uweight : ({fsfun 'cV[R]_n -> R for fun => 0%R})  := [fsfun x : V => 1/(#|`V|%:R) | 0]%fset.
-
-Lemma uweightP : [w \weight over V].
-Admitted.
-
-Lemma uweight_gt0 v : v \in V -> uweight v > 0.
-Admitted.
-
-Definition bary : 'cV[R]_n := \sum_(v <- V) (w v) *: v.
-
 End Weight.
 
-Notation "[ w '\weight' 'over' V ]" := (weight V w).
-Notation "\bary[ w ] V" := (bary V w).
+(* -------------------------------------------------------------------- *)
+Section Comb.
+Context {T : choiceType} {R : numDomainType}.
 
-(* REMARK: this is the only lemma which points out it might be a bad idea
- * to implements weights using a type depending on V.
- * Alternatively, we could craft a special function handling this case.
- * I don't know yet what it the best solution *)
-Lemma weight_subset (R : realFieldType) n (V V' : {fset 'cV[R]_n}) w :
-  (V `<=` V')%fset -> [w \weight over V] -> [w \weight over V'].
-Admitted.
+Implicit Types (w : {fsfun T ~> R}).
 
-(*
-Lemma sum_vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :
-  \sum_(v <- V) (w v) = '[const_mx 1, vect_fset V w].
-Proof.
-rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
-- apply: eq_bigr => i _.
-  by rewrite !mxE mul1r.
-- apply: onW_bij; exact: enum_val_bij.
+Definition conic  w := [forall x : finsupp w, 0 <= w (val x)].
+Definition convex w := conic w && (weight w == 1).
+
+Lemma conicP w :
+  reflect (forall x, x \in finsupp w -> 0 <= w x) (conic w).
+Proof. apply: (iffP forallP) => /= [h x|h].
++ by move=> xw; apply: (h (Sub x xw)).
++ by case=> [/= x xw]; apply: h.
 Qed.
 
-End Barycenter.
+Lemma convexP w :
+  reflect
+    [/\ forall x, x \in finsupp w -> 0 <= w x & weight w = 1]
+    (convex w).
+Proof. by apply: (iffP andP); case=> /conicP h /eqP ->; split. Qed.
 
-Notation "[ w '\weight' 'over' V ]" := (weight V w).
-Notation "\bary[ w ] V" := (bary V w).
+Lemma convex_conic w : convex w -> conic w.
+Proof. by case/andP. Qed.
 
-Section ConvexHullDef.
-
-Variable R : realFieldType.
-Variable n : nat.
-Variable V : {fset 'cV[R]_n}.
-
-Let p := #|predT : pred V|.
-Definition e := (const_mx 1):'cV[R]_p.
-
-Definition A := col_mx (col_mx (mat_fset V) e^T) 1%:M.
-
-Definition b (x: 'cV[R]_n) :=
-  col_mx (col_mx x 1) (0:'cV_p).
-
-Definition is_in_convex_hull := [pred x | HPrim.non_empty 'P^=(A, b x; (lshift p) @: [set: 'I_(n+1)]) ].
-
-Section ConvexHullPolyProp.
-
-Variable x : 'cV[R]_n.
-Let I := (lshift p) @: [set: 'I_(n+1)].
-Let P := 'P^=(A, b x; I).
-Let V_mat := mat_fset V.
-
-Fact sum_w w : e^T *m w = 1 <-> '[const_mx 1, w] = 1.
-Proof.
-rewrite -vdot_def vdotC.
-split; last by move ->.
-by move/matrixP/(_ 0 0); rewrite !mxE /= mulr1n.
+Lemma conicwP w : reflect (forall x, 0 <= w x) (conic w).
+Proof. apply: (iffP idP).
++ by move/conicP=> h x; case: (finsuppP w x) => // /h.
++ by move=> h; apply/conicP=> x _; apply: h.
 Qed.
 
-Fact poly_cvx_hull_inP w :
-  reflect [/\ V_mat *m w = x, '[const_mx 1, w] = 1 & w >=m 0] (w \in P).
+Lemma conic0 : conic 0.
+Proof. by apply/conicP=> x; rewrite fsfunwE. Qed.
+
+Lemma conicD w1 w2 : conic w1 -> conic w2 -> conic (w1 + w2).
 Proof.
-apply/(iffP hpolyEq_inP).
-- move => [w_ineq w_eq].
-  have : (col_mx V_mat e^T) *m w = col_mx x 1.
-  + apply/colP => i; pose i' := lshift p i.
-    have i'_in_I : i' \in I by exact: mem_imset.
-    move/(_ _ i'_in_I): w_eq.
-    by rewrite mul_col_mx !col_mxEu.
-  rewrite mul_col_mx; move/eq_col_mx => [? ?].
-  split; try by [done | apply/sum_w].
-  apply/gev0P => i.
-  pose i' := rshift (n+1) i.
-  rewrite inE in w_ineq.
-  move/forallP/(_ i'): w_ineq.
-  by rewrite !mul_col_mx !col_mxEd mul1mx mxE.
-- move => [V_mat_eq sum_eq1 ge0].
-  suff w_eq : forall j, j \in I -> (A *m w) j 0 = (b x) j 0.
-  + split; last by done.
-    rewrite inE !mul_col_mx mul1mx.
-    rewrite col_mx_lev; apply/andP; split; last by done.
-    apply/forallP => i; pose i' := lshift p i.
-    have i'_in_I : i' \in I by exact: mem_imset.
-    by move/(_ _ i'_in_I): w_eq; rewrite 2!mul_col_mx !col_mxEu => ->.
-  + move => ? /imsetP [i _ ->]; rewrite !mul_col_mx !col_mxEu V_mat_eq.
-    by move/sum_w: sum_eq1 ->.
+move=> /conicwP h1 /conicwP h2; apply/conicwP=> x.
+by rewrite fsfunwE addr_ge0.
 Qed.
 
-End ConvexHullPolyProp.
-
-End ConvexHullDef.
-
-Notation "\conv V" := (is_in_convex_hull V).
-
-Section ConvexHullProp.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Implicit Type V : {fset 'cV[R]_n}.
-Implicit Type x : 'cV[R]_n.
-
-Lemma convP V x :
-  reflect (exists w, [w \weight over V] /\ x = \bary[w] V) (x \in \conv V).
+Lemma conic_finsuppE x w : conic w -> (x \in finsupp w) = (0 < w x).
 Proof.
-rewrite inE; apply: (iffP HPrim.non_emptyP) => [ [w] | [w] ].
-- move/poly_cvx_hull_inP => [V_w_eq_x e_w_eq1 w_ge0].
-  pose w' := [fsfun v : V => w (enum_rank v) 0 | 0].
-  have w_eq_w' : w = (vect_fset V w').
-  + apply/colP => i; rewrite mxE fsfun_ffun insubT => [ | ? /=];
-      first exact: nth_fsetP; last by rewrite fsetsubE enum_valK.
-  exists w'; split; last first.
-  + by rewrite baryE -V_w_eq_x; apply: congr1.
-  + apply/weightP; split.
-    * move => v; rewrite fsfun_ffun; case: insubP => [? _ _ /= | /=];
-        try by [ move/gev0P: w_ge0 | done ].
-    * move => v v_notin_V; rewrite fsfun_ffun insubF //; exact: negbTE.
-    * by rewrite sum_vect_fset -w_eq_w'.
-- move => [/weightP [w_ge0 w_supp sum_w_eq1] x_bary].
-  pose w' := vect_fset V w.
-  exists w'; apply/poly_cvx_hull_inP; split.
-  + by rewrite -baryE x_bary.
-  + by rewrite -sum_vect_fset.
-  + apply/gev0P => i; rewrite mxE; exact: w_ge0.
-Qed.
- *)
-
-(*
-Lemma convP0 : \conv(fset0 : {fset 'cV[R]_n}) =i pred0.
-Proof.
-move => x; rewrite [RHS]inE.
-apply/negP; move/convP => [w [/weight_sum1]].
-by rewrite big_seq_fset0 => /eqP; rewrite eq_sym oner_eq0.
+by move=> /conicwP h; rewrite ltr_neqAle h andbT eq_sym; apply: mem_finsupp.
 Qed.
 
-Lemma convP1 v x :
-  reflect (x = v) (x \in \conv [fset v]%fset).
-Admitted.
+Lemma conic_weight_ge0 w : conic w -> 0 <= weight w.
+Proof. by move/conicwP=> ge0_w; rewrite weightE; apply: sumr_ge0. Qed.
+End Comb.
 
-Lemma convP2 v v' x :
-  reflect (exists a, 0 <= a <= 1 /\ x = a *: v + (1-a) *: v) (x \in \conv ([fset v; v'])%fset).
-Admitted.
+(* -------------------------------------------------------------------- *)
+Section SubConic.
+Context {T : choiceType} {R : numDomainType}.
 
-Lemma conv_mono V V' x : (V `<=` V')%fset -> x \in \conv V -> x \in \conv V'.
-Proof.
-Admitted.
+Record conicFun := mkConicFun
+  { conic_val :> {fsfun T ~> R}; _ : conic conic_val }.
 
-Lemma convU V V' x :
-  reflect (exists a v v', [/\ 0 <= a <= 1, v \in \conv V, v' \in \conv V' & x = a *: v + (1-a) *: v'])
-  (x \in \conv(V `|` V')%fset).
-Admitted.
+Canonical conicfun_subType := Eval hnf in [subType for conic_val].
+Definition conicfun_eqMixin := [eqMixin of conicFun by <:].
+Canonical conicfun_eqType := Eval hnf in EqType conicFun conicfun_eqMixin.
+Definition conicfun_choiceMixin := [choiceMixin of conicFun by <:].
+Canonical conicfun_choiceType :=
+  Eval hnf in ChoiceType conicFun conicfun_choiceMixin.
 
-Lemma convU1 v V' x :
-   reflect (exists a v', [/\ 0 <= a <= 1, v' \in \conv V' & x = a *: v + (1-a) *: v'])
-           (x \in \conv(v |` V')%fset).
-Admitted.
+Definition conicfun_of (_ : phant T) (_ : phant R) := conicFun.
+Identity Coercion type_of_conicfun : conicfun_of >-> conicFun.
+End SubConic.
 
-End ConvexHullProp.
- *)
+Notation "{ 'conic' T ~> R }" :=
+  (conicfun_of (Phant T) (Phant R)) : type_scope.
 
-(*
-Section Separation.
+Bind Scope conicfun_scope with conicFun.
+Bind Scope conicfun_scope with conicfun_of.
 
-Variable R : realFieldType.
-Variable n : nat.
+Delimit Scope conicfun_scope with cof.
 
-Definition separate (V : {fset 'cV[R]_n}) c x := exists z, ('[c,x] < z /\ forall (v: 'cV_n), v \in V -> '[c,v] >= z).
-Notation "[ c '\separates' x '\from' V ]" := (separate V c x).
+(* -------------------------------------------------------------------- *)
+Section SubConicTheory.
+Context {T : choiceType} {R : realDomainType}.
 
-Variable V : {fset 'cV[R]_n}.
+Canonical conicfun_of_subType    := Eval hnf in [subType    of {conic T ~> R}].
+Canonical conicfun_of_eqType     := Eval hnf in [eqType     of {conic T ~> R}].
+Canonical conicfun_of_choiceType := Eval hnf in [choiceType of {conic T ~> R}].
 
-Lemma separationP c x :
-  [ c \separates x \from V ] <-> (forall (v: 'cV_n), v \in V -> '[c, x] < '[c, v]).
-Proof.
-split.
-- move => [z [c_x_lt_z c_V_ge_z]] v v_in_V.
-  move/(_ _ v_in_V): c_V_ge_z.
-  exact: ltr_le_trans.
-- move => c_x_lt_c_V.
-  pose S := [seq '[c,v] | v <- V].
-  pose z := min_seq S ('[c,x] + 1).
-  exists z; split.
-  + case: (boolP (S == [::] :> seq _)).
-    * rewrite /z; move/eqP => -> /=.
-      by rewrite ltr_addl ltr01.
-    * rewrite /z.
-      move/(min_seq_eq ('[c,x]+1))/hasP => [? /mapP [v v_in_V ->]] /eqP ->.
-      exact: c_x_lt_c_V.
-  + move => v v_in_V.
-    by rewrite /z; apply: min_seq_ler; apply: map_f.
+Implicit Types (w : {conic T ~> R}).
+
+Lemma fconicP w1 w2 : w1 =1 w2 <-> w1 = w2.
+Proof. by rewrite fsfunP (rwP val_eqP) (rwP eqP). Qed.
+
+Lemma gt0_fconic w x : x \in finsupp w -> 0 < w x.
+Proof. by rewrite conic_finsuppE // (valP w). Qed.
+
+Lemma ge0_fconic w x : 0 <= w x.
+Proof. by move/conicwP: (valP w); apply. Qed.
+
+(* We have to lock the definitions *)
+Definition conicf0 : {conic T ~> R} :=
+  nosimpl (mkConicFun conic0).
+
+Definition conicfD : _ -> _ -> {conic T ~> R} :=
+  nosimpl (fun w1 w2 => mkConicFun (conicD (valP w1) (valP w2))).
+
+Notation "0 %:PFS" := conicf0 : conicfun_scope.
+Notation "f + g" := (conicfD f g) : conicfun_scope.
+
+Lemma fconic0E x : (0%:PFS)%cof x = 0.
+Proof. by rewrite fsfunwE. Qed.
+
+Lemma fconicDE w1 w2 x : (w1 + w2)%cof x = w1 x + w2 x.
+Proof. by rewrite fsfunwE. Qed.
+
+Definition fconicwE := (fconic0E, fconicDE).
+
+Lemma conic_comoid_r :
+  [/\ associative conicfD
+    , left_id conicf0 conicfD
+    , right_id conicf0 conicfD
+    & commutative conicfD].
+Proof. split.
++ by move=> w1 w2 w3; apply/fconicP => x; rewrite !fconicwE addrA.
++ by move=> w; apply/fconicP => x; rewrite !fconicwE add0r.
++ by move=> w; apply/fconicP => x; rewrite !fconicwE addr0.
++ by move=> w1 w2; apply/fconicP => x; rewrite !fconicwE addrC.
 Qed.
 
-Lemma separationP_proper c x :
-  [ c \separates x \from V ] <-> exists z, ('[c,x] < z /\ forall (v: 'cV_n), v \in V -> '[c,v] > z).
+Let addpA := let: And4 h _ _ _ := conic_comoid_r in h.
+Let add0p := let: And4 _ h _ _ := conic_comoid_r in h.
+Let addp0 := let: And4 _ _ h _ := conic_comoid_r in h.
+Let addpC := let: And4 _ _ _ h := conic_comoid_r in h.
+
+Canonical conic_monoid := Monoid.Law addpA add0p addp0.
+Canonical conic_comoid := Monoid.ComLaw addpC.
+
+Lemma mem_coffinsupp w x : (x \in finsupp w) = (0 < w x).
+Proof. by rewrite mem_finsupp ltr_neqAle eq_sym ge0_fconic andbT. Qed.
+
+Lemma coffinsupp0 : finsupp (0%:PFS)%cof = fset0.
+Proof. by rewrite supp_fs0. Qed.
+
+Lemma coffinsuppD w1 w2 :
+  finsupp (w1 + w2)%cof = (finsupp w1 `|` finsupp w2)%fset.
 Proof.
-split.
-- move => [z [c_x_lt_z c_V_ge_z]].
-  pose z' := ('[c,x]+z) / 2%:R; exists z'; split.
-  + by rewrite midf_lt.
-  + move => v /c_V_ge_z; apply: ltr_le_trans.
-    by rewrite midf_lt.
-- move => [z [c_x_lt_z c_V_gt_z]].
-  exists z; split; first by done.
-  move => v /c_V_gt_z; exact: ltrW.
+apply/fsetP=> x; rewrite in_fsetE !mem_coffinsupp fconicwE.
+have := ge0_fconic w1 x; rewrite ler_eqVlt => /orP[].
++ by move/eqP=> <-; rewrite ltrr add0r. 
++ by move=> gt0_w1; rewrite gt0_w1 ltr_paddr // ge0_fconic.
 Qed.
 
-Fact mul_A_tr_u c z w i :
-  let u := col_mx (col_mx c z%:M) w in
-  let v := @nth_fset _ _ V i in
-  row i ((A V)^T *m u) = ('[c, v] + z + w i 0)%:M.
+Lemma ge0_cofweight w : 0 <= weight w.
+Proof. by apply/conic_weight_ge0/valP. Qed.
+End SubConicTheory.
+
+Notation "0 %:PFS" := conicf0 : conicfun_scope.
+Notation "f + g" := (conicfD f g) : conicfun_scope.
+
+(* -------------------------------------------------------------------- *)
+Section SubConvex.
+Context {T : choiceType} {R : numDomainType}.
+
+Record convexFun := mkConvexfun
+  { convex_val :> {fsfun T ~> R}; _ : convex convex_val }.
+
+Canonical convexfun_subType := Eval hnf in [subType for convex_val].
+Definition convexfun_eqMixin := [eqMixin of convexFun by <:].
+Canonical convexfun_eqType := Eval hnf in EqType convexFun convexfun_eqMixin.
+Definition convexfun_choiceMixin := [choiceMixin of convexFun by <:].
+Canonical convexfun_choiceType :=
+  Eval hnf in ChoiceType convexFun convexfun_choiceMixin.
+
+Definition convexfun_of (_ : phant T) (_ : phant R) := convexFun.
+Identity Coercion type_of_convexfun : convexfun_of >-> convexFun.
+End SubConvex.
+
+Notation "{ 'convex' T ~> R }" :=
+  (convexfun_of (Phant T) (Phant R)) : type_scope.
+
+Bind Scope convexfun_scope with convexFun.
+Bind Scope convexfun_scope with convexfun_of.
+
+Delimit Scope convexfun_scope with cvf.
+
+(* -------------------------------------------------------------------- *)
+Section SubConvexTheory.
+Context {T : choiceType} {R : realDomainType}.
+
+Canonical convexfun_of_subType    := Eval hnf in [subType    of {convex T ~> R}].
+Canonical convexfun_of_eqType     := Eval hnf in [eqType     of {convex T ~> R}].
+Canonical convexfun_of_choiceType := Eval hnf in [choiceType of {convex T ~> R}].
+
+Implicit Types (w : {convex T ~> R}).
+
+Lemma fconvexP w1 w2 : w1 =1 w2 <-> w1 = w2.
+Proof. by rewrite fsfunP (rwP val_eqP) (rwP eqP). Qed.
+
+Lemma conic_fconvex w : conic w.
+Proof. by apply/convex_conic/valP. Qed.
+
+Lemma convex_fconvex w : convex w.
+Proof. by apply/valP. Qed.
+
+Lemma gt0_fconvex w x : x \in finsupp w -> 0 < w x.
+Proof. by rewrite conic_finsuppE //; apply/conic_fconvex. Qed.
+
+Lemma ge0_fconvex w x : 0 <= w x.
+Proof. by move/conicwP: (conic_fconvex w); apply. Qed.
+
+Lemma ge0_cvweight w : 0 <= weight w.
+Proof. by apply/conic_weight_ge0/conic_fconvex. Qed.
+
+Lemma wgt1_fconvex w : weight w = 1.
+Proof. by case/convexP: (valP w). Qed.
+
+Lemma fconvex_insupp_neq0 w : (finsupp w == fset0) = false.
 Proof.
-move => u v.
-rewrite row_mul -tr_col 2!col_col_mx.
-rewrite col_mat_fset.
-rewrite trmx_const col_const.
-rewrite 2!tr_col_mx trmx_const tr_col trmx1 row1.
-rewrite 2!mul_row_col -vdot_def -rowE.
-by rewrite const_mx11 -scalar_mxM mul1r row_cV -2!raddfD /=.
+apply/negP=> /eqP zw; have := wgt1_fconvex w.
+by rewrite weightE zw big_fset0 (rwP eqP) eq_sym oner_eq0.
+Qed.
+End SubConvexTheory.
+
+(* -------------------------------------------------------------------- *)
+Section CvxDirac.
+Context {T : choiceType} {R : numDomainType}.
+
+Lemma fcvx1_r x : @convex T R [fsfun _ in [fset x]%fset => 1].
+Proof. apply/convexP; split=> /=.
++ by move=> y _; rewrite fsfunE; case: ifP.
++ rewrite (weightwE (E := [fset x]%fset)); last first.
+    by rewrite big_fset1 /= fsfunE fset11.
+  apply/fsubsetP=> y; rewrite mem_finsupp fsfunE in_fset1.
+  by case: ifP => //; rewrite eqxx.
 Qed.
 
-Lemma convPn x :
-  reflect (exists c, [ c \separates x \from V ]) (x \notin \conv V).
+Definition fcvx1 : T -> {convex T ~> R} :=
+  nosimpl (fun x => mkConvexfun (fcvx1_r x)).
+
+Lemma fcvx1E x y : fcvx1 x y = (y == x)%:R.
+Proof. by rewrite fsfunE in_fset1; case: ifP. Qed.
+
+Lemma finsupp_fcvx1 x : finsupp (fcvx1 x) = [fset x]%fset.
 Proof.
-apply: (iffP hpolyEq_non_emptyPn_cert).
-- move => [u [u_ge0 A_u_eq0 b_u_lt0]].
-  pose c := -usubmx (usubmx u).
-  pose z := dsubmx (usubmx u) 0 0.
-  pose w := dsubmx u.
-  have split_u : u = col_mx (col_mx (-c) z%:M) w.
-  + by rewrite opprK -mx11_scalar 2!vsubmxK.
-  have w_ge0 : w >=m 0.
-  + apply/gev0P => i; rewrite mxE.
-    apply: u_ge0; apply/memPn => ? /imsetP [j _] ->; exact: lrshift_distinct.
-  exists c; exists z; split.
-  + move: b_u_lt0; rewrite split_u 2!vdot_col_mx vdot0l addr0.
-    rewrite vdotNr vdotC addrC subr_gt0.
-    suff ->: '[1,z%:M] = z by done.
-    * have ->: '[1,z%:M] = \sum_(i < 1) z.
-        by apply/eq_bigr => i _; rewrite !mxE [i]ord1_eq0 /= mul1r mulr1n.
-    * by rewrite big_const cardT size_enum_ord /= addr0.
-  + move => v v_in_V.
-    move/row_matrixP/(_ (enum_rank [`v_in_V]%fset)): A_u_eq0.
-    rewrite split_u mul_A_tr_u /= row0.
-    rewrite /nth_fset enum_rankK /=.
-    move/eqP; rewrite  scalar_mx_eq0 mxE /= mulr1n -addrA addrC vdotNl subr_eq0 => /eqP <-.
-    rewrite ler_addl; by move/gev0P: w_ge0.
-- move => [c [z [c_x_lt_z c_V_gt_z]]].
-  pose w := \col_i ('[c, nth_fset i] - z) :'cV_(#|predT : pred V|).
-  pose u := col_mx (col_mx (-c) z%:M) w.
-  exists u; split.
-  + move => j; rewrite -in_setC lshift_set_compl => /imsetP [k] _ ->.
-    by rewrite col_mxEd mxE subr_ge0; apply: c_V_gt_z; exact: nth_fsetP.
-  + apply/row_matrixP => i. rewrite mul_A_tr_u row0 mxE.
-    by rewrite vdotNl addrACA addrN addNr addr0 -const_mx11.
-  + rewrite 2!vdot_col_mx vdot0l addr0 vdotC vdotNl addrC subr_gt0.
-    suff ->: '[1,z%:M] = z by done.
-    * have ->: '[1,z%:M] = \sum_(i < 1) z.
-        by apply/eq_bigr => i _; rewrite !mxE [i]ord1_eq0 /= mul1r mulr1n.
-    * by rewrite big_const cardT size_enum_ord /= addr0.
+apply/fsetP=> y; rewrite in_fset1 mem_finsupp fcvx1E.
+by rewrite pnatr_eq0 eqb0 negbK.
 Qed.
 
-End Separation.
+Lemma mem_fcvx1 x y : (y \in finsupp (fcvx1 x)) = (y == x).
+Proof. by rewrite finsupp_fcvx1 in_fset1. Qed.
+End CvxDirac.
 
+(* -------------------------------------------------------------------- *)
+Section CvxDiracCombine.
+Context {R : numDomainType} {L : lmodType R}.
 
-Section Convexity.
-
-Variable R : realFieldType.
-Variable n : nat.
-
-Definition convex (P: pred 'cV[R]_n) :=
-  forall v w, P v -> P w -> (forall x, x \in \conv([fset v; w]%fset) -> P x).
-
-Lemma convexP (P: pred 'cV[R]_n) (V : {fset 'cV[R]_n}) :
-  convex P -> {subset V <= P} -> {subset (\conv V) <= P}.
-Admitted.
-
-Lemma hpoly_convex (P : 'hpoly[R]_n) : convex (mem P).
+Lemma combine_fcvx1 x : combine (@fcvx1 L R x) = x.
 Proof.
-Admitted.
-(*  case: P => m A b.
-move => V_sub_P x /convP [w [w_weight ->]].
-rewrite inE; apply/forallP => i.
-have ->: b i 0 = \sum_(v <- V) ((w v) * (b i 0)).
-  by rewrite -mulr_suml weight_sum1 // mul1r.
-rewrite mulmx_sumr summxE 2!big_seq; apply: ler_sum => /= v v_in_V.
-rewrite -scalemxAr mxE; apply: ler_wpmul2l; first exact: (weight_ge0 w_weight).
-by move/(_ _ v_in_V)/forallP: V_sub_P.
-Qed.*)
+by rewrite combineE finsupp_fcvx1 big_fset1 fcvx1E eqxx scale1r.
+Qed.
+End CvxDiracCombine.
 
-Lemma halfspace_leq_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] <= d].
-Admitted.
+(* -------------------------------------------------------------------- *)
+Section Bary.
+Context {R : numDomainType} {L : lmodType R}.
 
-Lemma halfspace_lt_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] < d].
-Admitted.
+Implicit Types (V : {fset L}) (w : {convex L ~> R}).
 
-Lemma halfspace_geq_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] >= d].
-Admitted.
+Definition bary (V : {fset L}) :=
+  fun x : L => exists2 w : {convex L ~> R},
+    {subset finsupp w <= V} & x = combine w.
 
-Lemma halfspace_gt_convex (c: 'cV[R]_n) (d: R) : convex [pred x | '[c,x] > d].
-Admitted.
+Notation "x \bary V" := (bary V x) : form_scope.
 
-End Convexity.
-*)
+Lemma bary_subset V1 V2 x :
+  {subset V1 <= V2} -> x \bary V1 -> x \bary V2.
+Proof.
+move=> le_V1_V2 [w le_w_V1 ->]; exists w => //.
+by move=> {x}x /le_w_V1 /le_V1_V2.
+Qed.
+
+Lemma bary1 x : x \bary [fset x]%fset.
+Proof.
+exists (fcvx1 x); last by rewrite combine_fcvx1.
+by move=> y; rewrite mem_fcvx1 => /eqP->; rewrite fset11.
+Qed.
+End Bary.
