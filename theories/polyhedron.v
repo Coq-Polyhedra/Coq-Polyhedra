@@ -1301,82 +1301,75 @@ Section Hull.
 
 Variable (R : realFieldType) (n : nat) .
 
-Definition nth_fset (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) := val (enum_val i).
-
-Lemma nth_fsetP (V : {fset 'cV[R]_n}) (i : 'I_#|predT: pred V|) :
-  nth_fset i \in V.
-Proof.
-rewrite /nth_fset; exact: fsvalP.
-Qed.
-
 Definition mat_fset (V : {fset 'cV[R]_n}) :=
-  (\matrix_(i < #|predT : pred V|) (nth_fset i)^T)^T.
-
-Fact col_mat_fset V i : col i (mat_fset V) = nth_fset i .
-Proof.
-by rewrite -tr_row rowK trmxK.
-Qed.
+  (\matrix_(i < #|`V|) (fnth i)^T)^T.
 
 Definition vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :=
-  \col_(i < #|predT : pred V|) (w (nth_fset i)).
+  \col_(i < #|`V|) (w (fnth i)).
 
-Lemma sum_vect_fset (V : {fset 'cV[R]_n}) (w : 'cV[R]_n -> R) :
-  \sum_(v <- V) (w v) = '[const_mx 1, vect_fset V w].
+Lemma vect_fsetK (V : {fset 'cV[R]_n}) (c : 'cV[R]__) :
+  vect_fset V (vect_to_fsfun c) = c.
 Proof.
-rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
-- apply: eq_bigr => i _.
-  by rewrite !mxE mul1r.
-- apply: onW_bij; exact: enum_val_bij.
+apply/colP=> i; rewrite mxE /vect_to_fsfun fsfun_ffun insubT ?fnthP //=.
+by move=> h; rewrite (bool_irrelevance h (fnthP _)) frankK.
 Qed.
 
-Lemma baryE V w : bary V w = (mat_fset V) *m (vect_fset V w).
-Proof.
-rewrite /bary mulmx_sum_col.
-rewrite big_seq_fsetE (reindex (@enum_val _ V)) /=.
-- apply: eq_bigr => i _.
-  by rewrite col_mat_fset /vect_fset mxE.
-- apply: onW_bij; exact: enum_val_bij.
-Qed.
-
-Definition cone V := map_poly (mat_fset V) orthant.
-
-Lemma in_coneP V x :
-  reflect (exists2 w, pweight V w & x = \bary[w] V) (x \in cone V).
-Proof.
-apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w /pweight_ge0 w_ge0 ->]].
-- rewrite in_orthant => y_ge0.
-  pose w := vect_to_pweight y; exists w; first exact: vect_to_pweightP.
-  suff ->: y = vect_fset V w by rewrite baryE.
-  apply/colP => i; rewrite mxE fsfun_ffun insubT ?nth_fsetP //.
-  by move => ?; rewrite /= fsetsubE enum_valK_in.
-- exists (vect_fset V w); first exact: baryE.
-  by rewrite in_orthant; apply/gev0P => i; rewrite mxE; exact: w_ge0.
-Qed.
+Definition cone V :=
+  map_poly (mat_fset V) orthant.
 
 Definition conv V :=
   map_poly (mat_fset V) (orthant `&` `[hp [<const_mx 1, 1>]]).
 
-Lemma in_convP V x :
-  reflect (exists2 w, [w \weight over V] & x = \bary[w] V) (x \in conv V).
+Lemma combine_mulmxE (w : {fsfun 'cV[R]_n ~> _}) (V : {fset 'cV[R]_n}) :
+  (finsupp w `<=` V)%fset -> combine w = mat_fset V *m vect_fset V w.
 Proof.
-apply: (iffP (in_map_polyP _ _ _)) => [[y ->] | [w w_weight ->]].
-- rewrite in_polyI in_orthant in_hp => /andP [y_ge0 /eqP Σy_eq_1].
-  pose w := vect_to_pweight y; exists w; first admit.
-  suff ->: y = vect_fset V w by rewrite baryE.
-  apply/colP => i; rewrite mxE fsfun_ffun insubT ?nth_fsetP //.
-  by move => ?; rewrite /= fsetsubE enum_valK_in.
-- exists (vect_fset V w); first exact: baryE.
-  rewrite in_polyI; apply/andP; split.
-  + by rewrite in_orthant; apply/gev0P => i; rewrite mxE; apply/weight_ge0: w_weight.
-  + by rewrite in_hp -sum_vect_fset; apply/eqP/weight_sum1.
-Admitted.
+move=> le_wV; rewrite (combinewE le_wV) mulmx_sum_col.
+rewrite (reindex (@frank _ _)) /=; last first.
++ by apply/onW_bij/bij_frank.
+apply: eq_bigr=> x _; rewrite !mxE val_fnthK; congr (_ *: _).
+by rewrite -tr_row rowK trmxK val_fnthK.
+Qed.
+
+Lemma in_coneP V x :
+  reflect
+    (exists2 w : {conic 'cV[R]_n ~> _},
+       (finsupp w `<=` V)%fset & x = combine w)
+    (x \in cone V).
+Proof.
+apply: (iffP (in_map_polyP _ _ _)) => /= [[c ->]|[w le_wV ->]].
++ rewrite in_orthant => ge0_c; pose w := vect_to_fsfun c.
+  exists (mkConicFun (conic_vect_to_fsfun ge0_c)); rewrite /= -/w.
+  - by apply: finsupp_vect_to_fsfun.
+  by rewrite (combine_mulmxE (finsupp_vect_to_fsfun c)) vect_fsetK.
++ exists (vect_fset V w); first by rewrite (combine_mulmxE le_wV).
+  by rewrite in_orthant; apply/gev0P => i; rewrite mxE ge0_fconic.
+Qed.
+
+Lemma in_convP V x :
+  reflect
+    (exists2 w : {convex 'cV[R]_n ~> _},
+       (finsupp w `<=` V)%fset & x = combine w)
+    (x \in conv V).
+Proof.
+apply: (iffP (in_map_polyP _ _ _)) => /= [[c ->]|[w le_wV ->]].
++ rewrite in_polyI in_orthant in_hp => /andP[/= ge0_c /eqP Σc_eq_1].
+  exists (mkConvexfun (convex_vect_to_fsfun ge0_c Σc_eq_1)) => /=.
+  - by apply: finsupp_vect_to_fsfun.
+  by rewrite (combine_mulmxE (finsupp_vect_to_fsfun c)) vect_fsetK.
++ exists (vect_fset V w); first by rewrite (combine_mulmxE le_wV).
+  rewrite in_polyI in_orthant in_hp /= -(rwP andP); split.
+  - by apply/gev0P=> i; rewrite mxE ge0_fconvex.
+  - rewrite vdotC vdotr_const_mx1 (reindex (@frank _ _)) /=; last first.
+    * by apply/onW_bij/bij_frank.
+    rewrite -[X in _==X](wgt1_fconvex w) (weightwE le_wV).
+    by apply/eqP/eq_bigr=> i _; rewrite mxE val_fnthK.
+Qed.
 
 Lemma conv0 : conv fset0 = `[poly0].
 Proof.
 apply/eqP; rewrite -subset0_equiv.
-apply/poly_subsetP => x /in_convP [w /weight_sum1 w_weight _].
-rewrite big_seq big_pred0 // in w_weight.
-by move/eqP: w_weight; rewrite eq_sym oner_eq0.
+apply/poly_subsetP => x /in_convP[w].
+by rewrite fsubset0 fconvex_insupp_neq0.
 Qed.
 
 Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
@@ -1389,21 +1382,14 @@ Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
 Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 
 Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
-Proof. (* RK *)
-apply/idP/idP => [/in_convP [w /weightP [w_ge0 _ sum_w] ->] | /eqP ->].
-- rewrite big_seq_fset1 in sum_w.
-  by rewrite /bary big_seq_fset1 sum_w scale1r.
-- pose w := [fsfun x : [fset Ω]%fset => 1%R | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-  have w_Ω_eq_1: w Ω = 1
-    by rewrite fsfun_ffun /=; case: insubP => [? ? ? /= | /= ]; [done | rewrite in_fset1 eq_refl].
-  apply/in_convP; exists w.
-  + apply/weightP; split.
-    * move => v; rewrite fsfun_ffun.
-      by case: insubP => [? _ _ /= | /= _]; [exact: ler01 | done].
-    * move => v; rewrite fsfun_ffun.
-      by case: insubP => [? -> _ /= | /= _].
-    * by rewrite big_seq_fset1.
-  + by rewrite /bary big_seq_fset1 w_Ω_eq_1 scale1r.
+Proof.
+apply/idP/idP => [/in_convP [w le_wΩ ->]|/eqP->].
++ rewrite (combinewE le_wΩ) big_fset1 /=; move: le_wΩ.
+  rewrite fsubset1 fconvex_insupp_neq0 orbF => /eqP fw.
+  have := wgt1_fconvex w; rewrite weightE fw big_fset1 /=.
+  by move=> ->; rewrite scale1r.
++ apply/in_convP; exists (fcvx1 Ω).
+    by rewrite finsupp_fcvx1. by rewrite combine_fcvx1.
 Qed.
 
 Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
@@ -1491,81 +1477,84 @@ Implicit Type w : {fsfun base_elt[R,n] -> R for fun => 0%R}.
 
 Lemma farkas (e : base_elt) :
   ('P(base) `>` `[poly0]) -> ('P(base) `<=` `[hs e]) ->
-  exists2 w, pweight base w & ((combine base w).1 = e.1 /\ (combine base w).2 >= e.2).
+  exists2 w : {conic base_elt ~> R},
+         (finsupp w `<=` base)%fset
+       & (combine w).1 = e.1 /\ (combine w).2 >= e.2.
 Proof.
 rewrite /poly_of_base big_polyI_mono -subset0N_proper 2!poly_subset_mono.
 exact: H.farkas.
 Qed.
 
-Lemma dual_sol_lower_bound w :
-  pweight base w -> 'P(base) `<=` `[hs (combine base w)].
+Lemma dual_sol_lower_bound (w : {conic base_elt ~> R}) :
+  (finsupp w `<=` base)%fset -> 'P(base) `<=` `[hs (combine w)].
 Proof.
-move => w_weight.
-apply/poly_subsetP => x; rewrite inE in_poly_of_base /=.
-rewrite !combineE vdot_sumDl => /forallP H.
-apply: ler_sum => i _.
-rewrite vdotZl; apply: ler_wpmul2l; first exact: (pweight_ge0 w_weight).
-by move/(_ i): H; rewrite inE.
+move=> le_wB; apply/poly_subsetP => x; rewrite inE in_poly_of_base /=.
+rewrite (combineb1E le_wB) (combineb2E le_wB) vdot_sumDl => /forallP h.
+apply: ler_sum => i _; rewrite vdotZl; apply: ler_wpmul2l.
++ by apply: ge0_fconic.
++ by move/(_ i): h; rewrite inE.
 Qed.
 
 Lemma dual_opt_sol (c : 'cV[R]_n) (H : bounded 'P(base) c) :
-  exists2 w, pweight base w & combine base w = [<c, opt_value H>].
+  exists2 w : {conic base_elt ~> R},
+    (finsupp w `<=` base)%fset & combine w = [<c, opt_value H>].
 Proof.
 move/(farkas (boundedN0 H)): (opt_value_lower_bound H).
-case=> [w w_weight [w_comb1 w_comb2]].
-exists w; first done.
-apply/eqP/be_eqP; split=> //.
-apply: ler_anti; apply/andP; split; last done.
-move: (opt_point H) => [x x_in_P <-].
+case=> [w w_weight [w_comb1 w_comb2]]; exists w => //.
+apply/eqP/be_eqP; split=> //; apply/ler_anti/andP; split=> //.
+case: (opt_point H) => [x x_in_P <-].
 move/poly_subsetP/(_ _ x_in_P): (dual_sol_lower_bound w_weight).
 by rewrite inE w_comb1.
 Qed.
 
-Lemma dual_sol_bounded w :
-  ('P(base) `>` `[poly0]) -> pweight base w -> bounded 'P(base) (fst (combine base w)).
+Lemma dual_sol_bounded (w : {conic base_elt ~>R}) :
+     ('P(base) `>` `[poly0])
+  -> (finsupp w `<=` base)%fset
+  -> bounded 'P(base) (combine w).1.
 Proof.
 move => P_non_empty u_ge0; apply/bounded_lower_bound => //.
-exists (combine base w).2; exact: dual_sol_lower_bound.
+exists (combine w).2; exact: dual_sol_lower_bound.
 Qed.
 
-Variable (w : {fsfun base_elt[R,n] -> R for fun => 0%R}).
-Hypothesis w_pweight : pweight base w.
+Variable (w : {conic base_elt[R,n] ~> R}).
 
-Lemma compl_slack_cond x :
-  x \in 'P(base) -> reflect (x \in `[hp (combine base w)]) (x \in 'P^=(base; supp base w)).
+Hypothesis le_wb : (finsupp w `<=` base)%fset.
+
+Lemma compl_slack_cond x : x \in 'P(base) ->
+  reflect (x \in `[hp (combine w)]) (x \in 'P^=(base; finsupp w)).
 Proof.
 move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
-- rewrite in_hp !combineE vdot_sumDl; apply/eqP.
+- rewrite in_hp !(combinebE le_wb) vdot_sumDl; apply/eqP.
   apply: eq_bigr => i _.
-  case: (suppP w_pweight); first by rewrite scale0r vdot0l mul0r.
+  case: finsuppP; first by rewrite scale0r vdot0l mul0r.
   by move/in_hps; rewrite inE vdotZl => /eqP <-.
-- rewrite in_hp !combineE vdot_sumDl => in_comb_hp.
+- rewrite in_hp !(combinebE le_wb) vdot_sumDl => in_comb_hp.
   apply/in_polyEqP; split; last done.
   move => e e_in_supp; move: in_comb_hp; apply: contraTT.
   rewrite notin_hp; last first.
   + move: x x_in_P; apply/poly_subsetP/poly_base_subset.
-    exact: (fsubsetP (supp_subset _ w)).
+    exact: (fsubsetP le_wb).
   + move => notin_hp; rewrite eq_sym; apply/ltr_neq.
     apply: sumr_ltrP => [i| ].
-    * rewrite vdotZl; apply/ler_wpmul2l; first exact : (pweight_ge0 w_pweight).
+    * rewrite vdotZl; apply/ler_wpmul2l; first exact : ge0_fconic.
       move/(poly_subsetP (poly_base_subset (fsvalP i))): x_in_P.
       by rewrite inE /=.
-    * have e_in_base : e \in base by apply/(fsubsetP (supp_subset _ w)).
+    * have e_in_base : e \in base by apply/(fsubsetP le_wb).
       exists [` e_in_base]%fset.
       rewrite vdotZl ltr_pmul2l; first done.
-      by rewrite -(pweight_gt0 w_pweight).
+      by rewrite gt0_fconic.
 Qed.
 
-Lemma dual_sol_argmin :
-  ('P^=(base; supp base w) `>` `[poly0]) -> argmin 'P(base) (fst (combine base w)) = 'P^=(base; supp base w).
+Lemma dual_sol_argmin : ('P^=(base; finsupp w) `>` `[poly0]) ->
+  argmin 'P(base) (combine w).1 = 'P^=(base; finsupp w).
 Proof.
-have PI_sub_P : 'P^=(base; supp base w) `<=` 'P(base) by exact: polyEq_antimono0.
+have PI_sub_P : 'P^=(base; finsupp w) `<=` 'P(base) by exact: polyEq_antimono0.
 move => PI_neq0.
 have P_neq0 : ('P(base) `>` `[poly0]) by exact: (poly_proper_subset PI_neq0).
 move/proper0P : PI_neq0 => [x x_in_PI].
-set c := (combine base w).1; have c_bounded := (dual_sol_bounded P_neq0 w_pweight).
+set c := (combine w).1; have c_bounded := (dual_sol_bounded P_neq0 le_wb).
 rewrite argmin_polyI.
-suff ->: opt_value c_bounded = (combine base w).2.
+suff ->: opt_value c_bounded = (combine w).2.
 - apply/poly_eqP => y; rewrite inE.
   apply/andP/idP => [[? ?]| y_in_PI]; first exact/compl_slack_cond.
   have y_in_P: y \in ('P(base)) by apply/(poly_subsetP PI_sub_P).
@@ -1576,7 +1565,7 @@ suff ->: opt_value c_bounded = (combine base w).2.
     move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound c_bounded).
     by rewrite inE.
   + move: (opt_point c_bounded) => [y y_in_P <-].
-    move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound w_pweight).
+    move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound le_wb).
     by rewrite inE.
 Qed.
 
@@ -1613,6 +1602,7 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
     by rewrite in_hs /= vdot0r.
   move/(farkas non_empty) => [w w_pweight [combine_eq _]].
   apply/in_convP.
+(*
   pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v : V => w (homogenize (val v))]%fset.
   suff /eq_col_mx [ <- /(scalar_mx_inj (ltnSn 0)) sum_eq1]:
     col_mx (\bary[w'] V) (\sum_(v <- V) (w' v))%:M = col_mx x 1%:M.
@@ -1621,6 +1611,7 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
   + rewrite raddf_sum /= /bary.
     (*rewrite -sum_col_mx.*)
     admit.
+*)
 Admitted.
 
 End Separation.
