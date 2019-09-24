@@ -10,7 +10,7 @@
 
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product vector_order row_submx.
-Require Import hpolyhedron polyhedron.
+Require Import hpolyhedron polyhedron barycenter.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -181,12 +181,12 @@ suff flat_prop: forall base0, bounded ('P(base0) : 'poly[R]_n) c -> has_base bas
 - (* now this is the classic proof of Schrijver *)
   move => base0 c_bounded.
   move: (dual_opt_sol c_bounded) => [w w_ge0 w_comb].
-  apply/has_baseP; exists (supp base0 w)%:fsub.
+  apply/has_baseP; exists (finsupp w)%:fsub.
   move: (opt_point c_bounded) => [x x_in_P0 c_x_eq_opt_val].
-  have: x \in `[hp (combine base0 w)] : 'poly[R]_n.
+  have: x \in `[hp (combine w)] : 'poly[R]_n.
   - by rewrite inE w_comb /=; apply/eqP.
   move/(compl_slack_cond w_ge0 x_in_P0) => x_in_P0I.
-  have ->: c = (combine base0 w).1 by rewrite w_comb.
+  have ->: c = (combine w).1 by rewrite w_comb.
   apply/dual_sol_argmin; try by done.
   by apply/proper0P; exists x.
 Qed.
@@ -400,17 +400,17 @@ case: (emptyP ('P(base) : 'poly[R]_n))
 - case: (poly_baseP Q) => [-> | ]; first constructor.
   move => I [Q_eq Q_prop0].
   rewrite inE; move => Q_sub_P.
-  pose w := uniform_pweight R I.
-  pose c := (combine base w).1.
+  pose w : {conic base_elt ~> R} := (fconicu I).
+  pose c := (combine w).1.
   have c_bounded : bounded ('P(base) : 'poly[R]_n) c.
-  + apply: dual_sol_bounded => //; exact: uniform_pweightP.
+  + apply: dual_sol_bounded => //; rewrite finsupp_fconicu; exact: fsubset_subP.
   have c_bounded_P : (bounded P c).
   + apply: (bounded_mono1 c_bounded); apply/andP; split;
       [ exact: (poly_proper_subset Q_prop0) | exact: poly_base_subset ].
   have c_argmin: argmin 'P(base) c = Q.
   + rewrite Q_eq in Q_prop0 *.
-    rewrite dual_sol_argmin /=; rewrite ?/w ?uniform_supp //.
-    exact: uniform_pweightP.
+    rewrite dual_sol_argmin /=; rewrite ?/w ?finsupp_fconicu //.
+    exact: fsubset_subP.
   suff <- : (argmin P c)%:poly_base = Q by constructor.
   apply: val_inj => /=. rewrite -c_argmin.
   apply/subset_argmin; first by done.
@@ -479,47 +479,6 @@ case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
 - case: (poly_dimP P) => [//= | P_prop0].
   rewrite ltnS; move/poly_base_subset_eq/base_vect_subset/dimvS: P_sub_Q.
   exact: leq_sub2l.
-Qed.
-
-Definition affine (U : {vspace base_elt[R,n]}) :=
-  let X := vbasis U in
-  \polyI_(i < \dim U) `[hp X`_i].
-
-Lemma in_affine (U : {vspace base_elt[R,n]}) x :
-  reflect (forall v, v \in U -> x \in `[hp v]) (x \in (affine U)).
-Proof.
-apply: (iffP idP) => [ /in_big_polyIP h | h]; last first.
-- apply/in_big_polyIP => [i _].
-  by apply/h/vbasis_mem/memt_nth.
-- move => e /coord_vbasis ->.
-  rewrite in_hp /=.
-  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) // vdot_sumDl.
-  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.2) 0 +%R) //=.
-  (* TODO: ugly applications of big_morph *)
-  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
-  by apply/h => //; apply/mem_nth => /=; rewrite size_tuple. (* TODO: perhaps mem_nth is not the right rewrite rule to be applied *)
-Qed.
-
-Lemma affine_span (I : base_t[R,n]) :
-  affine <<I>>%VS = \polyI_(i : I) `[hp (val i)].
-Proof.
-apply/poly_subset_anti; apply/poly_subsetP => [x].
-- move/in_affine => x_in.
-  by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
-- move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
-  rewrite in_hp /=.
-  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) // vdot_sumDl.
-  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.2) 0 +%R) //=.
-  (* TODO: ugly applications of big_morph *)
-  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
-  move/(_ [` fnthP i]%fset isT): x_in.
-  by rewrite -tnth_nth.
-Qed.
-
-Lemma poly_base_affine (I : base_t[R,n]) :
-  'P^=(base; I) = 'P(base) `&` (affine <<I>>%VS).
-Proof.
-by rewrite affine_span polyIC.
 Qed.
 
 Lemma poly_base_eq_dim (P Q : {poly base}) :
