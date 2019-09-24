@@ -257,7 +257,6 @@ End BaseMorph.
 
 (* -------------------------------------------------------------------- *)
 Section BaseVect.
-
 Context {R : fieldType} {n : nat}.
 
 Fact be_vect_iso : Vector.axiom (n+1) base_elt[R,n].

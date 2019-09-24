@@ -1383,7 +1383,11 @@ Qed.
 Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> (conv V) `<=` P.
 Proof.
-Admitted.
+move=> le_VP; apply/poly_subsetP=> x /in_convP.
+case=> [w /fsubsetP le_wV ->]; apply: convexW=> /=.
++ by move=> /= e1 e2 e1P e2Pa rg01_a; rewrite addrC; apply: convexP2.
++ by move=> c /le_wV /le_VP.
+Qed.
 
 Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
 

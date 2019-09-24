@@ -437,6 +437,14 @@ Proof. by apply/conic_weight_ge0/conic_fconvex. Qed.
 Lemma wgt1_fconvex w : weight w = 1.
 Proof. by case/convexP: (valP w). Qed.
 
+Lemma le1_fconvex w x : w x <= 1.
+Proof.
+case: finsuppP => // xw; rewrite -(wgt1_fconvex w) weightE.
+rewrite -(big_seq_fsetE _ _ predT) /= -(fsetD1K xw).
+rewrite finmap.big_setU1 ?fsetD11 //= ler_addl.
+by apply: sumr_ge0=> i _; apply: ge0_fconvex.
+Qed.
+
 Lemma fconvex_insupp_neq0 w : (finsupp w == fset0) = false.
 Proof.
 apply/negP=> /eqP zw; have := wgt1_fconvex w.
@@ -483,6 +491,7 @@ by rewrite combineE finsupp_fcvx1 big_fset1 fcvx1E eqxx scale1r.
 Qed.
 End CvxDiracCombine.
 
+(* -------------------------------------------------------------------- *)
 Section ConicUniform.
 Context {T : choiceType} {R : numDomainType}.
 
@@ -490,9 +499,8 @@ Implicit Type S : {fset T}.
 
 Lemma fconicu_r S : @conic T R [fsfun _ in S => 1].
 Proof.
-apply/conicP.
-move => x /(fsubsetP (finsupp_sub _ _ _)) x_in;
-  rewrite fsfunE ifT //.
+apply/conicP=> x /(fsubsetP (finsupp_sub _ _ _)) x_in.
+by rewrite fsfunE ifT.
 Qed.
 
 Definition fconicu : {fset T} -> {conic T ~> R} :=
@@ -506,7 +514,6 @@ Proof.
 apply/fsetP => y; rewrite mem_finsupp fconicuE.
 by rewrite pnatr_eq0 eqb0 negbK.
 Qed.
-
 End ConicUniform.
 
 (* -------------------------------------------------------------------- *)
@@ -534,3 +541,63 @@ exists (fcvx1 x); last by rewrite combine_fcvx1.
 by move=> y; rewrite mem_fcvx1 => /eqP->; rewrite fset11.
 Qed.
 End Bary.
+
+(* -------------------------------------------------------------------- *)
+Section ConvexPred.
+Context {R : realFieldType} {L : lmodType R} (P : pred L).
+
+Definition convex_pred :=
+  forall x y : L, x \in P -> y \in P ->
+    forall a : R, 0 <= a <= 1 -> a *: x + (1 - a) *: y \in P.
+
+Hypothesis cvxP : convex_pred.
+
+(* FIXME: TO BE REWORKED *)
+Lemma convexW (w : {convex L ~> R}) :
+  {in finsupp w, forall x, x \in P} -> combine w \in P.
+Proof.
+move=> wP; rewrite combineE; pose F x := w x *: x.
+rewrite -!(big_seq_fsetE _ _ predT F) /= {}/F.
+move: {-2}(finsupp _) (erefl (finsupp w)) => X.
+elim/finSet_rect: X w wP => X ih w wP XE.
+have /negP/negP := fconvex_insupp_neq0 w.
+rewrite -XE => /fset0Pn[x xX]; rewrite -(fsetD1K xX).
+rewrite finmap.big_setU1 ?fsetD11 //=.
+have w1: \sum_(y <- (X `\ x)%fset) w y = 1 - w x.
++ rewrite -(wgt1_fconvex w) weightE -(big_seq_fsetE _ _ predT) /=.
+  rewrite -XE -[in RHS](fsetD1K xX) finmap.big_setU1 ?fsetD11 //=.
+  by rewrite addrAC subrr add0r.
+have := le1_fconvex w x; rewrite ler_eqVlt => /orP[/eqP wxE|lt1_wx].
++ rewrite wxE scale1r big1_seq /= ?addr0; last by apply: wP; rewrite -XE.
+  move=> y yXDx; rewrite (rwP eqP); suff ->: w y = 0 by rewrite scale0r.
+  move/eqP: w1; rewrite wxE subrr psumr_eq0 => [z _|].
+  - by apply: ge0_fconvex.
+  - by move/allP=> h; apply/eqP/h.
+pose wR : {fsfun _ ~> _} := [fsfun a in (X `\ x)%fset => w a / (1 - w x)].
+have hE: \sum_(y <- (X `\ x)%fset) w y *: y
+        = (1 - w x) *: \sum_(y <- (X `\ x)%fset) wR y *: y.
++ rewrite scaler_sumr !big_seq; apply: eq_bigr=> y yXDx.
+  rewrite scalerA fsfunE yXDx mulrCA divff ?mulr1 //.
+  by rewrite subr_eq0 eq_sym ltr_eqF.
+rewrite hE; (apply: cvxP; first by apply: wP; rewrite -XE); last first.
++ by rewrite ge0_fconvex le1_fconvex.
+have cvx_wR: convex wR; first (apply/convexP; split).
++ move=> y _; rewrite fsfunE; case: ifP=> // _.
+  by rewrite divr_ge0 1?ge0_fconvex // subr_ge0 le1_fconvex.
++ rewrite (weightwE (E := (X `\ x)%fset)).
+  - by apply: finsupp_sub.
+  - rewrite (eq_bigr (fun y => w (val y) / (1 - w x))) /=.
+    * by move=> y _; rewrite fsfunE fsvalP.
+    rewrite -mulr_suml -(big_seq_fsetE _ _ predT w) /=.
+    by rewrite w1 divff // subr_eq0 eq_sym ltr_eqF.
+have supp_wR: (finsupp wR = X `\ x)%fset.
++ apply/fsetP=> y; rewrite mem_finsupp fsfunE.
+  case: ifP; rewrite ?eqxx //= => yXdx.
+  rewrite mulf_eq0 invr_eq0 gtr_eqF ?gt0_fconvex //=.
+  * by rewrite -XE; apply/fsubsetP/fsubD1set: yXdx.
+  by rewrite subr_eq0 eq_sym ltr_eqF.
+have /= := ih (X `\ x)%fset _ (mkConvexfun cvx_wR); apply=> //.
++ by apply: fproperD1.
++ by move=> y; rewrite supp_wR in_fsetD1 => /andP[_]; rewrite XE => /wP.
+Qed.
+End ConvexPred.
