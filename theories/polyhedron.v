@@ -1431,46 +1431,15 @@ Proof.
 by move/poly_properW; rewrite pt_subset.
 Qed.
 
-(* The notation [segm Ω & Ω'] has been removed because of the lack of symmetry between
- * Ω and Ω', while this should not appear in the [fset Ω; Ω']%fset                     *)
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
-  reflect (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω') (x \in conv [fset Ω; Ω']%fset).
-Proof. (* RK *)
-Admitted.
-(*
-case: (boolP (Ω == Ω')) => [/eqP -> | Ω_neq_Ω'].
-- rewrite fsetUid in_pt.
-  apply: (iffP idP) => [/eqP -> | [μ _ ->]].
-  + by exists 1; [apply/andP | rewrite scale1r subrr addr0].
-  + by rewrite subrr scaler0 addr0.
-- apply: (iffP idP) => [/convP [w /weightP [w_ge0 _ sum_w] ->] | [a /andP [? ?] ?]].
-  + have w_Ω_eq: w Ω = 1 - w Ω'.
-      rewrite -sum_w big_setU1 /=; last by rewrite in_fset1.
-      by rewrite big_seq_fset1 -addrA subrr addr0.
-    exists (w Ω').
-    * apply/andP; split; first by apply: w_ge0.
-      by rewrite -subr_ge0 -w_Ω_eq; apply: w_ge0.
-    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
-      by rewrite big_seq_fset1 w_Ω_eq scalerBl scale1r -addrA [X in _+X]addrC scalerBr.
-  + pose w := [fsfun x : [fset Ω; Ω']%fset => if (val x == Ω') then a else (1-a) | 0%R] : {fsfun 'cV[R]_n -> R for fun => 0%R}.
-    have w_Ω'_eq: w Ω' = a
-      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
-        [apply/ifT; rewrite val_y_eq | rewrite in_fset2 eq_refl negb_or /=; move/andP/proj2].
-    have w_Ω_eq: w Ω = (1 - a)
-      by rewrite fsfun_ffun /=; case: insubP => [y ? val_y_eq /= | /= ];
-        [apply/ifF; rewrite val_y_eq; apply/negbTE | rewrite in_fset2 eq_refl /=].
-    apply/convP; exists w.
-    * apply/weightP; split.
-      - move => y; rewrite fsfun_ffun.
-        case: insubP => [z _ _ /= | /= _]; last by done.
-        by case: (boolP (fsval z == Ω')) => [_ |_]; [done | rewrite subr_ge0].
-      - move => y; rewrite fsfun_ffun.
-        by case: insubP => [? -> _ /= | /= _].
-      - rewrite big_setU1 /=; last by rewrite in_fset1.
-        by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq subrK.
-    * rewrite /bary big_setU1 /=; last by rewrite in_fset1.
-      by rewrite big_seq_fset1 w_Ω_eq w_Ω'_eq scalerBl scale1r -addrA [X in _+X]addrC -scalerBr.
-Qed.*)
+  reflect
+    (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω')
+    (x \in conv [fset Ω; Ω']%fset).
+Proof.
+apply: Bool.iff_reflect;
+  rewrite -[X in _ <-> X](rwP (in_convP _ _));
+  exact: cvxsegP.
+Qed.
 
 Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
 Admitted.
