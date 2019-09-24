@@ -110,6 +110,44 @@ rewrite be_eqE; apply: (iffP andP).
 Qed.
 
 (* -------------------------------------------------------------------- *)
+Section BaseEncoding.
+Context {R : eqType} (n : nat).
+
+Definition base_elt_to_col (v : base_elt[R,n]) : 'cV[R]_(n+1) :=
+  col_mx v.1 (const_mx v.2).
+
+Definition col_to_base_elt (v : 'cV[R]_(n+1)) : base_elt[R,n] :=
+  [< usubmx v, dsubmx v 0 0 >].
+
+Lemma base_elt_to_colK : cancel col_to_base_elt base_elt_to_col.
+Proof.
+move=> c; apply/colP=> i; rewrite mxE.
+by case: splitP' => j -> /=; rewrite !mxE ?ord1.
+Qed.
+
+Lemma col_to_base_eltK : cancel base_elt_to_col col_to_base_elt.
+Proof.
+elim/beW=> A b; apply/eqP/be_eqP=> /=; split.
++ by apply/colP=> i; rewrite mxE col_mxEu.
++ by rewrite mxE col_mxEd mxE.
+Qed.
+End BaseEncoding.
+
+(* -------------------------------------------------------------------- *)
+Section BaseEncodingTheory.
+Context {R : realFieldType} (n m : nat).
+
+Lemma base_elt_to_colM (A : 'M[R]_(n, m)) (b : 'cV[R]_n) (x : 'cV[R]_n) :
+  base_elt_to_col [< A^T *m x, '[b, x] >] = (row_mx A b)^T *m x.
+Proof.
+apply/colP=> i; rewrite ![in X in X = _]mxE /=; case: splitP'.
++ by move=> j ->; rewrite tr_row_mx mul_col_mx col_mxEu.
++ move=> j ->; rewrite ord1 tr_row_mx mul_col_mx col_mxEd.
+  by rewrite mxE -vdot_def mxE eqxx mulr1n vdotC.
+Qed.
+End BaseEncodingTheory.
+
+(* -------------------------------------------------------------------- *)
 Section BaseZmod.
 Context {R : zmodType} {n : nat}.
 
@@ -147,6 +185,19 @@ Proof. by []. Qed.
 End BaseZmod.
 
 (* -------------------------------------------------------------------- *)
+Section BaseEltEncodingZmodMorph.
+Context {R : zmodType} {n : nat}.
+
+Lemma base_elt_to_col_is_additive : additive (@base_elt_to_col R n).
+Proof.
+move=> /= b1 b2; apply/colP=> i; rewrite !mxE.
+by case: splitP'=> j _; rewrite !mxE.
+Qed.
+
+Canonical base_elt_to_col_additive := Additive base_elt_to_col_is_additive.
+End BaseEltEncodingZmodMorph.
+
+(* -------------------------------------------------------------------- *)
 Section BaseLmod.
 Context {R : ringType} {n : nat}.
 
@@ -177,6 +228,19 @@ Canonical be_lmodType := Eval hnf in LmodType R base_elt be_lmodMixin.
 Lemma bescaleE c b : c *: b = [< c *: b.1, c * b.2 >].
 Proof. by []. Qed.
 End BaseLmod.
+
+(* -------------------------------------------------------------------- *)
+Section BaseEltEncodingLmodMorph.
+Context {R : ringType} {n : nat}.
+
+Lemma base_elt_to_col_is_scalable : scalable (@base_elt_to_col R n).
+Proof.
+move=> c b /=; apply/colP=> i; rewrite !mxE.
+by case: splitP'=> j _; rewrite !mxE.
+Qed.
+
+Canonical base_elt_to_col_scalable := AddLinear base_elt_to_col_is_scalable.
+End BaseEltEncodingLmodMorph.
 
 (* -------------------------------------------------------------------- *)
 Section BaseMorph.
@@ -223,130 +287,94 @@ Qed.
 End BaseVect.
 
 (* -------------------------------------------------------------------- *)
-Section PWeight.
+Section VectToFsFun.
+Context {T : choiceType} {R : ringType}.
 
-Variable (R : realFieldType) (K : choiceType) (base : {fset K}).
+Definition frank (S : {fset T}) (v : S) : 'I_#|`S| := 
+  cast_ord (esym (cardfE _)) (enum_rank v).
 
-Implicit Type (w : {fsfun K -> R for fun => 0%R}).
-
-Definition pweight w :=
-  (finsupp w `<=` base)%fset && [forall e : base, w (val e) >= 0].
-
-Lemma pweightP w :
-  reflect ((finsupp w `<=` base)%fset /\ (forall e, e \in base -> w e >= 0)) (pweight w).
+Lemma frankK (S : {fset T}) :
+  cancel (fun i : 'I_#|`S| => [`fnthP i]%fset) (@frank S).
 Proof.
-suff equiv : reflect (forall e, e \in base -> w e >= 0) [forall e : base, w (val e) >= 0]
-  by apply/(iffP andP) => [[? /equiv ?] | [? /equiv ?]].
-apply/(iffP forallP) => [H e e_in_base | H e].
-- by move/(_ [` e_in_base]%fset): H.
-- by apply: H; exact: fsvalP.
+move=> i; apply/(@cast_ord_inj _ _ (cardfE S))/eqP.
+rewrite cast_ordKV -(inj_eq (enum_val_inj)) enum_rankK -(rwP eqP).
+apply/val_eqP => /=; set j := cast_ord _ i.
+rewrite /fnth (tnth_nth (val (enum_default j))) /= {1}enum_fsetE.
+by rewrite (nth_map (enum_default j)) // -cardE -cardfE.
 Qed.
 
-Definition supp w := [fset e in base | w e > 0]%fset.
-
-Definition uniform_pweight (I : {fsubset base}) : {fsfun K -> R for fun => 0%R} :=
-  [fsfun e : I => 1 | 0]%fset.
-
-Lemma uniform_pweightP I : pweight (uniform_pweight I).
+Lemma fnthK (S : {fset T}) :
+  cancel (@frank S) (fun i : 'I_#|`S| => [`fnthP i]%fset).
 Proof.
-rewrite /uniform_pweight.
-apply/pweightP; split.
-- apply: (fsubset_trans (y := I)); first exact: finsupp_sub.
-  exact: (valP I).
-- move => e _.
-  by rewrite fsfun_ffun; case: insubP => [?|?] /=; rewrite ?ler01.
+move=> x; apply/val_eqP/eqP => /=; rewrite /fnth.
+rewrite (tnth_nth (val x)) /= enum_fsetE /=.
+by rewrite (nth_map x)? nth_enum_rank // -cardE.
 Qed.
 
-Lemma uniform_supp (I : {fsubset base}) : supp (uniform_pweight I) = I.
+Lemma val_fnthK (S : {fset T}) (v : S) : fnth (frank v) = fsval v.
+Proof. by have := fnthK v => /(congr1 val). Qed.
+
+Lemma bij_frank (S : {fset T}) : bijective (@frank S).
+Proof. exact: (Bijective (@fnthK _) (@frankK S)). Qed.
+
+Definition vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) : {fsfun T ~> R} :=
+  [fsfun v : I => c (frank v) 0].
+
+Lemma finsupp_vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) :
+  (finsupp (@vect_to_fsfun I c) `<=` I)%fset.
 Proof.
-apply/fsetP => e.
-rewrite /supp !inE /uniform_pweight fsfun_ffun.
-case: insubP => [? -> <- /=| /negbTE -> /=].
-- rewrite ltr01 andbT.
-  by apply/(fsubsetP (valP I)).
-- by rewrite ltrr andbF.
+apply/fsubsetP=> x; rewrite mem_finsupp fsfun_ffun.
+by case: insubP => //=; rewrite eqxx.
 Qed.
+End VectToFsFun.
 
-Section Extra.
+(* -------------------------------------------------------------------- *)
+Section VectToFsFunTheory.
+Context {T : choiceType} {R : realFieldType}.
 
-Variable (w : {fsfun K -> R for fun => 0%R}).
-Hypothesis w_pweight : pweight w.
-
-Lemma finsupp_subset : (finsupp w `<=` base)%fset.
+Lemma conic_vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) :
+  (0) <=m (c) -> conic (vect_to_fsfun c).
 Proof.
-by move/pweightP : w_pweight => [].
+move=> ge0_c; apply/conicwP => x; rewrite fsfun_ffun.
+by case: insubP => //= i _ _; apply: gev0P.
 Qed.
 
-Lemma pweight_ge0 e : w e >= 0.
+Lemma convex_vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) :
+  (0) <=m (c) -> '[const_mx 1, c] = 1 -> convex (vect_to_fsfun c).
 Proof.
-case: finsuppP => [| e_in_supp]; first done.
-move/pweightP : w_pweight => [_ H]; apply: H.
-exact: (fsubsetP finsupp_subset).
+move=> ge0_c Σc_eq_1; rewrite /convex conic_vect_to_fsfun //=.
+rewrite (weightwE (finsupp_vect_to_fsfun _)) -(rwP eqP).
+move: Σc_eq_1; rewrite vdotC vdotr_const_mx1 => <-.
+rewrite (reindex (@frank _ _)) /=; last by apply/onW_bij/bij_frank.
+apply: eq_bigr=> i _; rewrite fsfun_ffun insubT //=.
+by move=> hin; rewrite fsetsubE.
 Qed.
+End VectToFsFunTheory.
 
-Lemma supp_subset : (supp w `<=` base)%fset.
-Proof.
-exact: fset_sub.
-Qed.
-
-CoInductive supp_spec e : R -> bool -> Type :=
-  | SuppOut : e \notin supp w -> supp_spec e 0 false
-  | SuppIn of (e \in supp w) : supp_spec e (w e) true.
-
-Lemma suppP e : supp_spec e (w e) (w e > 0).
-Proof.
-case: (boolP (e \in supp w)) => [e_in | e_notin].
-- suff ->: w e > 0 by constructor.
-  by move: e_in; rewrite 2!inE => /andP [_].
-- case: finsuppP => [| e_in_finsupp]; rewrite ?ltrr; first by constructor.
-  suff ->: w e = 0 by rewrite ltrr; constructor.
-  apply/eqP; move: e_notin; apply: contraR => w_e_neq0.
-  have e_in_base : e \in base by exact: (fsubsetP finsupp_subset).
-  suff w_e_gt0: w e > 0 by rewrite !inE; apply/andP; split.
-  by rewrite ltr_def; apply/andP; split; last exact: pweight_ge0.
-Qed.
-
-Lemma pweight_gt0 e : (e \in supp w) = (w e > 0).
-Proof.
-by case: suppP; first exact: negbTE.
-Qed.
-
-End Extra.
-
-Fact valP' (v : base) : v \in (xpredT : pred base).
-by [].
-Qed.
-
-Notation m := #| predT : pred base|.
-
-Definition vect_to_pweight (y : 'cV[R]_m) :=
-  [fsfun v : base => y (enum_rank_in (valP' v) v) 0] : {fsfun K -> R for fun => 0%R}.
-
-Lemma vect_to_pweightP (w : 'cV[R]_m) :
-  w >=m 0 -> pweight (vect_to_pweight w).
-Proof.
-move/gev0P => w_pos.
-apply/pweightP; split; first exact: finsupp_sub.
-move => ? ?; rewrite fsfun_ffun insubT /=; exact: w_pos.
-Qed.
-
-End PWeight.
-
+(* -------------------------------------------------------------------- *)
 Section Combine.
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
 
-Definition combine (w : base_elt -> R) : base_elt :=
-  \sum_(v : base) w (val v) *: (val v).
+Implicit Types (w : {fsfun base_elt[R,n] ~> R}).
 
-Lemma combine1E w : (combine w).1 = \sum_(v : base) w (val v) *: (val v).1.
-Proof. by apply (big_morph (fst \o val) beadd_p1E). Qed.
+Lemma combineb1E w : (finsupp w `<=` base)%fset ->
+  (combine w).1 = \sum_(v : base) w (val v) *: (val v).1.
+Proof.
+move=> le_wb; rewrite (combinewE le_wb).
+by apply (big_morph (fst \o val) beadd_p1E).
+Qed.
 
-Lemma combine2E w : (combine w).2 = \sum_(v : base) w (val v) * (val v).2.
-Proof. by apply (big_morph (snd \o val) beadd_p2E). Qed.
+Lemma combineb2E w : (finsupp w `<=` base)%fset ->
+  (combine w).2 = \sum_(v : base) w (val v) * (val v).2.
+Proof.
+move=> le_wb; rewrite (combinewE le_wb).
+by apply (big_morph (snd \o val) beadd_p2E). Qed.
 
-Definition combineE := (combine1E, combine2E).
+Definition combinebE w (h : (finsupp w `<=` base)%fset) :=
+  (@combineb1E w h, @combineb2E w h).
 End Combine.
 
+(* -------------------------------------------------------------------- *)
 Module HPolyhedron.
 
 Section Def.
@@ -624,91 +652,79 @@ move => P' P P'' /poly_equivP P_eq_P' /poly_equivP P'_eq_P''.
 by apply/poly_equivP => x; rewrite P_eq_P'.
 Qed.
 
+(* -------------------------------------------------------------------- *)
 Section Farkas.
-
 Variable (base : base_t[R,n]).
 
 Let P := \big[polyI/polyT]_(b : base) (mk_hs (val b)).
 
-Definition nth_fset (K : choiceType) (V : {fset K}) (i : 'I_#|predT : pred V|) :=
-  val (enum_val i).
+Notation m := #|`base|.
 
-Lemma nth_fsetP (K : choiceType) (V : {fset K}) (i : 'I_#|predT : pred V|) :
-  nth_fset i \in V.
+Let A := \matrix_(i < m) ((fnth i).1)^T.
+Let b :=    \col_(i < m) (fnth i).2.
+
+Lemma fnth_baseE i : @fnth _ base i = [< col i A^T, b i 0 >].
 Proof.
-rewrite /nth_fset; exact: fsvalP.
+apply/eqP/be_eqP => /=; split.
+* by apply/colP=> k; rewrite !mxE. * by rewrite mxE.
 Qed.
 
-Notation m := #| xpredT : pred base |.
-
-Let A := \matrix_(i < m) ((nth_fset i).1)^T.
-Let b := \col_(i < m) ((nth_fset i).2).
-
 Lemma combinemE w :
-  (A^T *m w = (combine base (vect_to_pweight w)).1)
-  * ('[b, w] = (combine base (vect_to_pweight w)).2).
+  combine (vect_to_fsfun w) = [< A^T *m w, '[b, w] >].
 Proof.
-split; rewrite combineE.
-- rewrite /=; apply/colP => i; rewrite mxE summxE.
-  rewrite (reindex (@enum_val _ base)) /=.
-  + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
-    rewrite /vect_to_pweight fsfun_ffun /= insubT; first exact: fsvalP.
-    move => H /=; apply: congr2; last done.
-      by rewrite fsetsubE enum_valK_in.
-  + apply: onW_bij; exact: enum_val_bij.
-- rewrite /= /vdot.
-  rewrite (reindex (@enum_val _ base)) /=.
-  + apply/eq_bigr => j _; rewrite /= !mxE mulrC; apply: congr2; last done.
-    rewrite /vect_to_pweight fsfun_ffun /= insubT; first exact: fsvalP.
-    move => H /=; apply: congr2; last done.
-      by rewrite fsetsubE enum_valK_in.
-  + apply: onW_bij; exact: enum_val_bij.
+rewrite (combinewE (finsupp_vect_to_fsfun _)).
+pose h (i : 'I_m) := [`fnthP i]%fset.
+rewrite (reindex h) /=; last first.
++ by apply/onW_bij/(Bijective (@frankK _ _) (@fnthK _ _)).
+apply: (can_inj (@col_to_base_eltK _ _)) => /=.
+rewrite base_elt_to_colM raddf_sum /= mulmx_sum_col.
+apply: eq_bigr=> i _; rewrite linearZ /=.
+rewrite /vect_to_fsfun fsfun_ffun insubT /=; first by apply: fnthP.
+move=> hin; rewrite [hin](bool_irrelevance _ (fnthP i)) frankK.
+rewrite tr_row_mx col_col_mx; apply/colP=> j.
+rewrite /base_elt_to_col !fnth_baseE /=.
+rewrite (_ : const_mx _ = col i b^T) //.
+by apply/colP=> k; rewrite !mxE.
 Qed.
 
 Lemma memP : P =i HPoly A b.
 Proof.
-move => x.
-have -> : (x \in P) = (\big[andb/true]_(b : base) ('[(val b).1, x] >= (val b).2)).
-by rewrite /P; elim/big_rec2: _ => [|i y b' Pi <-];
-  rewrite ?in_polyT ?in_polyI ?inE; last by rewrite lev_scalar_mx vdotC vdot_def.
-rewrite inE big_andE.
-apply/forall_inP/forallP => [H i | H e _].
-- move/(_ (enum_val i) isT): H => /=.
-  by rewrite -row_vdot rowK trmxK mxE.
-- move/(_ (enum_rank_in (valP' e) e)): H.
-  rewrite -row_vdot rowK trmxK mxE.
-  by rewrite /nth_fset enum_rankK_in.
+move=> x; have [hI h0] := (fun P1 P2 => in_polyI P1 P2 x, in_polyT x).
+rewrite {hI h0}(big_morph (fun P => x \in P) hI h0).
+rewrite !inE big_andE; apply/forall_inP/forallP => /= h.
++ move=> i; move/(_ [`fnthP i]%fset isT): h.
+  rewrite inE /= !fnth_baseE /= -tr_row trmxK.
+  by rewrite -row_mul row_cV -lev_scalar_mx.
++ move=> e _; rewrite inE /=; move/(_ (frank e)): h.
+  have: fnth (frank e) = fsval [`fnthP (frank e)]%fset by [].
+  rewrite {1}fnth_baseE fnthK => <- /=; rewrite lev_scalar_mx.
+  by rewrite tr_col trmxK -row_mul row_cV.
 Qed.
 
 Lemma farkas (e : base_elt) :
-  ~~ (poly_subset P poly0) -> (poly_subset P (mk_hs e)) ->
-  exists2 w, (pweight base w) & ((combine base w).1 = e.1 /\ (combine base w).2 >= e.2).
+     ~~ (poly_subset P poly0)
+  -> (poly_subset P (mk_hs e))
+  -> exists2 w : {conic base_elt ~> R},
+         (finsupp w `<=` base)%fset
+       & (combine w).1 = e.1 /\ (combine w).2 >= e.2.
 Proof.
-move => P_neq0 /poly_subsetP incl.
-have incl' : poly_subset (HPoly A b) (mk_hs e).
-- by apply/poly_subsetP => x; rewrite -memP; apply/incl.
-case: (Simplex.simplexP A b e.1).
-- move => ? /(intro_existsT (Simplex.infeasibleP _ _)).
-  suff -> : Simplex.feasible A b by done.
-  apply/Simplex.feasibleP.
-  move/poly_subsetPn: P_neq0 => [x x_in_P _].
-  by exists x; rewrite inE; rewrite memP in x_in_P.
-- move => ? /(intro_existsT (Simplex.unboundedP_cert _ _ _))/Simplex.unboundedP/(_ e.2)
-    [x [x_in_PAb ineq]].
-  have /incl: x \in P by rewrite memP inE.
-  by rewrite in_hs; move/(ltr_le_trans ineq); rewrite ltrr.
-- move => [x w] [x_feas w_feas csc].
-  rewrite inE /= in w_feas; move/andP: w_feas => [/eqP w_feas1 w_pos].
-    exists (vect_to_pweight w).
-  + exact: vect_to_pweightP.
-  + rewrite -2!combinemE; split; first done.
-    by rewrite -csc /=; rewrite -in_hs; apply/incl; rewrite memP inE.
+move=> nz_P /poly_subsetP le_Pe; case: (Simplex.simplexP A b e.1).
++ move=> d /(intro_existsT (Simplex.infeasibleP _ _)) /negP[].
+  apply/Simplex.feasibleP; case/poly_subsetPn: nz_P => [x x_in_P _].
+  by exists x; rewrite inE memP in x_in_P |- *.
++ move=> p /(intro_existsT (Simplex.unboundedP_cert _ _ _)).
+  case/Simplex.unboundedP/(_ e.2) => [x [x_in_PAb ineq]].
+  have /le_Pe: x \in P by rewrite memP inE.
+  by rewrite in_hs => /(ltr_le_trans ineq); rewrite ltrr.
++ case=> [x w] [x_feas w_feas csc]; move: w_feas.
+  rewrite inE /= => /andP[/eqP w_feas1 w_pos].
+  exists (mkConicFun (conic_vect_to_fsfun w_pos)).
+  + by apply: finsupp_vect_to_fsfun.
+  + rewrite combinemE /=; split => //.
+    by rewrite -csc -in_hs le_Pe //= memP inE.
 Qed.
-
 End Farkas.
-
 End PolyPred.
-
 
 Section Proj1.
 
