@@ -33,6 +33,6 @@ RUN \
 RUN \
 	opam pin add -n coq 8.9.1 && \
 	opam pin add -n coq-mathcomp-ssreflect 1.9.0 && \
-	opam pin add -n finmap https://github.com/Nemeras/finmap.git && \
+	opam pin add -n finmap https://github.com/math-comp/finmap.git && \
 	opam install coq coq-mathcomp-field finmap && \
 	opam clean
