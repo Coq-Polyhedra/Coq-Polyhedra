@@ -1133,14 +1133,6 @@ Qed.
 Local Notation "\- I" := (-%R @` I)%fset
   (at level 2).
 
-Definition vect (m : nat) (A : 'M_(m,n)) :=
-  let base := [fset [<(row i A)^T, 0>] | i : 'I_m]%fset in
-  'P(base).
-
-Lemma in_vect m (A : 'M_(m,n)) x : x \in (vect A) = (A *m x == 0).
-Proof.
-Admitted.
-
 Definition baseEq (base I : base_t[R,n]) := (base `|` \- I)%fset.
 
 Lemma in_oppbase (I: base_t[R,n]) x :
@@ -1294,14 +1286,16 @@ Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 Let A' := row_mx (-A) (1%:M).
 
 Definition map_poly (P : 'poly_n) :=
-  proj ((lift_poly k P) `&` (vect A')).
+  proj ((lift_poly k P) `&` (\polyI_i `[hp [<(row i A')^T, 0>]])).
 
 Lemma in_map_polyP (P : 'poly_n) x :
   reflect (exists2 y, x = A*m y & y \in P) (x \in map_poly P).
 Proof.
-have in_vectA' y z : (col_mx y z \in (vect A')) = (z == A *m y).
-- rewrite in_vect mul_row_col mul1mx mulNmx.
-  by rewrite (can2_eq (addKr _) (addNKr _)) opprK addr0.
+have in_vectA' y z : (col_mx y z \in (\polyI_i `[hp [<(row i A')^T, 0>]])) = (z == A *m y).
+- apply/in_big_polyIP/eqP => [h | /colP h i _];
+    do ?[apply/colP => i; move/(_ i isT): h];
+    rewrite in_hp /= row_row_mx tr_row_mx vdot_col_mx !row_vdot mul1mx mulNmx mxE;
+    rewrite (can2_eq (addKr _) (addNKr _)) opprK addr0; exact/eqP.
 apply: (iffP projP) => [[y] | [y -> y_in_P]].
 - rewrite in_polyI in_lift_poly in_vectA' col_mxKu => /andP [? /eqP ->].
   by exists y.
@@ -1480,6 +1474,53 @@ Admitted.
 End Hull.
 
 Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
+
+Section Affine.
+
+Variable (R : realFieldType) (n : nat).
+
+Definition affine (U : {vspace base_elt[R,n]}) :=
+  let X := vbasis U in
+  \polyI_(i < \dim U) `[hp X`_i].
+
+Lemma in_affine (U : {vspace base_elt[R,n]}) x :
+  reflect (forall v, v \in U -> x \in `[hp v]) (x \in (affine U)).
+Proof.
+apply: (iffP idP) => [ /in_big_polyIP h | h]; last first.
+- apply/in_big_polyIP => [i _].
+  by apply/h/vbasis_mem/memt_nth.
+- move => e /coord_vbasis ->.
+  rewrite in_hp /=.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) // vdot_sumDl.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.2) 0 +%R) //=.
+  (* TODO: ugly applications of big_morph *)
+  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
+  by apply/h => //.
+Qed.
+
+Lemma affine_span (I : base_t[R,n]) :
+  affine <<I>>%VS = \polyI_(i : I) `[hp (val i)].
+Proof.
+apply/poly_subset_anti; apply/poly_subsetP => [x].
+- move/in_affine => x_in.
+  by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
+- move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
+  rewrite in_hp /=.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) // vdot_sumDl.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.2) 0 +%R) //=.
+  (* TODO: ugly applications of big_morph *)
+  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
+  move/(_ [` fnthP i]%fset isT): x_in.
+  by rewrite -tnth_nth.
+Qed.
+
+Lemma polyEq_affine (base I : base_t[R,n]) :
+  'P^=(base; I) = 'P(base) `&` (affine <<I>>%VS).
+Proof.
+by rewrite affine_span polyIC.
+Qed.
+
+End Affine.
 
 Section Duality.
 

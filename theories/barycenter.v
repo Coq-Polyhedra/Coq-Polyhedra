@@ -369,7 +369,7 @@ Lemma coffinsuppD w1 w2 :
 Proof.
 apply/fsetP=> x; rewrite in_fsetE !mem_coffinsupp fconicwE.
 have := ge0_fconic w1 x; rewrite ler_eqVlt => /orP[].
-+ by move/eqP=> <-; rewrite ltrr add0r. 
++ by move/eqP=> <-; rewrite ltrr add0r.
 + by move=> gt0_w1; rewrite gt0_w1 ltr_paddr // ge0_fconic.
 Qed.
 
@@ -482,6 +482,32 @@ Proof.
 by rewrite combineE finsupp_fcvx1 big_fset1 fcvx1E eqxx scale1r.
 Qed.
 End CvxDiracCombine.
+
+Section ConicUniform.
+Context {T : choiceType} {R : numDomainType}.
+
+Implicit Type S : {fset T}.
+
+Lemma fconicu_r S : @conic T R [fsfun _ in S => 1].
+Proof.
+apply/conicP.
+move => x /(fsubsetP (finsupp_sub _ _ _)) x_in;
+  rewrite fsfunE ifT //.
+Qed.
+
+Definition fconicu : {fset T} -> {conic T ~> R} :=
+  nosimpl (fun S => mkConicFun (fconicu_r S)).
+
+Lemma fconicuE S x : fconicu S x = (x \in S)%:R.
+Proof. by rewrite fsfunE; case: ifP. Qed.
+
+Lemma finsupp_fconicu S : finsupp (fconicu S) = S.
+Proof.
+apply/fsetP => y; rewrite mem_finsupp fconicuE.
+by rewrite pnatr_eq0 eqb0 negbK.
+Qed.
+
+End ConicUniform.
 
 (* -------------------------------------------------------------------- *)
 Section Bary.

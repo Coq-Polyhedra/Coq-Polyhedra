@@ -618,12 +618,6 @@ Export FSubset.Exports.
 Notation "'{fsubset'  S '}'" := (FSubset.fsubset_t S) (at level 2).
 Notation "A %:fsub" := (FSubset.fsubset_of (Phantom _ A)) (at level 0).
 
-Lemma fsubset_inj (K : choiceType) (S : {fset K}) (A B : {fsubset S}) :
-  (A = B :> {fset K}) -> A = B.
-Proof.
-by move => /FSubset.untag_inj ?; apply/val_inj => /=.
-Qed.
-
 (*
 Section Test.
 Local Open Scope fset_scope.
@@ -657,6 +651,15 @@ Section FSubsetOther.
 Local Open Scope fset_scope.
 
 Variable (K : choiceType) (S : {fset K}).
+
+Lemma fsubset_inj (A B : {fsubset S}) :
+  (A = B :> {fset K}) -> A = B.
+Proof.
+by move => /FSubset.untag_inj ?; apply/val_inj => /=.
+Qed.
+
+Lemma fsubset_subP (A : {fsubset S}) : A `<=` S.
+Proof. exact: (valP A). Qed.
 
 Lemma fsubsetT_proper (A : {fsubset S}) : (S `<` A) = false.
 Proof.
