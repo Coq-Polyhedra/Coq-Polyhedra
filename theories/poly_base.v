@@ -336,10 +336,11 @@ Qed.
 Lemma dim_le (P : {poly base}) :
   P `>` (`[poly0]) -> (\dim << {eq P} >>%VS <= n)%N.
 Proof.
+Admitted.
+(*
 move => P_prop0.
 move/proper0P : (P_prop0) => [x].
-rewrite (repr_active P_prop0).
-Admitted.
+rewrite (repr_active P_prop0).*)
 
 End Active.
 
@@ -480,9 +481,66 @@ case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
   exact: leq_sub2l.
 Qed.
 
+Definition affine (U : {vspace base_elt[R,n]}) :=
+  let X := vbasis U in
+  \polyI_(i < \dim U) `[hp X`_i].
+
+Lemma in_affine (U : {vspace base_elt[R,n]}) x :
+  reflect (forall v, v \in U -> x \in `[hp v]) (x \in (affine U)).
+Proof.
+apply: (iffP idP) => [ /in_big_polyIP h | h]; last first.
+- apply/in_big_polyIP => [i _].
+  by apply/h/vbasis_mem/memt_nth.
+- move => e /coord_vbasis ->.
+  rewrite in_hp /=.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) // vdot_sumDl.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.2) 0 +%R) //=.
+  (* TODO: ugly applications of big_morph *)
+  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
+  by apply/h => //; apply/mem_nth => /=; rewrite size_tuple. (* TODO: perhaps mem_nth is not the right rewrite rule to be applied *)
+Qed.
+
+Lemma affine_span (I : base_t[R,n]) :
+  affine <<I>>%VS = \polyI_(i : I) `[hp (val i)].
+Proof.
+apply/poly_subset_anti; apply/poly_subsetP => [x].
+- move/in_affine => x_in.
+  by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
+- move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
+  rewrite in_hp /=.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) // vdot_sumDl.
+  rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.2) 0 +%R) //=.
+  (* TODO: ugly applications of big_morph *)
+  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
+  move/(_ [` fnthP i]%fset isT): x_in.
+  by rewrite -tnth_nth.
+Qed.
+
+Lemma poly_base_affine (I : base_t[R,n]) :
+  'P^=(base; I) = 'P(base) `&` (affine <<I>>%VS).
+Proof.
+by rewrite affine_span polyIC.
+Qed.
+
 Lemma poly_base_eq_dim (P Q : {poly base}) :
   P `<=` Q -> poly_dim P = poly_dim Q -> P = Q.
-Admitted.
+Proof.
+case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
+- by rewrite subset0_equiv => /eqP /val_inj ->.
+- case: (poly_dimP P) => [//= | P_prop0].
+  move/succn_inj/(congr1 (addn^~ (\dim <<{eq P}>>%VS))).
+  rewrite subnK; last exact: dim_le.
+  rewrite addnC; move/(congr1 (addn^~ (\dim <<{eq Q}>>%VS))).
+  rewrite -addnA subnK; last exact: dim_le.
+  rewrite addnC; move/addIn => dimP_eq_dimQ.
+  suff eq_eq: <<{eq P}>>%VS = <<{eq Q}>>%VS.
+  + rewrite [P]repr_active // [Q]repr_active //.
+    apply/val_inj => /=.
+    by rewrite !poly_base_affine eq_eq.
+  + symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
+    * by rewrite dimP_eq_dimQ.
+    * by apply/base_vect_subset/poly_base_subset_eq.
+Qed.
 
 End Dimension.
 
