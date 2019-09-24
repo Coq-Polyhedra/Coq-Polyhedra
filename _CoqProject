@@ -11,3 +11,4 @@ theories/simplex.v
 theories/barycenter.v
 theories/hpolyhedron.v
 theories/polyhedron.v
+theories/poly_base.v
