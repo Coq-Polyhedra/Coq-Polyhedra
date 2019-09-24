@@ -275,7 +275,7 @@ Lemma repr_active0 :
 Proof.
 set A := {eq _}.
 apply/val_inj/FSubset.untag_inj => /=.
-apply/eqP; rewrite eqEfsubset; apply/andP; split; first by move: (valP A).
+apply/eqP; rewrite eqEfsubset; apply/andP; split; first exact: fsubset_subP.
 - rewrite -activeP => /=; exact: poly0_subset.
 Qed.
 
@@ -302,7 +302,7 @@ Lemma poly_base_subset_eq (P Q : {poly base}) :
     (P `<=` Q) -> (({eq Q} : {fset _}) `<=` {eq P})%fset.
 Proof.
 case: (poly_baseP P) => [-> | ? [_ P_prop0]].
-- rewrite repr_active0 poly0_subset => _; exact: (valP {eq _}).
+- rewrite repr_active0 poly0_subset => _; exact: fsubset_subP.
 - case: (poly_baseP Q) => [-> | ? [_ Q_prop0]].
   + rewrite -subset0N_proper in P_prop0.
     by move/negbTE : P_prop0 ->.
@@ -330,7 +330,7 @@ move: i_notin; rewrite in_active.
 - move/poly_subsetPn => [x x_in_Q x_notin].
   exists x; first by rewrite [Q]repr_active in x_in_Q.
   move: x_notin; apply: contra => x_in; exact: (polyEq_eq x_in).
-- move: i_in; apply/fsubsetP; exact: (valP {eq _}).
+- move: i_in; apply/fsubsetP; exact: fsubset_subP.
 Qed.
 
 Lemma dim_le (P : {poly base}) :
@@ -495,7 +495,7 @@ case: (poly_dimP Q) => [-> | Q_prop0 P_sub_Q ].
   suff eq_eq: <<{eq P}>>%VS = <<{eq Q}>>%VS.
   + rewrite [P]repr_active // [Q]repr_active //.
     apply/val_inj => /=.
-    by rewrite !poly_base_affine eq_eq.
+    by rewrite !polyEq_affine eq_eq.
   + symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
     * by rewrite dimP_eq_dimQ.
     * by apply/base_vect_subset/poly_base_subset_eq.
