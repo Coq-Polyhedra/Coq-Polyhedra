@@ -289,7 +289,7 @@ End BaseVect.
 Section VectToFsFun.
 Context {T : choiceType} {R : ringType}.
 
-Definition frank (S : {fset T}) (v : S) : 'I_#|`S| := 
+Definition frank (S : {fset T}) (v : S) : 'I_#|`S| :=
   cast_ord (esym (cardfE _)) (enum_rank v).
 
 Lemma frankK (S : {fset T}) :

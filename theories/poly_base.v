@@ -499,7 +499,6 @@ case: (poly_baseP P) => [->| I /= [-> P_prop0]].
   by rewrite /poly_dim ifT //; constructor.
 Qed.
 
-
 Lemma poly_dim0 (P : {poly base}) : poly_dim P = 0%N -> P = `[poly0]%:poly_base.
 Proof.
 by case: (poly_dimP P).
@@ -536,6 +535,53 @@ case: (poly_dimP Q) P_sub_Q => [-> | Q_prop0 P_sub_Q ].
 Qed.
 
 End Dimension.
+
+Section Gradedness.
+
+Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
+
+Hypothesis non_redundant : non_redundant_base base.
+
+Local Instance foo (e : base_elt) (_ : expose (e \in base)) : expose ([fset e] `<=` base)%fset.
+Proof.
+by rewrite fsub1set.
+Qed.
+
+(*Variable (e : base_elt[R,n]).
+Hypothesis He : e \in base.
+Check ([fset e]%fset%:fsub) : {fsubset base}.
+Variable (P : {poly base}).
+Set Typeclasses Debug.
+Let S := (({eq P} `|` [fset e])%fset%:fsub) : {fsubset base}.
+Check S.
+Check 'P^=(base; S)%:poly_base.*)
+
+Lemma activeU1 (P : {poly base}) (e : base_elt) & (e \in base) :
+  (P `>` `[poly0]) ->
+  let I : {fsubset base} := ({eq P} `|` [fset e])%fset%:fsub in
+  {eq 'P^=(base; I)%:poly_base } = I.
+Proof.
+move => P_prop0.
+case: (boolP (e \in ({eq P} : base_t))).
+Admitted.
+
+Lemma graded (P Q : {poly base}) :
+  P `>` (`[poly0]) -> P `<` Q -> ~ (exists S, (P `<` S `<` Q)) -> poly_dim Q = (poly_dim P).+1%N.
+Proof.
+move => P_prop0 P_prop_Q P_cover_Q.
+have Q_prop0 : Q `>` `[poly0] by apply: (poly_proper_trans P_prop0).
+have eqP_prop_eqQ : ({eq Q} `<` {eq P})%fset by admit.
+move/fproperP: (eqP_prop_eqQ) => [_ [i i_in_eqP i_notin_eqQ]].
+have foo: ([fset i] `<=` base)%fset by admit.
+set Q_U_i : {fsubset base} := (({eq Q} `|` [fset i])%fset)%:fsub.
+(* TODO: I use set and not pose here because pose doesn't infer the instances *)
+set S := 'P^=(base; Q_U_i)%:poly_base.
+have P_sub_S : P `<=` S.
+- rewrite activeP.
+  apply/FSubset.fsubset_setUP; by [apply/fproper_sub | rewrite fsub1set].
+Admitted.
+
+End Gradedness.
 
 (*
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
