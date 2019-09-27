@@ -166,6 +166,7 @@ Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing)
 Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<` Q `<` S" := ((poly_proper P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "'`[' 'hs'  b  ']'" := (mk_hs b%PH) (at level 70) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
@@ -980,7 +981,7 @@ Qed.
 Definition poly_of_base (base : base_t) :=
   \polyI_(b : base) `[hs (val b)].
 
-Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
+Notation "''P' ( base )" := (poly_of_base (base)%fset) (at level 0) : poly_scope.
 
 Lemma in_poly_of_base x (base : base_t) :
   (x \in 'P(base)) = [forall b : base, x \in `[hs (val b)]].
@@ -1020,7 +1021,7 @@ Qed.
 Definition polyEq (base I : base_t) :=
   (\polyI_(e : I) `[hp (val e)]) `&` 'P(base).
 
-Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
+Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 
 Fact in_polyEq x base I :
   (x \in 'P^=(base; I)) = [forall e : I, x \in `[hp (val e)]] && (x \in 'P(base)).
@@ -1245,12 +1246,13 @@ Notation "P `>` Q" := (Q `<` P)%PH (at level 70, no associativity, only parsing)
 Notation "P `<=` Q `<=` S" := ((poly_subset P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "P `<` Q `<=` S" := ((poly_proper P Q) && (poly_subset Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "P `<=` Q `<` S" := ((poly_subset P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
+Notation "P `<` Q `<` S" := ((poly_proper P Q) && (poly_proper Q S)) (at level 70, Q, S at next level) : poly_scope.
 Notation "'`[' 'hs'  b  ']'" := (mk_hs b) (at level 70) : poly_scope.
 Notation "'`[' 'hp' b  ']'" := (mk_hp b) (at level 70) : poly_scope.
 Notation "'`[' 'line'  c & Ω  ']'" := (mk_line c Ω) (at level 70) : poly_scope.
 Notation "'`[' 'hline'  c & Ω  ']'" := (mk_hline c Ω) (at level 70) : poly_scope.
-Notation "''P' ( base )" := (poly_of_base base) (at level 0) : poly_scope.
-Notation "''P^=' ( base ; I )" := (polyEq base I) : poly_scope.
+Notation "''P' ( base )" := (poly_of_base (base)%fset) (at level 0) : poly_scope.
+Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/`[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
@@ -1643,3 +1645,21 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
 Admitted.
 
 End Separation.
+
+(* -------------------------------------------------------------------- *)
+Section NonRedundantBase.
+Context {R : realFieldType} {n : nat}.
+
+Implicit Types (base : base_t[R,n]).
+
+Definition redundant_be base e :=
+  'P(base) `<=` `[hp e].
+
+Definition non_redundant_base (base : base_t[R,n]) :=
+  [forall e : base, ~~ (redundant_be (base `\ (val e))%fset (val e))].
+
+Lemma non_redundant_baseP (base : base_t[R,n]) :
+  reflect (forall e, e \in base -> ~~ ('P((base `\ e)) `<=` `[hp e])) (non_redundant_base base).
+Admitted.
+
+End NonRedundantBase.

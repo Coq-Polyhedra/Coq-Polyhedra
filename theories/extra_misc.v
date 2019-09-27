@@ -518,7 +518,7 @@ Definition fsubset_finMixin := CanFinMixin fsetval_of_fsubsetK.
 Canonical fsubset_finType := Eval hnf in FinType fsubset_t fsubset_finMixin.
 
 Definition fsubset_of (A : fsubset_t) & (phantom {fset K} A) : fsubset_t := A.
-Notation "A %:fsub" := (fsubset_of (Phantom _ A)) (at level 0).
+Notation "A %:fsub" := (fsubset_of (Phantom {fset K} A)) (at level 0).
 
 Definition tag0 x := Tag x.
 Definition tag1 x := tag0 x.
@@ -586,6 +586,16 @@ Goal (A' `|` fset0%:fsub)%:fsub = A%:fsub.
 rewrite /=; apply/val_inj/untag_inj => /=.
 Abort.
 
+Variable B : {fset K}.
+Hypothesis (HB : (B `<=` S)).
+Goal (A' `|` B)%:fsub = (B `|` A')%:fsub.
+Abort.
+
+Variable i : K.
+Hypothesis (Hi : ([fset i] `<=` S)).
+Goal (A' `|` [fset i])%:fsub = ([fset i] `|` A')%:fsub.
+Abort.
+
 Variable (I : finType) (P : pred I) (F : I -> fsubset_t).
 Check (\bigcup_(i | P i) (F i))%:fsub.
 Check (\bigcup_(i | P i) A')%:fsub.
@@ -616,7 +626,7 @@ End FSubset.
 Export FSubset.Exports.
 
 Notation "'{fsubset'  S '}'" := (FSubset.fsubset_t S) (at level 2).
-Notation "A %:fsub" := (FSubset.fsubset_of (Phantom _ A)) (at level 0).
+Notation "A %:fsub" := (FSubset.fsubset_of (Phantom {fset _} A)) (at level 0).
 
 (*
 Section Test.
@@ -682,6 +692,12 @@ Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
 End FSubsetOther.
 
 Notation "e +|` A" := (fslice e A) (at level 52).
+(*Global Instance expose_valP (K : choiceType) (S : {fset K}) (A : {fsubset S}) : expose (A `<=` S)%fset := Expose (valP A).
+Global Instance expose_funP (K : choiceType) (S : {fset K}) (T : Type) (P : pred T) (f : T -> {fsubset S}) :
+  expose (forall i, P i -> (f i `<=` S)%fset) := Expose (fun i _ => (valP (f i))).
+
+(* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
+Global Instance expose_setT (K : choiceType) (S : {fset K}) : expose (S `<=` S)%fset := Expose (fsubset_refl S).*)
 
 (*
 Section Test.
@@ -690,5 +706,9 @@ Variable (K : realFieldType) (S : {fset K}) (e : K) (A : {fsubset S}).
 Check ((e +|` A)%:fsub : {fsubset (e +|` S)}).
 Check ((e +|` fset0)%:fsub : {fsubset (e +|` S)}).
 Check ((e +|` S)%:fsub : {fsubset (e +|` S)}).
+Hypothesis He : ([fset e] `<=` S)%fset.
+Check ([fset e]%fset%:fsub : {fsubset S}).
+Check ((A `|` [fset e])%fset%:fsub : {fsubset S}).
+Check (([fset e] `|` A )%fset%:fsub : {fsubset _}). (* this should be a {fsubset S} *)
 End Test.
 *)
