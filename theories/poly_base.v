@@ -563,6 +563,10 @@ Lemma activeU1 (P : {poly base}) (e : base_elt) & (e \in base) :
 Proof.
 move => P_prop0.
 case: (boolP (e \in ({eq P} : base_t))).
+- move => h; apply/fsubset_inj.
+  set I := ({eq P} `|` [fset e])%fset %:fsub.
+  suff h': I = {eq P} :> base_t.
+  have /= ->: 'P^= (base; I) = P by rewrite [P]repr_active // h'.
 Admitted.
 
 Lemma graded (P Q : {poly base}) :
