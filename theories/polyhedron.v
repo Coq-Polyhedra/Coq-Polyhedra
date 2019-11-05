@@ -104,11 +104,52 @@ Coercion mem_pred_sort : type >-> pred_sort.
 Definition mk_poly (P : 'hpoly[R]_n) : 'poly[R] := \pi P.
 End Def.
 
-Notation "''poly[' R ]_ n" := (type_of n (Phant R)).
+Section Def.
+Context {R : realFieldType} (n : nat).
+
+Local Notation "''poly[' R ]_ n" := (type_of n (Phant R)).
+
+Inductive poly_type : predArgType := Poly of 'poly[R]_n.
+
+Definition poly_of of phant ('poly[R]_n) := poly_type.
+
+Identity Coercion type_of_poly : poly_of >-> poly_type.
+
+Definition polyval P := let: Poly t := P in t.
+Coercion polyval : poly_type >-> type_of.
+
+Canonical poly_subType := Eval hnf in [newType for polyval].
+End Def.
+
+Section Def.
+Context (R : realFieldType) (n : nat).
+
+Notation "''poly[' R ]_ n" :=
+  (poly_of (Phant (type_of n (Phant R)))).
 Notation "''poly[' R ]" := (type_of _ (Phant R)).
 Notation "''poly_' n" := (type_of n _).
-Notation "\repr" := (@Repr.f (H.hpoly _ _) _).
-Notation "''[' P ]" := (mk_poly P).
+
+Definition poly_eqMixin :=
+  Eval hnf in [eqMixin of 'poly[R]_n by <:].
+Canonical poly2_eqType :=
+  Eval hnf in EqType 'poly[R]_n poly_eqMixin.
+Definition poly_choiceMixin :=
+  [choiceMixin of 'poly[R]_n by <:].
+Canonical poly2_choiceType :=
+  Eval hnf in ChoiceType 'poly[R]_n poly_choiceMixin.
+
+Canonical poly2_predType :=
+  PredType (@mem_pred_sort R n : 'poly[R]_n -> pred 'cV[R]_n).
+
+Definition repr (P : 'poly[R]_n) := repr (polyval P).
+End Def.
+
+Notation "''poly[' R ]_ n" :=
+  (poly_of (Phant (type_of n (Phant R)))).
+Notation "''poly[' R ]" := 'poly[R]__.
+Notation "''poly_' n" := 'poly[_]_n.
+
+Notation "''[' P ]" := (Poly (mk_poly P)).
 
 Section BasicProperties.
 
@@ -116,12 +157,12 @@ Context {R : realFieldType} (n : nat).
 
 Lemma polyW (P : 'poly[R]_n -> Type) :
   (forall p : 'hpoly[R]_n, P '[p]) -> forall p : 'poly[R]_n, P p.
-Proof. by exact: quotW. Qed.
+Proof. by move=> ih -[]; apply: quotW. Qed.
 
-Lemma mem_polyE {P : 'poly[R]_n} x : (x \in P) = (x \in \repr P).
+Lemma mem_polyE {P : 'poly[R]_n} x : (x \in P) = (x \in repr P).
 Proof. by []. Qed.
 
-Lemma repr_equiv (P : 'hpoly[R]_n) : \repr '[P] =i P.
+Lemma repr_equiv (P : 'hpoly[R]_n) : repr '[P] =i P.
 Proof. by apply/H.poly_equivP/eqmodP => /=; rewrite reprK. Qed.
 
 Lemma mem_mk_poly {P : 'hpoly[R]_n} x : (x \in '[P]) = (x \in P).
@@ -130,7 +171,7 @@ Proof. by rewrite mem_polyE repr_equiv. Qed.
 Lemma poly_eqP {P Q : 'poly[R]_n} : (P =i Q) <-> (P = Q).
 Proof.
 split=> [|->//]; elim/polyW: P => P; elim/polyW: Q => Q /=.
-move=> eq_PQ; apply/eqmodP/H.poly_equivP => /= x.
+move=> eq_PQ; apply/val_inj/eqmodP/H.poly_equivP => /= x.
 by move/(_ x): eq_PQ; rewrite !mem_mk_poly.
 Qed.
 End BasicProperties.
@@ -143,13 +184,13 @@ Context {R : realFieldType} {n : nat}.
 
 Definition poly0 : 'poly[R]_n := '[ H.poly0 ].
 Definition polyT : 'poly[R]_n := '[ H.polyT ].
-Definition polyI (P Q : 'poly[R]_n) : 'poly[R]_n := '[ H.polyI (\repr P) (\repr Q) ].
-Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (\repr P) (\repr Q).
+Definition polyI (P Q : 'poly[R]_n) : 'poly[R]_n := '[ H.polyI (repr P) (repr Q) ].
+Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (repr P) (repr Q).
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
-Definition bounded (P : 'poly[R]_n) c := H.bounded (\repr P) c.
-Definition pointed (P : 'poly[R]_n) := H.pointed (\repr P).
-Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (\repr P)].
-Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (\repr P)].
+Definition bounded (P : 'poly[R]_n) c := H.bounded (repr P) c.
+Definition pointed (P : 'poly[R]_n) := H.pointed (repr P).
+Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (repr P)].
+Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (repr P)].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
 Definition poly_proper P Q := ((poly_subset P Q) && (~~ (poly_subset Q P))).
@@ -656,7 +697,7 @@ Lemma boundedPn {P} {c} :
 Proof.
 (*rewrite -subset0N_proper; move => P_non_empty.*)
 move => P_neq0.
-have reprP_neq0: ~~ H.poly_subset (\repr P) H.poly0.
+have reprP_neq0: ~~ H.poly_subset (repr P) H.poly0.
 - move: P_neq0; rewrite -subset0N_proper.
   apply: contraNN => /H.poly_subsetP incl.
   by apply/poly_subsetP => x /incl; rewrite H.in_poly0.
@@ -848,7 +889,7 @@ Qed.
 Lemma pointed0 : pointed (`[poly0]).
 Proof.
 rewrite /pointed /H.pointed.
-suff ->: H.poly_subset (\repr (`[ poly0 ])) H.poly0 by done.
+suff ->: H.poly_subset (repr (`[ poly0 ])) H.poly0 by done.
 by apply/H.poly_subsetP => x; rewrite repr_equiv.
 Qed.
 
