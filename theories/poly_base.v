@@ -28,6 +28,11 @@ Section FixedBase.
 
 Variable (base : base_t[R,n]).
 
+Print Canonical Projections.
+
+Unset Printing Notations.
+Check [quotType of 'poly[R]_n].
+
 Definition has_base (P : 'poly[R]_n) :=
   (P `>` `[poly0]) ==>
     [exists I : {fsubset base}, P == 'P^=(base; I)].
