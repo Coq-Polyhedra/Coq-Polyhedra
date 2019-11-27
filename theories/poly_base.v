@@ -28,11 +28,6 @@ Section FixedBase.
 
 Variable (base : base_t[R,n]).
 
-Print Canonical Projections.
-
-Unset Printing Notations.
-Check [quotType of 'poly[R]_n].
-
 Definition has_base (P : 'poly[R]_n) :=
   (P `>` `[poly0]) ==>
     [exists I : {fsubset base}, P == 'P^=(base; I)].
@@ -394,12 +389,49 @@ Qed.
 
 End ActiveSlice.
 
+Section Quotient.
+
+Variable (R : realFieldType) (n : nat).
+
+Axiom poly_has_base :
+  forall P, exists (x : { base : base_t[R,n] & {poly base}}),
+    P == (tagged x) :> 'poly[R]_n.
+
+Definition poly_base_of_poly (P : 'poly[R]_n) :=
+  xchoose (poly_has_base P).
+Definition poly_of_poly_base (x : { base : base_t[R,n] & {poly base} })
+  := pval (tagged x).
+
+Lemma poly_base_of_polyK : cancel poly_base_of_poly poly_of_poly_base.
+Proof.
+move => P; rewrite /poly_base_of_poly; symmetry; apply/eqP.
+exact: (xchooseP (poly_has_base _)).
+Qed.
+
+Definition poly_base_quot_class := QuotClass poly_base_of_polyK.
+
+Canonical poly_quot := QuotType 'poly[R]_n poly_base_quot_class.
+
+Definition repr_base (P : 'poly[R]_n) := (tag (repr P)).
+Definition repr_poly_base (P : 'poly[R]_n) : {poly (repr_base P)} := tagged (repr P).
+
+Lemma repr_poly_baseP P : P = repr_poly_base P.
+Proof. Admitted.
+
+Lemma fooP P : has_base (repr_base P) P.
+Proof. Admitted.
+
+Definition poly_of_poly_base2 (base : base_t[R,n]) (P : {poly base}) :=
+  poly_of_poly_base (Tagged _ P).
+End Quotient.
+
 Section Face.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
 
 Definition face_set (P : {poly base}) : {set {poly base}} :=
   [set Q : {poly base} | Q `<=` P].
+
 
 Lemma face_set_self (P : {poly base}) : P \in (face_set P).
 Proof.
@@ -471,6 +503,51 @@ rewrite !inE => Q_sub_P Q'_sub_P.
 by move: (polyISS Q_sub_P Q'_sub_P); rewrite polyIxx.
 Qed.
 End Face.
+
+Section Face2.
+Variable (R : realFieldType) (n : nat).
+
+Definition face_set2 (P : 'poly[R]_n) :=
+  [fset poly_of_poly_base2 x | x in face_set (repr_poly_base P)]%fset.
+
+Lemma face_set2_ok (base : base_t[R,n]) (P : {poly base}) :
+  face_set2 P = [fset poly_of_poly_base2 x | x in face_set P]%fset.
+Proof. Admitted.
+
+Lemma in_face_set2P (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) :
+  F \in face_set2 P -> exists2 Fb : {poly base}, F = Fb & Fb \in face_set P.
+Proof. Admitted.
+
+Lemma polybW (Pt : 'poly[R]_n -> Prop) :
+     (forall (base : base_t[R,n]) (Q : {poly base}), Pt Q)
+  -> (forall P : 'poly[R]_n, Pt P).
+Proof. Admitted.
+
+Lemma foo (F : 'poly[R]_n) (P : 'poly[R]_n)  :
+  F \in face_set2 P -> F `<=` P.
+Proof.
+elim/polybW: P => base Q /in_face_set2P[{F}F ->].
+Admitted.
+
+Variant face_set2_spec
+  (base : base_t[R, n]) (Fb : {poly base})
+  : 'poly[R]_n -> bool -> Type :=
+
+| FaceSet2Spec (F' : {poly base}) :
+    face_set2_spec Fb F' (F' \in face_set Fb).
+
+Lemma face_set2P (base : base_t[R, n]) (Fb : {poly base}) (F : 'poly[R]_n) :
+  @face_set2_spec base Fb F (F \in face_set2 Fb).
+Proof. Admitted.
+
+Lemma foo2 (F : 'poly[R]_n) (P : 'poly[R]_n)  :
+  F \in face_set2 P -> F `<=` P.
+Proof.
+elim/polybW: P => base Q.
+ case: face_set2P => {F}F.
+Admitted.
+
+End Face2.
 
 Section Dimension.
 

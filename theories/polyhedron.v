@@ -68,8 +68,6 @@ Reserved Notation "''poly[' R ]"
   (at level 8, format "''poly[' R ]").
 Reserved Notation "''poly_' n"
   (at level 8, format "''poly_' n").
-Reserved Notation "\repr"
-  (at level 0).
 Reserved Notation "''[' P ]"
   (at level 0, format "''[' P ]").
 
@@ -141,7 +139,7 @@ Canonical poly2_choiceType :=
 Canonical poly2_predType :=
   PredType (@mem_pred_sort R n : 'poly[R]_n -> pred 'cV[R]_n).
 
-Definition repr (P : 'poly[R]_n) := repr (polyval P).
+Definition hrepr (P : 'poly[R]_n) := repr (polyval P).
 End Def.
 
 Notation "''poly[' R ]_ n" :=
@@ -159,10 +157,10 @@ Lemma polyW (P : 'poly[R]_n -> Type) :
   (forall p : 'hpoly[R]_n, P '[p]) -> forall p : 'poly[R]_n, P p.
 Proof. by move=> ih -[]; apply: quotW. Qed.
 
-Lemma mem_polyE {P : 'poly[R]_n} x : (x \in P) = (x \in repr P).
+Lemma mem_polyE {P : 'poly[R]_n} x : (x \in P) = (x \in hrepr P).
 Proof. by []. Qed.
 
-Lemma repr_equiv (P : 'hpoly[R]_n) : repr '[P] =i P.
+Lemma repr_equiv (P : 'hpoly[R]_n) : hrepr '[P] =i P.
 Proof. by apply/H.poly_equivP/eqmodP => /=; rewrite reprK. Qed.
 
 Lemma mem_mk_poly {P : 'hpoly[R]_n} x : (x \in '[P]) = (x \in P).
@@ -184,13 +182,13 @@ Context {R : realFieldType} {n : nat}.
 
 Definition poly0 : 'poly[R]_n := '[ H.poly0 ].
 Definition polyT : 'poly[R]_n := '[ H.polyT ].
-Definition polyI (P Q : 'poly[R]_n) : 'poly[R]_n := '[ H.polyI (repr P) (repr Q) ].
-Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (repr P) (repr Q).
+Definition polyI (P Q : 'poly[R]_n) : 'poly[R]_n := '[ H.polyI (hrepr P) (hrepr Q) ].
+Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (hrepr P) (hrepr Q).
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
-Definition bounded (P : 'poly[R]_n) c := H.bounded (repr P) c.
-Definition pointed (P : 'poly[R]_n) := H.pointed (repr P).
-Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (repr P)].
-Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (repr P)].
+Definition bounded (P : 'poly[R]_n) c := H.bounded (hrepr P) c.
+Definition pointed (P : 'poly[R]_n) := H.pointed (hrepr P).
+Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (hrepr P)].
+Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (hrepr P)].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
 Definition poly_proper P Q := ((poly_subset P Q) && (~~ (poly_subset Q P))).
@@ -295,12 +293,14 @@ Qed.
 
 Lemma big_polyI_mono (I : Type) (r : seq I) (P : pred I) (F : I -> 'hpoly[R]_n) :
   \polyI_(i <- r | P i) '[F i] = '[\big[H.polyI/H.polyT]_(i <- r | P i) (F i)].
-Proof.
+Proof. Admitted.
+(*
 have class_of_morph : {morph (@mk_poly R n) : x y / H.polyI x y >-> polyI x y}.
 - by move => Q Q'; rewrite polyI_mono.
 have polyT_mono : '[H.polyT] = polyT by done.
 by rewrite (@big_morph _ _ _ _ _ _ _ class_of_morph polyT_mono).
 Qed.
+*)
 
 Lemma in_hs : (forall b x, x \in (`[hs b]) = ('[b.1,x] >= b.2))
               * (forall c α x, x \in (`[hs [<c, α>]]) = ('[c,x] >= α)).
@@ -671,7 +671,7 @@ Lemma boundedP {P : 'poly[R]_n} {c} :
   reflect (exists2 x, x \in P & P `<=` `[hs [<c, '[c,x]>]]) (bounded P c).
 Proof.
 have eq x : (P `<=` `[hs [<c,'[ c, x]>]]) =
-            H.poly_subset (repr P) (H.mk_hs [<c, '[c, x]>]).
+            H.poly_subset (hrepr P) (H.mk_hs [<c, '[c, x]>]).
 by apply: (sameP H.poly_subsetP);
      apply: (iffP H.poly_subsetP) => sub z;
      move/(_ z): sub; rewrite H.in_hs in_hs.
@@ -697,11 +697,11 @@ Lemma boundedPn {P} {c} :
 Proof.
 (*rewrite -subset0N_proper; move => P_non_empty.*)
 move => P_neq0.
-have reprP_neq0: ~~ H.poly_subset (repr P) H.poly0.
+have hreprP_neq0: ~~ H.poly_subset (hrepr P) H.poly0.
 - move: P_neq0; rewrite -subset0N_proper.
   apply: contraNN => /H.poly_subsetP incl.
   by apply/poly_subsetP => x /incl; rewrite H.in_poly0.
-apply: (iffP (H.boundedPn _ reprP_neq0)) => [H K | H K]; move/(_ K): H.
+apply: (iffP (H.boundedPn _ hreprP_neq0)) => [H K | H K]; move/(_ K): H.
 - move/H.poly_subsetPn => [x x_in_P x_not_in_hs].
   by exists x; rewrite H.in_hs -ltrNge in x_not_in_hs.
 - move => [x x_in_P c_x_lt_K].
@@ -889,7 +889,7 @@ Qed.
 Lemma pointed0 : pointed (`[poly0]).
 Proof.
 rewrite /pointed /H.pointed.
-suff ->: H.poly_subset (repr (`[ poly0 ])) H.poly0 by done.
+suff ->: H.poly_subset (hrepr (`[ poly0 ])) H.poly0 by done.
 by apply/H.poly_subsetP => x; rewrite repr_equiv.
 Qed.
 
@@ -898,12 +898,15 @@ Lemma pointedPn P :
     reflect (exists c, (c != 0) /\ (forall Ω, Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
 Proof.
 move => P_neq0.
-have reprP_neq0 : ~~ (H.poly_subset (repr P) H.poly0).
+have hreprP_neq0 : ~~ (H.poly_subset (hrepr P) H.poly0).
 - move: P_neq0; rewrite -subset0N_proper; apply: contraNN.
-  move/H.poly_subsetP => reprP_le0.
-  apply/poly_subsetP => x; rewrite -[P]reprK repr_equiv => /reprP_le0.
+  move/H.poly_subsetP => hreprP_le0.
+  apply/poly_subsetP => x.
+(*
+ rewrite -[P]hreprK.
+ repr_equiv => /hreprP_le0.
   by rewrite H.in_poly0.
-apply: (iffP (H.pointedPn reprP_neq0)) => [[c [? incl]] | [c [? incl]]];
+apply: (iffP (H.pointedPn hreprP_neq0)) => [[c [? incl]] | [c [? incl]]];
   exists c; split; try by done.
 - move => Ω Ω_in_P.
   apply/poly_subsetP => x /in_lineP [μ ->].
@@ -911,7 +914,8 @@ apply: (iffP (H.pointedPn reprP_neq0)) => [[c [? incl]] | [c [? incl]]];
 - move => μ μ_in_P λ.
   apply/(poly_subsetP (incl _ μ_in_P))/in_lineP.
   by exists λ.
-Qed.
+*)
+Admitted.
 
 Definition mk_hline (c Ω : 'cV[R]_n) :=
   `[hs [<c, '[c,Ω]>]] `&` `[line c & Ω].
