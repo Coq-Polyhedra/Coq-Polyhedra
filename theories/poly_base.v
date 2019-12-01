@@ -535,8 +535,11 @@ apply/eqP; rewrite eqEfsubset; apply/andP; split.
     apply/imfsetP; exists (`[poly0]%:poly_base); rewrite /=.
     * rewrite inE; exact: poly0_subset.
     * exact: poly_of_poly_base2P.
-  + move => c. rewrite {1}[(P : 'poly[R]_n)]repr_poly_baseP => c_bounded.
-Admitted.
+  + move => c c_bounded.
+    apply/imfsetP; exists (argmin (repr_poly_base P) c)%:poly_base; rewrite /=.
+    * rewrite inE; exact: argmin_subset.
+    * by rewrite -2!poly_of_poly_base2P -repr_poly_baseP.
+Qed.
 
 Lemma in_face_set2P (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) :
   F \in face_set2 P -> exists2 Fb : {poly base}, F = Fb & Fb \in face_set P.
