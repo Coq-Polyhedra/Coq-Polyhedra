@@ -152,13 +152,13 @@ by rewrite /= polyEq0.
 Qed.
 Canonical poly_of_base_base := PolyBase (poly_of_baseP).
 
-Lemma polyI_of_baseP (P Q : {poly base}) :
+Lemma polyI_baseP (P Q : {poly base}) :
   has_base base (P `&` Q).
 Proof.
 Admitted.
-Canonical polyI_of_base P Q := PolyBase (polyI_of_baseP P Q).
+Canonical polyI_base P Q := PolyBase (polyI_baseP P Q).
 
-Lemma slice_of_baseP (e : base_elt) (P : {poly base}) :
+Lemma slice_baseP (e : base_elt) (P : {poly base}) :
   has_base (e +|` base) (slice e P).
 Proof.
 Admitted.
@@ -166,8 +166,7 @@ Admitted.
 apply/has_baseP => _.
 by exists (slice_set I); rewrite -(quot_equivP slice_polyEq).*)
 
-Canonical slice_of_base e P := PolyBase (slice_of_baseP e P).
-
+Canonical slice_base e P := PolyBase (slice_baseP e P).
 
 Lemma argmin_baseP (P : {poly base}) c :
   has_base base (argmin P c).
@@ -287,7 +286,7 @@ have h: P `>` (`[poly0]) by apply/proper0P; exists x.
 by rewrite [P]repr_active in x_in_P.
 Qed.
 
-Lemma repr_active0 :
+Lemma active0 :
   {eq (`[poly0]%:poly_base : {poly base})} = base%:fsub.
 Proof.
 set A := {eq _}.
@@ -319,7 +318,7 @@ Lemma poly_base_subset_eq (P Q : {poly base}) :
     (P `<=` Q) -> (({eq Q} : {fset _}) `<=` {eq P})%fset.
 Proof.
 case: (poly_baseP P) => [-> | ? [_ P_prop0]].
-- rewrite repr_active0 poly0_subset => _; exact: fsubset_subP.
+- rewrite active0 poly0_subset => _; exact: fsubset_subP.
 - case: (poly_baseP Q) => [-> | ? [_ Q_prop0]].
   + rewrite -subset0N_proper in P_prop0.
     by move/negbTE : P_prop0 ->.
@@ -337,7 +336,7 @@ Qed.
 Lemma poly_base_proper (P Q : {poly base}) :
   ({eq Q} `<` {eq P})%fset -> P `<` Q.
 Proof.
-case: (poly_baseP Q) => [->| J [Q_eq Q_prop0]]; first by rewrite repr_active0 fsubsetT_proper.
+case: (poly_baseP Q) => [->| J [Q_eq Q_prop0]]; first by rewrite active0 fsubsetT_proper.
 case: (poly_baseP P) => [->| I [P_eq P_prop0]]; first done.
 rewrite {2}[Q]repr_active // => /fproperP [/fsubsetP eq_sub] [i i_in i_notin].
 rewrite [P]repr_active //.
@@ -389,7 +388,8 @@ Qed.
 
 End ActiveSlice.
 
-Section Quotient.
+Module BaseQuotient.
+Section BaseQuotient.
 
 Variable (R : realFieldType) (n : nat).
 
@@ -397,38 +397,56 @@ Axiom poly_has_base :
   forall P, exists (x : { base : base_t[R,n] & {poly base}}),
     P == (tagged x) :> 'poly[R]_n.
 
-Definition poly_base_of_poly (P : 'poly[R]_n) :=
+Definition of_poly (P : 'poly[R]_n) :=
   xchoose (poly_has_base P).
-Definition poly_of_poly_base (x : { base : base_t[R,n] & {poly base} })
+Definition to_poly (x : { base : base_t[R,n] & {poly base} })
   := pval (tagged x).
 
-Lemma poly_base_of_polyK : cancel poly_base_of_poly poly_of_poly_base.
+Lemma of_polyK : cancel of_poly to_poly.
 Proof.
-move => P; rewrite /poly_base_of_poly; symmetry; apply/eqP.
+move => P; rewrite /of_poly; symmetry; apply/eqP.
 exact: (xchooseP (poly_has_base _)).
 Qed.
 
-Definition poly_base_quot_class := QuotClass poly_base_of_polyK.
+Definition base_quot_class := QuotClass of_polyK.
 
-Canonical poly_quot := QuotType 'poly[R]_n poly_base_quot_class.
+Canonical base_quot := QuotType 'poly[R]_n base_quot_class.
 
 Definition repr_base (P : 'poly[R]_n) := (tag (repr P)).
 Definition repr_poly_base (P : 'poly[R]_n) : {poly (repr_base P)} := tagged (repr P).
 
-Lemma repr_poly_baseP P : P = repr_poly_base P.
+Lemma repr_baseP P : has_base (repr_base P) P.
 Proof. Admitted.
 
-Lemma fooP P : has_base (repr_base P) P.
-Proof. Admitted.
+Canonical poly_base_repr_baseP (P : 'poly[R]_n) := PolyBase (repr_baseP P).
 
-Definition poly_of_poly_base2 (base : base_t[R,n]) (P : {poly base}) :=
-  poly_of_poly_base (Tagged _ P).
+End BaseQuotient.
+Module Import Exports.
+(*Canonical poly_base_repr_baseP.*)
+End Exports.
+End BaseQuotient.
 
-Lemma poly_of_poly_base2P (base : base_t[R,n]) (P : 'poly[R]_n) (H : (has_base base P)) :
-  P = poly_of_poly_base2 (PolyBase H).
+Export BaseQuotient.Exports.
+
+Notation "\repr_base P" := (BaseQuotient.repr_base P) (at level 40).
+Notation "\repr P" := (BaseQuotient.repr_poly_base P) (at level 40).
+
+Section BaseQuotientAux.
+
+Variable (R : realFieldType) (n : nat).
+
+Lemma reprK (P : 'poly[R]_n) : \repr P = P :> 'poly[R]_n.
+Proof.
 Admitted.
 
-End Quotient.
+Lemma polybW (Pt : 'poly[R]_n -> Prop) :
+  (forall (base : base_t[R,n]) (Q : {poly base}), Pt Q)
+  -> (forall P : 'poly[R]_n, Pt P).
+Proof.
+by move => ? P; rewrite -[P]reprK.
+Qed.
+
+End BaseQuotientAux.
 
 Section Face.
 
@@ -512,46 +530,30 @@ Section Face2.
 Variable (R : realFieldType) (n : nat).
 
 Definition face_set2 (P : 'poly[R]_n) :=
-  [fset poly_of_poly_base2 x | x in face_set (repr_poly_base P)]%fset.
+  [fset pval x | x in face_set (BaseQuotient.repr_poly_base P)]%fset.
 
-Lemma face_set2_ok (base : base_t[R,n]) (P : {poly base}) :
-  face_set2 P = [fset poly_of_poly_base2 x | x in face_set P]%fset.
+Lemma face_set2_mono (base : base_t[R,n]) (P : {poly base}) :
+  face_set2 P = [fset pval x | x in face_set P]%fset.
 Proof.
-apply/eqP; rewrite eqEfsubset; apply/andP; split.
-- apply/fsubsetP => F /imfsetP [F' /= F'_in ->].
-  case/faceP: F'_in.
-  + rewrite -poly_of_poly_base2P.
-    apply/imfsetP; exists (`[poly0]%:poly_base); rewrite /=.
-    * rewrite inE; exact: poly0_subset.
-    * exact: poly_of_poly_base2P.
-  + move => c.
-    rewrite -poly_of_poly_base2P -repr_poly_baseP => c_bounded.
-    apply/imfsetP; exists ((argmin P c)%:poly_base); rewrite /=.
-    * rewrite inE; exact: argmin_subset.
-    * exact: poly_of_poly_base2P.
-- apply/fsubsetP => F /imfsetP [F' /= F'_in ->].
-  case/faceP: F'_in.
-  + rewrite -poly_of_poly_base2P.
-    apply/imfsetP; exists (`[poly0]%:poly_base); rewrite /=.
-    * rewrite inE; exact: poly0_subset.
-    * exact: poly_of_poly_base2P.
+suff H: forall base1 base2 (P1 : {poly base1}) (P2 : {poly base2}),
+    P1 = P2 :> 'poly[R]_n ->
+    ([fset pval x | x in face_set P1] `<=` [fset pval x | x in face_set P2])%fset.
+- by apply/eqP; rewrite eqEfsubset; apply/andP; split; apply/H; rewrite reprK.
+- move => base1 base2 P1 P2 eq_P12.
+  apply/fsubsetP => F /imfsetP [F' /= F'_in ->].
+  case/faceP : F'_in.
+  + apply/imfsetP; exists (`[poly0]%:poly_base) => //=.
+    rewrite inE; exact: poly0_subset.
   + move => c c_bounded.
-    apply/imfsetP; exists (argmin (repr_poly_base P) c)%:poly_base; rewrite /=.
-    * rewrite inE; exact: argmin_subset.
-    * by rewrite -2!poly_of_poly_base2P -repr_poly_baseP.
+    apply/imfsetP; exists ((argmin P2 c)%:poly_base) => /=.
+    rewrite inE; exact: argmin_subset.
+    by rewrite eq_P12.
 Qed.
 
 Lemma in_face_set2P (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) :
   F \in face_set2 P -> exists2 Fb : {poly base}, F = Fb & Fb \in face_set P.
 Proof.
-by rewrite face_set2_ok => /imfsetP [Fb /= ??]; exists Fb.
-Qed.
-
-Lemma polybW (Pt : 'poly[R]_n -> Prop) :
-  (forall (base : base_t[R,n]) (Q : {poly base}), Pt Q)
-  -> (forall P : 'poly[R]_n, Pt P).
-Proof.
-by move => base Q; rewrite [Q]repr_poly_baseP.
+by rewrite face_set2_mono => /imfsetP [Fb /= ??]; exists Fb.
 Qed.
 
 Lemma foo (F : 'poly[R]_n) (P : 'poly[R]_n)  :
@@ -563,7 +565,6 @@ Abort.
 Variant face_set2_spec
   (base : base_t[R, n]) (Fb : {poly base})
   : 'poly[R]_n -> bool -> Type :=
-
 | FaceSet2Spec (F' : {poly base}) :
     face_set2_spec Fb F' (F' \in face_set Fb).
 
