@@ -460,7 +460,7 @@ End ExtraFinmap.
 
 Class expose (P : Prop) := Expose : P.
 Hint Extern 0 (expose _) => (exact) : typeclass_instances.
-
+Hint Extern 0 (expose (is_true _)) => (match goal with H : is_true _ |- _ => exact: H end) : typeclass_instances.
 
 Module FSubset.
 Section FSubset.
