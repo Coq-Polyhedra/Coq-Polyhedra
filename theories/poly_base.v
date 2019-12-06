@@ -526,6 +526,87 @@ suff H: forall base1 base2 (P1 : {poly base1}) (P2 : {poly base2}),
     by rewrite eq_P12.
 Qed.
 
+Lemma face_set_has_base (base : base_t[R,n]) (P : {poly base}) (Q : 'poly[R]_n) :
+  Q \in face_set P -> [Q has \base base].
+Proof.
+rewrite face_set_mono => /imfsetP [{}Q _ ->].
+exact: valP.
+Qed.
+
+(*Canonical face_set_has_baseP (base : base_t[R,n]) (P : {poly base}) (Q : 'poly[R]_n) (H : expose (Q \in face_set P)) :=
+  PolyBase (face_set_has_base H).*)
+
+Lemma face_setE (base : base_t[R,n]) (P F : {poly base}) :
+  (pval F \in face_set P) = (F `<=` P).
+Proof.
+rewrite face_set_mono.
+apply/imfsetP/idP => [[{}F H ->]| F_sub_P]; first by rewrite inE in H.
+by exists F; rewrite ?inE.
+Qed.
+
+Lemma face_set_self (P : 'poly[R]_n) : P \in (face_set P).
+Proof.
+elim/polybW: P => base P.
+rewrite face_setE; exact: poly_subset_refl.
+Qed.
+
+(*
+Lemma in_face_setP (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) & (F \in face_set P) :
+  F%:poly_base `<=` P.
+Proof.
+by rewrite -face_setE.
+Qed.*)
+
+Variant face_set_spec (base : base_t[R, n]) (P : {poly base}) : 'poly[R]_n -> Type :=
+| FaceSetSpec (Q : {poly base}) of (Q `<=` P) : face_set_spec P Q.
+
+Lemma face_setP (base : base_t[R, n]) (P : {poly base}) (Q : 'poly[R]_n) :
+  (Q \in face_set P) -> @face_set_spec base P Q.
+Proof.
+move => Q_face_P.
+have Q_eq : Q = (PolyBase (face_set_has_base Q_face_P)) by done.
+move: (Q_face_P); rewrite Q_eq => Q_face_P'.
+constructor; by rewrite face_setE in Q_face_P'.
+Qed.
+
+Lemma face_set_of_face (P Q : 'poly[R]_n) :
+  Q \in face_set P -> face_set Q = [fset Q' in (face_set P) | (Q' `<=` Q)%PH]%fset.
+Proof.
+elim/polybW: P => base P.
+case/face_setP => {}Q Q_sub_P.
+apply/fsetP => Q'; apply/idP/idP.
+- case/face_setP => {}Q' Q'_sub_Q.
+  apply/imfsetP; exists (pval Q'); last done.
+  rewrite inE face_setE; apply/andP; split; try by done.
+  exact: (poly_subset_trans Q'_sub_Q).
+- rewrite mem_imfset => // /andP[].
+  case/face_setP => {}Q' _.
+  by rewrite face_setE.
+Qed.
+
+Corollary subset_face_set (P Q : 'poly[R]_n) :
+  Q \in face_set P -> (face_set Q `<=` face_set P)%fset.
+Proof.
+move/face_set_of_face ->; apply/fsubsetP => Q'.
+by rewrite mem_imfset // => /andP[].
+Qed.
+
+Lemma face_set_subset (F : 'poly[R]_n) (P : 'poly[R]_n)  :
+  F \in face_set P -> F `<=` P.
+Proof.
+elim/polybW: P => base P.
+by case/face_setP => ?.
+Qed.
+
+Lemma face_set0 : face_set (`[poly0]) = [fset `[poly0]]%fset.
+Proof.
+apply/fsetP => P; rewrite !inE /=; apply/idP/idP.
+- by move/face_set_subset; rewrite subset0_equiv.
+- move/eqP ->; exact: face_set_self.
+Qed.
+
+(*
+
 Lemma in_face_setP (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) :
   reflect (exists2 Fb : {poly base}, F = Fb & Fb \in \face_set P) (F \in face_set P).
 Proof.
@@ -575,6 +656,7 @@ apply/fsetP => P; rewrite !inE /=; apply/idP/idP.
 - by move/face_set_subset; rewrite subset0_equiv.
 - move/eqP ->; exact: face_set_self.
 Qed.
+ *)
 
 (*Variant face_set2_spec
   (base : base_t[R, n]) (Fb : {poly base})
