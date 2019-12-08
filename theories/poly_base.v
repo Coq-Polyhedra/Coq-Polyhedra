@@ -1,3 +1,4 @@
+
 (*************************************************************************)
 (* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
 (*                                                                       *)
@@ -416,8 +417,9 @@ Definition repr_base (P : 'poly[R]_n) := (tag (repr P)).
 Definition repr_poly_base (P : 'poly[R]_n) : {poly (repr_base P)} := tagged (repr P).
 
 Lemma repr_baseP P : has_base (repr_base P) P.
-Proof. Admitted.
-
+Proof.
+rewrite -{2}[P]reprK {1}unlock; exact: poly_base_base.
+Qed.
 Canonical poly_base_repr_baseP (P : 'poly[R]_n) := PolyBase (repr_baseP P).
 
 End BaseQuotient.
@@ -438,17 +440,11 @@ Variable (R : realFieldType) (n : nat).
 
 Lemma reprK (P : 'poly[R]_n) : \repr P = P :> 'poly[R]_n.
 Proof.
-Admitted.
-(*Set Printing Coercions.
-rewrite /BaseQuotient.repr_poly_base.
-rewrite -[P in RHS]reprK /=.
-suff -> //: forall x :  { base : base_t[R,n] & {poly base} } , pval (tagged x) = \pi_('poly_n)%qT x.
-done.
-move => x. rewrite /=.*)
+by rewrite -[P in RHS]reprK [in RHS]unlock.
+Qed.
 
 Lemma polybW (Pt : 'poly[R]_n -> Prop) :
-  (forall (base : base_t[R,n]) (Q : {poly base}), Pt Q)
-  -> (forall P : 'poly[R]_n, Pt P).
+  (forall (base : base_t[R,n]) (Q : {poly base}), Pt Q) -> (forall P : 'poly[R]_n, Pt P).
 Proof.
 by move => ? P; rewrite -[P]reprK.
 Qed.
