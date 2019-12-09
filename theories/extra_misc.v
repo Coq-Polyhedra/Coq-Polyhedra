@@ -605,6 +605,8 @@ End Test.
 End FSubset.
 
 Module Import Exports.
+Coercion untag : tagged_fset >-> finset_of.
+Coercion tf : fsubset_t >-> tagged_fset.
 Canonical tagged_fset_eqType.
 Canonical tagged_fset_choiceType.
 Canonical fsubset_subType.
@@ -618,8 +620,6 @@ Canonical fsubset_fset0.
 Canonical fsubset_setU.
 Canonical fsubset_bigU.
 Canonical fsubset_filter.
-Coercion untag : tagged_fset >-> finset_of.
-Coercion tf : fsubset_t >-> tagged_fset.
 End Exports.
 End FSubset.
 
