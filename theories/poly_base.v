@@ -233,19 +233,25 @@ Section Active.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
 
+Fact active_key : unit. by []. Qed.
+
 Definition active (P : {poly base}) := (* TODO: fix broken notation *)
-  (\big[@fsetU _/fset0]_(I : {fsubset base} | (P `<=` 'P^=(base; I))) I)%:fsub.
+  locked_with active_key ((\big[@fsetU _/fset0]_(I : {fsubset base} | (P `<=` 'P^=(base; I))) I)%:fsub).
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
 
 (*
 Section Test.
 Variable (P : {poly base}).
-Check ({eq P} : {fsubset base}).
+Check {eq P}.
+Goal {eq P} = fset0%:fsub :> {fsubset base}.
+Set Printing Coercions.
+apply/fsubset_inj => /=.
+Abort.
 Check 'P^=(base; {eq P}) : 'poly[R]_n.
 Check 'P^=(base; {eq P})%:poly_base : {poly base}.
 End Test.
-*)
+ *)
 
 Lemma repr_active (P : {poly base}) :
   P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
@@ -257,7 +263,7 @@ suff ->: 'P^=(base; {eq P}) =
 - apply/poly_equivP/andP; split.
   + by apply/big_polyIsP.
   + rewrite P_eq; apply/big_poly_inf; exact: poly_subset_refl.
-- symmetry; apply: polyEq_big_polyI.
+- rewrite polyEq_big_polyI /active; first by rewrite unlock_with.
   apply/pred0Pn; rewrite P_eq /=; exists I.
   exact: poly_subset_refl.
 Qed.
@@ -274,7 +280,7 @@ Lemma activeP (P : {poly base}) (I : {fsubset base}) :
   (P `<=` 'P^=(base; I)) = (I `<=` {eq P})%fset.
 Proof.
 apply/idP/idP.
-- by move => Psub; apply/bigfcup_sup.
+- by move => Psub; rewrite /active unlock_with; apply/bigfcup_sup.
 - case: (emptyP P) => [-> _|]; first exact: poly0_subset.
   move/repr_active => {2}-> /=.
   exact: polyEq_antimono.
@@ -794,10 +800,13 @@ Lemma activeU1 (P : {poly base}) (e : base_elt) & (e \in base) :
 Proof.
 move => P_prop0.
 case: (boolP (e \in ({eq P} : base_t))).
-- move => h; apply/fsubset_inj.
+- rewrite -fsub1set => /fsetUidPl e_in_eq.
   set I := ({eq P} `|` [fset e])%fset %:fsub.
-  suff h': I = {eq P} :> base_t.
-  have /= ->: 'P^= (base; I) = P by rewrite [P]repr_active // h'.
+  have ->: I = {eq P} by apply/fsubset_inj.
+  by rewrite /= -repr_active.
+- move => e_notin_eq; apply/fsubset_inj/eqP; rewrite eqEfsubset.
+  apply/andP; split; last exact: active_polyEq.
+  apply/fsubsetP => i.
 Admitted.
 
 Lemma span_fsetU (I J : {fsubset base}) :
@@ -862,7 +871,7 @@ rewrite -subnSK; last first.
     case: (μ =P 0) => [-> | /eqP μN0].
     * by rewrite scale0r memv0.
     * suff: i \in <<{eq Q}>>%VS by move/negP : i_not_in_affQ.
-      move/(memvZ μ^-1) : h1. Search _ (_^-1 * _).
+      move/(memvZ μ^-1) : h1.
       by rewrite scalerA mulVf // scale1r.
 Qed.
 
