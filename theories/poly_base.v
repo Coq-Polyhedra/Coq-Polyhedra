@@ -469,6 +469,11 @@ Proof.
 by move => ? P; rewrite -[P]reprK.
 Qed.
 
+Lemma non_redundant_baseW (Pt : 'poly[R]_n -> Prop) :
+  (forall (base : base_t[R,n]), non_redundant_base base -> Pt 'P(base)%:poly_base) -> (forall P : 'poly[R]_n, Pt P).
+Proof.
+Admitted.
+
 End BaseQuotientAux.
 
 Section PolyBaseFace.
@@ -794,39 +799,11 @@ Section Gradedness.
 
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
 
-Hypothesis non_redundant : non_redundant_base base.
 
 Local Instance foo (e : base_elt) (_ : expose (e \in base)) : expose ([fset e] `<=` base)%fset.
 Proof.
 by rewrite fsub1set.
 Qed.
-
-(*
-Variable (e : base_elt[R,n]).
-Hypothesis He : e \in base.
-Check ([fset e]%fset%:fsub) : {fsubset base}.
-Variable (P : {poly base}).
-Set Typeclasses Debug.
-Let S := (({eq P} `|` [fset e])%fset%:fsub) : {fsubset base}.
-Check S.
-Check 'P^=(base; S)%:poly_base.
- *)
-
-Lemma activeU1 (P : {poly base}) (e : base_elt) & (e \in base) : (* holds when P = 'P(base) *)
-  (P `>` `[poly0]) ->
-  let I : {fsubset base} := ({eq P} `|` [fset e])%fset%:fsub in
-  {eq 'P^=(base; I)%:poly_base } = I.
-Proof.
-move => P_prop0.
-case: (boolP (e \in ({eq P} : base_t))).
-- rewrite -fsub1set => /fsetUidPl e_in_eq.
-  set I := ({eq P} `|` [fset e])%fset %:fsub.
-  have ->: I = {eq P} by apply/fsubset_inj.
-  by rewrite /= -repr_active.
-- move => e_notin_eq; apply/fsubset_inj/eqP; rewrite eqEfsubset.
-  apply/andP; split; last exact: active_polyEq.
-  apply/fsubsetP => i.
-Admitted.
 
 Lemma span_fsetU (I J : {fsubset base}) :
   (<< (I `|` J)%fset >> = << I >> + << J >>)%VS.
@@ -841,55 +818,94 @@ Proof.
 by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
 Qed.
 
-Lemma graded (P Q : {poly base}) :
-  P `>` (`[poly0]) -> P `<` Q -> ~~ [exists S : {poly base}, (P `<` S `<` Q)] -> poly_dim Q = (poly_dim P).+1%N.
+
+Hypothesis non_redundant : non_redundant_base base.
+
+Let P := 'P(base)%:poly_base.
+Hypothesis P_prop0 : P `>` `[poly0].
+
+Lemma fsubset_fsubsetP (A B : {fsubset base}) :
+  reflect (forall x, x \in base -> x \in (A : {fset _}) -> x \in (B : {fset _})) (A `<=` B)%fset.
 Proof.
-move => P_prop0 P_prop_Q P_cover_Q.
-have Q_prop0 : Q `>` `[poly0] by apply/poly_proper_trans: P_prop_Q.
-have eqP_prop_eqQ : ({eq Q} `<` {eq P})%fset by apply/poly_base_proper_eq.
-move/fproperP: (eqP_prop_eqQ) => [_ [i i_in_eqP i_notin_eqQ]].
-have i_in_base: (i \in base) by move: (i) i_in_eqP; apply/fsubsetP: (valP {eq P}).
-set Q_U_i : {fsubset base} := (({eq Q} `|` [fset i])%fset)%:fsub.
+Admitted.
+
+Lemma activeU1 (e : base_elt) & (e \in base) : (* holds when P = 'P(base) *)
+  let I : {fsubset base} := ({eq P} `|` [fset e])%fset%:fsub in
+  {eq 'P^=(base; [fset e])%:poly_base } = I.
+Proof.
+case: (boolP (e \in ({eq P} : base_t))).
+- rewrite -fsub1set => /fsetUidPl e_in_eq.
+  set I := ({eq P} `|` [fset e])%fset %:fsub.
+  have ->: I = {eq P} by apply/fsubset_inj.
+  admit.
+(*    by rewrite /= -repr_active.
+- set I := ({eq P} `|` [fset e])%fset %:fsub.
+  move => e_notin_eq; apply/fsubset_inj/eqP; rewrite eqEfsubset.
+  apply/andP; split; last exact: active_polyEq.
+  apply/fsubset_fsubsetP => i i_in_eq.
+  apply: contraLR.
+  rewrite 2!inE negb_or => /andP [i_notin_eqP i_neq_e].
+  rewrite in_active //; apply/poly_subsetPn.
+  move/non_redundant_baseP/(_ _ H)/poly_subsetPn: non_redundant => [z z_in_P' z_notin_e].
+  move: i_notin_eqP; rewrite in_active //; move/poly_subsetPn => [y y_in_P y_notin_i].
+  have: exists lambda, lambda *: y +
+
+  Search _ non_redundant_base.
+
+
+  Search _ ((_ `|` _)%fset).
+
+*)
+Admitted.
+
+Lemma graded (Q : {poly base}) :
+  Q `>` (`[poly0]) -> Q `<` P -> ~~ [exists S : {poly base}, (Q `<` S `<` P)] -> poly_dim P = (poly_dim Q).+1%N.
+Proof.
+move => Q_prop0 P_prop_Q P_cover_Q.
+have eqQ_prop_eqP : ({eq P} `<` {eq Q})%fset by apply/poly_base_proper_eq.
+move/fproperP: (eqQ_prop_eqP) => [_ [i i_in_eqQ i_notin_eqP]].
+have i_in_base: (i \in base) by move: (i) i_in_eqQ; apply/fsubsetP: (valP {eq Q}).
+set eqPi : {fsubset base} := (({eq P} `|` [fset i])%fset)%:fsub.
 (* TODO: I use set and not pose here because pose doesn't infer the instances *)
-set S := 'P^=(base; Q_U_i)%:poly_base.
-have P_sub_S : P `<=` S.
-- rewrite activeP.
-  by apply/fsubUsetP; split; by [apply/fproper_sub | rewrite fsub1set].
-have S_prop_Q : S `<` Q.
+set S := 'P^=(base; [fset i])%:poly_base.
+have Q_sub_S : Q `<=` S.
+- by rewrite activeP fsub1set.
+have S_prop_P : S `<` P.
 - rewrite poly_properEneq; apply/andP; split.
-  * rewrite [Q]repr_active //.
-    apply: polyEq_antimono; exact: fsubsetUl.
-  * move: i_notin_eqQ; apply: contraNneq => S_eq_Q.
-    move: (poly_subset_refl Q); rewrite -{2}S_eq_Q activeP.
+  * by rewrite /= -polyEq0; apply: polyEq_antimono.
+  * move: i_notin_eqP; apply: contraNneq => S_eq_P.
+    move: (poly_subset_refl P); rewrite -{2}S_eq_P activeP.
     by move/fsubUsetP => [_]; rewrite fsub1set.
-have i_not_in_affQ: i \notin << {eq Q} >>%VS.
-- move: S_prop_Q; apply: contraTN => i_in_affQ.
-  rewrite /= /S polyEq_affine.
-  rewrite memvE in i_in_affQ; move/addv_idPl: i_in_affQ.
+have i_not_in_affP: i \notin << {eq P} >>%VS.
+- move: S_prop_P; apply: contraTN => i_in_affP.
+  rewrite /S /= polyEq_affine.
+  rewrite memvE in i_in_affP; move/addv_idPl: i_in_affP.
   rewrite -span_fset1 -span_fsetU => ->.
-  by rewrite -polyEq_affine {2}[Q]repr_active // poly_properxx.
-have P_eq_S : P = S.
+  rewrite -polyEq_affine.
+  have ->: 'P(base) = 'P(base)%:poly_base by done.
+  by rewrite ['P(base)%:poly_base]repr_active // poly_properxx.
+have Q_eq_S : Q = S.
 - move/existsPn/(_ S): P_cover_Q.
-  rewrite S_prop_Q andbT.
+  rewrite S_prop_P andbT.
   by apply: contraNeq; rewrite poly_properEneq => ->; rewrite andbT.
 rewrite !dim_polyN0 //; apply: congr1.
 rewrite -subnSK; last first.
-- suff: (poly_dim Q > 1)%N by rewrite dim_polyN0 // ltnS subn_gt0.
+- suff: (poly_dim P > 1)%N by rewrite dim_polyN0 // ltnS subn_gt0.
   move/poly_proper_ltn_dim: P_prop_Q.
   apply: leq_ltn_trans; by rewrite -poly_dimN0.
 - do 2![apply: congr1].
-  rewrite P_eq_S activeU1 // span_fsetU /= dimv_disjoint_sum.
+  rewrite Q_eq_S activeU1. // span_fsetU /= dimv_disjoint_sum.
   + rewrite -addn1; apply: congr1.
     rewrite span_fset1 dim_vline.
     suff ->: (i != 0) by [].
-    move: i_not_in_affQ; apply: contraNneq => ->.
+    move: i_not_in_affP; apply: contraNneq => ->.
     exact: mem0v.
   + apply/eqP; rewrite -subv0 span_fset1.
     apply/subvP => x /memv_capP [h1 /vlineP [μ x_eq]].
     rewrite {}x_eq in h1 *.
     case: (μ =P 0) => [-> | /eqP μN0].
     * by rewrite scale0r memv0.
-    * suff: i \in <<{eq Q}>>%VS by move/negP : i_not_in_affQ.
+    * suff: i \in <<{eq P}>>%VS by move/negP : i_not_in_affP.
       move/(memvZ μ^-1) : h1.
       by rewrite scalerA mulVf // scale1r.
 Qed.

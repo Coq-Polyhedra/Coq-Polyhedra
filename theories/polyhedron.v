@@ -1704,7 +1704,7 @@ Definition non_redundant_base (base : base_t[R,n]) :=
   [forall e : base, ~~ (redundant_be (base `\ (val e))%fset (val e))].
 
 Lemma non_redundant_baseP (base : base_t[R,n]) :
-  reflect (forall e, e \in base -> ~~ ('P((base `\ e)) `<=` `[hp e])) (non_redundant_base base).
+  reflect (forall e, e \in base -> ~~ ('P((base `\ e)) `<=` `[hs e])) (non_redundant_base base).
 Admitted.
 
 End NonRedundantBase.
