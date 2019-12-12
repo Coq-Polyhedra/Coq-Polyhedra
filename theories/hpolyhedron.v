@@ -283,6 +283,20 @@ Lemma base_vect_subset (I I' : base_t[R,n]) :
 Proof.
 by move => ?; apply/sub_span/fsubsetP.
 Qed.
+
+Lemma span_fsetU (I J : base_t[R,n]) :
+  (<< (I `|` J)%fset >> = << I >> + << J >>)%VS.
+Proof.
+rewrite -span_cat; apply/eq_span => x.
+by rewrite inE mem_cat.
+Qed.
+
+Lemma span_fset1 (v : base_elt[R,n]) :
+  (<< [fset v]%fset >> = <[ v ]>)%VS.
+Proof.
+by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
+Qed.
+
 End BaseVect.
 
 (* -------------------------------------------------------------------- *)

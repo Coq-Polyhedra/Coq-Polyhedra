@@ -352,6 +352,11 @@ Lemma hpE c (x : base_elt[R, n]) :
   (c \in `[hp x]) = (c \in (`[hs x])) && (c \in (`[hs -x])).
 Proof. by rewrite /mk_hp inE. Qed.
 
+Lemma hp_subset_hs (e : base_elt[R,n]) : `[hp e] `<=` `[hs e].
+Proof.
+by apply/poly_subsetP => x; rewrite !inE => /eqP ->.
+Qed.
+
 Lemma polyI0 P : (P `&` `[poly0]) = `[poly0].
 Proof.
 by apply/poly_eqP => x; rewrite !inE andbF.
@@ -367,6 +372,24 @@ Proof.
 by move => P Q; apply/poly_eqP => x; rewrite !in_polyI andbC.
 Qed.
 
+Lemma polyIA : associative polyI.
+Proof.
+by move => ???; apply/poly_eqP => ?; rewrite !inE andbA.
+Qed.
+
+Lemma polyTI : left_id (`[polyT]) polyI.
+Proof.
+by move => P; apply/poly_eqP => x; rewrite !inE.
+Qed.
+
+Lemma polyIT : right_id (`[polyT]) polyI.
+Proof.
+by move => P; apply/poly_eqP => x; rewrite !inE andbT.
+Qed.
+
+Canonical polyI_monoid := Monoid.Law polyIA polyTI polyIT.
+Canonical polyI_comonoid := Monoid.ComLaw polyIC.
+
 Lemma poly_subsetIl P Q : P `&` Q `<=` P.
 Proof. (* RK *)
 apply/poly_subsetP => x.
@@ -377,6 +400,24 @@ Lemma poly_subsetIr P Q : P `&` Q `<=` Q.
 Proof. (* RK *)
 apply/poly_subsetP => x.
 by rewrite in_polyI; move/andP => [_] .
+Qed.
+
+Lemma polyIidPl (Q Q' : 'poly[R]_n) : reflect ((Q `&` Q') = Q) (Q `<=` Q').
+Proof.
+apply/(iffP poly_subsetP) => H.
+- apply/poly_eqP => x; rewrite inE.
+  case: (boolP (x \in Q)) => //.
+  by move/H -> .
+- by move => x; rewrite -H inE => /andP [].
+Qed.
+
+Lemma polyIidPr (Q Q' : 'poly[R]_n) : reflect ((Q `&` Q') = Q') (Q' `<=` Q).
+Proof.
+apply/(iffP poly_subsetP) => H.
+- apply/poly_eqP => x; rewrite inE.
+  case: (boolP (x \in Q')); rewrite ?andbF //.
+  by move/H -> .
+- by move => x; rewrite -H inE => /andP [].
 Qed.
 
 Lemma polyIS P P' Q : P `<=` P' -> Q `&` P `<=` Q `&` P'.
@@ -490,6 +531,35 @@ rewrite inE => ?.
 by apply: (ler_trans d_le_d' _).
 Qed.
 
+Lemma moner_neq0 : -1 != 0 :> R.
+by rewrite eq_sym -addr_eq0 add0r oner_neq0.
+Qed.
+
+Lemma divrNN (x y : R) : (-x)/(-y) = x/y.
+Proof.
+rewrite -[(-x)]mulN1r -[(-y)]mulN1r -mulf_div mulfV ?mul1r //.
+exact: moner_neq0.
+Qed.
+
+Lemma bary2C (x y : 'cV[R]_n) (α : R) : (1-α) *: x + α *: y = (1 - (1 - α)) *: y + (1 - α) *: x.
+Proof.
+by rewrite subKr addrC.
+Qed.
+
+Lemma hp_itv (e : base_elt[R,n]) (y z: 'cV[R]_n) :
+  y \in (`[hs e]) -> z \notin (`[hs e]) -> exists2 α, (0 <= α < 1) & (1-α) *: y + α *: z \in `[hp e].
+Proof.
+rewrite !inE -ltrNge => Hy Hz.
+set α := (e.2 - '[e.1, y])/('[e.1,z] - '[e.1,y]).
+have z_lt_y: '[e.1,z] < '[e.1, y] by exact:(ltr_le_trans Hz).
+have neq0: '[e.1,z] - '[e.1, y] != 0 by rewrite subr_eq0 ltr_neq.
+exists α.
+- apply/andP; split.
+  + by rewrite /α -divrNN !opprB; apply: divr_ge0; rewrite subr_ge0 // ?ltrW.
+  + by rewrite lter_ndivr_mulr ?subr_lt0 // mul1r ltr_add2r.
+- by rewrite inE vdotDr !vdotZr mulrBl mul1r addrAC -addrA -mulrBr divfK // addrCA addrN addr0.
+Qed.
+
 Lemma hp_extremeL b x y α :
   (x \in `[hs b]) -> (y \in `[hs b]) ->
   0 <= α < 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (x \in `[hp b]).
@@ -498,8 +568,7 @@ rewrite !inE.
 move => x_in y_in /andP [α_ge0 α_lt1].
 case: (α =P 0) => [->| /eqP α_neq0].
 - by rewrite subr0 scale0r scale1r addr0.
-- have α_gt0 : α > 0
-    by rewrite lt0r; apply/andP; split.
+- have α_gt0 : α > 0 by rewrite lt0r; apply/andP; split.
   rewrite {α_ge0} vdotDr 2!vdotZr.
   apply: contraTT => x_notin_hp.
   have x_notin_hp' : '[ b.1, x] > b.2.
@@ -512,7 +581,7 @@ case: (α =P 0) => [->| /eqP α_neq0].
   + by rewrite ltr_def bary_in_hs andbT.
   have ->: b.2 = (1 - α) * b.2 + α * b.2.
   + by rewrite mulrBl -addrA addNr mul1r addr0.
-    by apply: ltr_le_add; rewrite lter_pmul2l //; rewrite subr_gt0.
+  + by apply: ltr_le_add; rewrite lter_pmul2l // subr_gt0.
 Qed.
 
 Lemma hp_extremeR b x y α :
@@ -520,9 +589,7 @@ Lemma hp_extremeR b x y α :
   0 < α <= 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (y \in `[hp b]).
 Proof.
 move => x_in y_in /andP [α_ge0 α_lt1].
-set bary := _ + _.
-have ->: bary = (1 - (1 - α)) *: y + (1 - α) *: x.
-- by rewrite subKr addrC.
+rewrite bary2C.
 apply: hp_extremeL; try by done.
 apply/andP; split.
 - by rewrite subr_cp0.
@@ -1061,6 +1128,15 @@ Proof.
 move => e_in_base.
 pose e' := [`e_in_base]%fset; have ->: e = fsval e' by done.
 exact: big_poly_inf.
+Qed.
+
+Lemma poly_of_base_antimono (base base' : base_t[R,n]) :
+  (base `<=` base')%fset -> 'P(base') `<=` 'P(base).
+Proof.
+move/fsubsetP => sub.
+apply/poly_subsetP => ??.
+apply/in_poly_of_baseP => ? /sub.
+by apply/in_poly_of_baseP.
 Qed.
 
 Definition polyEq (base I : base_t) :=

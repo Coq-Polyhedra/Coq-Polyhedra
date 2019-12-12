@@ -563,9 +563,9 @@ Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
 (* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
 Global Instance expose_setT : expose (S `<=` S) := Expose (fsubset_refl S).
 
-Lemma fsubset_eqW (A B : fsubset_t) : (A = B :> {fset K}) -> A = B.
+Global Instance expose_set1 (x : K) (_ : expose (x \in S)) : expose ([fset x] `<=` S)%fset.
 Proof.
-by move => /untag_inj ?; apply/val_inj => /=.
+by rewrite fsub1set.
 Qed.
 
 (*
@@ -688,6 +688,17 @@ Qed.
 
 Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
   @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e H).
+
+
+Lemma fsubset_fsubsetP (A B : {fsubset S}) :
+  reflect {in S, {subset (A : {fset K}) <= (B : {fset K})}} (A `<=` B)%fset.
+Proof.
+apply: (iffP idP).
+- move/fsubsetP => A_sub_B x _; exact: A_sub_B.
+- move => A_sub_B; apply/fsubsetP => x x_in_A.
+  suff x_in_S: x \in S by exact: A_sub_B.
+  by apply/(fsubsetP (valP A)).
+Qed.
 
 End FSubsetOther.
 
