@@ -748,16 +748,6 @@ Qed.
 
 End Dimension.
 
-Section Pointed.
-
-Context {R : realFieldType} {n : nat}.
-
-Lemma pointed_vertex (P : 'poly[R]_n) :
-  P `>` (`[poly0]) -> pointed P -> [exists S : face_set P, (dim (val S) == 1%N)].
-Admitted.
-
-End Pointed.
-
 Section Facet.
 
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
@@ -878,6 +868,28 @@ rewrite -subnSK; last first.
 Qed.
 
 End Facet.
+
+Section Pointed.
+
+Context {R : realFieldType} {n : nat}.
+
+Lemma pointed_vertex (P : 'poly[R]_n) :
+  P `>` (`[poly0]) -> pointed P -> [exists S : face_set P, (dim (val S) == 1%N)].
+Proof.
+elim/non_redundant_baseW: P => base non_redundant P.
+(* Sketch of the proof: by induction on P
+ * if dim P = 1, then take S = P
+ * if dim P > 1, then prove that ({eq P} `<` base)%fset
+ ** indeed, if {eq P} = base, then P should be an affine space A x = b, with ker A \neq 0
+ ** then P is not pointed (take any d \in Ker A, d ≠ 0, any line `[line Ω & d] is contained in P
+ ** provided that Ω \in P
+ * take i \notin {eq P}, and apply the induction hypothesis on 'P(base; [fset i])%:poly_base
+ * the latter has dimension (dim P).-1, and is non-empty
+ * QED.
+ *)
+Admitted.
+
+End Pointed.
 
 Section Graded.
 
