@@ -709,9 +709,9 @@ Lemma face_dimS (P Q : 'poly[R]_n) : P \in face_set Q -> (dim P <= dim Q)%N.
 Proof.
 case: (dimP Q) => [-> |].
 - by rewrite face_set0 => /fset1P ->; rewrite dim0.
-- elim/polybW : Q => base Q Q_prop0 P_face_Q.
-  case: (dimP P) => [//=|].
-  case/face_setP: P_face_Q => {}P P_sub_Q P_prop0.
+- elim/polybW : Q => base Q Q_prop0.
+  case/face_setP => {}P P_sub_Q.
+  case: (dimP P) => [//= | P_prop0].
   rewrite !dimN0_eq // ltnS; move/poly_base_subset_eq/base_vect_subset/dimvS: P_sub_Q.
   exact: leq_sub2l.
 Qed.
@@ -722,9 +722,9 @@ Proof.
 move => P_face_Q; split; first exact: face_dimS.
 apply/eqP/eqP; last by move => ->.
 case: (dimP Q) => [-> /dim_eq0 //|].
-elim/polybW: Q P_face_Q => base Q P_face_Q Q_prop0.
-case: (dimP P) => [-> /esym/dim_eq0 //| ].
-case/face_setP : P_face_Q => {}P P_sub_Q P_prop0.
+elim/polybW: Q P_face_Q => base Q.
+case/face_setP => {}P P_sub_Q Q_prop0.
+case: (dimP P) => [-> /esym/dim_eq0 //| P_prop0].
 rewrite !dimN0_eq //.
 move/succn_inj/(congr1 (addn^~ (\dim <<{eq P}>>)%N)).
 rewrite subnK; last exact: dim_le.
@@ -761,7 +761,6 @@ End Pointed.
 Section Facet.
 
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
-
 Hypothesis non_redundant : non_redundant_base base.
 
 Let P := 'P(base)%:poly_base.
@@ -888,10 +887,11 @@ Lemma graded (P Q : 'poly[R]_n) :
   pointed P -> Q \in face_set P -> Q != P -> ~~ [exists S : face_set P, (Q `<` (val S) `<` P)] -> dim P = (dim Q).+1%N.
 Proof.
 elim/non_redundant_baseW : P => base non_redundant.
-set P := 'P(base)%:poly_base => P_pointed Q_face_P Q_neq_P.
-have {Q_neq_P} Q_prop_P : Q `<` P by rewrite poly_properEneq face_set_subset //.
-have P_prop0 : P `>` `[poly0] by apply/(poly_subset_proper _ Q_prop_P); exact: poly0_subset.
-case: (dimP Q) => [-> P_cover0|].
+set P := 'P(base)%:poly_base => P_pointed.
+case/face_setP => {}Q Q_sub_P Q_neq_P.
+have {Q_sub_P Q_neq_P} Q_prop_P : Q `<` P by rewrite poly_properEneq Q_sub_P.
+have P_prop0 : P `>` `[poly0] by apply/(poly_subset_proper (poly0_subset Q)).
+case: (dimP Q) => [ -> P_cover0 | Q_prop0 P_cover_Q ].
 - suff: (dim P <= 1)%N.
   + move: P_prop0; rewrite dimN0 => ??.
     by apply/anti_leq/andP; split.
@@ -904,8 +904,7 @@ case: (dimP Q) => [-> P_cover0|].
     * by rewrite dimN0 dimS1.
     * rewrite poly_properEneq S_sub_P andTb.
       by move: dim_lt1; apply: contraTneq => <-; rewrite dimS1.
-- case/face_setP : Q_face_P Q_prop_P => {}Q _ Q_prop_P Q_prop0 P_cover_Q.
-  have eqQ_prop_eqP : ({eq P} `<` {eq Q})%fset by apply/poly_base_proper_eq.
+- have eqQ_prop_eqP : ({eq P} `<` {eq Q})%fset by apply/poly_base_proper_eq.
   move/fproperP: (eqQ_prop_eqP) => [_ [i i_in_eqQ i_notin_eqP]].
   have i_in_base: (i \in base) by move: (i) i_in_eqQ; apply/fsubsetP: (valP {eq Q}).
   set S := 'P^=(base; [fset i])%:poly_base.
@@ -923,7 +922,7 @@ case: (dimP Q) => [-> P_cover0|].
   exact: poly_dim_facet.
 Qed.
 
-End Gradedness.
+End Graded.
 
 
 (*
