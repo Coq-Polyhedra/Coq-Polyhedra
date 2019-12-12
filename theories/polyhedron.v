@@ -1055,7 +1055,7 @@ apply/in_poly_of_baseP/gev0P => [H i | H e /imfsetP [i /= _ ->]].
 - rewrite in_hs vdotl_delta_mx; exact: H.
 Qed.
 
-Lemma poly_base_subset {base : base_t} {e : base_elt} :
+Lemma poly_base_subset_hs {base : base_t} {e : base_elt} :
   e \in base -> 'P(base) `<=` `[hs e].
 Proof.
 move => e_in_base.
@@ -1607,12 +1607,12 @@ move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
   apply/in_polyEqP; split; last done.
   move => e e_in_supp; move: in_comb_hp; apply: contraTT.
   rewrite notin_hp; last first.
-  + move: x x_in_P; apply/poly_subsetP/poly_base_subset.
+  + move: x x_in_P; apply/poly_subsetP/poly_base_subset_hs.
     exact: (fsubsetP le_wb).
   + move => notin_hp; rewrite eq_sym; apply/ltr_neq.
     apply: sumr_ltrP => [i| ].
     * rewrite vdotZl; apply/ler_wpmul2l; first exact : ge0_fconic.
-      move/(poly_subsetP (poly_base_subset (fsvalP i))): x_in_P.
+      move/(poly_subsetP (poly_base_subset_hs (fsvalP i))): x_in_P.
       by rewrite inE /=.
     * have e_in_base : e \in base by apply/(fsubsetP le_wb).
       exists [` e_in_base]%fset.
@@ -1666,7 +1666,7 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
     by rewrite -lter_sub_addr add0r.
   + apply/convexP => v v_in_V; rewrite in_hs /=.
     have: homogenize v \in base by exact: in_imfset.
-    move/poly_base_subset/poly_subsetP/(_ _ z_in).
+    move/poly_base_subset_hs/poly_subsetP/(_ _ z_in).
     rewrite in_hs /= -{1}[z]vsubmxK vdot_col_mx vdot1 vdotC.
       (* TODO: redundant with what's above *)
     by rewrite -lter_sub_addr add0r.
