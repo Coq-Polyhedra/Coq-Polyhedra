@@ -818,7 +818,6 @@ Proof.
 by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
 Qed.
 
-
 Hypothesis non_redundant : non_redundant_base base.
 
 Let P := 'P(base)%:poly_base.
@@ -833,6 +832,29 @@ Lemma polyIidPl (Q Q' : 'poly[R]_n) : reflect ((Q `&` Q') = Q) (Q `<=` Q').
 Admitted.
 
 Lemma hp_subset_hs (e : base_elt[R,n]) : `[hp e] `<=` `[hs e].
+Admitted.
+
+Lemma poly_of_base_antimono (base1 base2 : base_t[R,n]) :
+  (base1 `<=` base2)%fset -> 'P(base2) `<=` 'P(base1).
+Admitted.
+
+Lemma lt01W (α : R) : 0 < α < 1 -> 0 <= α <= 1.
+Admitted.
+
+Lemma lt01Wl (α : R) : 0 < α < 1 -> 0 <= α < 1.
+Admitted.
+
+Lemma lt01Wr (α : R) : 0 < α < 1 -> 0 < α <= 1.
+Admitted.
+
+Lemma let01W (α : R) : 0 <= α < 1 -> 0 <= α <= 1.
+Admitted.
+
+Lemma lte01W (α : R) : 0 < α <= 1 -> 0 <= α <= 1.
+Admitted.
+
+Lemma hp_itv (e : base_elt[R,n]) (y z: 'cV[R]_n) :
+  y \in (`[hs e]) -> z \notin (`[hs e]) -> exists2 α, (0 <= α < 1) & (1-α) *: y + α *: z \in `[hp e].
 Admitted.
 
 Lemma activeU1 (e : base_elt) & (e \in base) :
@@ -855,18 +877,24 @@ case: (boolP (e \in ({eq P} : base_t))).
     rewrite in_active //; apply/poly_subsetPn.
     move/non_redundant_baseP/(_ _ H)/poly_subsetPn: non_redundant => [z z_in_P' z_notin_e].
     move: i_notin_eqP; rewrite in_active //; move/poly_subsetPn => [y y_in_P y_notin_i].
-    have [α α_01] : exists2 α, (0 < α < 1) & α *: y + (1-α) *: z \in `[hp e].
-    * admit.
-    set x := _ + _ => x_in_e.
-    exists x.
+    have y_in_e : y \in `[hs e] by apply/(poly_subsetP _ _ y_in_P)/poly_base_subset_hs.
+    move: (hp_itv y_in_e z_notin_e) => [α α01]; rewrite {y_in_e}.
+    set x := _ + _ => x_in_e; exists x.
     * rewrite /= polyEq1 inE.
       rewrite x_in_e andbT.
       apply/in_poly_of_baseP => j.
-      case: (j =P e) => [-> _| j_neq_e j_in_base].
+      case: (j =P e) => [-> _| /eqP j_neq_e j_in_base].
       - move: x x_in_e; apply/poly_subsetP; exact: hp_subset_hs.
-      - have: y \in 'P(base `\ e).
-        + move: (y) (y_in_P); apply/poly_subsetP.
-Admitted.
+      - have y_in_P' : y \in 'P(base `\ e)
+          by move: y_in_P; apply/poly_subsetP/poly_of_base_antimono; exact: fsubD1set.
+        have: x \in 'P(base `\ e) by apply/convexP2 => //; exact: let01W.
+        apply/poly_subsetP/poly_base_subset_hs.
+        by rewrite !inE j_neq_e.
+    * move: y_notin_i; apply/contraNN/hp_extremeL => //.
+      - by move: y_in_P; apply/poly_subsetP/poly_base_subset_hs.
+      - move: z_in_P'; apply/poly_subsetP/poly_base_subset_hs.
+        by rewrite !inE i_neq_e.
+Qed.
 
 Lemma foo1 : associative (@polyI R n).
 Admitted.
@@ -879,7 +907,7 @@ Admitted.
 
 Canonical polyI_monoid := Monoid.Law foo1 foo2 foo3.
 
-Lemma graded (Q : {poly base}) :
+Lemma pb_graded (Q : {poly base}) :
   Q `>` (`[poly0]) -> Q `<` P -> ~~ [exists S : {poly base}, (Q `<` S `<` P)] -> poly_dim P = (poly_dim Q).+1%N.
 Proof.
 move => Q_prop0 P_prop_Q P_cover_Q.
@@ -929,6 +957,7 @@ rewrite -subnSK; last first.
 Qed.
 
 End Gradedness.
+
 
 (*
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)
