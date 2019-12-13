@@ -889,7 +889,7 @@ Lemma line_subset_hs (e : base_elt[R,n]) (Ω c : 'cV[R]_n) :
   Ω \in (`[hs e]) -> (`[line c & Ω ] `<=` `[hs e]) = ('[e.1,c] == 0).
 Admitted.
 
-Lemma pointed_facet (P : 'poly[R]_n) :
+Lemma pointed_facet (P : 'poly[R]_n) : (* TODO: the assumption dim P > 1 is useless *)
   pointed P -> (dim P > 1)%N -> exists2 F, F \in face_set P & dim P = (dim F).+1.
 Proof.
 elim/non_redundant_baseW: P => base non_redundant.
@@ -907,8 +907,8 @@ suff: ({eq P} `<` base)%fset.
   pose base' := vbasis <<base>>.
   pose f0 : 'cV[R]_n -> 'cV[R]_(\dim << base>>%VS) :=
       fun x => (\col_i '[((vbasis <<base>>)`_i).1, x]).
-  have f0_linear : lmorphism f0.
-  + admit.
+  have f0_linear : lmorphism f0. split;
+    by move => ??; apply/colP => ?; rewrite !mxE ?vdotBr ?vdotZr.
   pose f := linfun (Linear f0_linear).
   move: (limg_ker_dim f (fullv : {vspace 'cV[R]_n})).
   rewrite capfv dimvf /Vector.dim /= muln1.
@@ -929,7 +929,7 @@ suff: ({eq P} `<` base)%fset.
   move => Ω Ω_in_P; apply/big_polyIsP => e _; rewrite line_subset_hs //.
   apply/eqP/e_c_eq0; first exact: valP.
   move: Ω_in_P; apply/poly_subsetP/poly_base_subset_hs; exact: valP.
-Admitted.
+Qed.
 
 Lemma pointed_vertex (P : 'poly[R]_n) :
   P `>` (`[poly0]) -> pointed P -> exists2 S, S \in face_set P & dim S = 1%N.
