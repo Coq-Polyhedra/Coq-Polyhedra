@@ -297,6 +297,12 @@ Proof.
 by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
 Qed.
 
+Lemma fst_lmorph : lmorphism (fst : base_elt[R,n] -> 'cV_n).
+by [].
+Qed.
+
+Definition befst := linfun (Linear fst_lmorph).
+
 End BaseVect.
 
 (* -------------------------------------------------------------------- *)

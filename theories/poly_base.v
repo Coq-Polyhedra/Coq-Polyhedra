@@ -324,6 +324,10 @@ have ->: ([fset e] = [fset e]%:fsub)%fset by done.
 by rewrite activeP.
 Qed.
 
+Lemma notin_active (P : {poly base}) e :
+  e \in (base `\` {eq P})%fset -> exists x, ((x \in P) && (x \notin `[hp e])).
+Admitted.
+
 Lemma poly_base_subset_eq (P Q : {poly base}) :
     (P `<=` Q) -> (({eq Q} : {fset _}) `<=` {eq P})%fset.
 Proof.
@@ -645,13 +649,85 @@ Qed.
 
 End Face.
 
+Module PBRelint.
+Section PBRelint.
+
+Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
+
+Implicit Type (P : {poly base}).
+
+Definition relint_pt P :=
+  let ceq := (base `\` {eq P})%fset in
+  let S := [fset (xchoose (notin_active (valP e))) | e : ceq ]%fset in
+  match @idP (S != fset0) with
+  | ReflectT H => combine (fconvexu H)
+  | _ => ppick P
+  end.
+
+Lemma mem_relint_pt P : (P `>` `[poly0]) -> relint_pt P \in P.
+Admitted.
+
+Lemma relint_pt_notin_eq P e :
+  e \in base -> e \notin ({eq P} : {fset _}) -> relint_pt P \notin `[hp e].
+Admitted.
+
+Parameter (P : {poly base}) (e : base_elt[R,n]).
+
+Definition hull (P : {poly base}) :=
+  let S := {eq P} : {fset _} in
+  if P `>` `[poly0] then
+    (<< ((fst : base_elt[R,n] -> 'cV[R]_n) @` S)%fset >>)^OC%VS
+  else
+    0%VS.
+
+Lemma in_polyEqP' x  I :
+  reflect ((forall e, e \in I -> x \in `[hp e]) /\ (forall e, e \in base -> e \notin I -> x \in `[hs e])) (x \in 'P^=(base; I)).
+Admitted.
+
+Lemma hull_relintP (P : {poly base}) d :
+  (P `>` `[poly0]) ->
+  reflect (exists2 α, α != 0 & relint_pt P + α *: d \in P)  (d \in hull P).
+Proof.
+move => P_prop0.
+apply/(iffP idP).
+- rewrite /hull ifT // => /orthv_spanP d_in_orth.
+  pose x := relint_pt P.
+  pose ceq := (base `\` {eq P})%fset.
+  pose f : base_elt -> R := fun e => (e.2 - '[e.1,x])/'[e.1,d].
+  pose gap_set := (f @` [fset e | e in ceq & '[e.1, d] < 0])%fset.
+  pose α := min_seq gap_set 1.
+  have α_gtr0 : α > 0.
+  + rewrite min_seq_positive; last by right; rewrite ltr01.
+    apply/allP => ? /imfsetP [i /= H ->].
+    move: H; rewrite !inE /= => /andP [/andP [i_in_base i_notin_eq] ed_lt0].
+    admit.
+  exists α.
+  + exact: lt0r_neq0.
+  + move: (mem_relint_pt P_prop0); rewrite {2 4}[P]repr_active // => relint_pt_in_P.
+    set y := _ + _.
+    apply/in_polyEqP'; split => e.
+    * move => e_in_eqP.
+      rewrite inE vdotDr vdotZr d_in_orth ?mulr0 ?addr0.
+      - admit.
+      - by apply/imfsetP; exists e.
+    * move => e_in_base e_notin_eqP.
+      have e_in_ceq : e \in ceq by rewrite inE; apply/andP; split.
+      case: (boolP ('[e.1, d] < 0)).
+ Admitted.
+End PBRelint.
+
+
+
+End PBRelint.
+
+
 Section Dimension.
 
 Variable (R : realFieldType) (n : nat).
 
 Definition pb_dim (base : base_t[R,n]) (P : {poly base}) :=
   if (P `>` `[poly0]) then
-    (n-\dim << {eq P} >>%VS).+1%N
+    (n - \dim << {eq P} >>).+1%N
   else 0%N.
 
 Notation "\dim P" := (pb_dim P) (at level 10, P at level 8).
@@ -681,7 +757,7 @@ by elim/polybW: P P_prop0 => base P P_prop0; rewrite dimE /pb_dim ifT.
 Qed.
 
 Lemma dimN0_eq (base : base_t[R,n]) (P : {poly base}) :
-  (P `>` `[poly0]) -> dim P = (n-\dim << {eq P} >>%VS).+1%N.
+  (P `>` `[poly0]) -> dim P = (n - \dim << {eq P} >>).+1%N.
 Proof.
 by rewrite dimE /pb_dim => ->.
 Qed.

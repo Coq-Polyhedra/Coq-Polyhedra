@@ -219,9 +219,9 @@ Definition orth_fun0 V x := (* WARNING: this is not the orthogonal projection,
 Lemma orth_fun_lmorph V : lmorphism (orth_fun0 V).
 Proof.
 split.
-- move => x y; rewrite /orth_fun0. Search _ ((_ - _) *: _).
+- move => x y; rewrite /orth_fun0.
   by under eq_big do [ | rewrite vdotBr scalerBl]; rewrite sumrB.
-- move => x y; rewrite /orth_fun0. Search _ (_ *: _).
+- move => x y; rewrite /orth_fun0.
   by under eq_big do [ | rewrite vdotZr -scalerA]; rewrite scaler_sumr.
 Qed.
 
