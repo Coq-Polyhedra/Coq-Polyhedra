@@ -290,6 +290,15 @@ apply/(iffP orthvP) => [h y | h y].
   by move/(_ Y`_i): h ->; rewrite ?mulr0 // mem_nth ?size_tuple.
 Qed.
 
+Lemma orthK : involutive orthv.
+Proof.
+move => V; symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
+- rewrite 2!dim_orthv subKn //.
+  by move: (dimvS (subvf V)); rewrite dimvf /Vector.dim /= muln1.
+- apply/subvP => x x_in_V; apply/orthvP => y /orthvP/(_ _ x_in_V).
+  by rewrite vdotC.
+Qed.
+
 End Orthogonal.
 
 Notation "V ^OC " := (orthv V) (at level 8, format "V ^OC") : vspace_scope.

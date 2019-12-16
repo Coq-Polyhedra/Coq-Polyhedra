@@ -1594,6 +1594,28 @@ apply: (iffP idP) => [ /in_big_polyIP h | h]; last first.
   by apply/h => //.
 Qed.
 
+Lemma in_affine_orth (U : {vspace base_elt[R,n]}) x y :
+  x \in affine U ->
+    reflect (exists2 d, d \in ((befst @: U)^OC)%VS & y = x + d)
+      (y \in affine U).
+Proof.
+move => x_in_aff.
+apply: (iffP idP) => [y_in_aff |].
+- exists (y-x).
+  + apply/orthvP => ? /memv_imgP [e e_in_U ->].
+    rewrite vdotBr lfunE /=.
+    move/in_affine/(_ _ e_in_U): x_in_aff; rewrite inE => /eqP ->.
+    move/in_affine/(_ _ e_in_U): y_in_aff; rewrite inE => /eqP ->.
+    by rewrite addrN.
+  + by rewrite addrCA addrN addr0.
+- move => [d /orthvP h] ->.
+  apply/in_affine => e e_in_U.
+  rewrite inE vdotDr; move/in_affine/(_ _ e_in_U): x_in_aff; rewrite inE => /eqP ->.
+  rewrite h ?addr0 //.
+  have ->: e.1 = befst e by rewrite lfunE.
+  by rewrite memv_img.
+Qed.
+
 Lemma affine_span (I : base_t[R,n]) :
   affine <<I>>%VS = \polyI_(i : I) `[hp (val i)].
 Proof.
