@@ -648,16 +648,16 @@ apply/(iffP poly_subsetPn) => [[x] x_in x_notin | [x] x_in];
   exists x; by rewrite ?inE.
 Qed.
 
-Definition pick_point P : 'cV[R]_n :=
+Definition ppick P : 'cV[R]_n :=
   match (@proper0P P) with
   | ReflectT P_non_empty => xchoose P_non_empty
   | ReflectF _ => 0
   end.
 
-Lemma pick_pointP {P} :
-  (P `>` `[poly0]) -> pick_point P \in P.
+Lemma ppickP {P} :
+  (P `>` `[poly0]) -> ppick P \in P.
 Proof. (* RK *)
-rewrite /pick_point; case: proper0P => [? _ | _] //; exact: xchooseP.
+rewrite /ppick; case: proper0P => [? _ | _] //; exact: xchooseP.
 Qed.
 
 Lemma poly_properP {P Q : 'poly[R]_n} :
@@ -1537,10 +1537,10 @@ Proof. (* RK *)
 apply/proper0P; exists Ω; exact: in_pt_self.
 Qed.
 
-Lemma pick_point_pt (Ω : 'cV[R]_n) :
-  pick_point (`[pt Ω]) = Ω.
+Lemma ppick_pt (Ω : 'cV[R]_n) :
+  ppick (`[pt Ω]) = Ω.
 Proof. (* RK *)
-apply/eqP; rewrite -in_pt; apply/pick_pointP; exact: pt_proper0.
+apply/eqP; rewrite -in_pt; apply/ppickP; exact: pt_proper0.
 Qed.
 
 Lemma pt_subset (Ω : 'cV[R]_n) P : `[pt Ω] `<=` P = (Ω \in P).
