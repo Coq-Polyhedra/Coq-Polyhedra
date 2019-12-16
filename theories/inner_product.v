@@ -202,3 +202,94 @@ by rewrite vdotC vdot_def trmx1 mul1mx -mx11_scalar.
 Qed.
 
 End Extra.
+
+Section Orthogonal.
+
+Context {R : realFieldType} {n : nat}.
+
+Let E := [vectType R of 'cV[R]_n].
+
+Implicit Type (V : {vspace E}) (x : 'cV[R]_n).
+
+Definition orth_fun0 V x := (* WARNING: this is not the orthogonal projection,
+                            * however this function is bijective over V *)
+  let B := vbasis V in
+  \sum_(i < \dim V) '[B`_i, x] *: B`_i.
+
+Lemma orth_fun_lmorph V : lmorphism (orth_fun0 V).
+Proof.
+split.
+- move => x y; rewrite /orth_fun0. Search _ ((_ - _) *: _).
+  by under eq_big do [ | rewrite vdotBr scalerBl]; rewrite sumrB.
+- move => x y; rewrite /orth_fun0. Search _ (_ *: _).
+  by under eq_big do [ | rewrite vdotZr -scalerA]; rewrite scaler_sumr.
+Qed.
+
+Fact orth_fun_key : unit. Proof. by []. Qed.
+Definition orth_fun V := linfun (Linear (orth_fun_lmorph V)).
+
+Definition orthv V := lker (orth_fun V).
+
+Notation "V ^OC " := (orthv V) (at level 8, format "V ^OC") : vspace_scope.
+
+Lemma orthvP {V x} :
+  reflect (forall y, y \in V -> '[y,x] = 0) (x \in V^OC)%VS.
+Proof.
+set B := vbasis V.
+have equiv :
+  (forall i: 'I_\dim V, '[B`_i, x] = 0) <-> (forall y, y \in V -> '[y,x] = 0).
+- split => [h y | h i].
+  + move/coord_vbasis ->.
+    rewrite vdot_sumDl; apply/big1 => i _; rewrite vdotZl.
+    by move/(_ i): h ->; rewrite mulr0.
+  + apply/h/vbasis_mem/mem_nth.
+    by rewrite size_tuple.
+apply/(equivP _ equiv)/(iffP idP) => [| H]; last first.
+- rewrite memv_ker lfunE /=; apply/eqP.
+  by apply/big1 => i _; move/(_ i): H ->; rewrite scale0r.
+- rewrite memv_ker lfunE /= => /eqP.
+  by move/basis_free/freeP/(_ (fun i => '[B`_i,x])): (vbasisP V).
+Qed.
+
+Lemma direct_orthvP V :
+  (V :&: V^OC = 0)%VS.
+Proof.
+apply/eqP; rewrite -subv0; apply/subvP => x.
+rewrite memv_cap memv0 => /andP [x_in_V /orthvP/(_ _ x_in_V)]/eqP.
+by rewrite vnorm_eq0.
+Qed.
+
+Lemma limg_orthv_fun V : limg (orth_fun V) = V.
+Proof.
+have h: (orth_fun V @: V = V)%VS.
+- apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
+  + by rewrite (limg_dim_eq (direct_orthvP _)).
+  + apply/subvP => x /memv_imgP [y _ ->].
+    rewrite lfunE /=; apply/memv_suml => i _.
+    apply/memvZ/vbasis_mem/mem_nth; by rewrite size_tuple.
+- apply/subv_anti; apply/andP; split.
+  + apply/subvP => x /memv_imgP [y _ ->].
+    rewrite lfunE /=; apply/memv_suml => i _.
+    apply/memvZ/vbasis_mem/mem_nth; by rewrite size_tuple.
+  + by rewrite -{1}h limgS ?subvf.
+Qed.
+
+Lemma dim_orthv V : (\dim V^OC = n - \dim V)%N.
+Proof.
+move: (limg_ker_dim (orth_fun V) (fullv)).
+rewrite capfv dimvf /Vector.dim /= muln1 limg_orthv_fun => {2}<-.
+by rewrite addnK.
+Qed.
+
+Lemma orthv_spanP (p : nat) (Y : p.-tuple 'cV[R]_n) x :
+  reflect (forall y, y \in Y -> '[y,x] = 0) (x \in (span Y)^OC)%VS.
+Proof.
+apply/(iffP orthvP) => [h y | h y].
+- move/memv_span; exact: h.
+- move/coord_span ->; rewrite vdot_sumDl; apply/big1 => i _; rewrite vdotZl.
+  by move/(_ Y`_i): h ->; rewrite ?mulr0 // mem_nth ?size_tuple.
+Qed.
+
+End Orthogonal.
+
+Notation "V ^OC " := (orthv V) (at level 8, format "V ^OC") : vspace_scope.
