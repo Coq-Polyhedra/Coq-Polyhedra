@@ -649,6 +649,7 @@ Qed.
 
 End Face.
 
+(*
 Module PBRelint.
 Section PBRelint.
 
@@ -671,9 +672,32 @@ Lemma relint_pt_notin_eq P e :
   e \in base -> e \notin ({eq P} : {fset _}) -> relint_pt P \notin `[hp e].
 Admitted.
 
-Parameter (P : {poly base}) (e : base_elt[R,n]).
+Definition hull (P : {poly base}) := affine << {eq P} >>%VS.
 
-Definition hull (P : {poly base}) :=
+Lemma subset_hull P : P `<=` hull P.
+Admitted.
+
+Lemma foo P e :
+  (P `>` `[poly0]) ->
+  (P `<=` `[hp e]) = (e \in << {eq P} >>%VS).
+Proof.
+move => P_prop0.
+apply/idP/idP.
+
+
+Lemma hullP (P : {poly base}) V :
+  (P `>` `[poly0]) -> (P `<=` affine V) = (hull P `<=` affine V).
+Proof.
+move => P_prop0.
+apply/idP/idP.
+- move => P_sub.
+  apply/poly_subsetP => x.
+  x \in hull P >-> x = Ω + d avec d \in (<< eq P >>.1)^OC
+  x \in affine V >-> x = Ω + d avec d \in (V.1)^OC
+  V <= << eq P >> ?
+  v \in V. e in << eq P >> iff forall x, x \in [hp e] ?
+
+
   let S := {eq P} : {fset _} in
   if P `>` `[poly0] then
     (<< ((fst : base_elt[R,n] -> 'cV[R]_n) @` S)%fset >>)^OC%VS
@@ -719,7 +743,7 @@ End PBRelint.
 
 
 End PBRelint.
-
+*)
 
 Section Dimension.
 
