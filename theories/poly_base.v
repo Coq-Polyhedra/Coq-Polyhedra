@@ -393,6 +393,20 @@ have /limg_dim_eq <-: (<<{eq P}>> :&: lker linfun_f)%VS = 0%VS.
   by rewrite dimvf /Vector.dim /= muln1.
 Qed.
 
+(*Lemma in_vect_eq (P : {poly base}) e :
+  (P `>` `[poly0]) ->
+  (P `<=` `[hp e]) = (e \in << {eq P} >>%VS).
+Proof.
+move => P_prop0.
+apply/idP/idP.
+- move: (P_prop0); rewrite {1 2}[P]repr_active.
+  rewrite /= polyEq_flatten.
+  set base' := baseEq _ _ => /farkas => h.
+  move => P_sub_hp.
+  move =>
+  => h.
+*)
+
 End Active.
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
