@@ -311,6 +311,11 @@ Proof.
 rewrite -activeP; exact: poly_subset_refl.
 Qed.
 
+Lemma subset_eq_hp (P : {poly base}) e :
+  (e \in ({eq P} : {fset _})) -> (P `<=` `[hp e]).
+Proof.
+Admitted.
+
 Lemma in_active (P : {poly base}) e :
   e \in base -> (e \in ({eq P} : {fset _})) = (P `<=` `[hp e]).
 Proof.
@@ -323,10 +328,6 @@ move => e_in_base.
 have ->: ([fset e] = [fset e]%:fsub)%fset by done.
 by rewrite activeP.
 Qed.
-
-Lemma notin_active (P : {poly base}) e :
-  e \in (base `\` {eq P})%fset -> exists x, ((x \in P) && (x \notin `[hp e])).
-Admitted.
 
 Lemma poly_base_subset_eq (P Q : {poly base}) :
     (P `<=` Q) -> (({eq Q} : {fset _}) `<=` {eq P})%fset.
@@ -393,19 +394,46 @@ have /limg_dim_eq <-: (<<{eq P}>> :&: lker linfun_f)%VS = 0%VS.
   by rewrite dimvf /Vector.dim /= muln1.
 Qed.
 
-(*Lemma in_vect_eq (P : {poly base}) e :
+Lemma bar (P : {poly base}) e :
+  (e \in << {eq P} >>%VS) -> (P `<=` `[hp e]).
+Proof.
+move/coord_span ->.
+apply/poly_subsetP => x x_in_P; rewrite inE; apply/eqP.
+rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : base_elt[R,n] => x.1)) //.
+rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : base_elt[R,n] => x.2)) //=.
+rewrite vdot_sumDl; under eq_big do [| rewrite /= vdotZl].
+apply/eq_bigr => i _; apply: congr1.
+apply/eqP; rewrite -in_hp; move: x_in_P; apply/poly_subsetP/subset_eq_hp.
+by rewrite mem_nth ?size_tuple.
+Qed.
+
+Lemma mem_vect_eq (P : {poly base}) e :
   (P `>` `[poly0]) ->
   (P `<=` `[hp e]) = (e \in << {eq P} >>%VS).
 Proof.
 move => P_prop0.
 apply/idP/idP.
-- move: (P_prop0); rewrite {1 2}[P]repr_active.
-  rewrite /= polyEq_flatten.
-  set base' := baseEq _ _ => /farkas => h.
-  move => P_sub_hp.
-  move =>
-  => h.
-*)
+- move: (P_prop0); rewrite {1 2}[P]repr_active //= polyEq_flatten.
+  move/farkas => h P_sub_hp.
+  move/h: (poly_subset_trans P_sub_hp (hp_subset_hs _)) => [w w_supp].
+  set eq := {eq P} : {fset _}.
+  suff finsupp_sub_eq: (finsupp w `<=` (eq `|` (-%R @` eq)))%fset.
+  + have comb_in_eqP: combine w \in << {eq P} >>%VS.
+    * rewrite (combinewE finsupp_sub_eq).
+      apply/memv_suml => i _; rewrite memvZ //.
+      move: (valP i); rewrite inE; move/orP; case; try exact: memv_span.
+      by move/imfsetP => [? /= ? ->]; rewrite memvN memv_span.
+    move => [e1_eq _].
+    suff: (combine w).2 = e.2.
+      by move/(injective_projections _ _ e1_eq)/val_inj <-.
+    move: (ppickP P_prop0); set x := ppick P => x_in_P.
+    move: (x_in_P); rewrite [P]repr_active //= polyEq_flatten => x_in_P'.
+    move/poly_subsetP/(_ _ x_in_P'): P_sub_hp.
+    rewrite inE => /eqP <-; rewrite -e1_eq.
+    symmetry; apply/eqP; rewrite -in_hp.
+    by move: x_in_P; apply/poly_subsetP/bar.
+  + admit.
+- exact: bar.
 
 End Active.
 
@@ -691,12 +719,6 @@ Definition hull (P : {poly base}) := affine << {eq P} >>%VS.
 Lemma subset_hull P : P `<=` hull P.
 Admitted.
 
-Lemma foo P e :
-  (P `>` `[poly0]) ->
-  (P `<=` `[hp e]) = (e \in << {eq P} >>%VS).
-Proof.
-move => P_prop0.
-apply/idP/idP.
 
 
 Lemma hullP (P : {poly base}) V :
