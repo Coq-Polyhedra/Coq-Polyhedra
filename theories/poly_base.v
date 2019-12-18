@@ -401,7 +401,7 @@ have /limg_dim_eq <-: (<<{eq P}>> :&: lker linfun_f)%VS = 0%VS.
   by rewrite dimvf /Vector.dim /= muln1.
 Qed.
 
-Lemma in_vect_active (P : {poly base}) e :
+Lemma in_span_active (P : {poly base}) e :
   (e \in << {eq P} >>%VS) -> (P `<=` `[hp e]).
 Proof.
 move/coord_span ->.
@@ -414,7 +414,7 @@ apply/eqP; rewrite -in_hp; move: x_in_P; apply/poly_subsetP/in_active.
 by rewrite mem_nth ?size_tuple.
 Qed.
 
-Lemma in_vect_activeP (P : {poly base}) e :
+Lemma in_span_activeP (P : {poly base}) e :
   (P `>` `[poly0]) ->
   (P `<=` `[hp e]) = (e \in << {eq P} >>%VS).
 Proof.
@@ -437,7 +437,7 @@ apply/idP/idP.
     move/poly_subsetP/(_ _ x_in_P): P_sub_hp.
     rewrite inE => /eqP <-; rewrite -e1_eq.
     apply/eqP; rewrite eq_sym.
-    move/in_vect_active: comb_in_eqP => /poly_subsetP/(_ _ x_in_P).
+    move/in_span_active: comb_in_eqP => /poly_subsetP/(_ _ x_in_P).
     by rewrite in_hp.
   + move: P_sub_hp; apply: contraTT.
     move/fsubsetPn => [e']; rewrite inE negb_or => e'_in /andP [e'_notin_S /negbTE e'_notin_mS].
@@ -458,7 +458,7 @@ apply/idP/idP.
       rewrite -notin_hp //=.
       move: x_in; apply/poly_subsetP.
       by rewrite P_eq; apply/poly_base_subset_hs.
-- exact: in_vect_active.
+- exact: in_span_active.
 Qed.
 
 End Active.
@@ -823,7 +823,13 @@ Definition dim (P : 'poly[R]_n) := \dim (\repr P).
 Lemma dimE (base : base_t[R,n]) (P : {poly base}) :
   dim P = \dim P.
 Proof.
-Admitted.
+case: (emptyP P) => [| P_propØ].
+- rewrite /dim /pb_dim => ->.
+  by rewrite ifF ?reprK ?poly_properxx.
+- rewrite /dim /pb_dim reprK !ifT //.
+  do 3![apply/congr1]; apply/eqP; rewrite eqEsubv /=; apply/andP; split;
+    apply/subvP => e; rewrite -!in_span_activeP ?reprK //.
+Qed.
 
 Lemma dim0 :
   (dim (`[poly0] : 'poly[R]_n) = 0%N)
