@@ -924,6 +924,10 @@ Qed.
 
 Lemma dim_pt (x : 'cV[R]_n) :
   dim (`[pt x]) = 1%N.
+Proof.
+elim/polybW : {-2}(`[pt x]) (erefl (`[pt x])) => base P P_eq.
+rewrite dimN0_eq ?P_eq ?pt_proper0 //.
+apply/congr1/eqP; rewrite subn_eq0.
 Admitted.
 
 Lemma dim_ptP (P : 'poly[R]_n) :
@@ -1226,9 +1230,12 @@ exists x.
 Qed.
 
 Lemma in_conv (V : {fset 'cV[R]_n}) : {subset V <= conv V}.
-Admitted.
+Proof.
+move => x x_in_V; apply/in_convP.
+by exists (fcvx1 x); rewrite ?finsupp_fcvx1 ?fsub1set ?combine_fcvx1.
+Qed.
 
-Lemma face_lattice (P : 'poly[R]_n) :
+Lemma atomic (P : 'poly[R]_n) :
   (P `>` `[poly0]) -> compact P -> P = conv (vertex_set P).
 Proof.
 move => P_prop0 P_compact.
