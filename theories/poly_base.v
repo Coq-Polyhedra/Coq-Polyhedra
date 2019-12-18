@@ -1043,19 +1043,6 @@ Section Pointed.
 
 Context {R : realFieldType} {n : nat}.
 
-Lemma pointedS (P Q : 'poly[R]_n) :
-  P `<=` Q -> pointed Q -> pointed P.
-Proof.
-case: (emptyP P) => [->|]; rewrite ?pointed0 //.
-move => P_prop0 P_sub_Q; apply: contraLR.
-have Q_prop0 : Q `>` `[poly0] by apply/(poly_proper_subset P_prop0).
-move/pointedPn; move/(_ P_prop0) => [c [c_neq0 line_sub_Q]].
-apply/pointedPn => //.
-exists c; split => //.
-move => Ω Ω_in_Q.
-apply/(poly_subset_trans _ P_sub_Q)/line_sub_Q.
-Admitted. (* we need a stronger characterization of pointedness *)
-
 Lemma face_pointed (P : 'poly[R]_n) :
   pointed P -> forall Q, Q \in face_set P -> pointed Q.
 Admitted.
