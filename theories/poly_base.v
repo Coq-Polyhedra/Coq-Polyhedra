@@ -715,6 +715,13 @@ rewrite face_setE; first by rewrite (poly_subset_trans (poly_subsetIl _ _)).
 exact: (valP (_ `&` _)%:poly_base).
 Qed.
 
+Lemma argmin_in_face_set (P : 'poly[R]_n) c :
+  bounded P c -> argmin P c \in face_set P.
+Proof.
+elim/polybW: P => base P c_bounded.
+have ->: (argmin P c) = (argmin P c)%:poly_base by [].
+rewrite face_setE; exact: argmin_subset.
+Qed.
 End Face.
 
 (*
@@ -915,6 +922,14 @@ move => P_face_Q.
 by move/face_dim_leqif_eq/ltn_leqif: (P_face_Q) ->.
 Qed.
 
+Lemma dim_pt (x : 'cV[R]_n) :
+  dim (`[pt x]) = 1%N.
+Admitted.
+
+Lemma dim_ptP (P : 'poly[R]_n) :
+  reflect (exists x, P = `[pt x]) (dim P == 1%N).
+Admitted.
+
 End Dimension.
 
 Section Facet.
@@ -1045,15 +1060,10 @@ Context {R : realFieldType} {n : nat}.
 
 Lemma face_pointed (P : 'poly[R]_n) :
   pointed P -> forall Q, Q \in face_set P -> pointed Q.
-Admitted.
-
-Lemma fsubset_properT (K : choiceType) (S : {fset K}) (A : {fsubset S}) :
-  (A `<` S)%fset = (A != S%:fsub).
-Admitted.
-
-Lemma line_subset_hs (e : base_elt[R,n]) (Ω c : 'cV[R]_n) :
-  Ω \in (`[hs e]) -> (`[line c & Ω ] `<=` `[hs e]) = ('[e.1,c] == 0).
-Admitted.
+Proof.
+move => P_pointed Q.
+by move/face_set_subset/pointedS/(_ P_pointed).
+Qed.
 
 Lemma pointed_facet (P : 'poly[R]_n) :
   P `>` (`[poly0]) -> pointed P -> exists2 F, F \in face_set P & dim P = (dim F).+1.
@@ -1096,10 +1106,10 @@ case: (leqP (dim P) 1%N) => [dimP_le1 | dimP_gt1].
       rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) //.
       rewrite vdot_sumDl; apply: big1 => i _; rewrite vdotZl.
       move/(_ i): eq0; rewrite mxE  => ->; by rewrite mulr0.
-    apply/pointedPn => //; exists c; split => //.
-    move => Ω Ω_in_P; apply/big_polyIsP => e _; rewrite line_subset_hs //.
+    apply/pointedPn; exists (ppick P); exists c => //.
+    apply/big_polyIsP => e _; rewrite line_subset_hs.
     apply/eqP/e_c_eq0; first exact: valP.
-    move: Ω_in_P; apply/poly_subsetP/poly_base_subset_hs; exact: valP.
+    move: (ppickP P_prop0); apply/poly_subsetP/poly_base_subset_hs; exact: valP.
 Qed.
 
 Lemma pointed_vertex (P : 'poly[R]_n) :
@@ -1165,6 +1175,78 @@ Qed.
 
 End Graded.
 
+Section Atomic.
+
+Context {R : realFieldType} {n : nat}.
+
+Definition vertex_set (P : 'poly[R]_n) :=
+  [fset ppick F | F in face_set P & dim F == 1%N]%fset.
+
+Lemma in_vertex_setP (P : 'poly[R]_n) x :
+  (x \in vertex_set P) = (`[pt x] \in face_set P).
+Proof.
+apply/imfsetP/idP => /=.
+- move => [F] /andP [F_face /dim_ptP [y F_eq]].
+  move: F_face; rewrite {}F_eq => ?.
+  by rewrite ppick_pt => ->.
+- move => pt_x_face.
+  exists (`[pt x]); rewrite ?ppick_pt //=.
+  by apply/andP; split; rewrite ?dim_pt.
+Qed.
+
+Lemma vertex_setS (P Q : 'poly[R]_n) :
+  P \in face_set Q -> (vertex_set P `<=` vertex_set Q)%fset.
+Proof.
+move => P_face.
+apply/fsubsetP => x; rewrite 2!in_vertex_setP.
+apply/fsubsetP; exact: subset_face_set.
+Qed.
+
+Lemma vertex_set_subset P : {subset (vertex_set P) <= P}.
+Proof.
+move => x; rewrite in_vertex_setP => /face_set_subset.
+by rewrite pt_subset.
+Qed.
+
+Lemma opt_vertex (P : 'poly[R]_n) c :
+  pointed P -> bounded P c -> exists2 x, x \in vertex_set P & x \in argmin P c.
+Proof.
+move => P_pointed c_bounded.
+set F := argmin P c.
+have F_face : F \in face_set P by apply/argmin_in_face_set.
+have F_pointed : pointed F by apply/(pointedS (argmin_subset _ _)).
+have F_prop0 : F `>` `[poly0] by rewrite -bounded_argminN0.
+move/(pointed_vertex F_prop0): F_pointed => [F' F'_face /eqP/dim_ptP [x F'_eq]].
+(* TODO: to be improved! Define a pick_vertex function instead? *)
+rewrite {}F'_eq in F'_face.
+exists x.
+- rewrite in_vertex_setP; move: F'_face; apply/fsubsetP.
+  exact: subset_face_set.
+- by move/face_set_subset: F'_face; rewrite pt_subset.
+Qed.
+
+Lemma in_conv (V : {fset 'cV[R]_n}) : {subset V <= conv V}.
+Admitted.
+
+Lemma face_lattice (P : 'poly[R]_n) :
+  (P `>` `[poly0]) -> compact P -> P = conv (vertex_set P).
+Proof.
+move => P_prop0 P_compact.
+apply/poly_eqP => x; apply/idP/idP.
+- apply/contraTT.
+  move/separation => [e x_notin_hs conv_sub].
+  have e_bounded : bounded P e.1 by apply/compactP.
+  move/compact_pointed/opt_vertex: P_compact.
+  move/(_ _ e_bounded) => [y].
+  move/in_conv/(poly_subsetP conv_sub) => y_in_e y_in_argmin.
+  move: x_notin_hs; apply/contraNN => x_in_P.
+  rewrite !in_hs in y_in_e *; apply/(ler_trans y_in_e).
+  by apply/(argmin_lower_bound y_in_argmin).
+- apply/poly_subsetP/polyhedron.convexP.
+  exact: vertex_set_subset.
+Qed.
+
+End Atomic.
 
 (*
 (* THE MATERIAL BELOW HAS NOT BEEN YET UPDATED *)

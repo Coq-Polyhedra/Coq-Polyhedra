@@ -953,6 +953,12 @@ apply: (iffP idP); last first.
   by rewrite /d vdotBr => ->; rewrite addrN.
 Qed.
 
+
+Lemma line_subset_hs (e : base_elt[R,n]) (Ω c : 'cV[R]_n) :
+  Ω \in (`[hs e]) -> (`[line c & Ω ] `<=` `[hs e]) = ('[e.1,c] == 0).
+Proof.
+Admitted.
+
 Lemma pointed0 : pointed (`[poly0]).
 Proof.
 rewrite /pointed /H.pointed.
@@ -1807,6 +1813,10 @@ Implicit Types (base : base_t[R,n]).
 
 Definition redundant_be base e :=
   'P(base) `<=` `[hp e].
+
+Lemma eliminate base e :
+  ('P(base) `<=` `[hp e]) -> 'P(e |` base) = 'P(base).
+Admitted.
 
 Definition non_redundant_base (base : base_t[R,n]) :=
   [forall e : base, ~~ (redundant_be (base `\ (val e))%fset (val e))].

@@ -700,6 +700,11 @@ apply: (iffP idP).
   by apply/(fsubsetP (valP A)).
 Qed.
 
+Lemma fsubset_properT (A : {fsubset S}) :
+  (A `<` S)%fset = (A != S%:fsub).
+Proof.
+Admitted.
+
 End FSubsetOther.
 
 Notation "e +|` A" := (fslice e A) (at level 52).
