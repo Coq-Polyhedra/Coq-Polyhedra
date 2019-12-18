@@ -961,15 +961,15 @@ by apply/H.poly_subsetP => x; rewrite repr_equiv.
 Qed.
 
 Lemma pointedPn P :
-  (P `>` `[poly0]) ->
-    reflect (exists c, (c != 0) /\ (forall Ω, Ω \in P -> (`[line c & Ω] `<=` P))) (~~ (pointed P)).
+  reflect (exists Ω, exists2 c, c != 0 & `[line c & Ω] `<=` P) (~~ (pointed P)).
 Proof.
-move => P_neq0.
+Admitted.
+(*
+  move => P_neq0.
 have hreprP_neq0 : ~~ (H.poly_subset (hrepr P) H.poly0).
 - move: P_neq0; rewrite -subset0N_proper; apply: contraNN.
   move/H.poly_subsetP => hreprP_le0.
   apply/poly_subsetP => x.
-(*
  rewrite -[P]hreprK.
  repr_equiv => /hreprP_le0.
   by rewrite H.in_poly0.
@@ -982,7 +982,15 @@ apply: (iffP (H.pointedPn hreprP_neq0)) => [[c [? incl]] | [c [? incl]]];
   apply/(poly_subsetP (incl _ μ_in_P))/in_lineP.
   by exists λ.
 *)
-Admitted.
+
+Lemma pointedS (P Q : 'poly[R]_n) :
+  P `<=` Q -> pointed Q -> pointed P.
+Proof.
+move => P_sub_Q.
+apply: contraTT; move/pointedPn => [Ω [c c_neq0 line_sub]].
+apply/pointedPn; exists Ω; exists c => //.
+by apply/(poly_subset_trans line_sub).
+Qed.
 
 Definition mk_hline (c Ω : 'cV[R]_n) :=
   `[hs [<c, '[c,Ω]>]] `&` `[line c & Ω].
@@ -1070,6 +1078,8 @@ Qed.
 Lemma compact_pointed P :
   compact P -> pointed P.
 Proof.
+Admitted.
+(*
 case: (emptyP P) => [->| P_neq0 P_compact]; first by rewrite pointed0.
 apply: contraT => /(pointedPn P_neq0) [c] [c_neq0 hl_sub].
 suff: ~~ (bounded P c).
@@ -1081,7 +1091,7 @@ pose μ := ((K - 1 - '[c,Ω])/'[| c |]^2)%R.
 exists (Ω + μ *: c); first by apply: hl_sub; apply/in_lineP; exists μ.
 rewrite vdotDr vdotZr mulfVK; last by apply: lt0r_neq0; rewrite vnorm_gt0.
 by rewrite addrCA addrN addr0 cpr_add ltrN10.
-Qed.
+Qed.*)
 
 Definition slice (b : base_elt) P := `[hp b] `&` P.
 
