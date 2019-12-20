@@ -299,6 +299,16 @@ move => V; symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
   by rewrite vdotC.
 Qed.
 
+Lemma orthS : {mono orthv : V W /~ (V <= W)%VS }.
+Proof.
+suff h: forall V W, (V <= W)%VS -> (W^OC <= V^OC)%VS.
+- move => V W; apply/idP/idP;
+  first rewrite -{2}[V]orthK -{2}[W]orthK; exact: h.
+- move => V W /subvP V_sub_W.
+  apply/subvP => x /orthvP h'.
+  apply/orthvP => y /V_sub_W; exact: h'.
+Qed.
+
 End Orthogonal.
 
 Notation "V ^OC " := (orthv V) (at level 8, format "V ^OC") : vspace_scope.
