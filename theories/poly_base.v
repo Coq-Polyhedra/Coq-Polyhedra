@@ -416,14 +416,11 @@ apply/idP/idP.
       apply/memv_suml => i _; rewrite memvZ //.
       move: (valP i); rewrite inE; move/orP; case; try exact: memv_span.
       by move/imfsetP => [? /= ? ->]; rewrite memvN memv_span.
-    suff: (combine w).2 = e.2
-      by move/(injective_projections _ _ e1_eq)/val_inj <-.
+    suff <-: (combine w) = e by [].
     move/proper0P: P_prop0 => [x x_in_P].
-    move/poly_subsetP/(_ _ x_in_P): P_sub_hp.
-    rewrite inE => /eqP <-; rewrite -e1_eq.
-    apply/eqP; rewrite eq_sym.
-    move/in_span_active: comb_in_eqP => /poly_subsetP/(_ _ x_in_P).
-    by rewrite in_hp.
+    apply/(befst_inj (x := x)) => //.
+    * by apply/poly_subsetP/in_span_active: x_in_P.
+    * by move/poly_subsetP/(_ _ x_in_P): P_sub_hp.
   + move: P_sub_hp; apply: contraTT.
     move/fsubsetPn => [e']; rewrite inE negb_or => e'_in /andP [e'_notin_S /negbTE e'_notin_mS].
     have {e'_notin_S e'_notin_mS} /poly_subsetPn [x x_in x_notin]: ~~ (P `<=` `[hp e']).
@@ -446,6 +443,7 @@ apply/idP/idP.
 - exact: in_span_active.
 Qed.
 
+(* TODO: to be removed *)
 Lemma dim_le (P : {poly base}) :
   P `>` (`[poly0]) -> (\dim << {eq P} >> <= n)%N.
 Proof.
@@ -465,11 +463,10 @@ have /limg_dim_eq <-: (<<{eq P}>> :&: lker linfun_f)%VS = 0%VS.
   by rewrite dimvf /Vector.dim /= muln1.
 Qed.
 
-Lemma active_affine (base : base_t[R,n]) :
+Lemma active_affine :
   {eq (affine <<base>>)%:poly_base} = base%:fsub.
 Proof.
 Admitted.
-
 
 End Active.
 
@@ -891,8 +888,6 @@ Proof.
 by apply/poly_subset_anti; rewrite ?subset_hull -?hullP ?poly_subset_refl.
 Qed.
 
-Definition adim
-
 End AffineHull.
 
 Section Dimension.
@@ -951,7 +946,7 @@ by apply/contra_eq; rewrite equiv0N_proper dimN0 lt0n.
 Qed.
 
 Lemma dim_affine (U : {vspace base_elt[R,n]}) :
-  affine U `>` (`[poly0]) -> dim (affine U) = (\dim (befst @: U)^OC).+1.
+  affine U `>` (`[poly0]) -> dim (affine U) = (n - \dim (befst @: U)).+1.
 Proof.
 set base := [fset e in ((vbasis U) : seq _)]%fset : {fset base_elt[R,n]}.
 have ->: U = << base >>%VS.
@@ -959,9 +954,8 @@ have ->: U = << base >>%VS.
   apply/subv_anti/andP; split; apply/sub_span;
     by move => ?; rewrite inE.
 move => prop0.
-by rewrite dimN0_eq // ?active_affine dim_orthv affine_dim_fst.
+by rewrite dimN0_eq // ?active_affine affine_dim_fst.
 Qed.
-
 
 Variant dim_spec : 'poly[R]_n -> nat -> Prop :=
 | DimEmpty : dim_spec (`[poly0]) 0%N
@@ -993,9 +987,6 @@ rewrite hullN0_eq // hullP hullI -hullP.
 rewrite -hullN0_eq //; apply/(poly_subset_trans P_sub_Q); exact: subset_hull.
 Qed.
 
-Lemma span_activeS (base base' : base_t[R,n]) (P : {poly base}) (Q : {poly base}) :
-  (P `>` `[poly0]) -> P `<=` Q -> (<< {eq Q} >> <= << {eq P} >>)%VS.
-Admitted.
 
 Lemma dimS : {homo dim : P Q / (P `<=` Q) >-> (P <= Q)%N}.
 Proof.
@@ -1003,65 +994,30 @@ move => P Q.
 case/dimP: P => [| base P P_prop0]; rewrite ?dim0 //.
 case/dimP: Q => [| base' Q Q_prop0];
   first by move/(poly_proper_subset P_prop0); rewrite ?poly_properxx.
-(*
-elim/polybW : P => baseP P P_prop0.
-elim/polybW : Q => baseQ Q P_sub_Q.
-rewrite dimN0_eq.
-
-have Q_prop0: Q `>` `[poly0] by apply/poly_proper_subset: P_sub_Q.
-move/hullS: P_sub_Q; rewrite !dimN0_eq ?hullN0_eq // => affine_sub.
-suff /dimvS: (<< {eq Q} >> <= << {eq P} >>)%VS.
-- rewrite ltnS.
-
-affineS.
-move/hullS.*)
-Admitted.
-
-Variant dim_spec' (P : 'poly[R]_n) : nat -> bool -> Prop :=
-| DimEmpty' of (P = `[poly0]) : dim_spec' P 0 false
-| DimNonEmpty' of (P `>` `[poly0]) : dim_spec' P (dim P) true.
-
-Lemma dimP' P : dim_spec' P (dim P) (dim P > 0)%N.
-Proof.
-case: (emptyP P) => [->| P_prop0].
-- by rewrite dim0 ltnn; constructor.
-- by rewrite -dimN0 P_prop0; constructor.
+rewrite ltnS => P_sub_Q; apply/leq_sub2l/dimvS/affine_subset.
+- by apply/(poly_proper_subset P_prop0); rewrite -hullN0_eq ?subset_hull.
+- by rewrite -?hullN0_eq //; apply/hullS.
 Qed.
 
-Lemma face_dimS (P Q : 'poly[R]_n) : P \in face_set Q -> (dim P <= dim Q)%N.
-(* this holds more generally as soon as P `<=` Q *)
-Proof.
-  (*
-case: (dimP Q) => [|].
-- by rewrite face_set0 => /fset1P ->; rewrite dim0.
-- case/face_setP => {}P P_sub_Q.
-  case: (dimP P) => [//= | P_prop0].
-  rewrite !dimN0_eq // ltnS; move/poly_base_subset_eq/base_vect_subset/dimvS: P_sub_Q.
-  exact: leq_sub2l.
-Qed.*)
-  Admitted.
 
 Lemma face_dim_leqif_eq (P Q : 'poly[R]_n) :
   (P \in face_set Q) -> (dim P <= dim Q ?= iff (P == Q))%N.
 Proof.
-move => P_face_Q; split; first exact: face_dimS.
-apply/eqP/eqP; last by move => ->.
-case: (dimP' Q) => [-> /dim_eq0 //|].
-elim/polybW: Q P_face_Q => base Q.
-case/face_setP => {}P P_sub_Q Q_prop0.
-case: (dimP' P) => [-> /esym/dim_eq0 //| P_prop0].
-rewrite !dimN0_eq //.
+move => P_face_Q; split; first by apply/dimS; exact: face_set_subset.
+apply/eqP/eqP => [| -> //].
+case/dimP: Q P_face_Q => [_ /dim_eq0 //| base Q Q_prop0].
+case/face_setP => {}P P_sub_Q.
+case: (emptyP P) => [->| P_prop0]; rewrite ?dim0 //.
+rewrite dimN0_eq //.
+move/poly_base_subset_eq/base_vect_subset: P_sub_Q => span_eq_sub.
 move/succn_inj/(congr1 (addn^~ (\dim <<{eq P}>>)%N)).
 rewrite subnK; last exact: dim_le.
 rewrite addnC; move/(congr1 (addn^~ (\dim <<{eq Q}>>)%N)).
 rewrite -addnA subnK; last exact: dim_le.
 rewrite addnC; move/addIn => dimP_eq_dimQ.
-suff eq_eq: <<{eq P}>>%VS = <<{eq Q}>>%VS.
-- rewrite [P]repr_active // [Q]repr_active //=.
-  by rewrite !polyEq_affine eq_eq.
-- symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
-  + by rewrite dimP_eq_dimQ.
-  + by apply/base_vect_subset/poly_base_subset_eq.
+rewrite [P]repr_active 1?[Q]repr_active //= ?polyEq_affine.
+do 2![apply/congr1]; apply/eqP; rewrite eq_sym eqEdim.
+by rewrite span_eq_sub dimP_eq_dimQ leqnn.
 Qed.
 
 Lemma face_proper_ltn_dim (P Q : 'poly[R]_n) :
@@ -1071,12 +1027,16 @@ move => P_face_Q.
 by move/face_dim_leqif_eq/ltn_leqif: (P_face_Q) ->.
 Qed.
 
+Lemma hull_pt (x : 'cV[R]_n) :
+  hull (`[pt x]) = (`[pt x]) :> 'poly[R]_n.
+Admitted.
+
 Lemma dim_pt (x : 'cV[R]_n) :
   dim (`[pt x]) = 1%N.
 Proof.
-elim/polybW : {-2}(`[pt x]) (erefl (`[pt x])) => base P P_eq.
-rewrite dimN0_eq ?P_eq ?pt_proper0 //.
-apply/congr1/eqP; rewrite subn_eq0.
+set base := [fset [< delta_mx i 0, x i 0 >] | i : 'I_n]%fset : base_t[R,n].
+suff eq: `[pt x] = affine <<base>>.
+rewrite eq dim_affine.
 Admitted.
 
 Lemma dim_ptP (P : 'poly[R]_n) :
@@ -1296,9 +1256,9 @@ set P := 'P(base)%:poly_base => P_pointed.
 case/face_setP => {}Q Q_sub_P Q_neq_P.
 have {Q_sub_P Q_neq_P} Q_prop_P : Q `<` P by rewrite poly_properEneq Q_sub_P.
 have P_prop0 : P `>` `[poly0] by apply/(poly_subset_proper (poly0_subset Q)).
-case: (dimP Q) => [ -> P_cover0 | Q_prop0 P_cover_Q ].
+case: (emptyP Q) => [ -> P_cover0 | Q_prop0 P_cover_Q ].
 - suff: (dim P <= 1)%N.
-  + move: P_prop0; rewrite dimN0 => ??.
+  + move: P_prop0; rewrite dim0 dimN0 => ??.
     by apply/anti_leq/andP; split.
   + move: P_cover0; apply: contraR.
     rewrite -ltnNge => dim_lt1.
