@@ -1528,46 +1528,11 @@ case=> [w /fsubsetP le_wV ->]; apply: convexW=> /=.
 + by move=> c /le_wV /le_VP.
 Qed.
 
-Definition mk_pt (Ω : 'cV[R]_n) := conv ([fset Ω]%fset).
 
-Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
-
-Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
+Lemma in_conv (V : {fset 'cV[R]_n}) : {subset V <= conv V}.
 Proof.
-apply/idP/idP => [/in_convP [w le_wΩ ->]|/eqP->].
-+ rewrite (combinewE le_wΩ) big_fset1 /=; move: le_wΩ.
-  rewrite fsubset1 fconvex_insupp_neq0 orbF => /eqP fw.
-  have := wgt1_fconvex w; rewrite weightE fw big_fset1 /=.
-  by move=> ->; rewrite scale1r.
-+ apply/in_convP; exists (fcvx1 Ω).
-    by rewrite finsupp_fcvx1. by rewrite combine_fcvx1.
-Qed.
-
-Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
-Proof. (* RK *)
-by rewrite in_pt.
-Qed.
-
-Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
-Proof. (* RK *)
-apply/proper0P; exists Ω; exact: in_pt_self.
-Qed.
-
-Lemma ppick_pt (Ω : 'cV[R]_n) :
-  ppick (`[pt Ω]) = Ω.
-Proof. (* RK *)
-apply/eqP; rewrite -in_pt; apply/ppickP; exact: pt_proper0.
-Qed.
-
-Lemma pt_subset (Ω : 'cV[R]_n) P : `[pt Ω] `<=` P = (Ω \in P).
-Proof. (* RK *)
-by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
-  [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_subsetP => v; rewrite in_pt => /eqP ->].
-Qed.
-
-Lemma pt_proper (Ω : 'cV[R]_n) P : `[pt Ω] `<` P -> (Ω \in P).
-Proof.
-by move/poly_properW; rewrite pt_subset.
+move => x x_in_V; apply/in_convP.
+by exists (fcvx1 x); rewrite ?finsupp_fcvx1 ?fsub1set ?combine_fcvx1.
 Qed.
 
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
@@ -1584,8 +1549,6 @@ Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
 Admitted.
 
 End Hull.
-
-Notation "'`[' 'pt'  Ω  ']'" := (mk_pt Ω) (at level 70) : poly_scope.
 
 Section Affine.
 
@@ -1610,26 +1573,72 @@ apply: (iffP idP) => [ /in_big_polyIP h | h]; last first.
   by apply/h => //.
 Qed.
 
-Lemma in_affine_orth (U : {vspace base_elt[R,n]}) x y :
-  x \in affine U ->
-    reflect (exists2 d, d \in ((befst @: U)^OC)%VS & y = x + d)
-      (y \in affine U).
+Implicit Type (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n).
+
+Lemma dim_cVn U : (\dim U <= n)%N.
+Proof.
+by move/dimvS: (subvf U); rewrite dimvf /Vector.dim /= muln1.
+Qed.
+
+Definition mk_affine_fun0 (x: 'cV[R]_n) := fun v => [<v, '[v,x]>].
+
+Lemma mk_affine_fun0_linear x : lmorphism (mk_affine_fun0 x).
+Proof.
+by split; move => v w; rewrite /mk_affine_fun0 ?beaddE ?bescaleE ?vdotBl ?vdotZl.
+Qed.
+
+Definition mk_affine_fun x := linfun (Linear (mk_affine_fun0_linear x)).
+
+Lemma befstE x : (befst \o (mk_affine_fun x) = \1)%VF.
+Proof.
+apply/lfunP => v.
+by rewrite comp_lfunE !lfunE.
+Qed.
+
+Lemma dim_mk_affine_fun U Ω : (\dim ((mk_affine_fun Ω) @: U) = \dim U)%N.
+Admitted.
+
+Definition mk_affine U Ω :=
+  affine ((mk_affine_fun Ω) @: U^OC)%VS.
+
+Notation "'`[' 'affine'  U & Ω  ']'" := (mk_affine U Ω) (at level 70) : poly_scope.
+
+Lemma in_mk_affine U Ω x :
+  (x \in `[affine U & Ω]) = (x - Ω \in U).
+Proof.
+apply/in_affine/idP => [h|].
+- rewrite -[U]orthK; apply/orthvP => y.
+  move/(memv_img (mk_affine_fun Ω))/h; rewrite inE lfunE /=.
+  by rewrite -subr_eq0 -vdotBr => /eqP.
+- rewrite -{1}[U]orthK => /orthvP h.
+  move => v /memv_imgP [{}v /h/eqP eq0 ->].
+  rewrite vdotBr subr_eq0 in eq0.
+  by rewrite inE lfunE /=.
+Qed.
+
+Lemma in_mk_affineP U Ω x :
+  reflect (exists2 d, d \in U & x = Ω + d) (x \in `[affine U & Ω]).
+Proof.
+rewrite in_mk_affine; apply/(iffP idP) => [?|[?? ->]].
+- by exists (x - Ω); last rewrite addrC subrK.
+- by rewrite addrC addKr.
+Qed.
+
+Lemma affine_orth (U : {vspace base_elt[R,n]}) x :
+  x \in (affine U) -> affine U = `[affine (befst @: U)^OC & x].
 Proof.
 move => x_in_aff.
-apply: (iffP idP) => [y_in_aff |].
-- exists (y-x).
-  + apply/orthvP => ? /memv_imgP [e e_in_U ->].
-    rewrite vdotBr lfunE /=.
-    move/in_affine/(_ _ e_in_U): x_in_aff; rewrite inE => /eqP ->.
-    move/in_affine/(_ _ e_in_U): y_in_aff; rewrite inE => /eqP ->.
-    by rewrite addrN.
-  + by rewrite addrCA addrN addr0.
-- move => [d /orthvP h] ->.
+apply/poly_eqP => y; rewrite in_mk_affine.
+apply/idP/idP => [y_in_aff |].
+- apply/orthvP => ? /memv_imgP [e e_in_U ->].
+  rewrite vdotBr lfunE /=.
+  move/in_affine/(_ _ e_in_U): x_in_aff; rewrite inE => /eqP ->.
+  move/in_affine/(_ _ e_in_U): y_in_aff; rewrite inE => /eqP ->.
+  by rewrite addrN.
+- move/orthvP => h.
   apply/in_affine => e e_in_U.
-  rewrite inE vdotDr; move/in_affine/(_ _ e_in_U): x_in_aff; rewrite inE => /eqP ->.
-  rewrite h ?addr0 //.
-  have ->: e.1 = befst e by rewrite lfunE.
-  by rewrite memv_img.
+  move/(memv_img befst)/h/eqP: (e_in_U); rewrite vdotBr subr_eq0 lfunE /= inE => /eqP ->.
+  by rewrite -in_hp; apply/(in_affine U).
 Qed.
 
 Lemma affine_span (I : base_t[R,n]) :
@@ -1678,6 +1687,7 @@ move: (vbasisP U) => /andP [/eqP <- _].
 apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
 Qed.
 
+(*
 Lemma affine_dim_fst (U : {vspace base_elt[R,n]}) :
   affine U `>` (`[poly0]) -> (\dim U = \dim (befst @: U))%N.
 Proof.
@@ -1697,6 +1707,7 @@ suff: x \in `[hp e].
 - by rewrite inE e1_eq0 vdot0l => /eqP <-.
 - by apply/(poly_subsetP (affineS1 e_in)).
 Qed.
+ *)
 
 Lemma befst_inj (x : 'cV[R]_n) (e e' : base_elt[R,n]) :
   (x \in `[hp e]) -> (x \in `[hp e']) -> e.1 = e'.1 -> e = e'.
@@ -1706,15 +1717,16 @@ apply/val_inj/injective_projections => //=.
 by move: x_in_e x_in_e'; do 2![rewrite inE => /eqP <-]; rewrite fst_eq.
 Qed.
 
-Lemma affine_dim_le (U : {vspace base_elt[R,n]}) :
+(*Lemma affine_dim_le (U : {vspace base_elt[R,n]}) :
   affine U `>` (`[poly0]) -> (\dim U <= n)%N.
 Proof.
 move/affine_dim_fst => ->.
 suff {5}<-: \dim (fullv : {vspace 'cV[R]_n}) = n.
 - apply/dimvS; exact: subvf.
 - by rewrite dimvf /Vector.dim /= muln1.
-Qed.
+Qed.*)
 
+(*
 Lemma affine_subset (U V : {vspace base_elt[R,n]}) :
   (affine V `>` `[poly0]) -> affine V `<=` affine U -> (U <= V)%VS.
 Proof.
@@ -1740,9 +1752,75 @@ Proof.
 move => affU_prop0 aff_eq.
 have affV_prop0 : (affine V `>` `[poly0]) by rewrite -aff_eq.
 by apply/subv_anti/andP; split; apply/affine_subset => //; rewrite aff_eq poly_subset_refl.
+Qed.*)
+
+Notation "'`[' 'pt'  Ω  ']'" := (`[affine 0%VS & Ω]) (at level 70) : poly_scope.
+
+Lemma in_pt (Ω x : 'cV[R]_n) : (x \in `[pt Ω]) = (x == Ω).
+Proof.
+by rewrite in_mk_affine memv0 subr_eq0.
+Qed.
+
+Lemma conv_pt (Ω : 'cV[R]_n) : conv [fset Ω]%fset = `[pt Ω].
+Proof.
+apply/poly_eqP => x; rewrite in_pt.
+apply/idP/eqP => [/in_convP [w le_wΩ ->]| ->].
++ rewrite (combinewE le_wΩ) big_fset1 /=; move: le_wΩ.
+  rewrite fsubset1 fconvex_insupp_neq0 orbF => /eqP fw.
+  have := wgt1_fconvex w; rewrite weightE fw big_fset1 /=.
+  by move=> ->; rewrite scale1r.
++ apply/in_convP; exists (fcvx1 Ω).
+  by rewrite finsupp_fcvx1. by rewrite combine_fcvx1.
+Qed.
+
+Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in `[pt Ω].
+Proof. (* RK *)
+by rewrite in_pt.
+Qed.
+
+Lemma pt_proper0 (Ω : 'cV[R]_n) : (`[ poly0 ]) `<` (`[ pt Ω ]).
+Proof. (* RK *)
+apply/proper0P; exists Ω; exact: in_pt_self.
+Qed.
+
+Lemma ppick_pt (Ω : 'cV[R]_n) :
+  ppick (`[pt Ω]) = Ω.
+Proof. (* RK *)
+apply/eqP; rewrite -in_pt; apply/ppickP; exact: pt_proper0.
+Qed.
+
+Lemma pt_subset (Ω : 'cV[R]_n) P : `[pt Ω] `<=` P = (Ω \in P).
+Proof. (* RK *)
+by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
+  [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_subsetP => v; rewrite in_pt => /eqP ->].
+Qed.
+
+Lemma pt_proper (Ω : 'cV[R]_n) P : `[pt Ω] `<` P -> (Ω \in P).
+Proof.
+by move/poly_properW; rewrite pt_subset.
+Qed.
+
+Lemma pointed_affine U Ω :
+  reflect (U = 0)%VS (pointed (`[affine U & Ω])).
+Proof.
+apply/(iffP idP); last first.
+- move ->. move: is_true_true; apply: contraTT => /=.
+  move/pointedPn => [Ω' [d /eqP d_ne0]] /poly_subsetP sub.
+  have: Ω' \in `[line d & Ω'] by  apply/in_lineP; exists 0; rewrite scale0r addr0.
+  move/sub; rewrite in_pt => /eqP eq.
+  have: Ω' + d\in `[line d & Ω'] by  apply/in_lineP; exists 1; rewrite scale1r.
+  by move/sub; rewrite eq in_pt => /eqP/(canRL (addKr _)); rewrite addNr.
+- move => h; apply/eqP; move: h; apply: contraTT => U_neq0.
+  apply/pointedPn; exists Ω; exists (vpick U); rewrite ?vpick0 //.
+  (* this should follow from the definition of a line by `[affine _ & _] *)
+  apply/poly_subsetP => x /in_lineP [μ ->].
+  by rewrite in_mk_affine addrAC addrN add0r memvZ ?memv_pick.
 Qed.
 
 End Affine.
+
+Notation "'`[' 'affine'  U & Ω  ']'" := (mk_affine U Ω) (at level 70) : poly_scope.
+Notation "'`[' 'pt'  Ω  ']'" := (`[affine 0%VS & Ω]) (at level 70) : poly_scope.
 
 Section Duality.
 
