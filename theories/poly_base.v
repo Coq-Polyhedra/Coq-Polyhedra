@@ -1106,6 +1106,28 @@ Admitted.
 
 End Dimension.
 
+Section Extra.
+(* TODO: move and rename *)
+
+Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
+
+Lemma dimS1 (e : base_elt[R,n]) :
+  e \notin << base >>%VS ->
+  (\dim << (base `|` [fset e])%fset >>%VS = (\dim << base >>%VS).+1)%N.
+Proof.
+move => e_notin.
+rewrite span_fsetU dimv_disjoint_sum ?span_fset1 ?dim_vline -1?addn1.
+- have -> //=: (e != 0).
+  by move: e_notin; apply: contraNneq => ->; rewrite mem0v.
+- apply/eqP; rewrite -subv0; apply/subvP => x /memv_capP [x_in /vlineP [μ x_eq]].
+  rewrite {}x_eq in x_in *.
+  suff -> : μ = 0 by rewrite scale0r memv0.
+  move: e_notin; apply: contraNeq => μ_neq0.
+  by move/(memvZ μ^-1) : x_in; rewrite scalerA mulVf // scale1r.
+Qed.
+
+End Extra.
+
 Section Facet.
 
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
@@ -1203,27 +1225,12 @@ have i_not_in_affP: i \notin << {eq P} >>%VS.
   apply/negP; move/(poly_subset_proper sub).
   by rewrite poly_properxx.
 rewrite !dimN0_eq ?facet_proper0 //; apply: congr1.
-rewrite -subnSK; last first.
-- suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
-  apply/(leq_ltn_trans _ (face_proper_ltn_dim (P := S) _ _)).
-  + by rewrite -dimN0 facet_proper0.
-  + rewrite face_setE; exact: poly_properW.
-  + exact: poly_proper_neq.
-- do 2![apply: congr1].
-  rewrite activeU1 // span_fsetU /= dimv_disjoint_sum.
-  + rewrite -addn1; apply: congr1.
-    rewrite span_fset1 dim_vline.
-    suff ->: (i != 0) by [].
-    move: i_not_in_affP; apply: contraNneq => ->.
-    exact: mem0v.
-  + apply/eqP; rewrite -subv0 span_fset1.
-    apply/subvP => x /memv_capP [h1 /vlineP [μ x_eq]].
-    rewrite {}x_eq in h1 *.
-    case: (μ =P 0) => [-> | /eqP μN0].
-    * by rewrite scale0r memv0.
-    * suff: i \in <<{eq P}>>%VS by move/negP : i_not_in_affP.
-      move/(memvZ μ^-1) : h1.
-      by rewrite scalerA mulVf // scale1r.
+rewrite activeU1 ?dimS1 ?subnSK //=.
+suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
+apply/(leq_ltn_trans _ (face_proper_ltn_dim (P := S) _ _)).
+- by rewrite -dimN0 facet_proper0.
+- rewrite face_setE; exact: poly_properW.
+- exact: poly_proper_neq.
 Qed.
 
 End Facet.
@@ -1255,35 +1262,10 @@ case: (leqP (dim P) 1%N) => [dimP_le1 | dimP_gt1].
     set F := 'P^=(base; [fset i]%fset)%:poly_base.
     exists (pval F); last exact: poly_dim_facet.
     by rewrite face_setE poly_properW ?facet_proper.
-  + move: P_pointed; apply: contraLR; rewrite fsubset_properT negbK => /eqP eqP_eq_base.
-    have dim_base: (\dim << base >> < n)%N.
-    * move: eqP_eq_base => /(congr1 (fun (x : {fsubset _}) => (x : {fset _}))) /= <-.
-      by move: dimP_gt1; rewrite dimN0_eq // ltnS subn_gt0.
-    pose base' := vbasis <<base>>.
-    pose f0 : 'cV[R]_n -> 'cV[R]_(\dim << base>>%VS) :=
-      fun x => (\col_i '[((vbasis <<base>>)`_i).1, x]).
-    have f0_linear : lmorphism f0. split;
-    by move => ??; apply/colP => ?; rewrite !mxE ?vdotBr ?vdotZr.
-    pose f := linfun (Linear f0_linear).
-    move: (limg_ker_dim f (fullv : {vspace 'cV[R]_n})).
-    rewrite capfv dimvf /Vector.dim /= muln1.
-    move/dimvS: (subvf (limg f)); rewrite dimvf /Vector.dim /= muln1.
-    move/leq_ltn_trans/(_ dim_base) => dim_imf.
-    move/(congr1 (subn^~ (\dim (limg f))%N)).
-    rewrite -addnBA // subnn addn0 => dim_lker_eq.
-    have {dim_lker_eq} {dim_imf}: (\dim (lker f) != 0)%N by rewrite dim_lker_eq -lt0n subn_gt0.
-    rewrite dimv_eq0 => kerf_neq0; pose c := vpick (lker f).
-    have c_neq0 : c != 0 by rewrite /c vpick0.
-    move: (memv_pick (lker f)); rewrite memv_ker -/c !lfunE /f0 /= => /eqP/col0P eq0.
-    have e_c_eq0 : forall e, e \in base -> '[e.1, c] = 0.
-    * move => e /memv_span/coord_vbasis ->.
-      rewrite (@big_morph _ _ (fun e : base_elt[R,n] => e.1) 0 +%R) //.
-      rewrite vdot_sumDl; apply: big1 => i _; rewrite vdotZl.
-      move/(_ i): eq0; rewrite mxE  => ->; by rewrite mulr0.
-    apply/pointedPn; exists (ppick P); exists c => //.
-    apply/big_polyIsP => e _; rewrite line_subset_hs.
-    apply/eqP/e_c_eq0; first exact: valP.
-    move: (ppickP P_prop0); apply/poly_subsetP/poly_base_subset_hs; exact: valP.
+  + move: P_pointed; apply: contraTT; rewrite fsubset_properT negbK => /eqP eqP_eq_base.
+    move: (P_prop0) dimP_gt1; rewrite [P]repr_active //=.
+    rewrite eqP_eq_base polyEqT_affine => /proper0P [x x_in_aff].
+    by rewrite (affine_orth x_in_aff) pointed_affine dim_affine ltnS lt0n dimv_eq0.
 Qed.
 
 Lemma pointed_vertex (P : 'poly[R]_n) :
