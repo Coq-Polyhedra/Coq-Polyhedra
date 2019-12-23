@@ -1663,6 +1663,10 @@ Proof.
 by rewrite affine_span polyIC.
 Qed.
 
+Lemma polyEqT_affine (base : base_t[R,n]) :
+  'P^=(base; base) = affine << base >>.
+Admitted.
+
 Lemma affineS :
   {homo affine : U V / (U <= V)%VS >-> (U `>=` V)%VS}.
 Proof.
@@ -1801,20 +1805,20 @@ by move/poly_properW; rewrite pt_subset.
 Qed.
 
 Lemma pointed_affine U Ω :
-  reflect (U = 0)%VS (pointed (`[affine U & Ω])).
+  pointed (`[affine U & Ω]) = (U == 0)%VS.
 Proof.
-apply/(iffP idP); last first.
-- move ->. move: is_true_true; apply: contraTT => /=.
+apply/idP/idP.
+- apply: contraTT => U_neq0.
+  apply/pointedPn; exists Ω; exists (vpick U); rewrite ?vpick0 //.
+  (* this should follow from the definition of a line by `[affine _ & _] *)
+  apply/poly_subsetP => x /in_lineP [μ ->].
+  by rewrite in_mk_affine addrAC addrN add0r memvZ ?memv_pick.
+- move => /eqP ->; move: is_true_true; apply: contraTT => /=.
   move/pointedPn => [Ω' [d /eqP d_ne0]] /poly_subsetP sub.
   have: Ω' \in `[line d & Ω'] by  apply/in_lineP; exists 0; rewrite scale0r addr0.
   move/sub; rewrite in_pt => /eqP eq.
   have: Ω' + d\in `[line d & Ω'] by  apply/in_lineP; exists 1; rewrite scale1r.
   by move/sub; rewrite eq in_pt => /eqP/(canRL (addKr _)); rewrite addNr.
-- move => h; apply/eqP; move: h; apply: contraTT => U_neq0.
-  apply/pointedPn; exists Ω; exists (vpick U); rewrite ?vpick0 //.
-  (* this should follow from the definition of a line by `[affine _ & _] *)
-  apply/poly_subsetP => x /in_lineP [μ ->].
-  by rewrite in_mk_affine addrAC addrN add0r memvZ ?memv_pick.
 Qed.
 
 End Affine.
