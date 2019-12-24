@@ -1084,20 +1084,15 @@ Qed.
 Lemma compact_pointed P :
   compact P -> pointed P.
 Proof.
-Admitted.
-(*
-case: (emptyP P) => [->| P_neq0 P_compact]; first by rewrite pointed0.
-apply: contraT => /(pointedPn P_neq0) [c] [c_neq0 hl_sub].
-suff: ~~ (bounded P c).
-  by move/(compactP P_neq0)/(_ c) : P_compact => ->.
-apply/boundedPn => //.
-move/proper0P: P_neq0 => [Ω Ω_in_P].
-move/(_ _ Ω_in_P): hl_sub => /poly_subsetP hl_sub K.
+case: (emptyP P) => [->| P_neq0 P_compact]; rewrite ?pointed0 //.
+apply: contraT => /pointedPn [Ω [c]] [c_neq0 /poly_subsetP hl_sub].
+suff: ~~ (bounded P c) by move/(compactP P_neq0)/(_ c) : P_compact => ->.
+apply/boundedPn => // K.
 pose μ := ((K - 1 - '[c,Ω])/'[| c |]^2)%R.
-exists (Ω + μ *: c); first by apply: hl_sub; apply/in_lineP; exists μ.
-rewrite vdotDr vdotZr mulfVK; last by apply: lt0r_neq0; rewrite vnorm_gt0.
+exists (Ω + μ *: c); first by apply/hl_sub/in_lineP; exists μ.
+rewrite vdotDr vdotZr mulfVK ?lt0r_neq0 ?vnorm_gt0 //.
 by rewrite addrCA addrN addr0 cpr_add ltrN10.
-Qed.*)
+Qed.
 
 Definition slice (b : base_elt) P := `[hp b] `&` P.
 
@@ -1624,6 +1619,12 @@ rewrite in_mk_affine; apply/(iffP idP) => [?|[?? ->]].
 - by rewrite addrC addKr.
 Qed.
 
+Lemma mk_affine_prop0 (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n) :
+  `[affine U & Ω] `>` `[poly0].
+Proof.
+by apply/proper0P; exists Ω; rewrite in_mk_affine addrN mem0v.
+Qed.
+
 Lemma affine_orth (U : {vspace base_elt[R,n]}) x :
   x \in (affine U) -> affine U = `[affine (befst @: U)^OC & x].
 Proof.
@@ -1813,7 +1814,7 @@ apply/idP/idP.
   (* this should follow from the definition of a line by `[affine _ & _] *)
   apply/poly_subsetP => x /in_lineP [μ ->].
   by rewrite in_mk_affine addrAC addrN add0r memvZ ?memv_pick.
-- move => /eqP ->; move: is_true_true; apply: contraTT => /=.
+- move => /eqP ->; apply: contraT.
   move/pointedPn => [Ω' [d /eqP d_ne0]] /poly_subsetP sub.
   have: Ω' \in `[line d & Ω'] by  apply/in_lineP; exists 0; rewrite scale0r addr0.
   move/sub; rewrite in_pt => /eqP eq.
