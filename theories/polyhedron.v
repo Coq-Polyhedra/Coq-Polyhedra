@@ -551,7 +551,7 @@ Lemma hp_itv (e : base_elt[R,n]) (y z: 'cV[R]_n) :
 Proof.
 rewrite !inE -ltrNge => Hy Hz.
 set α := (e.2 - '[e.1, y])/('[e.1,z] - '[e.1,y]).
-have z_lt_y: '[e.1,z] < '[e.1, y] by exact:(ltr_le_trans Hz).
+have z_lt_y: '[e.1,z] < '[e.1, y] by exact : (ltr_le_trans Hz).
 have neq0: '[e.1,z] - '[e.1, y] != 0 by rewrite subr_eq0 ltr_neq.
 exists α.
 - apply/andP; split.
@@ -957,7 +957,15 @@ Qed.
 Lemma line_subset_hs (e : base_elt[R,n]) (Ω c : 'cV[R]_n) :
   Ω \in (`[hs e]) -> (`[line c & Ω ] `<=` `[hs e]) = ('[e.1,c] == 0).
 Proof.
-Admitted.
+move => Ω_in_e.
+apply/idP/eqP.
+- apply/contraTeq => e_c_neq0; apply/poly_subsetPn.
+  exists (Ω + (e.2 - 1 - '[e.1, Ω])/'[e.1, c] *: c).
+  + by apply/in_lineP; exists ((e.2 - 1 - '[e.1, Ω])/'[e.1, c]).
+  + by rewrite inE vdotDr vdotZr divfK // addrCA addrN addr0 lter_sub_addr cpr_add ler10.
+- move => e_c_eq0; apply/poly_subsetP => x /in_lineP [μ ->].
+  by rewrite inE vdotDr vdotZr e_c_eq0 mulr0 addr0 -in_hs.
+Qed.
 
 Lemma pointed0 : pointed (`[poly0]).
 Proof.
@@ -1010,14 +1018,13 @@ rewrite !inE; apply: (iffP andP).
 - move => [c_x_ge_c_Ω /in_lineP [μ x_eq]].
   rewrite x_eq in c_x_ge_c_Ω *.
   case: (c =P 0) => [-> | c_neq0].
-  + exists 0; by rewrite ?scaler0.
-  + exists μ; last by done.
-    rewrite vdotDr ler_addl vdotZr pmulr_lge0 in c_x_ge_c_Ω; first by done.
+  + exists 0; rewrite ?scaler0 //.
+  + exists μ => //.
+    rewrite vdotDr ler_addl vdotZr pmulr_lge0 // in c_x_ge_c_Ω.
     by rewrite vnorm_gt0; apply/eqP.
 - move => [μ μ_ge0 ->]; split; last by apply/in_lineP; exists μ.
   rewrite vdotDr ler_addl vdotZr.
-  apply: mulr_ge0; first by done.
-  exact: vnorm_ge0.
+  by apply: mulr_ge0; rewrite ?vnorm_ge0.
 Qed.
 
 Definition compact P :=
@@ -1540,7 +1547,9 @@ apply: Bool.iff_reflect;
   exact: cvxsegP.
 Qed.
 
-Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
+Lemma compact_conv (V : {fset 'cV[R]_n}) : V != fset0 -> compact (conv V).
+Proof.
+move => V_prop0; apply/compactP.
 Admitted.
 
 End Hull.
