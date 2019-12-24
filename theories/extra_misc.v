@@ -7,7 +7,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix finmap.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix finmap vector.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -226,6 +226,14 @@ Proof.
 by move => H ?; rewrite (ltn_divLR _ _ H).
 Qed.
 
+
+Lemma subn_inj (p q r : nat) : (p <= r)%N -> (q <= r)%N -> (r - p == r - q)%N = (p == q).
+Proof.
+move => p_le_r q_le_r; apply/eqP/idP; last by move/eqP => ->.
+move/(congr1 (addn^~ p)); rewrite subnK // addnC.
+move/(congr1 (addn^~ q)); rewrite -addnA subnK // addnC.
+by move/addIn => ->.
+Qed.
 
 End Basic.
 
@@ -728,3 +736,22 @@ Check ((A `|` [fset e])%fset%:fsub : {fsubset S}).
 Check (([fset e] `|` A )%fset%:fsub : {fsubset _}). (* this should be a {fsubset S} *)
 End Test.
 *)
+
+Section Vector.
+
+Context {K : fieldType} {vT : vectType K}.
+
+Lemma dim_add_line  (U : {vspace vT}) (v : vT) :
+  v \notin U -> (\dim (U + <[ v ]>) = (\dim U).+1)%N.
+Proof.
+move => v_notin; rewrite dimv_disjoint_sum ?dim_vline -1?addn1.
+- have -> //=: (v != 0).
+  by move: v_notin; apply: contraNneq => ->; rewrite mem0v.
+- apply/eqP; rewrite -subv0; apply/subvP => x /memv_capP [x_in /vlineP [μ x_eq]].
+  rewrite {}x_eq in x_in *.
+  suff -> : μ = 0 by rewrite scale0r memv0.
+  move: v_notin; apply: contraNeq => μ_neq0.
+  by move/(memvZ μ^-1) : x_in; rewrite scalerA mulVf // scale1r.
+Qed.
+
+End Vector.

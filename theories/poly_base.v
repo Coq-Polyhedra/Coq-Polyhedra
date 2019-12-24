@@ -958,12 +958,6 @@ split; last by move ->; rewrite dim0.
 by apply/contra_eq; rewrite equiv0N_proper dimN0 lt0n.
 Qed.
 
-Lemma mk_affine_prop0 (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n) :
-  `[affine U & Ω] `>` `[poly0].
-Proof.
-by apply/proper0P; exists Ω; rewrite in_mk_affine addrN mem0v.
-Qed.
-
 Lemma dim_affine (U : {vspace 'cV[R]_n}) Ω :
   (dim (`[affine U & Ω]) = (\dim U).+1)%N.
 Proof.
@@ -1003,14 +997,6 @@ case/dimP: P => [| base P P_prop0]; rewrite ?dim0 //.
 case/dimP: Q => [| base' Q Q_prop0];
   first by move/(poly_proper_subset P_prop0); rewrite ?poly_properxx.
 by rewrite ltnS => P_sub_Q; apply/leq_sub2l/dimvS/span_activeS.
-Qed.
-
-Lemma subn_inj (p q r : nat) : (p <= r)%N -> (q <= r)%N -> (r - p == r - q)%N = (p == q).
-Proof.
-move => p_le_r q_le_r; apply/eqP/idP; last by move/eqP => ->.
-move/(congr1 (addn^~ p)); rewrite subnK // addnC.
-move/(congr1 (addn^~ q)); rewrite -addnA subnK // addnC.
-by move/addIn => ->.
 Qed.
 
 Lemma dim_le (base : base_t[R,n]) (P : {poly base}) :
@@ -1104,28 +1090,6 @@ Admitted.
 
 End Dimension.
 
-Section Extra.
-(* TODO: move and rename *)
-
-Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
-
-Lemma dimS1 (e : base_elt[R,n]) :
-  e \notin << base >>%VS ->
-  (\dim << (base `|` [fset e])%fset >>%VS = (\dim << base >>%VS).+1)%N.
-Proof.
-move => e_notin.
-rewrite span_fsetU dimv_disjoint_sum ?span_fset1 ?dim_vline -1?addn1.
-- have -> //=: (e != 0).
-  by move: e_notin; apply: contraNneq => ->; rewrite mem0v.
-- apply/eqP; rewrite -subv0; apply/subvP => x /memv_capP [x_in /vlineP [μ x_eq]].
-  rewrite {}x_eq in x_in *.
-  suff -> : μ = 0 by rewrite scale0r memv0.
-  move: e_notin; apply: contraNeq => μ_neq0.
-  by move/(memvZ μ^-1) : x_in; rewrite scalerA mulVf // scale1r.
-Qed.
-
-End Extra.
-
 Section Facet.
 
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
@@ -1218,7 +1182,7 @@ have i_not_in_affP: i \notin << {eq P} >>%VS.
 - move: S_prop_P; apply/contraTN; move/in_span_active.
   by rewrite /= polyEq1 => /polyIidPl ->; rewrite poly_properxx.
 rewrite !dimN0_eq ?facet_proper0 //; apply: congr1.
-rewrite activeU1 ?dimS1 ?subnSK //=.
+rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.
 suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
 apply/(leq_ltn_trans _ (face_proper_ltn_dim (P := S) _ _)).
 - by rewrite -dimN0 facet_proper0.
