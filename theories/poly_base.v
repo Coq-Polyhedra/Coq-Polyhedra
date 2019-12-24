@@ -1016,11 +1016,9 @@ Qed.
 Lemma dim_le (base : base_t[R,n]) (P : {poly base}) :
   P `>` (`[poly0]) -> (\dim << {eq P} >> <= n)%N.
 Proof.
+(* TO BE IMPROVED *)
 move => /proper0P [x x_in_P].
-have f_linear : lmorphism (fun (v : base_elt[R,n]) => v.1) by done.
-pose f := Linear f_linear.
-pose linfun_f := linfun f.
-have /limg_dim_eq <-: (<<{eq P}>> :&: lker linfun_f)%VS = 0%VS.
+have /limg_dim_eq <-: (<<{eq P}>> :&: lker befst)%VS = 0%VS.
 - apply/eqP; rewrite -subv0.
   apply/subvP => e; rewrite memv_cap memv_ker memv0 => /andP [e_in /eqP f_e_eq0].
   have e1_eq0 : e.1 = 0 by rewrite lfunE in f_e_eq0.
@@ -1217,13 +1215,8 @@ set S := 'P^=(_; _)%:poly_base.
 move => i_notin_eqP.
 move/(facet_proper H): (i_notin_eqP) => S_prop_P.
 have i_not_in_affP: i \notin << {eq P} >>%VS.
-- move: S_prop_P; apply: contraTN => i_in_affP.
-  rewrite [P]repr_active //= 2!polyEq_affine.
-  have /(polyIS 'P(base)) sub: affine <<{eq P}>> `<=` affine <<[fset i]%fset>>.
-  + apply/poly_subsetP => x /in_affine/(_ _ i_in_affP).
-    by rewrite affine_span big_fset1 /=.
-  apply/negP; move/(poly_subset_proper sub).
-  by rewrite poly_properxx.
+- move: S_prop_P; apply/contraTN; move/in_span_active.
+  by rewrite /= polyEq1 => /polyIidPl ->; rewrite poly_properxx.
 rewrite !dimN0_eq ?facet_proper0 //; apply: congr1.
 rewrite activeU1 ?dimS1 ?subnSK //=.
 suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
