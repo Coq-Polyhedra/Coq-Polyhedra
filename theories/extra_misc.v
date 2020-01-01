@@ -467,8 +467,12 @@ Qed.
 End ExtraFinmap.
 
 Class expose (P : Prop) := Expose : P.
+
 Hint Extern 0 (expose _) => (exact) : typeclass_instances.
 Hint Extern 0 (expose (is_true _)) => (match goal with H : is_true _ |- _ => exact: H end) : typeclass_instances.
+
+(*Hint Extern 0 (_ `<=` _)%fset => exact: fsubset_refl.
+Hint Extern 0 (fset0 `<=` _)%fset => exact: fsub0set.*)
 
 Module FSubset.
 Section FSubset.
@@ -738,6 +742,10 @@ End Test.
 *)
 
 Section Vector.
+
+Local Open Scope ring_scope.
+
+Import GRing.Theory Num.Theory.
 
 Context {K : fieldType} {vT : vectType K}.
 
