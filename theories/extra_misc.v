@@ -542,8 +542,8 @@ Definition tag6 x := tag5 x.
 Canonical tag6.
 
 Canonical fsubset_expose (A : {fset K})
-          (H : expose (A `<=` S)%fset) := @FSubset (tag1 _) H.
-Canonical fsubset_fset0 := @FSubset (tag2 _) (fsub0set S).
+          (H : expose (A `<=` S)%fset) := @FSubset (tag0 _) H.
+Canonical fsubset_fset0 := @FSubset (tag1 _) (fsub0set S).
 
 Lemma fsubset_setUP (A B : {fset K}) :
   A `<=` S -> B `<=` S -> A `|` B `<=` S.
@@ -552,7 +552,7 @@ Proof. by move=> leAS leBS; rewrite -[S]fsetUid fsetUSS. Qed.
 Canonical fsubset_setU
   (A B : {fset K}) (HA : expose (A `<=` S)) (HB : expose (B `<=` S))
 :=
-  @FSubset (tag3 _) (fsubset_setUP HA HB).
+  @FSubset (tag2 _) (fsubset_setUP HA HB).
 
 Lemma fsubset_bigUP (I : finType) (P : pred I) F :
   (forall i, P i -> F i `<=` S) -> (\bigcup_(i | P i) F i) `<=` S.
@@ -561,12 +561,12 @@ Proof. by move=> le_FS; apply/bigfcupsP=> i _; apply: le_FS. Qed.
 Canonical fsubset_bigU
   (I : finType) (P : pred I) F (H : expose (forall i, P i -> F i `<=` S))
 :=
-  @FSubset (tag4 _) (fsubset_bigUP H).
+  @FSubset (tag3 _) (fsubset_bigUP H).
 
 Lemma fsubset_filterP (P : pred K) : [fset x in S | P x] `<=` S.
 Proof. by apply/fsubsetP=> x; rewrite !inE /= => /andP[]. Qed.
 
-Canonical fsubset_filter (P : pred K) := @FSubset (tag5 _) (fsubset_filterP P).
+Canonical fsubset_filter (P : pred K) := @FSubset (tag4 _) (fsubset_filterP P).
 
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
 Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
@@ -690,17 +690,24 @@ by apply/negP/fproper_irrefl.
 Qed.
 
 Definition fslice e (A : {fset K}) := e |` A.
+Definition funslice e (A : {fset K}) := A `\ e.
 
-Lemma fsubset_sliceP e A : A `<=` S -> fslice e A `<=` fslice e S.
+Lemma fsubset_sliceP e (A : {fsubset S}) : fslice e A `<=` fslice e S.
 Proof.
-move=> /fsubsetP leAS; apply/fsubsetP=> x; rewrite !in_fset1U.
+move/fsubsetP: (fsubset_subP A) => leAS; apply/fsubsetP=> x; rewrite !in_fset1U.
 case/orP=> [/eqP->|]; first by rewrite eqxx.
 by move/leAS=> ->; rewrite orbT.
 Qed.
 
-Canonical fsubset_slice e A (H : expose (A `<=` S)) :=
-  @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e H).
+Canonical fsubset_slice e A :=
+  @FSubset.FSubset _ _ (FSubset.tag5 _) (fsubset_sliceP e A).
 
+Lemma fsubset_unsliceP e (A : {fsubset (fslice e S)}) :
+  funslice e A `<=` S.
+Admitted.
+
+Canonical fsubset_unslice e (A : {fsubset (fslice e S)}) :=
+  @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_unsliceP A).
 
 Lemma fsubset_fsubsetP (A B : {fsubset S}) :
   reflect {in S, {subset (A : {fset K}) <= (B : {fset K})}} (A `<=` B)%fset.
@@ -720,6 +727,8 @@ Admitted.
 End FSubsetOther.
 
 Notation "e +|` A" := (fslice e A) (at level 52).
+Notation "A `|- e" := (funslice e A) (at level 52).
+
 (*Global Instance expose_valP (K : choiceType) (S : {fset K}) (A : {fsubset S}) : expose (A `<=` S)%fset := Expose (valP A).
 Global Instance expose_funP (K : choiceType) (S : {fset K}) (T : Type) (P : pred T) (f : T -> {fsubset S}) :
   expose (forall i, P i -> (f i `<=` S)%fset) := Expose (fun i _ => (valP (f i))).
