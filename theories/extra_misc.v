@@ -349,6 +349,21 @@ elim: S => [ | x S']; first by done.
       by rewrite minr_r // ltrW.
 Qed.
 
+Variant min_seq_spec (S : seq R) (v : R) : R -> Prop :=
+| MinSeqEmpty of (S = [::]) : min_seq_spec S v v
+| MinSeqNonEmpty x of (x \in S /\ (forall y, y \in S -> y >= x)) : min_seq_spec S v x.
+
+Lemma min_seqP (S : seq R) (v : R) :
+  min_seq_spec S v (min_seq S v).
+Proof.
+case: (altP (S =P [::])) => [->|].
+- by constructor.
+- move/(min_seq_eq v)/hasP => [x [x_in_S]]; rewrite inE eq_sym => /eqP x_eq.
+  constructor; split.
+  + by rewrite -x_eq.
+  + exact: min_seq_ler.
+Qed.
+
 Lemma min_seq_positive (S : seq R) (v : R) :
   (S != [::]) \/ (v > 0) -> (min_seq S v > 0) = (all [pred i | i > 0] S).
 Proof.
