@@ -1414,7 +1414,10 @@ Lemma notin_argmin (P : 'poly_n) (c : 'cV[R]_n) (bounded_P : bounded P c) :
   forall x, x \in P -> x \notin argmin P c -> x \notin `[hs - ([<c, opt_value bounded_P>])].
 Proof.
 move => x x_in_P; apply/contra.
-Admitted.
+rewrite argmin_polyI in_polyI x_in_P /=.
+rewrite in_polyI andbC => -> /=.
+by move: x_in_P; apply/poly_subsetP/opt_value_lower_bound.
+Qed.
 
 Lemma in_hsN (e : base_elt[R,n]) x : (x \in `[hs -e]) = ('[e.1,x] <= e.2).
 Proof.
@@ -1432,7 +1435,7 @@ have v_notin: v \notin (`[ hs [<c, α>] ]).
 - rewrite /α; case: min_seqP => [| ? [/mapP [z] z_in -> _]].
   + by rewrite in_hs -ltrNge cpr_add ltr01.
   + move: z_in; rewrite 2!inE => /andP [z_neq_v /vertex_set_subset z_in].
-    have /(notin_argmin c_bounded): z \notin argmin P c by rewrite -pt_eq in_pt.
+    have /(notin_argmin c_bounded z_in): z \notin argmin P c by rewrite -pt_eq in_pt.
     rewrite in_hsN in_hs /=.
     suff ->: '[c,v] = opt_value c_bounded by [].
     move: (argmin_opt_value c_bounded).
@@ -1449,9 +1452,33 @@ Definition separating_hp (e : base_elt[R,n]) (V : {fset 'cV_n}) (x : 'cV_n) :=
 
 Notation "[ e 'separates' x 'from' V ]" := (separating_hp e V x) : poly_scope.
 
+Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
+Proof.
+move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltrNge in x_in y_in *.
+rewrite vdotDr !vdotZr.
+case: (ltrP '[e.1,x] '[e.1,y]) => [/ltrW ?|?].
+- apply/ler_lt_trans: y_in.
+  have {2}->: '[ e.1, y] = α * '[ e.1, y] + (1 - α) * '[ e.1, y].
+  + by rewrite mulrBl mul1r addrCA addrN addr0.
+  + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
+- apply/ler_lt_trans: x_in.
+  have {2}->: '[ e.1, x] = α * '[ e.1, x] + (1 - α) * '[ e.1, x].
+  + by rewrite mulrBl mul1r addrCA addrN addr0.
+  + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
+Qed.
+
 Lemma separating_hpP {e : base_elt[R,n]} {V : {fset 'cV_n}} {x : 'cV_n} :
-  reflect ((x \notin `[hs e]) /\ (forall y, y \in conv V -> y \notin `[hs -e])) ([e separates x from V]).
-Admitted.
+  reflect ((x \notin `[hs e]) /\ (forall y, y \in conv V -> y \notin `[hs -e]))
+          ([e separates x from V]).
+Proof.
+apply: (iffP andP) => [[? /forallP h] | [? h]]; split => //.
+- move => y /in_convP [w w_supp ->].
+  suff: combine w \in [predC `[hs -e]] by rewrite !inE.
+  apply/convexW; first exact: hsC_convex.
+  move => v /(fsubsetP w_supp) v_in.
+  have ->: v = val [` v_in]%fset by []; apply/h.
+- by apply/forallP => v; apply/h/in_conv/fsvalP.
+Qed.
 
 Lemma separation' (V : {fset 'cV_n}) (x : 'cV_n) :
   x \notin conv V -> exists e : base_elt, [e separates x from V].
@@ -1472,11 +1499,20 @@ Notation "[ e 'separates' x 'from' V ]" := (separating_hp e V x) : poly_scope.
 
 Lemma subset_compact (R : realFieldType) (n : nat) (P Q : 'poly[R]_n) :
   compact P -> Q `<=` P -> compact Q.
-Admitted.
+Proof.
+move => P_compact Q_sub_P.
+case: (emptyP Q) => [->| Q_prop0]; rewrite ?compact0 //.
+apply/compactP => // c.
+have P_prop0: P `>` `[poly0] by apply/poly_proper_subset: Q_sub_P.
+have h: `[poly0] `<` Q `<=` P by apply/andP; split.
+by move/(compactP P_prop0)/(_ c)/bounded_mono1/(_ h): P_compact.
+Qed.
 
 Lemma face_set_compact (R : realFieldType) (n : nat) (P Q : 'poly[R]_n) :
   compact P -> Q \in face_set P -> compact Q.
-Admitted.
+Proof.
+by move => ? /face_set_subset; apply/subset_compact.
+Qed.
 
 Section VertexFigure.
 
@@ -1542,13 +1578,6 @@ Lemma hsN_subset (e : base_elt[R,n]) x : (x \notin `[hs -e]) -> x \in `[hs e].
 Proof.
 by rewrite in_hsN -ltrNge in_hs => /ltrW.
 Qed.
-
-Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
-Proof.
-move => x y x_in y_in α [/andP [α0 α1]]; rewrite !inE -!ltrNge in x_in y_in *.
-rewrite vdotDr !vdotZr.
-case: (ltrP '[e.1,x] '[e.1,y]) => [/ltrW ?|?].
-Admitted.
 
 Lemma vf_prop0 (F : 'poly[R]_n) :
   F \in L -> (dim F > 1)%N -> (Φ F) `>` `[poly0].
