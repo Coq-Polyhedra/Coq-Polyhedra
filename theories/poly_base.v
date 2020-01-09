@@ -427,9 +427,13 @@ Section BaseQuotient.
 
 Variable (R : realFieldType) (n : nat).
 
-Axiom poly_has_base :
-  forall P, exists (x : { base : base_t[R,n] & {poly base}}),
+Lemma poly_has_base P :
+  exists (x : { base : base_t[R,n] & {poly base}}),
     P == (tagged x) :> 'poly[R]_n.
+Proof.
+move: (is_poly_of_base P) => [base ->].
+by exists (Tagged _ ('P(base)%:poly_base : {poly base})) => /=.
+Qed.
 
 Definition of_poly (P : 'poly[R]_n) :=
   xchoose (poly_has_base P).
@@ -485,7 +489,12 @@ Qed.
 Lemma non_redundant_baseW (Pt : 'poly[R]_n -> Prop) :
   (forall (base : base_t[R,n]), non_redundant_base base -> Pt 'P(base)%:poly_base) -> (forall P : 'poly[R]_n, Pt P).
 Proof.
-Admitted.
+move => h P.
+move: (is_poly_of_base P) => [base ->].
+rewrite -poly_of_non_redundant_base.
+have ->: 'P(mk_non_redundant_base base) = 'P(mk_non_redundant_base base)%:poly_base by [].
+by apply/h/mk_non_redundant_baseP.
+Qed.
 
 End BaseQuotientAux.
 
@@ -1354,13 +1363,11 @@ have v_notin: v \notin (`[ hs [<c, α>] ]).
     by rewrite inE /= /α; apply/min_seq_ler/mapP; exists w.
 Qed.
 
-
 Lemma vertex_set_conv_subset V : (vertex_set (conv V) `<=` V)%fset.
 Proof.
 set P := conv V.
 apply/fsubsetP => v /(sep_vertex (compact_conv _)).
 Admitted.
-
 
 Definition separating_hp (e : base_elt[R,n]) (V : {fset 'cV_n}) (x : 'cV_n) :=
   (x \notin `[hs e]) && [forall v : V, (val v) \notin `[hs -e]].

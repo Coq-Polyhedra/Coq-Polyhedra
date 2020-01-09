@@ -1127,6 +1127,19 @@ rewrite in_poly_of_base. apply: (iffP forallP) => /= h.
 + by move=> b; apply: h.
 Qed.
 
+Lemma is_poly_of_base (P : 'poly[R]_n) :
+  exists base : base_t[R,n], P = 'P(base).
+Proof.
+case: {2}(hrepr P) (erefl (hrepr P)) => m A b eq.
+exists [fset [<(row i A)^T, b i 0>] | i : 'I_m]%fset.
+have equiv: forall i x, (x \in `[hs [<(row i A)^T, b i 0>]]) = ((A *m x) i 0 >= b i 0)
+  by move => ??; rewrite inE /= row_vdot.
+apply/poly_eqP => x; rewrite mem_polyE eq inE.
+apply/forallP/in_poly_of_baseP => [h ? /imfsetP [i /= _ ->] | h i].
+- by rewrite equiv; apply/h.
+- by rewrite -equiv; apply/h/in_imfset.
+Qed.
+
 Definition orthant :=
   let base := ((fun i => [<delta_mx i 0, 0>]) @` 'I_n)%fset in
   'P(base).
@@ -2016,23 +2029,101 @@ Admitted.
 End Separation.
 
 (* -------------------------------------------------------------------- *)
-Section NonRedundantBase.
+Module MkNonRedundantBase.
+Section MkNonRedundantBase.
+
 Context {R : realFieldType} {n : nat}.
 
-Implicit Types (base : base_t[R,n]).
+Fixpoint mk_nonredundant_base (base res : seq base_elt[R,n]) :=
+  match base with
+  | [::] => res
+  | e::base' =>
+    if 'P([fset e in base' ++ res]) `<=` `[hs e] then mk_nonredundant_base base' res
+    else (mk_nonredundant_base base' (e::res))
+  end.
 
-Definition redundant_be base e :=
-  'P(base) `<=` `[hp e].
-
-Lemma eliminate base e :
-  ('P(base) `<=` `[hp e]) -> 'P(e |` base) = 'P(base).
+Lemma poly_of_baseU1 (base: base_t[R,n]) (e0 : base_elt[R,n]) :
+  'P(e0 |` base) = `[hs e0] `&` 'P(base).
+Proof.
 Admitted.
 
+Lemma fset_of_cons (K : choiceType) (x : K) (l : seq K) :
+  ([fset y in x :: l] = x |` [fset y in l])%fset.
+Proof.
+by apply/fsetP => ?; rewrite !inE.
+Qed.
+
+Lemma poly_of_nonredundant_base (base0 base1: seq base_elt[R,n]) :
+  let base := mk_nonredundant_base base0 base1 in
+  'P([fset e in base]) = 'P([fset e in base0 ++ base1]).
+Proof.
+elim: base0 base1 => [//=| e base' /= h_ind base1].
+case: ifP => [ | _]; symmetry.
+- by rewrite /= !fset_of_cons !poly_of_baseU1 h_ind; apply/polyIidPr.
+- rewrite h_ind; apply/congr1.
+  by apply/fsetP => i; rewrite !inE /= orbCA.
+Qed.
+
+Lemma mk_nonredundant_base_subset (base0 base1 : seq base_elt[R,n]) :
+  {subset (mk_nonredundant_base base0 base1) <= base0 ++ base1}.
+Proof.
+elim: base0 base1 => [/= ? //| e base0 /= h_ind base1].
+case: ifP => [_ ?|_ ?].
+- by move/h_ind; rewrite inE => ->; rewrite orbT.
+- move/h_ind; rewrite mem_cat !inE mem_cat.
+  by rewrite orbCA.
+Qed.
+
+Lemma mk_nonredundant_baseP (base0 base1 : seq base_elt[R,n]) :
+  let base := mk_nonredundant_base base0 base1 in
+  forall e, e \in base -> e \notin base1 -> ~~ ('P(([fset e in base] `\ e)) `<=` `[hs e]).
+Proof.
+elim: base0 base1 => [? /= ??/negP //| e base0 /= h_ind base1].
+case: ifP => [ _| /negbT subN e']; first exact: h_ind.
+case/altP: (e =P e') => [eq | /negbTE neq ? /negbTE e'_notin].
+- rewrite !eq in subN *.
+  move => ??; move: subN; apply/contra.
+  apply/poly_subset_trans/poly_of_base_antimono/fsubsetP => i.
+  rewrite !inE /= => /andP [/negbTE neq].
+  by move/mk_nonredundant_base_subset; rewrite mem_cat inE neq /=.
+- by apply/h_ind; rewrite // inE eq_sym neq e'_notin.
+Qed.
+
+End MkNonRedundantBase.
+End MkNonRedundantBase.
+
+Section NonRedundantBase.
+
+Context {R : realFieldType} {n : nat}.
+
 Definition non_redundant_base (base : base_t[R,n]) :=
-  [forall e : base, ~~ (redundant_be (base `\ (val e))%fset (val e))].
+  [forall e : base, ~~ ('P(base `\ (val e)) `<=` `[hs (val e)])].
 
 Lemma non_redundant_baseP (base : base_t[R,n]) :
   reflect (forall e, e \in base -> ~~ ('P((base `\ e)) `<=` `[hs e])) (non_redundant_base base).
-Admitted.
+Proof.
+apply/(iffP forallP) => [h | h].
+- move => e e_in; have ->: e = val [` e_in ]%fset by [].
+  by apply/h.
+- move => ?; apply/h; exact: valP.
+Qed.
+
+Definition mk_non_redundant_base (base : base_t[R,n]) :=
+  [fset e in MkNonRedundantBase.mk_nonredundant_base base [::]]%fset.
+
+Lemma poly_of_non_redundant_base (base : base_t[R,n]) :
+  'P(mk_non_redundant_base base) = 'P(base).
+Proof.
+rewrite MkNonRedundantBase.poly_of_nonredundant_base cats0.
+by apply/congr1/fsetP => ?; rewrite inE.
+Qed.
+
+Lemma mk_non_redundant_baseP (base : base_t[R,n]) :
+  non_redundant_base (mk_non_redundant_base base).
+Proof.
+apply/non_redundant_baseP => e e_in_base.
+apply/MkNonRedundantBase.mk_nonredundant_baseP => //=.
+by rewrite /mk_non_redundant_base inE in e_in_base.
+Qed.
 
 End NonRedundantBase.
