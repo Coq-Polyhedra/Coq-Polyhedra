@@ -1020,14 +1020,23 @@ move: dim1; rewrite dim_hull hullN0_eq //.
 by rewrite (affine_orth x_in_hullP) dim_affine => /succn_inj/eqP; rewrite dimv_eq0 => /eqP ->.
 Qed.
 
-Lemma dim_line (Ω d : 'cV[R]_n) :
-  d != 0 -> dim (`[line d & Ω] ) = 2%N.
+Lemma line_affine (Ω d : 'cV[R]_n) :
+  `[line d & Ω] = `[affine <[d]> & Ω ].
 Proof.
-suff eq : `[line d & Ω] = `[affine <[d]> & Ω ].
-- by rewrite eq dim_affine dim_vline => ->.
-- apply/poly_eqP => x; apply/in_lineP/in_mk_affineP => [[μ ->] | [y /vlineP [μ ->]]].
-  + by exists (μ *: d); rewrite ?memvZ ?memv_line.
-  + by exists μ.
+apply/poly_eqP => x; apply/in_lineP/in_mk_affineP => [[μ ->] | [y /vlineP [μ ->]]].
++ by exists (μ *: d); rewrite ?memvZ ?memv_line.
++ by exists μ.
+Qed.
+
+Lemma line0 (v : 'cV[R]_n) :
+  `[line 0 & v] = `[pt v].
+Admitted.
+
+Lemma dim_line (Ω d : 'cV[R]_n) :
+  (dim (`[line d & Ω] ) = (d != 0%R).+1)%N.
+Proof.
+case/altP: (d =P 0) => [->|]; first by rewrite /= line0 dim_pt.
+by rewrite line_affine dim_affine dim_vline => ->.
 Qed.
 
 (*
@@ -1363,17 +1372,6 @@ have v_notin: v \notin (`[ hs [<c, α>] ]).
     by rewrite inE /= /α; apply/min_seq_ler/mapP; exists w.
 Qed.
 
-Lemma vertex_set_conv_subset V : (vertex_set (conv V) `<=` V)%fset.
-Proof.
-set P := conv V.
-apply/fsubsetP => v /(sep_vertex (compact_conv _)).
-Admitted.
-
-Definition separating_hp (e : base_elt[R,n]) (V : {fset 'cV_n}) (x : 'cV_n) :=
-  (x \notin `[hs e]) && [forall v : V, (val v) \notin `[hs -e]].
-
-Notation "[ e 'separates' x 'from' V ]" := (separating_hp e V x) : poly_scope.
-
 Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
 Proof.
 move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltrNge in x_in y_in *.
@@ -1388,6 +1386,38 @@ case: (ltrP '[e.1,x] '[e.1,y]) => [/ltrW ?|?].
   + by rewrite mulrBl mul1r addrCA addrN addr0.
   + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
 Qed.
+
+Lemma argmin_polyIN (P : 'poly[R]_n) (c : 'cV_n) (bounded_P : bounded P c) :
+  argmin P c = P `&` (`[ hs -[<c, opt_value bounded_P>] ]).
+Proof.
+by rewrite argmin_polyI polyIA (polyIidPl _ _ (opt_value_lower_bound _)) .
+Qed.
+
+Lemma vertex_set_conv_subset V : (vertex_set (conv V) `<=` V)%fset.
+Proof.
+set P := conv V.
+apply/fsubsetP => v v_vtx.
+move/vertex_set_subset: (v_vtx) => v_in.
+move: v_vtx; rewrite in_vertex_setP => /face_argmin/(_ (pt_proper0 _)) => [[c] c_bounded].
+move/in_convP: v_in => {v} [w w_supp ->].
+set v := combine w => eq_argmin.
+have /forallPn [x]: ~~ [forall v : V, val v \notin `[hs -[<c, opt_value c_bounded>]]].
+- move: (in_pt_self v); rewrite eq_argmin argmin_polyIN in_polyI => /andP [_].
+  apply/contraL; move/forallP => h.
+  suff: v \in [predC `[hs -[<c, opt_value c_bounded>]]] by rewrite !inE.
+  apply/convexW; first exact: hsC_convex.
+  move => x /(fsubsetP w_supp) x_in.
+  have ->: x = val [` x_in]%fset by [].
+  by apply/h.
+rewrite negbK => x_in.
+have {x_in}: val x \in argmin P c by rewrite argmin_polyIN inE x_in andbT in_conv ?fsvalP.
+rewrite -eq_argmin in_pt => /eqP <-; exact: fsvalP.
+Qed.
+
+Definition separating_hp (e : base_elt[R,n]) (V : {fset 'cV_n}) (x : 'cV_n) :=
+  (x \notin `[hs e]) && [forall v : V, (val v) \notin `[hs -e]].
+
+Notation "[ e 'separates' x 'from' V ]" := (separating_hp e V x) : poly_scope.
 
 Lemma separating_hpP {e : base_elt[R,n]} {V : {fset 'cV_n}} {x : 'cV_n} :
   reflect ((x \notin `[hs e]) /\ (forall y, y \in conv V -> y \notin `[hs -e]))
@@ -1435,6 +1465,55 @@ Lemma face_set_compact (R : realFieldType) (n : nat) (P Q : 'poly[R]_n) :
 Proof.
 by move => ? /face_set_subset; apply/subset_compact.
 Qed.
+
+Section FaceSegment.
+
+Context {R : realFieldType} {n : nat} .
+
+Lemma line_subset_hp (e : base_elt[R,n]) (v v' : 'cV[R]_n) :
+  (v \in `[hp e]) -> (v' \in `[hp e]) -> `[line (v' - v) & v] `<=` `[hp e].
+Proof.
+rewrite !in_hp => /eqP v_in /eqP v'_in.
+apply/poly_subsetP => ? /in_lineP [μ -> ]; rewrite in_hp.
+by rewrite vdotDr vdotZr vdotBr v_in v'_in addrN mulr0 addr0.
+Qed.
+
+Lemma line_subset_hull (P : 'poly[R]_n) (v v' : 'cV[R]_n) :
+  v \in P -> v' \in P -> `[line (v' - v) & v] `<=` hull P.
+Proof.
+elim/polybW: P => base P v_in_P v'_in_P.
+have P_prop0: P `>` `[poly0] by apply/proper0P; exists v.
+rewrite hullN0_eq // affine_span; apply/big_polyIsP => e _.
+by apply/line_subset_hp; apply/(poly_subsetP (poly_base_subset_hp (valP _))).
+Qed.
+
+Lemma dim_segm (v v' : 'cV[R]_n) : dim (conv [fset v; v']%fset) = (v != v').+1.
+Proof.
+case/altP: (v =P v') => /= [ <- | neq ].
+- have ->: ([fset v; v] = [fset v])%fset by apply/fsetP => x; rewrite inE orbb.
+  by rewrite conv_pt dim_pt.
+- set S := conv _.
+  have v_in_S : v \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
+  have v'_in_S : v' \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
+  suff: hull S = `[line (v' - v) & v].
+  + rewrite dim_hull => ->; rewrite dim_line ?subr_eq0 ?neq //= 1?eq_sym.
+Admitted.
+(*
+  + apply/poly_subset_anti; last exact: line_subset_hull.
+    Search _ hull.
+
+  Search _ (dim _ = 2)%N.
+  Search _ hull.
+
+  Search _ (`[pt _]).
+
+
+Search _ [fset _; _]%fset.
+ *)
+
+End FaceSegment.
+
+
 
 Section VertexFigure.
 
