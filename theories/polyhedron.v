@@ -293,14 +293,12 @@ Qed.
 
 Lemma big_polyI_mono (I : Type) (r : seq I) (P : pred I) (F : I -> 'hpoly[R]_n) :
   \polyI_(i <- r | P i) '[F i] = '[\big[H.polyI/H.polyT]_(i <- r | P i) (F i)].
-Proof. Admitted.
-(*
-have class_of_morph : {morph (@mk_poly R n) : x y / H.polyI x y >-> polyI x y}.
+Proof.
+have class_of_morph : {morph (fun x : 'hpoly[R]_n => '[x]) : x y / H.polyI x y >-> polyI x y}.
 - by move => Q Q'; rewrite polyI_mono.
 have polyT_mono : '[H.polyT] = polyT by done.
 by rewrite (@big_morph _ _ _ _ _ _ _ class_of_morph polyT_mono).
 Qed.
-*)
 
 Lemma in_hs : (forall b x, x \in (`[hs b]) = ('[b.1,x] >= b.2))
               * (forall c α x, x \in (`[hs [<c, α>]]) = ('[c,x] >= α)).
@@ -497,12 +495,14 @@ Qed.
 Lemma projP {k : nat} {P : 'poly[R]_(k+n)} {x} :
   reflect (exists y, col_mx y x \in P) (x \in proj P).
 Proof.
-Admitted.
+by rewrite repr_equiv; apply/(iffP (H.projP _ _)) => [[y h]| [y h]]; exists y; rewrite mem_polyE in h *.
+Qed.
 
 Lemma in_lift_poly (k : nat) (P : 'poly[R]_n) x :
   (x \in lift_poly k P) = (usubmx x \in P).
 Proof.
-Admitted.
+by rewrite repr_equiv H.lift_polyP mem_polyE.
+Qed.
 
 Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
   v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
@@ -1537,6 +1537,11 @@ move => x x_in_V; apply/in_convP.
 by exists (fcvx1 x); rewrite ?finsupp_fcvx1 ?fsub1set ?combine_fcvx1.
 Qed.
 
+Lemma conv_prop0 (V : {fset 'cV[R]_n}) : (V != fset0)%fset -> (conv V `>` `[poly0]).
+Proof.
+by move/fset0Pn => [v ?];  apply/proper0P; exists v; apply/in_conv.
+Qed.
+
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
   reflect
     (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω')
@@ -1547,10 +1552,15 @@ apply: Bool.iff_reflect;
   exact: cvxsegP.
 Qed.
 
-Lemma compact_conv (V : {fset 'cV[R]_n}) : V != fset0 -> compact (conv V).
+Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
 Proof.
-move => V_prop0; apply/compactP.
-Admitted.
+case/altP: (V =P fset0) => [->| V_neq0]; first by rewrite conv0 compact0.
+set P := conv V.
+have P_prop0 := conv_prop0 V_neq0.
+apply/(compactP P_prop0) => c; apply/(bounded_lower_bound _ P_prop0).
+exists (min_seq [seq '[c,v] | v <- V] 0%R).
+by apply/convexP => v v_in; rewrite inE /= min_seq_ler ?map_f.
+Qed.
 
 End Hull.
 
@@ -1600,7 +1610,12 @@ by rewrite comp_lfunE !lfunE.
 Qed.
 
 Lemma dim_mk_affine_fun U Ω : (\dim ((mk_affine_fun Ω) @: U) = \dim U)%N.
-Admitted.
+Proof.
+apply/limg_dim_eq/subv_anti/andP; split; rewrite ?sub0v //.
+apply/subvP => v; rewrite memv_cap memv_ker => /andP [h /eqP].
+move/(congr1 befst); rewrite -comp_lfunE befstE id_lfunE linear0 => ->.
+by rewrite memv0.
+Qed.
 
 Definition mk_affine U Ω :=
   affine ((mk_affine_fun Ω) @: U^OC)%VS.
@@ -1673,9 +1688,19 @@ Proof.
 by rewrite affine_span polyIC.
 Qed.
 
+Lemma affine_subset_poly_of_base (base : base_t[R,n]) :
+  affine << base >> `<=` 'P(base).
+Proof.
+apply/poly_subsetP => x /in_affine x_in.
+apply/in_poly_of_baseP => e /memv_span/x_in.
+by apply/(poly_subsetP (hp_subset_hs _)).
+Qed.
+
 Lemma polyEqT_affine (base : base_t[R,n]) :
   'P^=(base; base) = affine << base >>.
-Admitted.
+Proof.
+rewrite polyEq_affine; apply/polyIidPr/affine_subset_poly_of_base.
+Qed.
 
 Lemma affineS :
   {homo affine : U V / (U <= V)%VS >-> (U `>=` V)%VS}.
@@ -1970,9 +1995,14 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
     apply/in_poly_of_baseP => ? /imfsetP [v _ ->].
     by rewrite in_hs /= vdot0r.
   move/(farkas non_empty) => [w w_pweight [combine_eq _]].
-  apply/in_convP.
-(*
+  apply/in_convP. Search _ (_ \o _)%fsfun in finmap.
   pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v : V => w (homogenize (val v))]%fset.
+  suff w'_cvx : convex w'.
+  + exists (mkConvexfun w'_cvx).
+(*
+
+    Search _ convex.
+
   suff /eq_col_mx [ <- /(scalar_mx_inj (ltnSn 0)) sum_eq1]:
     col_mx (\bary[w'] V) (\sum_(v <- V) (w' v))%:M = col_mx x 1%:M.
   + exists w'; last done.

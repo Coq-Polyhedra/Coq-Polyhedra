@@ -1317,9 +1317,6 @@ case: (emptyP P) => [-> _| P_prop0 P_compact].
     exact: vertex_set_subset.
 Qed.
 
-(*Lemma vertex_set_conv_subset V : (vertex_set (conv V) `<=` V)%fset.
-Admitted.*)
-
 Lemma notin_argmin (P : 'poly_n) (c : 'cV[R]_n) (bounded_P : bounded P c) :
   forall x, x \in P -> x \notin argmin P c -> x \notin `[hs - ([<c, opt_value bounded_P>])].
 Proof.
@@ -1356,6 +1353,14 @@ have v_notin: v \notin (`[ hs [<c, α>] ]).
   + apply/polyhedron.convexP => w w_in.
     by rewrite inE /= /α; apply/min_seq_ler/mapP; exists w.
 Qed.
+
+
+Lemma vertex_set_conv_subset V : (vertex_set (conv V) `<=` V)%fset.
+Proof.
+set P := conv V.
+apply/fsubsetP => v /(sep_vertex (compact_conv _)).
+Admitted.
+
 
 Definition separating_hp (e : base_elt[R,n]) (V : {fset 'cV_n}) (x : 'cV_n) :=
   (x \notin `[hs e]) && [forall v : V, (val v) \notin `[hs -e]].
