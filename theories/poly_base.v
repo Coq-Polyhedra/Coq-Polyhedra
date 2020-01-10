@@ -984,23 +984,22 @@ suff: (<< {eq P} >> = << {eq Q} >>)%VS.
   by apply/span_activeS.
 Qed.
 
-Lemma face_proper_ltn_dim (P Q : 'poly[R]_n) :
-  P \in face_set Q -> P != Q -> (dim P < dim Q)%N.
+Lemma face_dim_geq (P Q : 'poly[R]_n) :
+  P \in face_set Q -> (dim P >= dim Q)%N -> P = Q.
 Proof.
-move => P_face_Q.
-by move/face_dim_leqif_eq/ltn_leqif: (P_face_Q) ->.
+move/face_dim_leqif_eq/geq_leqif => h dim_geq.
+by rewrite dim_geq in h; move/esym/eqP: h.
 Qed.
 
-(*
-Lemma hull_pt (x : 'cV[R]_n) :
-  hull (`[pt x]) = (`[pt x]) :> 'poly[R]_n.
-Admitted.
- *)
+Lemma face_dim_eq (P Q : 'poly[R]_n) :
+  P \in face_set Q -> dim P = dim Q -> P = Q.
+Proof.
+by move => ? dim_eq; apply/face_dim_geq; rewrite ?dim_eq.
+Qed.
 
 Lemma dim_pt (x : 'cV[R]_n) :
   dim (`[pt x]) = 1%N.
 Proof.
-(* this proof would be easier if `[pt x] was defined as an affine subspace *)
 by rewrite dim_affine dimv0.
 Qed.
 
@@ -1148,10 +1147,9 @@ have i_not_in_affP: i \notin << {eq P} >>%VS.
 rewrite !dimN0_eq ?facet_proper0 //; apply: congr1.
 rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.
 suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
-apply/(leq_ltn_trans _ (face_proper_ltn_dim (P := S) _ _)).
-- by rewrite -dimN0 facet_proper0.
-- rewrite face_setE; exact: poly_properW.
-- exact: poly_proper_neq.
+have S_face : pval S \in face_set P by rewrite face_setE; exact: poly_properW.
+move/contra_neqN/(_ (poly_proper_neq S_prop_P)): (face_dim_geq S_face).
+by rewrite -ltnNge; apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
 Qed.
 
 End Facet.
@@ -1270,6 +1268,10 @@ apply/imfsetP/idP => /=.
   exists (`[pt x]); rewrite ?ppick_pt //=.
   by apply/andP; split; rewrite ?dim_pt.
 Qed.
+
+Lemma face_dim1 (P Q : 'poly[R]_n) :
+  Q \in face_set P -> dim Q = 1%N -> exists2 x, Q = `[pt x] & x \in vertex_set P.
+Admitted.
 
 Lemma vertex_setS (P Q : 'poly[R]_n) :
   P \in face_set Q -> (vertex_set P `<=` vertex_set Q)%fset.
@@ -1487,13 +1489,24 @@ rewrite hullN0_eq // affine_span; apply/big_polyIsP => e _.
 by apply/line_subset_hp; apply/(poly_subsetP (poly_base_subset_hp (valP _))).
 Qed.
 
+Lemma in_segm (v v' : 'cV[R]_n) : (v \in conv [fset v; v']%fset) * (v' \in conv [fset v; v']%fset).
+Proof.
+split; by apply/in_conv; rewrite !inE eq_refl ?orbT.
+Qed.
+
+Definition in_segml v v' := (in_segm v v').1.
+Definition in_segmr v v' := (in_segm v v').2.
+
+Lemma segm_prop0 (v v' : 'cV[R]_n) : (conv [fset v; v']%fset `>` `[poly0]).
+Proof.
+apply/proper0P; exists v; apply/in_segml.
+Qed.
+
 Lemma line_hull (v v' : 'cV[R]_n) :
   hull (conv [fset v; v']%fset) = `[line (v' - v) & v].
 Proof.
 set S := conv _.
-have v_in_S : v \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
-have v'_in_S : v' \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
-apply/poly_subset_anti; last by apply/line_subset_hull.
+apply/poly_subset_anti; last by apply/line_subset_hull; [rewrite in_segml | rewrite in_segmr].
 have eq := line_affine v (v' - v); rewrite /mk_affine in eq.
 rewrite eq -hullP -eq. (* TODO: we shouldn't have to use /mk_affine *)
 apply/polyhedron.convexP => x; rewrite !inE => /orP; case => /eqP ->; apply/in_lineP.
@@ -1511,11 +1524,39 @@ Lemma vertex_set_segm (v v' : 'cV[R]_n) :
 Proof.
 set V := [fset _; _]%fset; set S := conv _.
 have sub: (vertex_set S `<=` V)%fset by apply/vertex_set_conv_subset.
-apply/eqP; rewrite eqEfproper sub /=.
-apply/fproperP => [[_] [x x_in_V]].
-have x_in_S : x \in S by apply/in_conv.
-rewrite [S]atomic ?compact_conv in x_in_S.
-Admitted.
+apply/eqP; rewrite eqEfcard sub /=.
+move: (atomic (compact_conv [fset v; v']%fset)); rewrite -/S.
+apply/contra_eqT => /=; rewrite -ltnNge cardfs2 ltnS.
+case/altP: (#|` vertex_set S| =P 0%N) => /= [ /cardfs0_eq -> _|].
+- by rewrite conv0 equiv0N_proper segm_prop0.
+- rewrite -lt0n => card_gt0.
+  case/altP: (v =P v') => /= [_| neq card_le1].
+  + by rewrite leqn0 => /eqP card_eq0; rewrite card_eq0 in card_gt0.
+  + have {card_gt0} {card_le1} /eqP/cardfs1P [x ->]: #|` vertex_set S| = 1%N by apply/anti_leq/andP; split.
+    apply/eqP; move/(congr1 (@dim R n)).
+    by rewrite conv_pt dim_pt dim_segm neq.
+Qed.
+
+Lemma face_set_segm (v v' : 'cV[R]_n) :
+  face_set (conv [fset v; v']%fset) = [fset `[poly0]; `[pt v]; `[pt v']; (conv [fset v; v']%fset)]%fset.
+Proof.
+set S := conv _.
+apply/eqP; rewrite eqEfsubset; apply/andP; split; last first.
+- apply/fsubsetP => F; rewrite !inE -!orbA; move/or4P.
+  case; move/eqP ->;
+    by rewrite ?poly0_face_set ?face_set_self -?in_vertex_setP ?vertex_set_segm ?inE ?eq_refl ?orbT.
+- apply/fsubsetP => F F_face; rewrite !inE -!orbA.
+  case: {2}(dim F) (erefl (dim F)).
+  + by move/dim_eq0 ->; rewrite eq_refl.
+  + case. move/(face_dim1 F_face) => [x ->].
+    by rewrite vertex_set_segm !inE => /orP; case => /eqP ->; rewrite eq_refl /= ?orbT.
+  + case. move => dimF2.
+    have /(face_dim_geq F_face) ->: (dim F >= dim S)%N.
+    * by rewrite dimF2 dim_segm; apply/(leq_ltn_trans (leq_b1 _)).
+    * by rewrite eq_refl !orbT.
+  + move => k dimF_eq; move: (face_dim_leqif_eq F_face).1; rewrite dim_segm dimF_eq ltnS.
+    by move/leq_trans/(_ (leq_b1 _)); rewrite -ltn_predRL /= ltn0.
+Qed.
 
 End FaceSegment.
 
