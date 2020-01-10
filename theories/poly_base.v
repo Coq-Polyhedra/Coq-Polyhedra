@@ -1487,33 +1487,37 @@ rewrite hullN0_eq // affine_span; apply/big_polyIsP => e _.
 by apply/line_subset_hp; apply/(poly_subsetP (poly_base_subset_hp (valP _))).
 Qed.
 
+Lemma line_hull (v v' : 'cV[R]_n) :
+  hull (conv [fset v; v']%fset) = `[line (v' - v) & v].
+Proof.
+set S := conv _.
+have v_in_S : v \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
+have v'_in_S : v' \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
+apply/poly_subset_anti; last by apply/line_subset_hull.
+have eq := line_affine v (v' - v); rewrite /mk_affine in eq.
+rewrite eq -hullP -eq. (* TODO: we shouldn't have to use /mk_affine *)
+apply/polyhedron.convexP => x; rewrite !inE => /orP; case => /eqP ->; apply/in_lineP.
+- by exists 0; rewrite scale0r addr0.
+- by exists 1; rewrite scale1r addrCA addrN addr0.
+Qed.
+
 Lemma dim_segm (v v' : 'cV[R]_n) : dim (conv [fset v; v']%fset) = (v != v').+1.
 Proof.
-case/altP: (v =P v') => /= [ <- | neq ].
-- have ->: ([fset v; v] = [fset v])%fset by apply/fsetP => x; rewrite inE orbb.
-  by rewrite conv_pt dim_pt.
-- set S := conv _.
-  have v_in_S : v \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
-  have v'_in_S : v' \in S by apply/in_conv; rewrite !inE eq_refl ?orbT.
-  suff: hull S = `[line (v' - v) & v].
-  + rewrite dim_hull => ->; rewrite dim_line ?subr_eq0 ?neq //= 1?eq_sym.
+by rewrite dim_hull line_hull dim_line subr_eq0 eq_sym.
+Qed.
+
+Lemma vertex_set_segm (v v' : 'cV[R]_n) :
+  vertex_set (conv [fset v; v']%fset) = [fset v; v']%fset.
+Proof.
+set V := [fset _; _]%fset; set S := conv _.
+have sub: (vertex_set S `<=` V)%fset by apply/vertex_set_conv_subset.
+apply/eqP; rewrite eqEfproper sub /=.
+apply/fproperP => [[_] [x x_in_V]].
+have x_in_S : x \in S by apply/in_conv.
+rewrite [S]atomic ?compact_conv in x_in_S.
 Admitted.
-(*
-  + apply/poly_subset_anti; last exact: line_subset_hull.
-    Search _ hull.
-
-  Search _ (dim _ = 2)%N.
-  Search _ hull.
-
-  Search _ (`[pt _]).
-
-
-Search _ [fset _; _]%fset.
- *)
 
 End FaceSegment.
-
-
 
 Section VertexFigure.
 
