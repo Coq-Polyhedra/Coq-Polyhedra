@@ -1350,7 +1350,7 @@ rewrite !in_fsetE in_oppbase (negbTE cNb) /=.
 by rewrite -(in_oppbase I) -(in_oppbase J) /= opprK.
 Qed.
 
-Lemma in_imfset {T U : choiceType} (f : T -> U) (A : {fset T}) x :
+Lemma in_imfset0 {T U : choiceType} (f : T -> U) (A : {fset T}) x :
   x \in A -> f x \in (f @` A)%fset.
 Proof. by move=> xA; apply/imfsetP; exists x. Qed.
 
@@ -1380,7 +1380,7 @@ rewrite 2!in_fsetE => /andP[Ncb] /orP[cI|cJ].
     exists [`cb]%fset => //; apply/imfsetP => //=.
     by exists [`cb]%fset => //; rewrite inE 2!in_fsetE /= cJ cb orbT.
   - move: cNb; rewrite -{1}[c]opprK (in_oppbase I).
-    move/(fsubsetP (valP I)) => /(in_imfset -%R).
+    move/(fsubsetP (valP I)) => /(in_imfset imfset_key -%R) /=.
     by rewrite opprK (negbTE Ncb).
 Qed.                            (* FIXME: QED is too long! *)
 
@@ -2008,7 +2008,7 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
     apply/in_poly_of_baseP => ? /imfsetP [v _ ->].
     by rewrite in_hs /= vdot0r.
   move/(farkas non_empty) => [w w_pweight [combine_eq _]].
-  apply/in_convP. Search _ (_ \o _)%fsfun in finmap.
+  apply/in_convP.
   pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v : V => w (homogenize (val v))]%fset.
   suff w'_cvx : convex w'.
   + exists (mkConvexfun w'_cvx).
