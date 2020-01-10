@@ -1029,7 +1029,10 @@ Qed.
 
 Lemma line0 (v : 'cV[R]_n) :
   `[line 0 & v] = `[pt v].
-Admitted.
+Proof.
+apply/poly_eqP => x; rewrite in_pt.
+apply/in_lineP/eqP => [[?]|->]; try exists 0; by rewrite scaler0 addr0.
+Qed.
 
 Lemma dim_line (Ω d : 'cV[R]_n) :
   (dim (`[line d & Ω] ) = (d != 0%R).+1)%N.
@@ -1269,9 +1272,19 @@ apply/imfsetP/idP => /=.
   by apply/andP; split; rewrite ?dim_pt.
 Qed.
 
+Lemma dim1_pt_pick (P : 'poly[R]_n) :
+  dim P = 1%N -> P = `[pt (ppick P)].
+Proof.
+by move/eqP/dim_ptP => [? ->]; rewrite ppick_pt.
+Qed.
+
 Lemma face_dim1 (P Q : 'poly[R]_n) :
   Q \in face_set P -> dim Q = 1%N -> exists2 x, Q = `[pt x] & x \in vertex_set P.
-Admitted.
+Proof.
+move => Q_face dimQ1; exists (ppick Q).
+- by apply/dim1_pt_pick.
+- by apply/in_imfset => /=; rewrite !inE Q_face dimQ1 eq_refl.
+Qed.
 
 Lemma vertex_setS (P Q : 'poly[R]_n) :
   P \in face_set Q -> (vertex_set P `<=` vertex_set Q)%fset.
