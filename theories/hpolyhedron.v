@@ -607,33 +607,29 @@ Qed.
 
 Definition pointed P :=
   ~~ (poly_subset P poly0) ==>
-  let: HPoly _ A _ := P in
-    Simplex.pointed A.
+  let: HPoly _ A _ := P in Simplex.pointed A.
 
 Lemma pointedPn P :
-  ~~ (poly_subset P poly0) ->
-    reflect (exists (d : 'cV[R]_n), ((d != 0) /\ (forall x, x \in P -> (forall λ, x + λ *: d \in P)))) (~~ pointed P).
+  reflect (exists x, exists2 d, (d != 0) & (forall μ, x + μ *: d \in P)) (~~ pointed P).
 Proof. (* RK *)
-case: P => m A b non_empty_P.
-rewrite /pointed non_empty_P /=.
-have feasible_P: exists x, x \in HPoly A b
-    by move/poly_subsetPn: non_empty_P => [x ? _]; exists x.
-apply/(equivP (Simplex.pointedPn A) _); split =>
-  [[d [? /Simplex.feasible_dirP d_feas_dir /Simplex.feasible_dirP md_feas_dir]] | [d [? d_recession_dir]]];
-    exists d; split; try by done.
-- move => x x_in_P λ.
-  case: (boolP (0 <= λ)) => [? | ?].
-  + by apply: d_feas_dir.
+case: P => [m A b].
+rewrite /pointed; apply/(iffP idP).
+- rewrite negb_imply => /andP [/poly_subsetPn [x x_in _]].
+  move/Simplex.pointedPn =>
+  [d [d_neq0 /Simplex.feasible_dirP d_feas_dir /Simplex.feasible_dirP md_feas_dir]].
+  exists x; exists d => //.
+  move => μ; case: (lerP 0 μ) => [?|?].
+  + apply/d_feas_dir => //; exists x => //.
   + rewrite -[d]opprK scalerN -scaleNr.
-    apply: md_feas_dir; try by done.
-    by rewrite oppr_ge0; apply: ltrW; rewrite ltrNge.
-- apply/(@Simplex.feasible_dirP _ _ _ _ b); try by done.
-  by move => x x_in_P λ _; apply: d_recession_dir.
-- apply/(@Simplex.feasible_dirP _ _ _ _ b); try by done.
-  move => x x_in_P λ _; rewrite scalerN -scaleNr.
-  by apply: d_recession_dir.
+    apply/md_feas_dir => //.
+    by rewrite oppr_ge0 ltrW.
+- move => [x [d d_neq0 sub]].
+  have x_in : x \in HPoly A b by move/(_ 0): sub; rewrite scale0r addr0.
+  have -> /=: ~~ poly_subset (HPoly A b) poly0 by apply/poly_subsetPn; exists x => //; rewrite in_poly0.
+  apply/Simplex.pointedPn.
+  by exists d; split => //; apply/(Simplex.feasible_dirP _ x_in) => [μ _];
+     rewrite ?scalerN -?scaleNr; apply/sub.
 Qed.
-
 
 Lemma convexP2 (P : 'hpoly[R]_n) (v w : 'cV[R]_n) α :
   v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
