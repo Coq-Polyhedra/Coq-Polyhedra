@@ -478,7 +478,7 @@ Qed.
 End SubConvexTheory.
 
 (* -------------------------------------------------------------------- *)
-Section ConvexUniform.
+(*Section ConvexUniform.
 Context {T : choiceType} {R : numDomainType}.
 
 Implicit Type S : {fset T}.
@@ -508,7 +508,7 @@ Proof.
 apply/fsetP => y; rewrite mem_finsupp fconvexuE.
 Admitted.
 
-End ConvexUniform.
+End ConvexUniform.*)
 
 (* -------------------------------------------------------------------- *)
 Section CvxDirac.

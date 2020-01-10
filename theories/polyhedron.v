@@ -969,33 +969,18 @@ Qed.
 
 Lemma pointed0 : pointed (`[poly0]).
 Proof.
-rewrite /pointed /H.pointed.
+rewrite /pointed /H.pointed /=.
 suff ->: H.poly_subset (hrepr (`[ poly0 ])) H.poly0 by done.
 by apply/H.poly_subsetP => x; rewrite repr_equiv.
 Qed.
 
 Lemma pointedPn P :
-  reflect (exists Ω, exists2 c, c != 0 & `[line c & Ω] `<=` P) (~~ (pointed P)).
+  reflect (exists Ω, exists2 d, d != 0 & `[line d & Ω] `<=` P) (~~ (pointed P)).
 Proof.
-Admitted.
-(*
-  move => P_neq0.
-have hreprP_neq0 : ~~ (H.poly_subset (hrepr P) H.poly0).
-- move: P_neq0; rewrite -subset0N_proper; apply: contraNN.
-  move/H.poly_subsetP => hreprP_le0.
-  apply/poly_subsetP => x.
- rewrite -[P]hreprK.
- repr_equiv => /hreprP_le0.
-  by rewrite H.in_poly0.
-apply: (iffP (H.pointedPn hreprP_neq0)) => [[c [? incl]] | [c [? incl]]];
-  exists c; split; try by done.
-- move => Ω Ω_in_P.
-  apply/poly_subsetP => x /in_lineP [μ ->].
-  exact: incl.
-- move => μ μ_in_P λ.
-  apply/(poly_subsetP (incl _ μ_in_P))/in_lineP.
-  by exists λ.
-*)
+apply/(iffP (H.pointedPn _)) => [[x [d] d_neq0 sub]| [x [d] d_neq0 sub]]; exists x; exists d => //.
+- by apply/poly_subsetP => ? /in_lineP [μ ->]; apply/sub.
+- by move => μ; apply/(poly_subsetP sub)/in_lineP; exists μ.
+Qed.
 
 Lemma pointedS (P Q : 'poly[R]_n) :
   P `<=` Q -> pointed Q -> pointed P.
@@ -2042,10 +2027,30 @@ Fixpoint mk_nonredundant_base (base res : seq base_elt[R,n]) :=
     else (mk_nonredundant_base base' (e::res))
   end.
 
+Lemma poly_of_baseU (base base': base_t[R,n]) :
+  'P(base `|`  base') = 'P(base) `&` 'P(base').
+Proof.
+apply/poly_eqP => x; rewrite inE.
+apply/in_poly_of_baseP/andP => [x_in | [/in_poly_of_baseP x_in /in_poly_of_baseP x_in']].
+- by split; apply/in_poly_of_baseP => e e_in;
+            apply/x_in; move: e_in; apply/fsubsetP;
+            [apply/fsubsetUl | apply/fsubsetUr].
+- by move => e; rewrite inE => /orP; case; [apply/x_in | apply/x_in'].
+Qed.
+
+Lemma poly_of_base1 (e : base_elt[R,n]) :
+  'P([fset e]) = `[hs e].
+Proof.
+apply/poly_eqP => x; apply/in_poly_of_baseP/idP => [x_in | x_in ?].
+- by apply/x_in; rewrite inE eq_refl.
+- by rewrite inE => /eqP ->.
+Qed.
+
 Lemma poly_of_baseU1 (base: base_t[R,n]) (e0 : base_elt[R,n]) :
   'P(e0 |` base) = `[hs e0] `&` 'P(base).
 Proof.
-Admitted.
+by rewrite poly_of_baseU poly_of_base1.
+Qed.
 
 Lemma fset_of_cons (K : choiceType) (x : K) (l : seq K) :
   ([fset y in x :: l] = x |` [fset y in l])%fset.
