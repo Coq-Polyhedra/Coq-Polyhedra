@@ -1771,3 +1771,88 @@ Qed.
  *)
 
 End VertexFigure.
+
+Section Graph.
+
+Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
+
+Hypothesis P_compact : compact P.
+
+Implicit Types (v w : 'cV[R]_n).
+
+Definition adj :=
+  [rel v w : 'cV[R]_n | (v != w) && (conv [fset v; w]%fset \in face_set P)].
+
+Lemma adj_sym : symmetric adj.
+Proof.
+by move => ??; rewrite /= eq_sym fsetUC.
+Qed.
+
+Lemma adj_vtx v w : adj v w -> v \in vertex_set P /\ w \in vertex_set P.
+Proof.
+by move/andP => [_] segm_face; split; apply/(fsubsetP (vertex_setS segm_face));
+   rewrite vertex_set_segm; rewrite !inE eq_refl ?orbT.
+Qed.
+
+Lemma convS : {homo (@conv R n) : P Q / (P `<=` Q)%fset >-> P `<=` Q}.
+Admitted.
+
+Lemma face_dim2 (Q : 'poly[R]_n) :
+  (Q `>` `[poly0]) -> compact Q -> (dim Q <= 2)%N -> exists v, exists w, Q = conv [fset v; w]%fset.
+Proof.
+elim/polybW : Q => base Q Q_prop0 Q_compact dimQ_le2.
+have Q_pointed := compact_pointed Q_compact.
+rewrite [pval Q]conv_vertex_set //.
+case/altP : (vertex_set Q =P fset0) => [eq0| /fset0Pn [v v_vtx]].
+- by move: Q_prop0; rewrite [pval Q]conv_vertex_set ?eq0 ?conv0 ?poly_properxx.
+- exists v; case/altP : (vertex_set Q =P [fset v]%fset) => [->| neq_v].
+  + exists v; by rewrite fsetUid conv_pt.
+  + have {dimQ_le2} dimQ2 : dim Q = 2%N.
+    * admit.
+    have v_in: v \in Q by apply/vertex_set_subset.
+    pose sep := (conv_sep_hp (sep_vertex Q_compact v_vtx)).
+    set e0 := xchoose sep; set F := slice e0 Q.
+    have: (dim F = 1)%N.
+    * symmetry; apply/succn_inj; rewrite -dimQ2.
+      apply/(vf_dim Q_compact v_vtx); first by apply/(xchooseP sep).
+        by rewrite ?inE face_set_self v_in.
+Admitted.
+(*
+
+    apply/
+
+      Search _ dim slice.
+
+    (vf_surj Q_compact v_in (xchooseP sep)).
+
+    elim/polybW: Q Q_prop0 Q_compact dimQ_le2 Q_pointed v_in neq_v => base Q Q_prop0 Q_compact dimQ_le2 Q_pointed v_in neq_v.
+
+
+  + have {neq_v} /fproperP [_ [w w_vtx]] : ([fset v] `<` (vertex_set Q))%fset.
+    * admit.
+    rewrite inE => w_neq_v.
+    have sub: ([fset v; w] `<=` (vertex_set Q))%fset
+      by apply/fsubsetP => ? /fset2P; case => ->.
+    exists w; apply/poly_subset_anti; last by apply/convS.
+    suff /convS: (vertex_set Q `<=` [fset v; w])%fset by [].
+    apply: contraT => subN.
+    have {sub} {subN} /fproperP [_ [x x_in x_notin]]: ([fset v; w] `<` (vertex_set Q))%fset
+      by rewrite fproperE sub subN.
+    have wv_in_hull : w - v \in hull Q.
+    Search _ hull.
+
+
+    Search _ (~~ (_ `<=` _)%fset).
+
+      Search _ conv.
+
+
+have: (#|` vertex_set Q| <= 2)%N.
+- Search _ 2%N in fintype.
+
+
+have Q_pointed : pointed Q by apply/(face_pointed (compact_pointed P_compact)).
+move/fset0Pn: (vertex_setN0 Q_prop0 Q_pointed) => [v v_vtx].
+ *)
+
+End Graph.
