@@ -1965,72 +1965,85 @@ End Duality.
 
 Section Separation.
 
-Variable (R : realFieldType) (n : nat) (V : {fset 'cV[R]_n}) (x : 'cV[R]_n).
+Variable (R : realFieldType) (n : nat).
+
+Definition homog (x : 'cV[R]_n) : base_elt[R,n+1] := [<col_mx x (1%:M), 0>].
+
+Definition inv_homog (e : base_elt[R,n+1]) : 'cV[R]_n := usubmx e.1.
+
+Lemma homogK : cancel homog inv_homog.
+Proof.
+move => x; by rewrite /inv_homog col_mxKu.
+Qed.
+
+Variable (V : {fset 'cV[R]_n}).
+
+Let base := (homog @` V)%fset.
+
+Lemma homog_in x : x \in V -> homog x \in base.
+Proof.
+by move => ?; apply/in_imfset.
+Qed.
+
+Definition lift_homog (x : V) := [` homog_in (fsvalP x)]%fset.
+
+Lemma lift_homog_inj : injective lift_homog.
+Proof.
+move => x y /(congr1 val)/(congr1 inv_homog) /=.
+by rewrite !homogK; move/val_inj.
+Qed.
+
+Lemma lift_homog_bij : bijective lift_homog.
+Proof.
+have ex_inv : forall e, e \in base -> exists x : V, e == homog (val x).
+- move => e /imfsetP [x /= x_in_V ->].
+  by exists [` x_in_V]%fset => /=.
+pose inv (e : base) := xchoose (ex_inv _ (fsvalP e)).
+suff h: cancel inv lift_homog.
+- exists inv => //.
+  by move => x; apply/lift_homog_inj; rewrite h.
+- move => e; apply/val_inj => /=.
+  by move/eqP: (xchooseP (ex_inv _ (fsvalP e))) ->.
+Qed.
+
+Variable (x : 'cV[R]_n).
 
 Lemma separation :
   x \notin conv V -> exists2 e, x \notin `[hs e] & (conv V `<=` `[hs e]).
 Proof.
-pose homogenize v : base_elt[R,n+1] := [<col_mx v (1%:M), 0>].
-pose base : base_t[R,n+1] := (homogenize @` V)%fset.
 move => x_notin.
-suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
+suff: ~~ ('P(base) `<=` `[hs (homog x)]).
 - move/poly_subsetPn => [z z_in z_notin].
   pose e := [<usubmx z, - (dsubmx z 0 0)>].
+  have in_hs_e: forall y, (y \in `[hs e]) = (z \in `[hs (homog y)]).
+  + move => y; rewrite 2!in_hs -{1}[z]vsubmxK vdot_col_mx vdot1 vdotC.
+    by rewrite -lter_sub_addr add0r.
   exists e.
-  + move: z_notin; apply: contraNN.
-    rewrite !in_hs /=.
-    rewrite -{3}[z]vsubmxK vdot_col_mx vdot1 vdotC.
-    by rewrite -lter_sub_addr add0r.
-  + apply/convexP => v v_in_V; rewrite in_hs /=.
-    have: homogenize v \in base by exact: in_imfset.
-    move/poly_of_base_subset_hs/poly_subsetP/(_ _ z_in).
-    rewrite in_hs /= -{1}[z]vsubmxK vdot_col_mx vdot1 vdotC.
-      (* TODO: redundant with what's above *)
-    by rewrite -lter_sub_addr add0r.
+  + by move: z_notin; apply/contraNN; rewrite in_hs_e.
+  + apply/convexP => v v_in_V; rewrite in_hs_e.
+    have: homog v \in base by exact: in_imfset.
+    by move/poly_of_base_subset_hs/poly_subsetP/(_ _ z_in).
 - move: x_notin; apply: contraNN.
   have non_empty: 'P(base) `>` `[poly0].
   + apply/proper0P; exists 0.
     apply/in_poly_of_baseP => ? /imfsetP [v _ ->].
     by rewrite in_hs /= vdot0r.
-  move/(farkas non_empty) => [w w_pweight [combine_eq _]].
-  apply/in_convP.
-  pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v in V => w (homogenize v)]%fset.
-  have homo_in_base: forall v : V, homogenize (val v) \in base.
-  + move => v; apply/in_imfset/fsvalP.
-    pose lift_homo : V -> base := fun v => [` homo_in_base v]%fset.
-  have homo_bij : {on predT, bijective lift_homo}.
-  + apply/onW_bij.
-    pose g (e : base) := usubmx ((val e).1).
-    have g_in_V : forall e, g e \in V.
-    * move => e; rewrite /g.
-      move/imfsetP: (fsvalP e) => [? /= ? ->].
-      by rewrite /= col_mxKu.
-  pose lift_g (e : base) := [`g_in_V e]%fset.
-  exists lift_g => z; apply/val_inj => /=.
-  + by rewrite /lift_homo /g col_mxKu.
-  + rewrite /g; move/imfsetP: (fsvalP z) => [? /= ? ->].
-    by rewrite col_mxKu.
-  suff w'_cvx : convex w'.
-  + exists (mkConvexfun w'_cvx); first by apply/finsupp_sub.
-    move: combine_eq.
-    rewrite (combineb1E w_pweight) /=.
-    move/(congr1 usubmx); rewrite col_mxKu => <-.
-    rewrite linear_sum /=; under eq_big do [| rewrite linearZ /=].
-    rewrite (combinewE (finsupp_sub _ _ _)); rewrite (reindex _ homo_bij) => /=.
-    under eq_big do [| rewrite col_mxKu].
-    by apply/eq_big => // v _; rewrite fsfun_ffun valK /=.
+  move/(farkas non_empty) => [w w_pweight].
+  rewrite (combineb1E w_pweight); rewrite (reindex _ (onW_bij _ lift_homog_bij)) => /=.
+  under eq_big do [| rewrite scale_col_mx scalemx1]; rewrite sum_col_mx.
+  move => [combine_eq _].
+  pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v in V => w (homog v)]%fset.
+  have supp_w' : (finsupp w' `<=` V)%fset by apply/finsupp_sub.
+  have {combine_eq} : col_mx (combine w') (weight w')%:M = col_mx x 1%:M.
+  rewrite -combine_eq (combinewE supp_w') (weightwE supp_w') raddf_sum /=.
+  by apply/eqP; rewrite col_mx_eq; apply/andP; split;
+    under [X in X == _]eq_big do [| rewrite fsfunE ifT //].
+  move/eq_col_mx => [ <- w'_weight].
+  suff w'_cvx : convex w' by apply/in_convP; exists (mkConvexfun w'_cvx).
   apply/barycenter.convexP; split.
-  + move => v /(fsubsetP (finsupp_sub _ _ _)) v_in_V.
+  + move => v /(fsubsetP supp_w') v_in_V.
     by rewrite fsfunE ifT //; apply/conicwP/valP.
-  + move: combine_eq.
-    rewrite (combineb1E w_pweight) /=.
-    move/(congr1 dsubmx); rewrite col_mxKd.
-    rewrite linear_sum /=; under eq_big do [| rewrite linearZ /=].
-    rewrite (weightwE (finsupp_sub _ _ _)); rewrite (reindex _ homo_bij) => /=.
-    under eq_big do [| rewrite col_mxKd].
-    move/colP/(_ 0); rewrite summxE mxE mulr1n.
-    under eq_big do [| rewrite !mxE /= mulr1] => <-.
-    by apply/eq_big => // v _; rewrite fsfun_ffun valK /=.
+  + by move/colP/(_ 0): w'_weight; rewrite !mxE !mulr1n.
 Qed.
 
 End Separation.
