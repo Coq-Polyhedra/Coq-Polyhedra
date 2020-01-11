@@ -1994,22 +1994,44 @@ suff: ~~ ('P(base) `<=` `[hs (homogenize x)]).
     by rewrite in_hs /= vdot0r.
   move/(farkas non_empty) => [w w_pweight [combine_eq _]].
   apply/in_convP.
-  pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v : V => w (homogenize (val v))]%fset.
+  pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v in V => w (homogenize v)]%fset.
+  have homo_in_base: forall v : V, homogenize (val v) \in base.
+  + move => v; apply/in_imfset/fsvalP.
+    pose lift_homo : V -> base := fun v => [` homo_in_base v]%fset.
+  have homo_bij : {on predT, bijective lift_homo}.
+  + apply/onW_bij.
+    pose g (e : base) := usubmx ((val e).1).
+    have g_in_V : forall e, g e \in V.
+    * move => e; rewrite /g.
+      move/imfsetP: (fsvalP e) => [? /= ? ->].
+      by rewrite /= col_mxKu.
+  pose lift_g (e : base) := [`g_in_V e]%fset.
+  exists lift_g => z; apply/val_inj => /=.
+  + by rewrite /lift_homo /g col_mxKu.
+  + rewrite /g; move/imfsetP: (fsvalP z) => [? /= ? ->].
+    by rewrite col_mxKu.
   suff w'_cvx : convex w'.
-  + exists (mkConvexfun w'_cvx).
-(*
-
-    Search _ convex.
-
-  suff /eq_col_mx [ <- /(scalar_mx_inj (ltnSn 0)) sum_eq1]:
-    col_mx (\bary[w'] V) (\sum_(v <- V) (w' v))%:M = col_mx x 1%:M.
-  + exists w'; last done.
-    * admit.
-  + rewrite raddf_sum /= /bary.
-    (*rewrite -sum_col_mx.*)
-    admit.
-*)
-Admitted.
+  + exists (mkConvexfun w'_cvx); first by apply/finsupp_sub.
+    move: combine_eq.
+    rewrite (combineb1E w_pweight) /=.
+    move/(congr1 usubmx); rewrite col_mxKu => <-.
+    rewrite linear_sum /=; under eq_big do [| rewrite linearZ /=].
+    rewrite (combinewE (finsupp_sub _ _ _)); rewrite (reindex _ homo_bij) => /=.
+    under eq_big do [| rewrite col_mxKu].
+    by apply/eq_big => // v _; rewrite fsfun_ffun valK /=.
+  apply/barycenter.convexP; split.
+  + move => v /(fsubsetP (finsupp_sub _ _ _)) v_in_V.
+    by rewrite fsfunE ifT //; apply/conicwP/valP.
+  + move: combine_eq.
+    rewrite (combineb1E w_pweight) /=.
+    move/(congr1 dsubmx); rewrite col_mxKd.
+    rewrite linear_sum /=; under eq_big do [| rewrite linearZ /=].
+    rewrite (weightwE (finsupp_sub _ _ _)); rewrite (reindex _ homo_bij) => /=.
+    under eq_big do [| rewrite col_mxKd].
+    move/colP/(_ 0); rewrite summxE mxE mulr1n.
+    under eq_big do [| rewrite !mxE /= mulr1] => <-.
+    by apply/eq_big => // v _; rewrite fsfun_ffun valK /=.
+Qed.
 
 End Separation.
 
