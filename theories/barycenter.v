@@ -174,10 +174,10 @@ Context {R : ringType} {L : lmodType R}.
 
 Implicit Types (f g h : {fsfun L ~> R}).
 
-Definition combine f : L := \sum_(x : finsupp f) f (val x) *: val x.
+Definition combine f : L := \sum_(x : finsupp f) f (fsval x) *: fsval x.
 
 Lemma combinewE E f : (finsupp f `<=` E)%fset ->
-  combine f = \sum_(x : E) f (val x) *: (val x).
+  combine f = \sum_(x : E) f (fsval x) *: (fsval x).
 Proof.
 move=> leEw; pose F x := f x *: x; rewrite /combine.
 rewrite -!(big_seq_fsetE _ _ predT F) /= {}/F.
@@ -189,7 +189,7 @@ apply/perm_big/uniq_perm; rewrite ?(fset_uniq, filter_uniq) //.
 by move=> x; rewrite mem_filter inE andb_idr // => /(fsubsetP leEw).
 Qed.
 
-Lemma combineE f : combine f = \sum_(x : finsupp f) f (val x) *: (val x).
+Lemma combineE f : combine f = \sum_(x : finsupp f) f (fsval x) *: (fsval x).
 Proof. by []. Qed.
 End Combine.
 
@@ -199,10 +199,10 @@ Context {T : choiceType} {R : zmodType}.
 
 Implicit Types (f g h : {fsfun T ~> R}).
 
-Definition weight f := \sum_(x : finsupp f) f (val x).
+Definition weight f := \sum_(x : finsupp f) f (fsval x).
 
 Lemma weightwE E w : (finsupp w `<=` E)%fset ->
-  weight w = \sum_(x : E) w (val x).
+  weight w = \sum_(x : E) w (fsval x).
 Proof.
 move=> leEw; rewrite /weight -!(big_seq_fsetE _ _ predT) /=.
 have /permEl h := perm_filterC (mem (finsupp w)) E.
@@ -212,7 +212,7 @@ rewrite addr0; apply/perm_big/uniq_perm; rewrite ?filter_uniq //.
 by move=> x; rewrite mem_filter inE andb_idr // => /(fsubsetP leEw).
 Qed.
 
-Lemma weightE f : weight f = \sum_(x : finsupp f) f (val x).
+Lemma weightE f : weight f = \sum_(x : finsupp f) f (fsval x).
 Proof. by []. Qed.
 
 Lemma weight0 : weight 0 = 0.
@@ -232,7 +232,7 @@ Context {T : choiceType} {R : numDomainType}.
 
 Implicit Types (w : {fsfun T ~> R}).
 
-Definition conic  w := [forall x : finsupp w, 0 <= w (val x)].
+Definition conic  w := [forall x : finsupp w, 0 <= w (fsval x)].
 Definition convex w := conic w && (weight w == 1).
 
 Lemma conicP w :
