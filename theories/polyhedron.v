@@ -1519,7 +1519,7 @@ apply/poly_subsetP => x /in_convP[w].
 by rewrite fsubset0 fconvex_insupp_neq0.
 Qed.
 
-Lemma convexP (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
+Lemma conv_subset (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> (conv V) `<=` P.
 Proof.
 move=> le_VP; apply/poly_subsetP=> x /in_convP.
@@ -1557,7 +1557,7 @@ set P := conv V.
 have P_prop0 := conv_prop0 V_neq0.
 apply/(compactP P_prop0) => c; apply/(bounded_lower_bound _ P_prop0).
 exists (min_seq [seq '[c,v] | v <- V] 0%R).
-by apply/convexP => v v_in; rewrite inE /= min_seq_ler ?map_f.
+by apply/conv_subset => v v_in; rewrite inE /= min_seq_ler ?map_f.
 Qed.
 
 End Hull.
@@ -2020,7 +2020,7 @@ suff: ~~ ('P(base) `<=` `[hs (homog x)]).
     by rewrite -lter_sub_addr add0r.
   exists e.
   + by move: z_notin; apply/contraNN; rewrite in_hs_e.
-  + apply/convexP => v v_in_V; rewrite in_hs_e.
+  + apply/conv_subset => v v_in_V; rewrite in_hs_e.
     have: homog v \in base by exact: in_imfset.
     by move/poly_of_base_subset_hs/poly_subsetP/(_ _ z_in).
 - move: x_notin; apply: contraNN.
@@ -2029,7 +2029,7 @@ suff: ~~ ('P(base) `<=` `[hs (homog x)]).
     apply/in_poly_of_baseP => ? /imfsetP [v _ ->].
     by rewrite in_hs /= vdot0r.
   move/(farkas non_empty) => [w w_pweight].
-  rewrite (combineb1E w_pweight); rewrite (reindex _ (onW_bij _ lift_homog_bij)) => /=.
+  rewrite (combineb1E w_pweight) (reindex _ (onW_bij _ lift_homog_bij)) => /=.
   under eq_big do [| rewrite scale_col_mx scalemx1]; rewrite sum_col_mx.
   move => [combine_eq _].
   pose w' : fsfun (fun _ : 'cV_n => 0) := [fsfun v in V => w (homog v)]%fset.
@@ -2040,7 +2040,7 @@ suff: ~~ ('P(base) `<=` `[hs (homog x)]).
     under [X in X == _]eq_big do [| rewrite fsfunE ifT //].
   move/eq_col_mx => [ <- w'_weight].
   suff w'_cvx : convex w' by apply/in_convP; exists (mkConvexfun w'_cvx).
-  apply/barycenter.convexP; split.
+  apply/convexP; split.
   + move => v /(fsubsetP supp_w') v_in_V.
     by rewrite fsfunE ifT //; apply/conicwP/valP.
   + by move/colP/(_ 0): w'_weight; rewrite !mxE !mulr1n.
