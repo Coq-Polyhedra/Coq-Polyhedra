@@ -351,6 +351,16 @@ Proof. by rewrite !inE => /eqP->. Qed.
 Lemma hsN_hp c (x : base_elt[R,n]) : c \in (`[hp x]) -> c \in `[hs -x].
 Proof. by rewrite !inE => /eqP /= <-; rewrite vdotNl. Qed.
 
+Lemma hpN (e : base_elt[R,n]) : `[hp -e] = `[hp e].
+Proof.
+by apply/poly_eqP => x; rewrite !in_hp /= vdotNl eqr_opp.
+Qed.
+
+Lemma hsN_subset (e : base_elt[R,n]) x : (x \notin `[hs -e]) -> x \in `[hs e].
+Proof.
+by rewrite in_hsN -ltrNge in_hs => /ltrW.
+Qed.
+
 Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
 Proof.
 move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltrNge in x_in y_in *.
@@ -1601,6 +1611,9 @@ Lemma conv_prop0 (V : {fset 'cV[R]_n}) : (V != fset0)%fset -> (conv V `>` `[poly
 Proof.
 by move/fset0Pn => [v ?];  apply/proper0P; exists v; apply/in_conv.
 Qed.
+
+Lemma convS : {homo conv : P Q / (P `<=` Q)%fset >-> P `<=` Q}.
+Admitted.
 
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
   reflect
