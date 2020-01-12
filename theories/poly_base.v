@@ -988,6 +988,17 @@ case/dimP: Q => [| base' Q Q_prop0];
 by rewrite ltnS => P_sub_Q; apply/leq_sub2l/dimvS/span_activeS.
 Qed.
 
+Lemma hull_mk_affine {P : 'poly[R]_n} {x} :
+  x \in P -> exists2 U, hull P = `[affine U & x] & (\dim U = (dim P).-1)%N.
+Proof.
+elim/polybW: P => base P x_in_P.
+have P_prop0 : P `>` `[poly0] by apply/proper0P; exists x.
+set U := (befst @: <<{eq P}>>)^OC%VS.
+have hullP : hull P = `[affine U & x].
+- by rewrite -affine_orth -hullN0_eq //; apply/(poly_subsetP (subset_hull _)).
+exists U => //; by rewrite dim_hull hullP dim_affine /=.
+Qed.
+
 Lemma dim_le (base : base_t[R,n]) (P : {poly base}) :
   P `>` (`[poly0]) -> (\dim << {eq P} >> <= n)%N.
 Proof.
@@ -1066,6 +1077,73 @@ Proof.
 by rewrite dim_hull hull_line dim_line subr_eq0 eq_sym.
 Qed.
 
+Lemma dim2P (P : 'poly[R]_n) :
+  compact P -> dim P = 2 -> exists v, exists2 w, P = conv [fset v; w]%fset & v != w.
+Proof.
+elim/polybW: P => base P P_compact dimP2.
+have P_prop0 : P `>` `[poly0] by rewrite dimN0 dimP2.
+set U := (befst @: <<{eq P}>>)^OC%VS.
+have hullP_eq : forall x, x \in P -> hull P = `[ affine U & x ].
+- move => x x_in_P.
+  by rewrite -affine_orth -hullN0_eq //; apply/(poly_subsetP (subset_hull _)).
+pose Ω := ppick P.
+have dimU1 : (\dim U = 1)%N.
+- by move: dimP2; rewrite dim_hull (hullP_eq _ (ppickP _)) // dim_affine => /succn_inj.
+pose d := vpick U.
+have d_neq0 : d != 0 by rewrite vpick0 -dimv_eq0 dimU1.
+have d_bounded : bounded P d by apply/(compactP P_prop0).
+have d_bounded' : bounded P (-d) by apply/(compactP P_prop0).
+set v := ppick (argmin P d); set w := ppick (argmin P (-d)).
+have v_in_argmin: v \in (argmin P d) by apply/ppickP; rewrite -bounded_argminN0.
+have w_in_argmin: w \in (argmin P (-d)) by apply/ppickP; rewrite -bounded_argminN0.
+have d_v : '[d,v] = opt_value d_bounded.
+- by move: v_in_argmin; rewrite argmin_polyI in_polyI => /andP [_]; rewrite in_hp => /eqP.
+have d_w : '[d,w] = -(opt_value d_bounded').
+- move: w_in_argmin; rewrite argmin_polyI in_polyI => /andP [_]; rewrite in_hp => /eqP /=.
+  by rewrite vdotNl => <-; rewrite opprK.
+have v_in_P : v \in P by move: v_in_argmin; apply/(poly_subsetP (argmin_subset _ _)).
+have w_in_P : w \in P by move: w_in_argmin; apply/(poly_subsetP (argmin_subset _ _)).
+have dv_neq_dw: '[d,v] != '[d,w].
+- move: d_neq0; apply: contra_neq => dv_eq_dw.
+  pose e := [< d, opt_value d_bounded >].
+  have: P `<=` `[hp e].
+  + apply/poly_subsetIP; split; first by apply/opt_value_lower_bound.
+    rewrite beoppE /= -d_v dv_eq_dw d_w opprK.
+    by apply/opt_value_lower_bound.
+  rewrite in_span_activeP // => /(memv_img befst).
+  rewrite lfunE /= => d_in_eq.
+  have: d \in (U :&: U^OC)%VS by rewrite memv_cap orthK d_in_eq (memv_pick U).
+  by rewrite direct_orthvP memv0 => /eqP.
+have v_neq_w : v != w by move: dv_neq_dw; apply/contra_neq => ->.
+have dv_lt_dw: '[d,v] < '[d,w].
+- rewrite ltr_neqAle dv_neq_dw /=.
+  move/poly_subsetP/(_ _ w_in_P): (opt_value_lower_bound d_bounded).
+  by rewrite in_hs -d_v /=.
+exists v; exists w => //.
+have U_eq: U = <[w-v]>%VS.
+- apply/eqP; rewrite eq_sym eqEdim; apply/andP; split; last first.
+  + by rewrite dimU1 dim_vline subr_eq0 eq_sym v_neq_w.
+  + rewrite -memvE -in_mk_affine -(hullP_eq _ v_in_P).
+    by apply/(poly_subsetP (subset_hull _)).
+have {hullP_eq} hullP_eq : hull P = `[line (w-v) & v].
+- by rewrite line_affine -U_eq -hullP_eq.
+apply/poly_subset_anti; last first.
+- by apply/conv_subset => x /fset2P; case => ->.
+- apply/poly_subsetP => x x_in_P.
+  move/(poly_subsetP (subset_hull _)): (x_in_P).
+  rewrite hullP_eq => /in_lineP [μ x_eq].
+  apply/in_segmP; exists μ; last first.
+  + rewrite scalerDl scale1r addrAC scaleNr -scalerN.
+    by rewrite x_eq scalerDr addrA.
+  + apply/andP; split.
+    * move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound d_bounded).
+      rewrite inE /= -d_v x_eq vdotDr vdotZr vdotBr ler_addl.
+      by rewrite pmulr_lge0 ?subr_gt0.
+    * move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound d_bounded').
+      rewrite inE /= vdotNl ler_oppr -d_w x_eq vdotDr vdotZr vdotBr addrC.
+      by rewrite -ler_subr_addr ger_pmull ?subr_gt0.
+Qed.
+
 (*
 Lemma dimW (Pt : 'poly[R]_n -> Prop) :
   Pt (`[poly0]) -> (forall k, forall Q : 'poly[R]_n, (dim Q = k.+1)%N -> Pt Q) -> (forall P : 'poly[R]_n, Pt P).
@@ -1086,6 +1164,8 @@ Admitted.
 *)
 
 End Dimension.
+
+Notation "\dim P" := (pb_dim P) (at level 10, P at level 8) : poly_scope.
 
 Section Facet.
 
@@ -1384,6 +1464,13 @@ Qed.
 
 End Minkowski.
 
+Section Dim2.
+
+Context {R : realFieldType} {n : nat}.
+
+
+End Dim2.
+
 Section SeparationVertex.
 
 Context {R : realFieldType} {n : nat}.
@@ -1560,16 +1647,6 @@ suff /fsubsetPn [w w_vtx w_neq] : ~~ (vertex_set F `<=` [fset v])%fset.
 - move: dimF_gt1; apply: contraTN => sub.
   suff ->: vertex_set F = [fset v]%fset by rewrite conv_pt dim_pt.
   by apply/eqP; rewrite eqEfsubset fsub1set ?vf_vtx ?andbT.
-Qed.
-
-Lemma hpN (e : base_elt[R,n]) : `[hp -e] = `[hp e].
-Proof.
-by apply/poly_eqP => x; rewrite !in_hp /= vdotNl eqr_opp.
-Qed.
-
-Lemma hsN_subset (e : base_elt[R,n]) x : (x \notin `[hs -e]) -> x \in `[hs e].
-Proof.
-by rewrite in_hsN -ltrNge in_hs => /ltrW.
 Qed.
 
 Lemma vf_prop0 (F : 'poly[R]_n) :
@@ -1794,8 +1871,6 @@ by move/andP => [_] segm_face; split; apply/(fsubsetP (vertex_setS segm_face));
    rewrite vertex_set_segm; rewrite !inE eq_refl ?orbT.
 Qed.
 
-Lemma convS : {homo (@conv R n) : P Q / (P `<=` Q)%fset >-> P `<=` Q}.
-Admitted.
 
 Lemma face_dim2 (Q : 'poly[R]_n) :
   (Q `>` `[poly0]) -> compact Q -> (dim Q <= 2)%N -> exists v, exists w, Q = conv [fset v; w]%fset.
