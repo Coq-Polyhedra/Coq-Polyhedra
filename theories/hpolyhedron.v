@@ -12,6 +12,8 @@ From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter.
 
+Import Order.Theory.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -523,7 +525,7 @@ apply: (iffP idP) => [/orP poly_subset_P_Q | subset_P_Q].
     by apply/Simplex.feasibleP; exists x.
   + apply/forallP => i.
     move/andP: (hs_incl i) => [/Simplex.boundedP [_ opt_is_opt] ?].
-    apply: (@ler_trans _ (Simplex.opt_value A b (row i A')^T) _ _); first by done.
+    apply: (@le_trans _ _ (Simplex.opt_value A b (row i A')^T) _ _); first by done.
     by rewrite -row_vdot; apply: opt_is_opt.
 - apply/orP.
   case: (boolP (Simplex.feasible A b)) => [feasible_P | _]; last by left.
@@ -555,14 +557,14 @@ have unbounded_suff:
   move: (unbounded_P_row_i_A' (b' i 0)) => [x [x_in_P ineq]].
   exists x; try by done.
   move: ineq; apply: contraL => x_in_Q.
-  rewrite -lerNgt row_vdot.
+  rewrite -leNgt row_vdot.
   exact: ((forallP x_in_Q) i).
 case: unbounded_or; first exact: unbounded_suff.
 case: (boolP (Simplex.bounded A b (row i A')^T)) => [? | ? _]; last by apply: unbounded_suff.
-rewrite -ltrNge => ineq.
+rewrite -ltNge => ineq.
 exists (Simplex.opt_point A b (row i A')^T); first exact: Simplex.opt_point_is_feasible.
 move: ineq; apply: contraL => opt_point_in_Q.
-rewrite -lerNgt /Simplex.opt_value row_vdot.
+rewrite -leNgt /Simplex.opt_value row_vdot.
 exact: ((forallP opt_point_in_Q) i).
 Qed.
 
@@ -599,10 +601,10 @@ apply/(equivP (Simplex.unboundedP A b c) _);
 - apply/poly_subsetPn.
   move: (unbounded_cond_point K) => [x [? val_x_sineq]].
   exists x; first by done.
-  by rewrite in_hs -ltrNge.
+  by rewrite in_hs -ltNge.
 - move/poly_subsetPn: (unbounded_cond_hs K) => [x ? x_not_in_hs].
   exists x; split; first by done.
-  by rewrite in_hs -ltrNge in x_not_in_hs.
+  by rewrite in_hs -ltNge in x_not_in_hs.
 Qed.
 
 Definition pointed P :=
@@ -622,7 +624,7 @@ rewrite /pointed; apply/(iffP idP).
   + apply/d_feas_dir => //; exists x => //.
   + rewrite -[d]opprK scalerN -scaleNr.
     apply/md_feas_dir => //.
-    by rewrite oppr_ge0 ltrW.
+    by rewrite oppr_ge0 ltW.
 - move => [x [d d_neq0 sub]].
   have x_in : x \in HPoly A b by move/(_ 0): sub; rewrite scale0r addr0.
   have -> /=: ~~ poly_subset (HPoly A b) poly0 by apply/poly_subsetPn; exists x => //; rewrite in_poly0.
@@ -730,7 +732,7 @@ move=> nz_P /poly_subsetP le_Pe; case: (Simplex.simplexP A b e.1).
 + move=> p /(intro_existsT (Simplex.unboundedP_cert _ _ _)).
   case/Simplex.unboundedP/(_ e.2) => [x [x_in_PAb ineq]].
   have /le_Pe: x \in P by rewrite memP inE.
-  by rewrite in_hs => /(ltr_le_trans ineq); rewrite ltrr.
+  by rewrite in_hs => /(lt_le_trans ineq); rewrite ltxx.
 + case=> [x w] [x_feas w_feas csc]; move: w_feas.
   rewrite inE /= => /andP[/eqP w_feas1 w_pos].
   exists (mkConicFun (conic_vect_to_fsfun w_pos)).
@@ -856,7 +858,7 @@ case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
         by rewrite !mxE k_eq j_eq -[X in _ = X - _]mulrA -[X in _ = _ - X]mulrA [X in _ = _*X - _]mulrC
              [X in _ =  _ -_*X]mulrC [X in _ = X - _]mulrA [X in _ = _ - X]mulrA mulrBl.
     * have k_in_Jeq0: k \in Jeq0
-        by rewrite inE; move: k_not_in_U; apply/contraR; rewrite neqr_lt in_setU !inE.
+        by rewrite inE; move: k_not_in_U; apply/contraR; rewrite neq_lt in_setU !inE.
       move: ((forallP x_in_proj) (rshift q (enum_rank_in k_in_Jeq0 k))).
       rewrite mul_col_mx 2!col_mxEd -row_submx_mul 2!mxE enum_rankK_in // (mulmx_col'_row' A y i) row'_eq.
       rewrite inE in k_in_Jeq0.
@@ -875,7 +877,7 @@ case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
           -ler_pdivl_mulr // -[X in _ <= X]mulrA [X in _ <= _ * X]mulrC [X in _ <= X]mulrA -[X in _ <= X]opprK -mulrN -mulNr -ler_pdivr_mulr;
             last by rewrite oppr_gt0.
       rewrite ler_oppr.
-      apply: (@ler_trans _ (y i 0)).
+      apply: (@le_trans _ _ (y i 0)).
       - rewrite ler_pdivr_mulr // mulrC ler_subl_addr -mulmx_col'_row'.
         by apply: (forallP y_in).
       - rewrite ler_oppr ler_pdivr_mulr; last by rewrite oppr_gt0.
@@ -896,7 +898,7 @@ case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
       by apply: min_seq_ler; apply: map_f; rewrite mem_enum.
     * have k_in_Jeq0: k \in Jeq0.
         rewrite inE; move/norP: (conj k_not_in_Jlt0 Jgt0_empty).
-        apply/contraR; rewrite neqr_lt !inE; move/orP.
+        apply/contraR; rewrite neq_lt !inE; move/orP.
         case => [k_in_Jlt0 | ?]; apply/orP; first by left.
         by right; rewrite card_gt0; apply/set0Pn; exists k; rewrite inE.
       move: ((forallP x_in_proj) (enum_rank_in k_in_Jeq0 k)).
@@ -920,7 +922,7 @@ case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
       by apply: min_seq_ler; apply: map_f; rewrite mem_enum.
     * have k_in_Jeq0: k \in Jeq0.
         rewrite inE; move/norP: (conj k_not_in_Jgt0 Jlt0_empty).
-        apply/contraR; rewrite neqr_lt !inE; move/orP.
+        apply/contraR; rewrite neq_lt !inE; move/orP.
         case => [k_in_Jlt0 | ?]; apply/orP; last by left.
         by right; rewrite card_gt0; apply/set0Pn; exists k; rewrite inE.
       move: ((forallP x_in_proj) (enum_rank_in k_in_Jeq0 k)).
@@ -944,7 +946,7 @@ case: {-}_/idP => [Jlt0_not_empty | /negP Jlt0_empty];
       by rewrite (mulmx_col'_row' A y i) [X in _ = X -_]addrC -addrA subrr addr0.
     suff ->: A j i = 0 by rewrite mul0r subr0; exact: ((forallP y_in) j).
     apply/eqP; move/norP: (conj Jlt0_empty Jgt0_empty).
-    apply/contraR; rewrite neqr_lt; move/orP.
+    apply/contraR; rewrite neq_lt; move/orP.
     by case => [? | ?]; apply/orP; [left | right]; rewrite card_gt0; apply/set0Pn; exists j; rewrite inE.
 Qed.
 

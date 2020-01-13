@@ -7,8 +7,13 @@
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix fingroup perm.
+From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import bigop ssralg ssrnum zmodp matrix fingroup perm.
 Require Import extra_misc inner_product.
+
+Import Order.Theory.
+
+Definition lte_anti := (=^~ @eq_le, @lt_asym, @lt_le_asym, @le_lt_asym).
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -130,7 +135,7 @@ Lemma lev_antisym:
   antisymmetric (<=m).
 Proof.
 move => x y /andP [/forallP Hx /forallP Hy].
-apply/colP => i; apply: ler_asym; apply/andP; split; by [move/(_ i): Hx; move/(_ i): Hy].
+apply/colP => i; apply: le_anti; apply/andP; split; by [move/(_ i): Hx; move/(_ i): Hy].
 Qed.
 
 Lemma lev_trans:
@@ -138,7 +143,7 @@ Lemma lev_trans:
 Proof.
 move => x y z /forallP Hx /forallP Hy.
 apply/forallP => i; move/(_ i): Hy; move/(_ i): Hx.
-by apply: ler_trans.
+by apply: le_trans.
 Qed.
 
 Lemma eqv_le x y :
@@ -187,19 +192,19 @@ Definition lev_min x y := \col_i (Num.min (x i 0) (y i 0)).
 Lemma lev_maxC x y :
   lev_max x y = lev_max y x.
 Proof.
-apply/colP => i; rewrite !mxE; apply: maxrC.
+apply/colP => i; rewrite !mxE; apply: joinC.
 Qed.
 
 Lemma lev_minC x y :
   lev_min x y = lev_min y x.
 Proof.
-apply/colP => i; rewrite !mxE; apply: minrC.
+apply/colP => i; rewrite !mxE; apply: meetC.
 Qed.
 
 Lemma lev_maxl x y :
   (lev_max x y) >=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE ler_maxr lerr.
+by apply/forallP => i; rewrite !mxE lexU lexx.
 Qed.
 
 Lemma lev_maxr x y :
@@ -211,7 +216,7 @@ Qed.
 Lemma lev_minl x y :
   (lev_min x y) <=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE ler_minl lerr.
+by apply/forallP => i; rewrite !mxE leIx lexx.
 Qed.
 
 Lemma lev_minr x y :
@@ -400,7 +405,7 @@ Lemma lex_add2l x :
 Proof.
 move => y z; symmetry.
 apply: order_preserving_equiv => i.
-move/(_ (y 0 i) (z 0 i)): (lerW_mono (ler_add2l (x 0 i))) <-.
+move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_add2l (x 0 i))) <-.
 rewrite !mxE; split; first done.
 symmetry; apply/inj_eq; exact: GRing.addrI.
 Qed.
@@ -410,7 +415,7 @@ Lemma lex_add2r x :
 Proof.
 move => y z; symmetry.
 apply: order_preserving_equiv => i.
-move/(_ (y 0 i) (z 0 i)): (lerW_mono (ler_add2r (x 0 i))) <-.
+move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_add2r (x 0 i))) <-.
 rewrite !mxE; split; first done.
 symmetry; apply/(inj_eq (GRing.addIr _)).
 Qed.
@@ -421,7 +426,7 @@ Proof.
 move => Ha y z; symmetry.
 apply: order_preserving_equiv => i.
 rewrite !mxE.
-move/(_ (y 0 i) (z 0 i)): (lerW_mono (ler_pmul2l Ha)) <-.
+move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_pmul2l Ha)) <-.
 split; first done.
 symmetry; apply/inj_eq; apply/mulfI; exact: lt0r_neq0.
 Qed.
@@ -438,7 +443,7 @@ Proof.
 suff /(_ (enum 'I_n)): forall s, (leqlex_seq x x s) by done.
 move => s.
 elim: s => [| i s' IH]; first by done.
-by rewrite /= IH ltrr eq_refl.
+by rewrite /= IH ltxx eq_refl.
 Qed.
 
 Lemma oppv_gelex0 x :
@@ -486,10 +491,10 @@ elim: s => [ | i s' IH]; first by done.
 rewrite /=.
 case: (ltrgtP (x 0 i) (y 0 i)) (ltrgtP (y 0 i) (z 0 i))
   => [H [H' | H' | H'] | H [H' | H' | H'] | H [H' | H' | H']]; try by done.
-- by move: (ltr_trans H H') ->.
+- by move: (lt_trans H H') ->.
 - by rewrite -H' ifT //.
 - by rewrite H ifT //.
-- by rewrite -H' H eq_refl ltrr; apply: IH.
+- by rewrite -H' H eq_refl ltxx; apply: IH.
 Qed.
 
 Lemma lex0_total :
@@ -524,7 +529,7 @@ Proof.
 move => Ha Hxy.
 case: (ltrgt0P a).
 - by move/lex_pscalar ->.
-- by move/(ler_lt_trans Ha); rewrite ltrr.
+- by move/(le_lt_trans Ha); rewrite ltxx.
 - by move ->; rewrite !scale0r; apply: lex_refl.
 Qed.
 
@@ -744,9 +749,9 @@ have <-: x0 = 0.
 - apply/ord_inj.
   move/(congr1 (head 0))/(congr1 (@nat_of_ord _)): Henum.
   by rewrite -2!nth0 nth_enum_ord //.
-rewrite Henum /=; case: ifP => [|_]; first by move/ltrW.
+rewrite Henum /=; case: ifP => [|_]; first by move/ltW.
 - case: ifP => [|_]; last by done.
-  + by move/eqP ->; rewrite lerr.
+  + by move/eqP ->; rewrite lexx.
 Qed.
 
 Lemma leqlex_seq_cons S1 S2 u v :
@@ -763,9 +768,9 @@ Lemma leqlex_seq_lev S u v :
 Proof.
 elim: S => [| i S' IH H]; first by done.
 rewrite /=; case: ifP => [| /negbT Hi]; first by done.
-rewrite -lerNgt in Hi.
+rewrite -leNgt in Hi.
 move/forallP/(_ i)/implyP/(_ (mem_head _ _)): (H) => Hi'.
-move/andP: (conj Hi' Hi); rewrite lter_anti; move ->.
+move/andP: (conj Hi' Hi); rewrite lte_anti; move ->.
 apply: IH.
 apply/forallP => j; apply/implyP => Hj.
 by move/forallP/(_ j): H; rewrite in_cons Hj orbT.
@@ -823,7 +828,7 @@ Proof.
 move/andP => [H H'].
 rewrite /ltrlex; apply/andP; split.
 - move: H'. apply: contraL.
-  by move/eqP/rowP/(_ i) ->; rewrite ltrr.
+  by move/eqP/rowP/(_ i) ->; rewrite ltxx.
 - rewrite /leqlex (enum_ord_split i).
   apply: leqlex_seq_cons_head; apply/andP; split; last by done.
   apply/forallP => j; apply/implyP; rewrite mem_filter => /andP [Hj _].

@@ -9,8 +9,11 @@
 (*************************************************************************)
 
 Require Import Recdef.
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
+From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
+
+Import Order.Theory.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -55,14 +58,14 @@ apply/(iffP idP) => [feasible_dir_d μ μ_ge0 | d_recession_dir].
   rewrite mxE in A_d_i_neq.
   set λ := ((A *m d) i 0 + b i 0 - (A *m x) i 0) * ((A *m d) i 0)^-1.
   have λ_ge_0: 0 <= λ.
-    rewrite ler_ndivl_mulr; last by rewrite -ltrNge in A_d_i_neq.
+    rewrite ler_ndivl_mulr; last by rewrite -ltNge in A_d_i_neq.
     rewrite mul0r ler_subl_addr.
     apply: ler_add; last exact: ((forallP x_in) i).
-    apply: ltrW.
-    by rewrite -ltrNge in A_d_i_neq.
+    apply: ltW.
+    by rewrite -ltNge in A_d_i_neq.
   move: (forallP (d_recession_dir _  λ_ge_0) i) => b_i_ineq.
   rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in b_i_ineq;
-    last by apply: ltr0_neq0; rewrite -ltrNge in A_d_i_neq.
+    last by apply: ltr0_neq0; rewrite -ltNge in A_d_i_neq.
   rewrite mulr1 [(A *m x) i 0 + _]addrC -3!ler_subl_addr opprK -addrA -opprB addNr in b_i_ineq.
   by rewrite b_i_ineq in A_d_i_neq.
 Qed.
@@ -266,10 +269,10 @@ exists x; split.
   rewrite -[X in X <= _]addr0.
   apply: ler_add; first by apply: (Hx0 _).
   - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
-    by rewrite lter_maxr lerr.
+    by rewrite lexU lexx.
 + rewrite vdotDr vdotZr -ltr_subr_addl.
   rewrite -mulrC -ltr_ndivr_mull //.
-  rewrite lter_maxr; apply/orP; right.
+  rewrite ltxU; apply/orP; right.
   rewrite -(ltr_nmul2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
   by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10.
 Qed.
@@ -607,7 +610,7 @@ Lemma cand_idxP : (#|cand_idx| > 0)%N.
 Proof.
 apply/card_gt0P.
 move/existsP : d_infeas_dir => [k].
-rewrite mxE -ltrNge => Ak_d_neg.
+rewrite mxE -ltNge => Ak_d_neg.
 by exists k.
 Qed.
 
@@ -638,7 +641,7 @@ Proof.
 move => j_is_cand.
 apply: lex_scalar_le0.
 - rewrite invr_le0.
-  exact: ltrW.
+  exact: ltW.
 - rewrite lex_subr_le0.
   by move/forallP/(_ j): x_feas.
 Qed.
@@ -685,7 +688,7 @@ case: (boolP (cand_idx j)) => [j_is_cand | j_is_not_cand].
   exact: (argmin_gapP.2 j j_is_cand).
 - rewrite -[(row j b)]addr0.
   apply: lex_add; first by move/forallP: x_feas.
-  apply: lex0_nnscalar; by [exact: min_gap_ge0 | rewrite lerNgt].
+  apply: lex0_nnscalar; by [exact: min_gap_ge0 | rewrite leNgt].
 Qed.
 
 End Feasibility.
@@ -703,7 +706,7 @@ move: argmin_is_cand; apply: contraL => argmin_in_I.
 rewrite inE.
 move: d_in_kerAI; rewrite -row_submx_mul.
 move/row_submx_col0P/(_ _ argmin_in_I) => ->.
-by rewrite ltrr.
+by rewrite ltxx.
 Qed.
 
 Fact argmin_gap_rank :
@@ -718,7 +721,7 @@ have Ajd_neq0 : (Aj *m d) != 0.
   move: j_is_cand; rewrite inE.
   apply: contraTneq.
   rewrite -row_mul; move/col0P/(_ 0); rewrite mxE => ->.
-  by rewrite ltrr.
+  by rewrite ltxx.
 have Aj_inter_AI : (Aj :&: AI <= (0:'M_n))%MS.
   apply/rV_subP => ?; rewrite submx0 sub_capmx.
   move/andP => [/sub_rVP [a ->] /submxP [z]].
@@ -825,7 +828,7 @@ Function build_basic_point x {measure height x} :=
 Proof.
 move => x /negbT.
 rewrite -lt0n subn_gt0 => rk_lt_n.
-apply/leP.
+apply/ssrnat.leP.
 move/build_basic_point_iter_rank: (rk_lt_n); exact: ltn_sub2l.
 Qed.
 
@@ -1176,7 +1179,7 @@ suff Hz: z = 0.
   - rewrite subv_ge0 -row_submx_mul.
     exact: row_submx_lev.
   - rewrite vdotBr -[row_submx b bas]row_submx_point_of_basis 2!vdot_mulmx.
-    apply/eqP; rewrite subr_eq0 eqr_le.
+    apply/eqP; rewrite subr_eq0 eq_le.
     apply/andP; split; first by done.
     apply: (optimal_cert_on_basis (bas := bas)); last by done.
     + rewrite polyhedron_equiv_lex_polyhedron.
@@ -1263,7 +1266,7 @@ have j_is_not_cand: (row_submx A bas *m d) k 0 >= 0.
 rewrite -row_submx_mul row_submx_mxE -{}Hk in j_is_not_cand.
 move: (argmin_gapP b_pert x d_infeas_dir) => [j_is_cand _].
 move/andP: (conj j_is_not_cand j_is_cand).
-by rewrite ler_lt_asym.
+by rewrite le_lt_asym.
 Qed.
 
 Fact col_b_pert (I : prebasis) k :
@@ -1395,7 +1398,7 @@ Function phase2 bas {measure basis_height bas} :=
   end.
 Proof.
 move => bas bas' Hbas.
-apply/leP.
+apply/ssrnat.leP.
 pose u := reduced_cost_of_basis c bas.
 move: Hbas; rewrite /basic_step.
 case: pickP => [i |]; last by done.
@@ -1432,7 +1435,7 @@ apply: phase2_rect; last by done.
     * by rewrite negbK in Hd; constructor.
   + constructor; apply/forallP => i; rewrite mxE.
     move/(_ i)/negbT: Hu.
-    by rewrite lerNgt.
+    by rewrite leNgt.
 Qed.
 
 End Phase2.
@@ -1521,7 +1524,7 @@ Proof.
 move => x_feas [/andP [/eqP Ad d_lt0] b_d_ltr0].
 move/(vdot_lev d_lt0): x_feas.
 rewrite vdot_mulmx Ad vdot0l vdotC.
-by move/(ltr_le_trans b_d_ltr0); rewrite ltrr.
+by move/(lt_le_trans b_d_ltr0); rewrite ltxx.
 Qed.
 
 Lemma feasibleP :
@@ -1813,7 +1816,7 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 - move/(_ '[c,x]) => [y [Hy Hy']].
   move/eqP: Hcsc; rewrite -duality_gap_eq0_def; move/eqP => Hcsc.
   move/(_ _ Hy)/(conj Hy')/andP: (duality_gap_eq0_optimality Hx Hu Hcsc).
-  by rewrite ltr_le_asym.
+  by rewrite lt_le_asym.
 Qed.
 
 Lemma opt_point_is_feasible :
@@ -1837,7 +1840,7 @@ case: simplexP.
   apply /idP => Q. destruct H. by exists 0.
 - move => //= [_ p] //= [_ _ Q]. apply /and3P. move => [_ P _].
   move: P. rewrite /dual_polyhedron !inE => /andP [/eqP P _].
-  move: P. rewrite mulmx0 => Qn. move: Q. by rewrite -Qn vdot0l ltrr.
+  move: P. rewrite mulmx0 => Qn. move: Q. by rewrite -Qn vdot0l ltxx.
 - move => [p1 p2] //= [Q1 Q2 Q3]. apply /and3P. by rewrite Q1 Q2 Q3.
 Qed.
 
@@ -1852,7 +1855,7 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP H
 - move => [_ H].
   move: (unbounded_certificate 0 Hx Hd Hd') => [y [Hy Hy']].
   move/(conj Hy')/andP: (H _ Hy).
-  by rewrite vdot0r ltr_le_asym.
+  by rewrite vdot0r lt_le_asym.
 - split.
   + by exists x; split.
   + apply: (duality_gap_eq0_optimality Hx Hu).
@@ -1883,7 +1886,7 @@ case: (boolP (feasible A b)) => /= [Hfeas | /negP Hinfeas]; last first.
   + by exists opt_value.
   + rewrite bounded_is_not_unbounded //.
     apply/negP; move/unboundedP/(_ K) => [x [Hx Hlt]].
-    by move/(_ _ Hx): H; move/(ltr_le_trans Hlt); rewrite ltrr.
+    by move/(_ _ Hx): H; move/(lt_le_trans Hlt); rewrite ltxx.
 Qed.
 
 Lemma boundedP_lower_bound : (feasible A b) ->
@@ -1894,7 +1897,7 @@ apply: (iffP idP).
 + by move => /boundedP [_ H]; exists opt_value.
 + move => [K H]. rewrite bounded_is_not_unbounded //.
   apply /negP. move/unboundedP/(_ K) => [x [Hx Hlt]].
-  move/(_ _ Hx): H. by rewrite ltr_geF.
+  move/(_ _ Hx): H. by rewrite lt_geF.
 Qed.
 
 Lemma opt_value_is_optimal x :
@@ -1908,12 +1911,12 @@ case: simplexP => [ d /(intro_existsT (infeasibleP _ _))/negP
 - by move/(intro_existsT (feasibleP _ _)): Hx.
 - move: (unbounded_certificate '[c,x] Hx Hd Hd') => [y [Hy Hy']].
   move/(_ _ Hy): Hopt.
-  by move/(ltr_le_trans Hy'); rewrite ltrr.
+  by move/(lt_le_trans Hy'); rewrite ltxx.
 - move/eqP: Hcsc; rewrite -duality_gap_eq0_def.
   move/eqP/(duality_gap_eq0_optimality Hy Hu)/(_ _ Hx) => Hyx.
   move/(_ _  Hy): Hopt => Hxy.
   move/andP: (conj Hxy Hyx).
-  by exact: ler_anti.
+  by exact: le_anti.
 Qed.
 
 Lemma bounded_is_dual_feasible :
@@ -2008,7 +2011,7 @@ case: pointed_simplexP =>
   by move/(intro_existsT (feasibleP _ _)): Hfeas.
 - move => [_ Hopt].
   move: (unbounded_cert_on_basis opt_value Hd' Hd (lex_feasible_basis_is_feasible fbas)) => [x [Hx Hx']].
-  by move/(ltr_le_trans Hx'): (Hopt _ Hx); rewrite ltrr.
+  by move/(lt_le_trans Hx'): (Hopt _ Hx); rewrite ltxx.
 - have Hval: '[ c, point_of_basis b bas] = opt_value.
     apply: opt_value_is_optimal;
       [ exact: (lex_feasible_basis_is_feasible bas) | exact: (optimal_cert_on_basis (lex_feasible_basis_is_feasible bas) i)].

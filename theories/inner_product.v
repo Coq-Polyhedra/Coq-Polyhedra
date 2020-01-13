@@ -16,8 +16,10 @@
 (* You may distribute this file under the terms of the CeCILL-B license   *)
 (**************************************************************************)
 
-From mathcomp Require Import all_ssreflect bigop ssralg ssrnum zmodp matrix vector fingroup perm.
+From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import bigop ssralg ssrnum zmodp matrix vector fingroup perm order.
 Require Import extra_matrix.
+Import Order.Theory.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -152,7 +154,7 @@ by rewrite u0 // => y _; exact: sqr_ge0.
 Qed.
 
 Lemma vnorm_gt0 u : ('[| u |]^2 > 0) = (u != 0).
-Proof. by rewrite ltr_def vnorm_ge0 vnorm_eq0 andbT. Qed.
+Proof. by rewrite lt_def vnorm_ge0 vnorm_eq0 andbT. Qed.
 
 End InnerProduct.
 

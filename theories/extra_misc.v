@@ -7,7 +7,10 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix finmap vector.
+From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import ssralg ssrnum zmodp matrix finmap vector order.
+
+Import Order.Theory.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -291,7 +294,7 @@ Variable m n : nat.
 
 Lemma ltr_neq (x y : R) : x < y -> x != y.
 Proof.
-by rewrite ltr_neqAle => /andP [].
+by rewrite lt_neqAle => /andP [].
 Qed.
 
 Lemma addr_ltr_le0 (x y : R) :
@@ -330,23 +333,23 @@ elim: S => [ | x S' IH].
 - move => i; rewrite in_cons; move/orP => [/eqP -> | H].
   + rewrite /=.
     case H': S'; first by done.
-    * rewrite ler_minl; apply/orP; left; done.
+    * rewrite leIx; apply/orP; left; done.
   + rewrite /=; move: H.
     case H': S'; first by rewrite in_nil.
-    * by rewrite -H'; move => Hi; rewrite ler_minl; apply/orP; right; apply: IH.
+    * by rewrite -H'; move => Hi; rewrite leIx; apply/orP; right; apply: IH.
 Qed.
 
 Lemma min_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | min_seq S v == i] S.
 Proof.
 elim: S => [ | x S']; first by done.
 - case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
-  + apply/hasP. case: (minrP x (min_seq S' v)) => [H'' |].
+  + apply/hasP. case: (leP x (min_seq S' v)) => [H'' |].
     * exists x; first by rewrite mem_head.
-      rewrite /= minr_l //. by case H: S'.
+      rewrite /= meet_l //. by case H: S'.
     * move/hasP: IH => [i Hi /= /eqP ->] ?.
       exists i; first by rewrite mem_behead.
       case H: S'; first by move: Hi; rewrite H in_nil.
-      by rewrite minr_r // ltrW.
+      by rewrite meet_r // ltW.
 Qed.
 
 Variant min_seq_spec (S : seq R) (v : R) : R -> Prop :=
@@ -370,7 +373,7 @@ Proof.
   move => H.
   apply/idP/idP.
   - move => H'. apply/allP; rewrite /= => x Hx.
-    apply: (@ltr_le_trans _ (min_seq S v) _ _); first by done.
+    apply: (@lt_le_trans _ _ (min_seq S v) _ _); first by done.
     + by apply: min_seq_ler.
   - case: H => [Hne | He].
     + move/allP => H' /=. move/hasP: (min_seq_eq v Hne) => [i Hi /eqP -> /=].
@@ -379,27 +382,27 @@ Proof.
         rewrite /= => /andP [Hxp H_].
         have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
         case Haf: (S); first by apply: Hxp. rewrite -Haf.
-        case: minrP => //.
+        case: leP => //.
 Qed.
 
 Lemma ltW_lt (x y z : R) : (x < y < z) -> (x <= y < z).
 Proof.
-by move => /andP [??]; rewrite ltrW //=.
+by move => /andP [??]; rewrite ltW //=.
 Qed.
 
 Lemma lt_ltW (x y z : R) : (x < y < z) -> (x < y <= z).
 Proof.
-by move => /andP [??]; rewrite ltrW //= andbT.
+by move => /andP [??]; rewrite ltW //= andbT.
 Qed.
 
 Lemma lt_leW (x y z : R) : (x < y <= z) -> (x <= y <= z).
 Proof.
-by move => /andP [??]; rewrite ltrW //= andbT.
+by move => /andP [??]; rewrite ltW //= andbT.
 Qed.
 
 Lemma ltW_le (x y z : R) : (x <= y < z) -> (x <= y <= z).
 Proof.
-by move => /andP [-> ?]; rewrite ltrW //=.
+by move => /andP [-> ?]; rewrite ltW //=.
 Qed.
 
 End ExtraNum.

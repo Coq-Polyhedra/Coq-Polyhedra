@@ -12,6 +12,8 @@ From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra 
 Require Import extra_misc inner_product extra_matrix vector_order row_submx.
 Require Import hpolyhedron polyhedron barycenter.
 
+Import Order.Theory.
+
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -753,7 +755,7 @@ suff finsupp_sub_eq: (finsupp w `<=` (S `|` -%R @` S))%fset.
     by move/fsubsetP/(_ _ e'_in): w_supp; rewrite inE e'_notin_mS orbF.
   apply/poly_subsetPn; exists x => //.
   rewrite in_hp -e1_eq eq_sym; apply/ltr_neq.
-  apply/(ler_lt_trans e2_le).
+  apply/(le_lt_trans e2_le).
   rewrite !(combinebE w_supp) /= vdot_sumDl.
   apply/sumr_ltrP.
   + move => i; rewrite vdotZl ler_wpmul2l ?ge0_fconic //.
@@ -1116,7 +1118,7 @@ have dv_neq_dw: '[d,v] != '[d,w].
   by rewrite direct_orthvP memv0 => /eqP.
 have v_neq_w : v != w by move: dv_neq_dw; apply/contra_neq => ->.
 have dv_lt_dw: '[d,v] < '[d,w].
-- rewrite ltr_neqAle dv_neq_dw /=.
+- rewrite lt_neqAle dv_neq_dw /=.
   move/poly_subsetP/(_ _ w_in_P): (opt_value_lower_bound d_bounded).
   by rewrite in_hs -d_v /=.
 exists v; exists w => //.
@@ -1456,7 +1458,7 @@ case: (emptyP P) => [-> _| P_prop0 P_compact].
     move/(_ _ e_bounded) => [y].
     move/in_conv/(poly_subsetP conv_sub) => y_in_e y_in_argmin.
     move: x_notin_hs; apply/contraNN => x_in_P.
-    rewrite !in_hs in y_in_e *; apply/(ler_trans y_in_e).
+    rewrite !in_hs in y_in_e *; apply/(le_trans y_in_e).
     by apply/(argmin_lower_bound y_in_argmin).
   + apply/poly_subsetP/conv_subset.
     exact: vertex_set_subset.
@@ -1484,7 +1486,7 @@ pose S := [seq '[c,x] | x <- (vertex_set P `\ v)%fset].
 pose α := min_seq S ('[c,v]+1%R).
 have v_notin: v \notin (`[ hs [<c, α>] ]).
 - rewrite /α; case: min_seqP => [| ? [/mapP [z] z_in -> _]].
-  + by rewrite in_hs -ltrNge cpr_add ltr01.
+  + by rewrite in_hs -ltNge cpr_add ltr01.
   + move: z_in; rewrite 2!inE => /andP [z_neq_v /vertex_set_subset z_in].
     have /(notin_argmin c_bounded z_in): z \notin argmin P c by rewrite -pt_eq in_pt.
     rewrite in_hsN in_hs /=.
@@ -1541,13 +1543,13 @@ Lemma conv_sep_hp (V : {fset 'cV_n}) (x : 'cV_n) :
   x \notin conv V -> exists e : base_elt, [e separates x from V].
 Proof.
 move/separation => [e x_notin /poly_subsetP sub].
-rewrite in_hs -ltrNge in x_notin.
+rewrite in_hs -ltNge in x_notin.
 pose e' := [<e.1, ('[e.1,x]+e.2)/2%:R >].
 exists e'; apply/andP; split.
-- by rewrite in_hs -ltrNge /e' /= midf_lt.
-- apply/forallP => v; rewrite in_hsN -ltrNge /e' /=.
+- by rewrite in_hs -ltNge /e' /= midf_lt.
+- apply/forallP => v; rewrite in_hsN -ltNge /e' /=.
   move/in_conv/sub: (fsvalP v); rewrite in_hs.
-  by apply/ltr_le_trans; rewrite midf_lt.
+  by apply/lt_le_trans; rewrite midf_lt.
 Qed.
 
 End SeparationVertex.
@@ -1773,7 +1775,7 @@ have: combine y \in [predC `[hs -e0]].
   + by apply/contraTneq => ->.
   + by apply/fsubsetP/vertex_setS.
 rewrite !inE /= vdotNl in in_hp *.
-by move/eqP: in_hp ->; rewrite lerr.
+by move/eqP: in_hp ->; rewrite lexx.
 Qed.
 
 Lemma vf_P_in_L : pval P \in L.
