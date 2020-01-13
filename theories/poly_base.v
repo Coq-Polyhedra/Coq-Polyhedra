@@ -1867,69 +1867,65 @@ Proof.
 by move => ??; rewrite /= eq_sym fsetUC.
 Qed.
 
-Lemma adj_vtx v w : adj v w -> v \in vertex_set P /\ w \in vertex_set P.
+Lemma adj_vtxl (v w : 'cV[R]_n) : adj v w -> v \in vertex_set P.
 Proof.
-by move/andP => [_] segm_face; split; apply/(fsubsetP (vertex_setS segm_face));
-   rewrite vertex_set_segm; rewrite !inE eq_refl ?orbT.
+by move/andP => [_] segm_face; apply/(fsubsetP (vertex_setS segm_face));
+   rewrite vertex_set_segm; rewrite !inE eq_refl.
 Qed.
 
-
-Lemma face_dim2 (Q : 'poly[R]_n) :
-  (Q `>` `[poly0]) -> compact Q -> (dim Q <= 2)%N -> exists v, exists w, Q = conv [fset v; w]%fset.
+Lemma adj_vtxr (v w : 'cV[R]_n) : adj v w -> w \in vertex_set P.
 Proof.
-elim/polybW : Q => base Q Q_prop0 Q_compact dimQ_le2.
-have Q_pointed := compact_pointed Q_compact.
-rewrite [pval Q]conv_vertex_set //.
-case/altP : (vertex_set Q =P fset0) => [eq0| /fset0Pn [v v_vtx]].
-- by move: Q_prop0; rewrite [pval Q]conv_vertex_set ?eq0 ?conv0 ?poly_properxx.
-- exists v; case/altP : (vertex_set Q =P [fset v]%fset) => [->| neq_v].
-  + exists v; by rewrite fsetUid conv_pt.
-  + have {dimQ_le2} dimQ2 : dim Q = 2%N.
-    * admit.
-    have v_in: v \in Q by apply/vertex_set_subset.
-    pose sep := (conv_sep_hp (sep_vertex Q_compact v_vtx)).
-    set e0 := xchoose sep; set F := slice e0 Q.
-    have: (dim F = 1)%N.
-    * symmetry; apply/succn_inj; rewrite -dimQ2.
-      apply/(vf_dim Q_compact v_vtx); first by apply/(xchooseP sep).
-        by rewrite ?inE face_set_self v_in.
 Admitted.
-(*
 
-    apply/
+Lemma subset_neighbor_cone (v x : 'cV[R]_n) :
+  v \in vertex_set P -> x \in P -> x-v \in cone ([fset (w - v) | w in vertex_set P & adj v w]%fset).
+Proof.
+move => v_vtx x_in_P.
+Admitted.
 
-      Search _ dim slice.
+Hypothesis P_prop0 : (P `>` `[poly0]).
 
-    (vf_surj Q_compact v_in (xchooseP sep)).
+Lemma vdot_combineE (V : {fset 'cV[R]_n}) (ω : {fsfun 'cV[R]_n ~> R}) :
+  (finsupp ω `<=` V)%fset ->
+  forall c, '[c,combine ω] = \sum_(x : V) (ω (fsval x)) * '[c, (fsval x)].
+Proof.
+Admitted.
 
-    elim/polybW: Q Q_prop0 Q_compact dimQ_le2 Q_pointed v_in neq_v => base Q Q_prop0 Q_compact dimQ_le2 Q_pointed v_in neq_v.
+Lemma le_argmin (c x y : 'cV[R]_n) :
+  x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
+Admitted.
 
+Lemma improving_neighbor (v c : 'cV[R]_n) :
+  v \in vertex_set P -> v \notin argmin P c -> exists2 w, adj v w & '[c,w] < '[c,v].
+Proof.
+move => v_vtx v_notin.
+have c_bounded : bounded P c by apply/compactP.
+set x0 := ppick (argmin P c).
+have x0_in_argmin : x0 \in argmin P c by apply/ppickP; rewrite -bounded_argminN0.
+have: x0 \in P by move: x0_in_argmin; apply/poly_subsetP/argmin_subset.
+move/(subset_neighbor_cone v_vtx)/in_coneP => [ω ω_supp eq_combine].
+suff: '[c,combine ω] < 0.
+- rewrite (vdot_combineE ω_supp) => c_combine_lt0.
+  suff: [exists w : vertex_set P, (adj v (fsval w)) && ('[ c, (fsval w)] < '[ c, v])].
+  + by move/existsP => [w] /andP [??]; exists (fsval w).
+  move: c_combine_lt0; apply/contraTT.
+  rewrite negb_exists -leNgt => /forallP h.
+  apply/sumr_ge0 => z _.
+  move/imfsetP: (fsvalP z) => [w /andP [w_vtx w_adj_v] ->].
+  apply/mulr_ge0; first by apply/conicwP/valP.
+  pose w_idx := [` w_vtx]%fset.
+  move/(_ w_idx): h; rewrite w_adj_v /=.
+  by rewrite -leNgt vdotBr subr_ge0.
+- rewrite -eq_combine vdotBr subr_lt0.
+  move: v_notin; apply/contraR.
+  by rewrite -leNgt; apply/le_argmin.
+Qed.
 
-  + have {neq_v} /fproperP [_ [w w_vtx]] : ([fset v] `<` (vertex_set Q))%fset.
-    * admit.
-    rewrite inE => w_neq_v.
-    have sub: ([fset v; w] `<=` (vertex_set Q))%fset
-      by apply/fsubsetP => ? /fset2P; case => ->.
-    exists w; apply/poly_subset_anti; last by apply/convS.
-    suff /convS: (vertex_set Q `<=` [fset v; w])%fset by [].
-    apply: contraT => subN.
-    have {sub} {subN} /fproperP [_ [x x_in x_notin]]: ([fset v; w] `<` (vertex_set Q))%fset
-      by rewrite fproperE sub subN.
-    have wv_in_hull : w - v \in hull Q.
-    Search _ hull.
-
-
-    Search _ (~~ (_ `<=` _)%fset).
-
-      Search _ conv.
-
-
-have: (#|` vertex_set Q| <= 2)%N.
-- Search _ 2%N in fintype.
-
-
-have Q_pointed : pointed Q by apply/(face_pointed (compact_pointed P_compact)).
-move/fset0Pn: (vertex_setN0 Q_prop0 Q_pointed) => [v v_vtx].
- *)
+Lemma connected (v w : 'cV[R]_n) :
+  v \in vertex_set P -> w \in vertex_set P -> exists2 p, (path adj v p) & w \in p.
+Proof.
+move => v_vtx w_vtx.
+move: (w_vtx); rewrite in_vertex_setP => /face_argmin/(_ (pt_proper0 _)) [c c_bouned argmin_eq].
+Admitted.
 
 End Graph.
