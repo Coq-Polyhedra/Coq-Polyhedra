@@ -1,5 +1,6 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
+Import Order.Theory.
 
 Set   Implicit Arguments.
 Unset Strict Implicit.
@@ -268,7 +269,7 @@ Qed.
 
 Lemma conic_finsuppE x w : conic w -> (x \in finsupp w) = (0 < w x).
 Proof.
-by move=> /conicwP h; rewrite ltr_neqAle h andbT eq_sym; apply: mem_finsupp.
+by move=> /conicwP h; rewrite lt_neqAle h andbT eq_sym; apply: mem_finsupp.
 Qed.
 
 Lemma conic_weight_ge0 w : conic w -> 0 <= weight w.
@@ -359,7 +360,7 @@ Canonical conic_monoid := Monoid.Law addpA add0p addp0.
 Canonical conic_comoid := Monoid.ComLaw addpC.
 
 Lemma mem_coffinsupp w x : (x \in finsupp w) = (0 < w x).
-Proof. by rewrite mem_finsupp ltr_neqAle eq_sym ge0_fconic andbT. Qed.
+Proof. by rewrite mem_finsupp lt_neqAle eq_sym ge0_fconic andbT. Qed.
 
 Lemma coffinsupp0 : finsupp (0%:PFS)%cof = fset0.
 Proof. by rewrite supp_fs0. Qed.
@@ -368,8 +369,8 @@ Lemma coffinsuppD w1 w2 :
   finsupp (w1 + w2)%cof = (finsupp w1 `|` finsupp w2)%fset.
 Proof.
 apply/fsetP=> x; rewrite in_fsetE !mem_coffinsupp fconicwE.
-have := ge0_fconic w1 x; rewrite ler_eqVlt => /orP[].
-+ by move/eqP=> <-; rewrite ltrr add0r.
+have := ge0_fconic w1 x; rewrite le_eqVlt => /orP[].
++ by move/eqP=> <-; rewrite ltxx add0r.
 + by move=> gt0_w1; rewrite gt0_w1 ltr_paddr // ge0_fconic.
 Qed.
 
@@ -570,7 +571,7 @@ Proof. by rewrite /clamp => ->. Qed.
 
 Lemma rg01_clamp a : 0 <= clamp a <= 1.
 Proof.
-by rewrite /clamp; case: ifP => // _; rewrite lerr ler01.
+by rewrite /clamp; case: ifP => // _; rewrite lexx ler01.
 Qed.
 
 Lemma ge0_clamp a : 0 <= clamp a.
@@ -697,7 +698,7 @@ have w1: \sum_(y <- (X `\ x)%fset) w y = 1 - w x.
 + rewrite -(wgt1_fconvex w) weightE -(big_seq_fsetE _ _ predT) /=.
   rewrite -XE -[in RHS](fsetD1K xX) finmap.big_setU1 ?fsetD11 //=.
   by rewrite addrAC subrr add0r.
-have := le1_fconvex w x; rewrite ler_eqVlt => /orP[/eqP wxE|lt1_wx].
+have := le1_fconvex w x; rewrite le_eqVlt => /orP[/eqP wxE|lt1_wx].
 + rewrite wxE scale1r big1_seq /= ?addr0; last by apply: wP; rewrite -XE.
   move=> y yXDx; rewrite (rwP eqP); suff ->: w y = 0 by rewrite scale0r.
   move/eqP: w1; rewrite wxE subrr psumr_eq0 => [z _|].
@@ -708,7 +709,7 @@ have hE: \sum_(y <- (X `\ x)%fset) w y *: y
         = (1 - w x) *: \sum_(y <- (X `\ x)%fset) wR y *: y.
 + rewrite scaler_sumr !big_seq; apply: eq_bigr=> y yXDx.
   rewrite scalerA fsfunE yXDx mulrCA divff ?mulr1 //.
-  by rewrite subr_eq0 eq_sym ltr_eqF.
+  by rewrite subr_eq0 eq_sym lt_eqF.
 rewrite hE; (apply: cvxP; first by apply: wP; rewrite -XE); last first.
 + by rewrite ge0_fconvex le1_fconvex.
 have cvx_wR: convex wR; first (apply/convexP; split).
@@ -719,13 +720,13 @@ have cvx_wR: convex wR; first (apply/convexP; split).
   - rewrite (eq_bigr (fun y => w (val y) / (1 - w x))) /=.
     * by move=> y _; rewrite fsfunE fsvalP.
     rewrite -mulr_suml -(big_seq_fsetE _ _ predT w) /=.
-    by rewrite w1 divff // subr_eq0 eq_sym ltr_eqF.
+    by rewrite w1 divff // subr_eq0 eq_sym lt_eqF.
 have supp_wR: (finsupp wR = X `\ x)%fset.
 + apply/fsetP=> y; rewrite mem_finsupp fsfunE.
   case: ifP; rewrite ?eqxx //= => yXdx.
-  rewrite mulf_eq0 invr_eq0 gtr_eqF ?gt0_fconvex //=.
+  rewrite mulf_eq0 invr_eq0 gt_eqF ?gt0_fconvex //=.
   * by rewrite -XE; apply/fsubsetP/fsubD1set: yXdx.
-  by rewrite subr_eq0 eq_sym ltr_eqF.
+  by rewrite subr_eq0 eq_sym lt_eqF.
 have /= := ih (X `\ x)%fset _ (mkConvexfun cvx_wR); apply=> //.
 + by apply: fproperD1.
 + by move=> y; rewrite supp_wR in_fsetD1 => /andP[_]; rewrite XE => /wP.
