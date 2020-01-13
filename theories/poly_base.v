@@ -1880,6 +1880,9 @@ Lemma subset_neighbor_cone v (x : 'cV[R]_n) :
   v \in vertex_set P -> x \in P ->
         x - v \in cone ([fset (w - v) | w in vertex_set P & adj v w]%fset).
 Proof.
+move => v_vtx x_in_P.
+pose sep := conv_sep_hp (sep_vertex P_compact v_vtx).
+pose e := xchoose sep.
 Admitted.
 
 Hypothesis P_prop0 : (P `>` `[poly0]).
@@ -1894,22 +1897,52 @@ Lemma le_argmin (c x y : 'cV[R]_n) :
   x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
 Admitted.
 
+Lemma vertex_set_slice v : v \in vertex_set P ->
+  forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
+       vertex_set (slice e P) =
+       [fset ppick (slice e F) | F in face_set P & ((v \in F) && (dim F == 2%N))]%fset.
+Admitted.
+
 Lemma improving_neighbor (c v : 'cV[R]_n) :
   v \in vertex_set P -> v \notin argmin P c -> exists w, adj v w && ('[c,w] < '[c,v]).
 Proof.
 move => v_vtx v_notin.
 suff /existsP: [exists w : vertex_set P, adj v (fsval w) &&  ('[c,fsval w] < '[c,v])]
   by move => [w ?]; exists (fsval w).
-move: v_notin; apply/contraR; rewrite negb_exists => /forallP h.
+move: v_notin; apply/contraR; rewrite negb_exists => /forallP adj_vert.
 have c_bounded : bounded P c by apply/compactP.
-rewrite in_argmin (vertex_set_subset v_vtx) /=; apply/poly_subsetP => x; rewrite in_hs /=.
+rewrite in_argmin (vertex_set_subset v_vtx) /=.
+rewrite [P]conv_vertex_set //; apply/conv_subset.
+move => w; case/altP : (w =P v) => [ -> _| w_neq_v w_vtx]; first by rewrite in_hs.
+pose sep := conv_sep_hp (sep_vertex P_compact v_vtx).
+pose e := xchoose sep.
+pose sep_v := (sep_hpP (xchooseP sep)).1.
+pose sep_other := (sep_hpP (xchooseP sep)).2.
+have w_in_hs : w \in `[hs e].
+  by apply/hsN_subset/sep_other/in_conv; rewrite !inE w_neq_v /=.
+move: (hp_itv w_in_hs sep_v) => [α /ltW_le α01].
+set x := _ + _ => x_in_hp.
+have {x_in_hp} x_in_slice : x \in slice e P.
+  by rewrite in_polyI x_in_hp /=; apply/convexP2 => //; apply/vertex_set_subset.
+suff: x \in (`[ hs [<c, '[ c, v]>] ]).
+- admit.
+- move: x_in_slice; rewrite [slice _ _]conv_vertex_set;
+    last by apply/(subset_compact P_compact)/poly_subsetIr.
+  rewrite (vertex_set_slice v_vtx) ?(xchooseP sep) // => /in_convP [ω ω_supp ->].
+  apply/convexW; first admit.
+  move => z /(fsubsetP ω_supp)/imfsetP => [[F] /and3P [F_face v_in_F /eqP dimF2] ->].
+  move/(dim2P (face_compact P_compact F_face)): dimF2 => [y [y' F_eq y_neq_y']].
+Admitted.
+
+(*
+  apply/poly_subsetP => x; rewrite in_hs /=.
 move/(subset_neighbor_cone v_vtx)/in_coneP => [ω ω_supp].
 rewrite -subr_ge0 -vdotBr => ->.
 rewrite (vdot_combineE ω_supp); apply/sumr_ge0 => z _.
 move/imfsetP: (fsvalP z) => [w /andP [w_vtx w_adj_v] ->].
 apply/mulr_ge0; first by apply/conicwP/valP.
 move/(_ [` w_vtx]%fset): h; rewrite w_adj_v /=.
-by rewrite -leNgt vdotBr subr_ge0.
+by rewrite -leNgt vdotBr subr_ge0.*)
 Qed.
 
 Section MkPath.
