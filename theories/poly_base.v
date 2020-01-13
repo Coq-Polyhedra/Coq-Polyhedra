@@ -8,6 +8,7 @@
 (* You may distribute this file under the terms of the CeCILL-B license  *)
 (*************************************************************************)
 
+Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product extra_matrix vector_order row_submx.
 Require Import hpolyhedron polyhedron barycenter.
@@ -1857,8 +1858,6 @@ Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
 
 Hypothesis P_compact : compact P.
 
-Implicit Types (v w : 'cV[R]_n).
-
 Definition adj :=
   [rel v w : 'cV[R]_n | (v != w) && (conv [fset v; w]%fset \in face_set P)].
 
@@ -1877,10 +1876,10 @@ Lemma adj_vtxr (v w : 'cV[R]_n) : adj v w -> w \in vertex_set P.
 Proof.
 Admitted.
 
-Lemma subset_neighbor_cone (v x : 'cV[R]_n) :
-  v \in vertex_set P -> x \in P -> x-v \in cone ([fset (w - v) | w in vertex_set P & adj v w]%fset).
+Lemma subset_neighbor_cone v (x : 'cV[R]_n) :
+  v \in vertex_set P -> x \in P ->
+        x - v \in cone ([fset (w - v) | w in vertex_set P & adj v w]%fset).
 Proof.
-move => v_vtx x_in_P.
 Admitted.
 
 Hypothesis P_prop0 : (P `>` `[poly0]).
@@ -1895,37 +1894,105 @@ Lemma le_argmin (c x y : 'cV[R]_n) :
   x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
 Admitted.
 
-Lemma improving_neighbor (v c : 'cV[R]_n) :
-  v \in vertex_set P -> v \notin argmin P c -> exists2 w, adj v w & '[c,w] < '[c,v].
+Lemma improving_neighbor (c v : 'cV[R]_n) :
+  v \in vertex_set P -> v \notin argmin P c -> exists w, adj v w && ('[c,w] < '[c,v]).
 Proof.
 move => v_vtx v_notin.
+suff /existsP: [exists w : vertex_set P, adj v (fsval w) &&  ('[c,fsval w] < '[c,v])]
+  by move => [w ?]; exists (fsval w).
+move: v_notin; apply/contraR; rewrite negb_exists => /forallP h.
 have c_bounded : bounded P c by apply/compactP.
-set x0 := ppick (argmin P c).
-have x0_in_argmin : x0 \in argmin P c by apply/ppickP; rewrite -bounded_argminN0.
-have: x0 \in P by move: x0_in_argmin; apply/poly_subsetP/argmin_subset.
-move/(subset_neighbor_cone v_vtx)/in_coneP => [ω ω_supp eq_combine].
-suff: '[c,combine ω] < 0.
-- rewrite (vdot_combineE ω_supp) => c_combine_lt0.
-  suff: [exists w : vertex_set P, (adj v (fsval w)) && ('[ c, (fsval w)] < '[ c, v])].
-  + by move/existsP => [w] /andP [??]; exists (fsval w).
-  move: c_combine_lt0; apply/contraTT.
-  rewrite negb_exists -leNgt => /forallP h.
-  apply/sumr_ge0 => z _.
-  move/imfsetP: (fsvalP z) => [w /andP [w_vtx w_adj_v] ->].
-  apply/mulr_ge0; first by apply/conicwP/valP.
-  pose w_idx := [` w_vtx]%fset.
-  move/(_ w_idx): h; rewrite w_adj_v /=.
-  by rewrite -leNgt vdotBr subr_ge0.
-- rewrite -eq_combine vdotBr subr_lt0.
-  move: v_notin; apply/contraR.
-  by rewrite -leNgt; apply/le_argmin.
+rewrite in_argmin (vertex_set_subset v_vtx) /=; apply/poly_subsetP => x; rewrite in_hs /=.
+move/(subset_neighbor_cone v_vtx)/in_coneP => [ω ω_supp].
+rewrite -subr_ge0 -vdotBr => ->.
+rewrite (vdot_combineE ω_supp); apply/sumr_ge0 => z _.
+move/imfsetP: (fsvalP z) => [w /andP [w_vtx w_adj_v] ->].
+apply/mulr_ge0; first by apply/conicwP/valP.
+move/(_ [` w_vtx]%fset): h; rewrite w_adj_v /=.
+by rewrite -leNgt vdotBr subr_ge0.
 Qed.
 
-Lemma connected (v w : 'cV[R]_n) :
-  v \in vertex_set P -> w \in vertex_set P -> exists2 p, (path adj v p) & w \in p.
+Section MkPath.
+
+Variable c : 'cV[R]_n.
+
+Definition height (v : 'cV[R]_n) :=
+  #|` [fset w in vertex_set P | '[c,w] <= '[c,v]] |%fset.
+
+Definition improve (v : 'cV[R]_n) :=
+  match @idP (v \in vertex_set P) with
+  | ReflectT v_vtx =>
+    match @idPn (v \in argmin P c) with
+    | ReflectT v_notin => xchoose (improving_neighbor v_vtx v_notin)
+    | _ => v
+    end
+  | _ => v
+  end.
+
+Lemma improveE (v : 'cV[R]_n) (v_vtx : v \in vertex_set P) (v_notin : v \notin argmin P c) :
+  let w := improve v in adj v w && ('[c,w] < '[c,v]).
 Proof.
-move => v_vtx w_vtx.
-move: (w_vtx); rewrite in_vertex_setP => /face_argmin/(_ (pt_proper0 _)) [c c_bouned argmin_eq].
-Admitted.
+rewrite /improve.
+case: {-}_/idP => [h|]; rewrite ?v_vtx //.
+case: {-}_/idPn => [h'|]; rewrite ?v_notin //.
+by apply/(xchooseP (improving_neighbor _ _)).
+Qed.
+
+Lemma improve_in_vertex_set (v : 'cV[R]_n) :
+  v \in vertex_set P -> improve v \in vertex_set P.
+Proof.
+move => v_vtx; rewrite /improve.
+case: {-}_/idP => [h|]; rewrite ?v_vtx //.
+case: {-}_/idPn => [h'| //].
+by move: (xchooseP (improving_neighbor h h')) => /andP [/adj_vtxr ? _].
+Qed.
+
+Function mk_path (v : 'cV[R]_n) {measure height v} :=
+  if (v \in vertex_set P) && (v \notin argmin P c) then
+    let w := improve v in
+    w :: mk_path w
+  else [::].
+Proof.
+move => v /andP [v_vtx v_notin].
+set w := improve v; apply/ssrnat.leP.
+suff w_lt_v: '[c,w] < '[c,v].
+- rewrite /height.
+  set S_w := [fset _ | _ in _ & _]%fset; set S_v := [fset _ | _ in _ & _]%fset.
+  apply/fproper_ltn_card/fproperP; split.
+  + move => x; rewrite !inE /= => /andP [-> /=].
+    by move/le_lt_trans/(_ w_lt_v)/ltW.
+  + by exists v; rewrite !inE v_vtx //= -?ltNge.
+- by rewrite /w; move/andP : (improveE v_vtx v_notin) => [_].
+Qed.
+
+Lemma mk_pathP :
+  forall v, path adj v (mk_path v).
+Proof.
+apply/(@mk_path_rect (path adj)) => [v /andP [v_vtx v_notin] w | //=].
+suff: adj v w by rewrite /= => -> ->.
+by rewrite /w; move/andP : (improveE v_vtx v_notin) => [].
+Qed.
+
+Lemma mk_path_argmin :
+  forall v, v \in vertex_set P -> (last v (mk_path v)) \in argmin P c.
+Proof.
+pose P' v s := v \in vertex_set P -> (last v s) \in argmin P c.
+apply/(@mk_path_rect P') => [v _| v ? <-].
+- by rewrite /P' /= => h ?; apply/h/improve_in_vertex_set.
+- case: ifP => [// | /negbT]; rewrite negb_and => /orP; case; rewrite /P' /=.
+  + by move/negP.
+  + by rewrite negbK.
+Qed.
+
+End MkPath.
+
+Lemma connected v w :
+  v \in vertex_set P -> w \in vertex_set P -> exists2 p, (path adj v p) & w = last v p.
+Proof.
+move => v_vtx; rewrite in_vertex_setP.
+move/face_argmin/(_ (pt_proper0 _)) => [c c_bouned argmin_eq].
+exists (mk_path c v); first by apply/mk_pathP.
+by move: (mk_path_argmin c v_vtx); rewrite -argmin_eq in_pt => /eqP.
+Qed.
 
 End Graph.
