@@ -1467,13 +1467,6 @@ Qed.
 
 End Minkowski.
 
-Section Dim2.
-
-Context {R : realFieldType} {n : nat}.
-
-
-End Dim2.
-
 Section SeparationVertex.
 
 Context {R : realFieldType} {n : nat}.
@@ -1874,28 +1867,10 @@ Qed.
 
 Lemma adj_vtxr (v w : 'cV[R]_n) : adj v w -> w \in vertex_set P.
 Proof.
-Admitted.
+by rewrite adj_sym; apply/adj_vtxl.
+Qed.
 
-Lemma subset_neighbor_cone v (x : 'cV[R]_n) :
-  v \in vertex_set P -> x \in P ->
-        x - v \in cone ([fset (w - v) | w in vertex_set P & adj v w]%fset).
-Proof.
-move => v_vtx x_in_P.
-pose sep := conv_sep_hp (sep_vertex P_compact v_vtx).
-pose e := xchoose sep.
-Admitted.
-
-Hypothesis P_prop0 : (P `>` `[poly0]).
-
-Lemma vdot_combineE (V : {fset 'cV[R]_n}) (ω : {fsfun 'cV[R]_n ~> R}) :
-  (finsupp ω `<=` V)%fset ->
-  forall c, '[c,combine ω] = \sum_(x : V) (ω (fsval x)) * '[c, (fsval x)].
-Proof.
-Admitted.
-
-Lemma le_argmin (c x y : 'cV[R]_n) :
-  x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
-Admitted.
+(*Hypothesis P_prop0 : (P `>` `[poly0]).*)
 
 Lemma vertex_set_slice_dim1 v : v \in vertex_set P ->
   forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
@@ -1908,16 +1883,11 @@ Lemma vertex_set_slice v : v \in vertex_set P ->
        [fset ppick (slice e F) | F in face_set P & ((v \in F) && (dim F == 2%N))]%fset.
 Admitted.
 
-Lemma foo (v w : 'cV[R]_n) α : (1 - α) *: v + α *: w = v + α *: (w - v).
-Admitted.
-
-Lemma hs_convex (e : base_elt[R,n]) : convex_pred (mem (`[hs e])).
-Admitted.
-
 Lemma improving_neighbor (c v : 'cV[R]_n) :
   v \in vertex_set P -> v \notin argmin P c -> exists w, adj v w && ('[c,w] < '[c,v]).
 Proof.
 move => v_vtx v_notin.
+have P_prop0 : P `>` `[poly0] by apply/proper0P; exists v; apply/vertex_set_subset.
 suff /existsP: [exists w : vertex_set P, adj v (fsval w) &&  ('[c,fsval w] < '[c,v])]
   by move => [w ?]; exists (fsval w).
 move: v_notin; apply/contraR; rewrite negb_exists => /forallP adj_vert.
@@ -1925,7 +1895,7 @@ have {}adj_vert: forall w, adj v w -> '[c,w] >= '[c,v].
 - move => w adj; move/adj_vtxr: (adj) => w_vtx.
   by move/(_ [` w_vtx]%fset): adj_vert; rewrite adj /= leNgt.
 have c_bounded : bounded P c by apply/compactP.
-rewrite in_argmin (vertex_set_subset v_vtx) /=.
+rewrite in_argmin vertex_set_subset //=.
 rewrite [P]conv_vertex_set //; apply/conv_subset.
 move => w; case/altP : (w =P v) => [ -> _| w_neq_v w_vtx]; first by rewrite in_hs.
 pose sep := conv_sep_hp (sep_vertex P_compact v_vtx).
@@ -1939,7 +1909,8 @@ set x := _ + _ => x_in_hp.
 have {x_in_hp} x_in_slice : x \in slice e P
   by rewrite in_polyI x_in_hp /= convexP2 ?ltW_le ?vertex_set_subset.
 suff: x \in (`[ hs [<c, '[ c, v]>] ]).
-- rewrite !in_hs /= /x bary2C foo vdotDr ler_addl vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
+- rewrite !in_hs /= /x bary2C bary2_in_hline vdotDr ler_addl.
+  rewrite vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
   by rewrite subr_cp0; move/andP: α01 => [].
 - move: x_in_slice; rewrite [slice _ _]conv_vertex_set;
     last by apply/(subset_compact P_compact)/poly_subsetIr.

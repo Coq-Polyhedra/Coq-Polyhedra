@@ -363,6 +363,9 @@ Proof.
 by rewrite in_hsN -ltNge in_hs => /ltW.
 Qed.
 
+Lemma hs_convex (e : base_elt[R,n]) : convex_pred (mem (`[hs e])).
+Admitted.
+
 Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
 Proof.
 move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltNge in x_in y_in *.
@@ -577,6 +580,9 @@ Lemma bary2C (x y : 'cV[R]_n) (α : R) : (1-α) *: x + α *: y = (1 - (1 - α)) 
 Proof.
 by rewrite subKr addrC.
 Qed.
+
+Lemma bary2_in_hline (v w : 'cV[R]_n) α : (1 - α) *: v + α *: w = v + α *: (w - v).
+Admitted.
 
 Lemma hp_itv (e : base_elt[R,n]) (y z: 'cV[R]_n) :
   y \in (`[hs e]) -> z \notin (`[hs e]) -> exists2 α, (0 <= α < 1) & (1-α) *: y + α *: z \in `[hp e].
@@ -910,6 +916,10 @@ Lemma argmin_lower_bound {c x y} P :
 Proof. (* RK *)
 by rewrite in_argmin; move/andP => [_ /poly_subset_hsP/(_ y)].
 Qed.
+
+Lemma le_in_argmin {c x y} P :
+  x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
+Admitted.
 
 Lemma subset_opt_value P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
   argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q. (* RK *)
@@ -1541,6 +1551,12 @@ Definition cone V :=
 
 Definition conv V :=
   map_poly (mat_fset V) (orthant `&` `[hp [<const_mx 1, 1>]]).
+
+Lemma vdot_combineE (w : {fsfun 'cV[R]_n ~> R}) (V : {fset 'cV[R]_n}) :
+  (finsupp w `<=` V)%fset ->
+  forall c, '[c,combine w] = \sum_(x : V) (w (fsval x)) * '[c, (fsval x)].
+Proof.
+Admitted.
 
 Lemma combine_mulmxE (w : {fsfun 'cV[R]_n ~> _}) (V : {fset 'cV[R]_n}) :
   (finsupp w `<=` V)%fset -> combine w = mat_fset V *m vect_fset V w.
