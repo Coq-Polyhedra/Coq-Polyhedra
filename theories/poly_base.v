@@ -1942,8 +1942,9 @@ rewrite (vdot_combineE ω_supp); apply/sumr_ge0 => z _.
 move/imfsetP: (fsvalP z) => [w /andP [w_vtx w_adj_v] ->].
 apply/mulr_ge0; first by apply/conicwP/valP.
 move/(_ [` w_vtx]%fset): h; rewrite w_adj_v /=.
-by rewrite -leNgt vdotBr subr_ge0.*)
+by rewrite -leNgt vdotBr subr_ge0.
 Qed.
+*)
 
 Section MkPath.
 
