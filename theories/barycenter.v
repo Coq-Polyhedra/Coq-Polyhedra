@@ -679,7 +679,19 @@ Context {R : realFieldType} {L : lmodType R} (P : pred L).
 
 Definition convex_pred :=
   forall x y : L, x \in P -> y \in P ->
-    forall a : R, 0 <= a <= 1 -> a *: x + (1 - a) *: y \in P.
+    forall a : R, 0 <= a <= 1 -> (1-a) *: x + a *: y \in P.
+
+Lemma combine2C (x y : L) (α : R) :
+  (1-α) *: x + α *: y = (1 - (1 - α)) *: y + (1 - α) *: x.
+Proof.
+by rewrite subKr addrC.
+Qed.
+
+Lemma combine2_line (v w : L) α :
+  (1 - α) *: v + α *: w = v + α *: (w - v).
+Proof.
+by rewrite scalerBl scale1r addrAC -addrA -scalerBr.
+Qed.
 
 Hypothesis cvxP : convex_pred.
 
@@ -710,7 +722,7 @@ have hE: \sum_(y <- (X `\ x)%fset) w y *: y
 + rewrite scaler_sumr !big_seq; apply: eq_bigr=> y yXDx.
   rewrite scalerA fsfunE yXDx mulrCA divff ?mulr1 //.
   by rewrite subr_eq0 eq_sym lt_eqF.
-rewrite hE; (apply: cvxP; first by apply: wP; rewrite -XE); last first.
+rewrite hE addrC; (apply: cvxP; try by apply: wP; rewrite -XE); last first.
 + by rewrite ge0_fconvex le1_fconvex.
 have cvx_wR: convex wR; first (apply/convexP; split).
 + move=> y _; rewrite fsfunE; case: ifP=> // _.

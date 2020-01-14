@@ -363,24 +363,6 @@ Proof.
 by rewrite in_hsN -ltNge in_hs => /ltW.
 Qed.
 
-Lemma hs_convex (e : base_elt[R,n]) : convex_pred (mem (`[hs e])).
-Admitted.
-
-Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
-Proof.
-move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltNge in x_in y_in *.
-rewrite vdotDr !vdotZr.
-case: (ltrP '[e.1,x] '[e.1,y]) => [/ltW ?|?].
-- apply/le_lt_trans: y_in.
-  have {2}->: '[ e.1, y] = α * '[ e.1, y] + (1 - α) * '[ e.1, y].
-  + by rewrite mulrBl mul1r addrCA addrN addr0.
-  + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
-- apply/le_lt_trans: x_in.
-  have {2}->: '[ e.1, x] = α * '[ e.1, x] + (1 - α) * '[ e.1, x].
-  + by rewrite mulrBl mul1r addrCA addrN addr0.
-  + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
-Qed.
-
 Lemma hpE c (x : base_elt[R, n]) :
   (c \in `[hp x]) = (c \in (`[hs x])) && (c \in (`[hs -x])).
 Proof. by rewrite /mk_hp inE. Qed.
@@ -539,10 +521,30 @@ Proof.
 by rewrite repr_equiv H.lift_polyP mem_polyE.
 Qed.
 
-Lemma convexP2 (P : 'poly[R]_n) (v w : 'cV[R]_n) α :
-  v \in P -> w \in P -> 0 <= α <= 1 -> (1-α) *: v + α *: w \in P.
+Lemma mem_poly_convex (P : 'poly[R]_n) :
+  convex_pred (mem P).
 Proof.
-exact: H.convexP2.
+by move => ??????; apply/H.convexP2.
+Qed.
+
+Lemma hs_convex (e : base_elt[R,n]) : convex_pred (mem (`[hs e])).
+Proof.
+(*move => x y x_in y_in α α01.*)
+Admitted.
+
+Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
+Proof.
+move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltNge in x_in y_in *.
+rewrite vdotDr !vdotZr.
+case: (ltrP '[e.1,x] '[e.1,y]) => [/ltW ?|?].
+- apply/le_lt_trans: y_in.
+  have {2}->: '[ e.1, y] = (1 - α) * '[ e.1, y] + α * '[ e.1, y].
+  + by rewrite mulrBl mul1r addrAC -addrA addrN addr0.
+  + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
+- apply/le_lt_trans: x_in.
+  have {2}->: '[ e.1, x] = (1 - α) * '[ e.1, x] + α * '[ e.1, x].
+  + by rewrite mulrBl mul1r addrAC -addrA addrN addr0.
+  + by rewrite ler_add ?ler_wpmul2l ?subr_ge0.
 Qed.
 
 Lemma polyIxx P : P `&` P = P.
@@ -576,14 +578,6 @@ rewrite -[(-x)]mulN1r -[(-y)]mulN1r -mulf_div mulfV ?mul1r //.
 exact: moner_neq0.
 Qed.
 
-Lemma bary2C (x y : 'cV[R]_n) (α : R) : (1-α) *: x + α *: y = (1 - (1 - α)) *: y + (1 - α) *: x.
-Proof.
-by rewrite subKr addrC.
-Qed.
-
-Lemma bary2_in_hline (v w : 'cV[R]_n) α : (1 - α) *: v + α *: w = v + α *: (w - v).
-Admitted.
-
 Lemma hp_itv (e : base_elt[R,n]) (y z: 'cV[R]_n) :
   y \in (`[hs e]) -> z \notin (`[hs e]) -> exists2 α, (0 <= α < 1) & (1-α) *: y + α *: z \in `[hp e].
 Proof.
@@ -612,7 +606,7 @@ case: (α =P 0) => [->| /eqP α_neq0].
   have x_notin_hp' : '[ b.1, x] > b.2.
   + by rewrite lt_def; apply/andP; split.
   have bary_in_hs : (1-α) *: x + α *: y \in `[hs b].
-  + apply: convexP2; try by rewrite inE.
+  + apply: mem_poly_convex; try by rewrite inE.
     * by apply/andP; split; apply: ltW.
   rewrite (* inE *) in_hs vdotDr 2!vdotZr in bary_in_hs. (* TODO: here, rewrite inE loops, why? *)
   suff: b.2 < (1 - α) * '[ b.1, x] + α * '[b.1, y].
@@ -626,10 +620,8 @@ Lemma hp_extremeR b x y α :
   (x \in `[hs b]) -> (y \in `[hs b]) ->
   0 < α <= 1 -> ((1-α) *: x + α *: y \in `[hp b]) -> (y \in `[hp b]).
 Proof.
-move => x_in y_in /andP [α_ge0 α_lt1].
-rewrite bary2C.
-apply: hp_extremeL; try by done.
-apply/andP; split.
+move => x_in y_in /andP [α_ge0 α_lt1]; rewrite combine2C.
+apply: hp_extremeL => //; apply/andP; split.
 - by rewrite subr_cp0.
 - by rewrite cpr_add oppr_lt0.
 Qed.
@@ -1615,7 +1607,7 @@ Lemma conv_subset (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
 Proof.
 move=> le_VP; apply/poly_subsetP=> x /in_convP.
 case=> [w /fsubsetP le_wV ->]; apply: convexW=> /=.
-+ by move=> /= e1 e2 e1P e2Pa rg01_a; rewrite addrC; apply: convexP2.
++ by move=> /= e1 e2 e1P e2Pa rg01_a; apply: mem_poly_convex.
 + by move=> c /le_wV /le_VP.
 Qed.
 
