@@ -1861,9 +1861,9 @@ Hypothesis P_compact : compact P.
 Definition adj :=
   [rel v w : 'cV[R]_n | (v != w) && (conv [fset v; w]%fset \in face_set P)].
 
-Lemma adj_sym : symmetric adj.
+Lemma adj_sym v w : adj v w = adj w v. (*symmetric adj.*)
 Proof.
-by move => ??; rewrite /= eq_sym fsetUC.
+by rewrite /= eq_sym fsetUC.
 Qed.
 
 Lemma adj_vtxl (v w : 'cV[R]_n) : adj v w -> v \in vertex_set P.
@@ -1897,10 +1897,21 @@ Lemma le_argmin (c x y : 'cV[R]_n) :
   x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
 Admitted.
 
+Lemma vertex_set_slice_dim1 v : v \in vertex_set P ->
+  forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
+       forall F, F \in face_set P -> (v \in F) -> (dim F >= 1)%N -> (slice e F `>` `[poly0]).
+Admitted.
+
 Lemma vertex_set_slice v : v \in vertex_set P ->
   forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
        vertex_set (slice e P) =
        [fset ppick (slice e F) | F in face_set P & ((v \in F) && (dim F == 2%N))]%fset.
+Admitted.
+
+Lemma foo (v w : 'cV[R]_n) α : (1 - α) *: v + α *: w = v + α *: (w - v).
+Admitted.
+
+Lemma hs_convex (e : base_elt[R,n]) : convex_pred (mem (`[hs e])).
 Admitted.
 
 Lemma improving_neighbor (c v : 'cV[R]_n) :
@@ -1910,6 +1921,9 @@ move => v_vtx v_notin.
 suff /existsP: [exists w : vertex_set P, adj v (fsval w) &&  ('[c,fsval w] < '[c,v])]
   by move => [w ?]; exists (fsval w).
 move: v_notin; apply/contraR; rewrite negb_exists => /forallP adj_vert.
+have {}adj_vert: forall w, adj v w -> '[c,w] >= '[c,v].
+- move => w adj; move/adj_vtxr: (adj) => w_vtx.
+  by move/(_ [` w_vtx]%fset): adj_vert; rewrite adj /= leNgt.
 have c_bounded : bounded P c by apply/compactP.
 rewrite in_argmin (vertex_set_subset v_vtx) /=.
 rewrite [P]conv_vertex_set //; apply/conv_subset.
@@ -1920,29 +1934,32 @@ pose sep_v := (sep_hpP (xchooseP sep)).1.
 pose sep_other := (sep_hpP (xchooseP sep)).2.
 have w_in_hs : w \in `[hs e].
   by apply/hsN_subset/sep_other/in_conv; rewrite !inE w_neq_v /=.
-move: (hp_itv w_in_hs sep_v) => [α /ltW_le α01].
+move: (hp_itv w_in_hs sep_v) => [α α01].
 set x := _ + _ => x_in_hp.
-have {x_in_hp} x_in_slice : x \in slice e P.
-  by rewrite in_polyI x_in_hp /=; apply/convexP2 => //; apply/vertex_set_subset.
+have {x_in_hp} x_in_slice : x \in slice e P
+  by rewrite in_polyI x_in_hp /= convexP2 ?ltW_le ?vertex_set_subset.
 suff: x \in (`[ hs [<c, '[ c, v]>] ]).
-- admit.
+- rewrite !in_hs /= /x bary2C foo vdotDr ler_addl vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
+  by rewrite subr_cp0; move/andP: α01 => [].
 - move: x_in_slice; rewrite [slice _ _]conv_vertex_set;
     last by apply/(subset_compact P_compact)/poly_subsetIr.
   rewrite (vertex_set_slice v_vtx) ?(xchooseP sep) // => /in_convP [ω ω_supp ->].
-  apply/convexW; first admit.
+  apply/convexW; first apply/hs_convex.
   move => z /(fsubsetP ω_supp)/imfsetP => [[F] /and3P [F_face v_in_F /eqP dimF2] ->].
-  move/(dim2P (face_compact P_compact F_face)): dimF2 => [y [y' F_eq y_neq_y']].
-Admitted.
-
-(*
-  apply/poly_subsetP => x; rewrite in_hs /=.
-move/(subset_neighbor_cone v_vtx)/in_coneP => [ω ω_supp].
-rewrite -subr_ge0 -vdotBr => ->.
-rewrite (vdot_combineE ω_supp); apply/sumr_ge0 => z _.
-move/imfsetP: (fsvalP z) => [w /andP [w_vtx w_adj_v] ->].
-apply/mulr_ge0; first by apply/conicwP/valP.
-move/(_ [` w_vtx]%fset): h; rewrite w_adj_v /=.
-by rewrite -leNgt vdotBr subr_ge0.*)
+  have : v \in vertex_set F by rewrite (vertex_set_face F_face) in_imfset // inE ?v_vtx.
+  move: (F_face).
+  move/(dim2P (face_compact P_compact F_face)): dimF2 => [y [y' -> y_neq_y' yy'_face]].
+  have adj_y_y': adj y y' by rewrite inE yy'_face y_neq_y'.
+  move/vertex_setS: (yy'_face); rewrite vertex_set_segm => /fsubsetP sub_vtx v_in.
+  have slice_prop0 : slice e (conv [fset y; y']%fset) `>` `[poly0].
+  - apply/(vertex_set_slice_dim1 v_vtx) => //; first by apply/(xchooseP sep).
+    + by apply/in_conv.
+    + by rewrite dim_segm y_neq_y'.
+  suff: slice e (conv [fset y; y']%fset) `<=` `[ hs [<c, '[ c, v]>] ]
+    by move/poly_subsetP/(_ _ (ppickP slice_prop0)).
+  apply/(poly_subset_trans (poly_subsetIr _ _))/conv_subset.
+  move: v_in adj_y_y' => /fset2P; case => <-;
+    by move => adj_v u /fset2P; case => ->; rewrite in_hs // adj_vert // adj_sym.
 Qed.
 
 Section MkPath.
