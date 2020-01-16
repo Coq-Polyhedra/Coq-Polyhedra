@@ -38,5 +38,6 @@ RUN \
 	opam pin add -n coq-mathcomp-ssreflect https://github.com/strub/math-comp.git\#coqpolyhedra && \
 	opam pin add -n coq-mathcomp-algebra   https://github.com/strub/math-comp.git\#coqpolyhedra && \
 	opam pin add -n coq-mathcomp-fingroup  https://github.com/strub/math-comp.git\#coqpolyhedra && \
+	opam pin add -n coq-mathcomp-field     https://github.com/strub/math-comp.git\#coqpolyhedra && \
 	opam install coq coq-mathcomp-field coq-mathcomp-finmap && \
 	opam clean

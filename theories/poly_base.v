@@ -2239,9 +2239,9 @@ Definition lteEfaces := (leEfaces, ltEfaces).
 End FacesSubTheory.
 
 (* -------------------------------------------------------------------- *)
-Section FacesLattice.
-
 Import MeetBTFinMixin.Exports.
+
+Section FacesLattice.
 Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
 
 Lemma poly0_fp : `[poly0] \in face_set P.
@@ -2301,6 +2301,19 @@ Canonical polyFaces_tbLatticeType :=
 Canonical polyFaces_finLatticeType :=
   Eval hnf in [finLatticeType of {faces P}].
 End FacesLattice.
+
+(* -------------------------------------------------------------------- *)
+Section FacesGradedLattice.
+Context (R : realFieldType) (n : nat) (P : 'pointed[R]_n).
+
+Lemma foo :
+  [/\ forall x y : {faces P}, x < y -> (dim x < dim y)%N
+   &  forall x y : {faces P}, ((rank x).+1 < rank y)%N -> exists z, x < z < y].
+
+
+
+End FacesGradedLattice.
+
 
 (*
 (* -------------------------------------------------------------------- *)
