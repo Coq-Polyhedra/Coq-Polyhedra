@@ -2303,6 +2303,7 @@ Canonical polyFaces_finLatticeType :=
 End FacesLattice.
 
 (* -------------------------------------------------------------------- *)
+(*
 Section FacesGradedLattice.
 Context (R : realFieldType) (n : nat) (P : 'pointed[R]_n).
 
@@ -2313,7 +2314,7 @@ Lemma foo :
 
 
 End FacesGradedLattice.
-
+*)
 
 (*
 (* -------------------------------------------------------------------- *)
