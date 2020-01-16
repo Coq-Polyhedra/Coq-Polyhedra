@@ -13,21 +13,18 @@ Local Open Scope order_scope.
 (* -------------------------------------------------------------------- *)
 Module MeetBTFinMixin.
 Section MeetBTFinMixin.
-Context {T : finType}.
+Context (d : unit) (T : finPOrderType d).
 
 Record of_ := Build {
-  le     : rel T;
-  lt     : rel T;
   top    : T;
   bottom : T;
   meet   : T -> T -> T;
-  le_def : forall x y : T, le x y = (meet x y == x);
-  lt_def : forall x y : T, lt x y = (y != x) && le x y;
+  le_def : forall x y : T, x <= y = (meet x y == x);
   meetC  : commutative meet;
   meetA  : associative meet;
   meetxx : idempotent meet;
-  le0x   : forall x, le bottom x;
-  lex1   : forall x, le x top;
+  le0x   : forall x, bottom <= x;
+  lex1   : forall x, x <= top;
 }.
 
 Local Lemma meet1x (m : of_) : left_id (top m) (meet m).
@@ -36,25 +33,13 @@ Proof. by move=> x; rewrite (rwP eqP) meetC -le_def lex1. Qed.
 Local Lemma meetx1 (m : of_) : right_id (top m) (meet m).
 Proof. by move=> x; rewrite meetC meet1x. Qed.
 
-Variable (disp : unit) (m : of_).
+Variable (m : of_).
 
 Local Canonical meet_monoid := Monoid.Law (meetA m) (meet1x m) (meetx1 m).
 Local Canonical meet_comoid := Monoid.ComLaw (meetC m).
 
-Local Lemma le_refl : reflexive (le m).
-Proof. by move=> x; rewrite le_def meetxx. Qed.
-
-Local Lemma le_anti : antisymmetric (le m).
-Proof. by move=> x y; rewrite !le_def meetC => /andP [] /eqP {2}<- /eqP ->. Qed.
-
-Local Lemma le_trans : transitive (le m).
-Proof.
-move=> y x z; rewrite !le_def => /eqP lexy /eqP leyz; apply/eqP.
-by rewrite -[in LHS]lexy -meetA leyz lexy.
-Qed.
-
 Definition join (x y : T) : T :=
-  \big[meet m/top m]_(z : T | le m x z && le m y z) z.
+  \big[meet m/top m]_(z : T | (x <= z) && (y <= z)) z.
 
 Lemma joinC : commutative join.
 Proof. by move=> x y; apply: eq_bigl => z; rewrite andbC. Qed.
@@ -63,23 +48,23 @@ Lemma joinKI (y x : T) : meet m x (join x y) = x.
 Proof.
 rewrite (rwP eqP) -le_def /join; elim/big_ind: _.
 + by rewrite lex1.
-+ by move=> x' y'; rewrite !le_def meetA => /eqP -> /eqP ->.
++ by move=> x' y'; rewrite !(le_def m) meetA => /eqP-> /eqP->.
 + by move=> z /andP[].
 Qed.
 
 Lemma meetKU (y x : T) : join x (meet m x y) = x.
 Proof.
 rewrite /join (bigD1 x) /=; last first.
-+ by rewrite !le_def /= -meetA [meet _ y x]meetC meetA !meetxx !eqxx.
++ by rewrite !(le_def m) /= -meetA [meet _ y x]meetC meetA !meetxx !eqxx.
 rewrite (rwP eqP) -le_def; elim/big_ind: _.
 + by rewrite lex1.
-+ by move=> x' y'; rewrite !le_def meetA => /eqP-> /eqP->.
++ by move=> x' y'; rewrite !(le_def m) meetA => /eqP-> /eqP->.
 + by move=> z /andP[/andP[]].
 Qed.
 
-Lemma le_def_dual x y : le m x y = (join x y == y).
+Lemma le_def_dual x y : x <= y = (join x y == y).
 Proof.
-rewrite le_def; apply/eqP/eqP=> <-.
+rewrite (le_def m); apply/eqP/eqP=> <-.
 + by rewrite joinC meetC meetKU.
 + by rewrite joinKI.
 Qed.
@@ -87,29 +72,21 @@ Qed.
 Lemma joinA : associative join.
 Proof. Admitted.
 
-Definition porderMixin : lePOrderMixin T :=
-  LePOrderMixin (lt_def m) le_refl le_anti le_trans.
-
-Let T_porderType := POrderType disp T porderMixin.
-
-Definition latticeMixin : latticeMixin T_porderType :=
-  @LatticeMixin disp (POrderType disp T porderMixin)
+Definition latticeMixin : latticeMixin T :=
+  @LatticeMixin d T
     (meet m) join (meetC m) joinC
     (meetA m) joinA joinKI meetKU (le_def m).
 
-Definition bLatticeMixin : bLatticeMixin T_porderType :=
-  @BLatticeMixin disp (POrderType disp T porderMixin)
-    (bottom m) (le0x m).
+Definition bLatticeMixin : bLatticeMixin T :=
+  @BLatticeMixin d T (bottom m) (le0x m).
 
-Definition tbLatticeMixin : tbLatticeMixin T_porderType :=
-  @TBLatticeMixin disp (POrderType disp T porderMixin)
-    (top m) (lex1 m).
+Definition tbLatticeMixin : tbLatticeMixin T :=
+  @TBLatticeMixin d T (top m) (lex1 m).
 End MeetBTFinMixin.
 
 Module Exports.
 Notation meetBTFinMixin := of_.
 Notation MeetBTFinMixin := Build.
-Coercion porderMixin : meetBTFinMixin >-> lePOrderMixin.
 Coercion latticeMixin : meetBTFinMixin >-> Lattice.mixin_of.
 Coercion bLatticeMixin : meetBTFinMixin >-> BLattice.mixin_of.
 Coercion tbLatticeMixin : meetBTFinMixin >-> TBLattice.mixin_of.
@@ -408,9 +385,6 @@ Proof. by case: (TBOMorphism.class f). Qed.
 End TBOMorphismTheory.
 
 (* -------------------------------------------------------------------- *)
-Reserved Notation "'[< a ; b >]"
-  (at level 2, a, b at level 8, format "''[<' a ;  b '>]'").
-
 Section LatticeClosed.
 Context (d : unit) (L : latticeType d).
 
@@ -517,6 +491,9 @@ End SubLattices.
 Import SubLattices.Exports.
 
 (* -------------------------------------------------------------------- *)
+Reserved Notation "'[< a ; b >]"
+  (at level 2, a, b at level 8, format "''[<' a ;  b '>]'").
+
 Section Interval.
 Context (d : unit) (L : latticeType d).
 

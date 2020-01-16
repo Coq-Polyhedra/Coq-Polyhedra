@@ -2182,8 +2182,6 @@ Canonical seqsub_porderType :=
 End SeqSubPOrder.
 
 (* -------------------------------------------------------------------- *)
-Require Import graded.
-
 Section FacesSubType.
 Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
 
@@ -2205,6 +2203,8 @@ Canonical polyFaces_subFinType := Eval hnf in [subFinType of polyFaces].
 Definition polyFaces_porderMixin := Eval hnf in [porderMixin of polyFaces by <:].
 Canonical polyFaces_porderType := Eval hnf in POrderType ring_display polyFaces polyFaces_porderMixin.
 Canonical polyFaces_finPOrderType := Eval hnf in [finPOrderType of polyFaces].
+
+Coercion facepoly (F : polyFaces) := val (val F).
 End FacesSubType.
 
 Bind Scope ring_scope with polyFaces.
@@ -2212,6 +2212,31 @@ Bind Scope ring_scope with polyFaces.
 Reserved Notation "{ 'faces' P }" (at level 8, format "{ 'faces'  P }").
 
 Notation "{ 'faces' P }" := (@polyFaces _ _  P).
+
+(* -------------------------------------------------------------------- *)
+Section FacesSubTheory.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+
+Lemma facesP (F : {faces P}) : (facepoly F) \in face_set P.
+Proof. by apply: valP. Qed.
+
+Lemma facepoly_inj : injective (facepoly (P := P)).
+Proof. by move=> F1 F2 /val_inj /val_inj. Qed.
+
+Lemma PolyFaceK (F : 'poly[R]_n) (p : F \in face_set P) :
+  facepoly (PolyFace (SeqSub p)) = F.
+Proof. by []. Qed.
+
+Lemma leEfaces (F1 F2 : {faces P}) :
+  (F1 <= F2) = (facepoly F1 `<=` facepoly F2).
+Proof. by rewrite !leEsub. Qed.
+
+Lemma ltEfaces (F1 F2 : {faces P}) :
+  (F1 < F2) = (facepoly F1 `<` facepoly F2).
+Proof. by rewrite !ltEsub. Qed.
+
+Definition lteEfaces := (leEfaces, ltEfaces).
+End FacesSubTheory.
 
 (* -------------------------------------------------------------------- *)
 Section FacesLattice.
@@ -2224,8 +2249,80 @@ Proof. by apply: poly0_face_set. Qed.
 
 Lemma polyP_fp : P \in face_set P.
 Proof. by apply: face_set_self. Qed.
-(*
+
+Let fp0 := (PolyFace (SeqSub poly0_fp)).
+Let fp1 := (PolyFace (SeqSub polyP_fp)).
+
+Definition fpI (F1 F2 : {faces P}) : {faces P} :=
+  PolyFace (SeqSub (face_set_polyI (facesP F1) (facesP F2))).
+
+Lemma fpIC : commutative fpI.
+Proof.
+move=> F1 F2; apply: facepoly_inj; rewrite !PolyFaceK.
+by apply/poly_eqP=> x; rewrite !in_polyI andbC.
+Qed.
+
+Lemma fp_le_def (F1 F2 : {faces P}) : (F1 <= F2) = (fpI F1 F2 == F1).
+Proof.
+rewrite leEfaces -(inj_eq (@facepoly_inj _ _ _)) fpIC.
+by apply/idP/eqP => /polyIidPr.
+Qed.
+
+Lemma fp_lt_def (F1 F2 : {faces P}) : (F1 < F2) = (F2 != F1) && (F1 <= F2).
+Proof. by rewrite !lteEfaces poly_properEneq andbC eq_sym. Qed.
+
+Lemma fpIA : associative fpI.
+Proof.
+move=> F1 F2 F3; apply: facepoly_inj; rewrite !PolyFaceK.
+by apply/poly_eqP=> x; rewrite !in_polyI andbA.
+Qed.
+
+Lemma fpII : idempotent fpI.
+Proof.
+move=> F; apply: facepoly_inj; rewrite !PolyFaceK.
+by apply/poly_eqP=> x; rewrite !in_polyI andbb.
+Qed.
+
+Lemma fp0I (F : {faces P}) : fp0 <= F.
+Proof. by rewrite !leEsub /= /Order.le /= poly0_subset. Qed.
+
+Lemma fpI1 (F : {faces P}) : F <= fp1.
+Proof. by rewrite !leEsub /= /Order.le /=; apply/face_subset/facesP. Qed.
+
 Definition polyFaces_latticeMixin :=
-   @MeetBTFinMixin [finType of {faces P}] poly_subset.
-*)
+   MeetBTFinMixin fp_le_def fpIC fpIA fpII fp0I fpI1.
+
+Canonical polyFaces_latticeType :=
+  Eval hnf in LatticeType {faces P} polyFaces_latticeMixin.
+Canonical polyFaces_bLatticeType :=
+  Eval hnf in BLatticeType {faces P} polyFaces_latticeMixin.
+Canonical polyFaces_tbLatticeType :=
+  Eval hnf in TBLatticeType {faces P} polyFaces_latticeMixin.
+Canonical polyFaces_finLatticeType :=
+  Eval hnf in [finLatticeType of {faces P}].
 End FacesLattice.
+
+(*
+(* -------------------------------------------------------------------- *)
+Parameter (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+Parameter (F1 F2 : {faces P}).
+
+Notation I := '[<F1; F2>].
+
+Import OMorphism.Exports.
+
+Goal exists Q : 'poly[R]_n, exists f : {omorphism I -> {faces Q}}%O, bijective f.
+*)
+ 
+(*
+ * {faces P} est (face_set P) directement
+ * Gradation de {faces P}
+ * intervalle TB + gradation
+ * morphisme de rang
+ * atomicité, co-atomicité
+
+ * Propagation:
+ * - integration de vertex figure
+ * - treillis triviaux (d'un point, d'un segment, d'un polyhedre de hg 2)
+ * - tout intervalle de hauteur 2 dans un face lattice est un diamant
+ *)
