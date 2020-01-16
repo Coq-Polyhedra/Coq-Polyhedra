@@ -51,7 +51,7 @@ Proof.
 by move ->.
 Qed.
 
-Arguments exists_andP [T A B].
+Arguments exists_andP {T A B}.
 Prenex Implicits exists_andP.
 
 Lemma intro_existsT (T: Type) (P: T -> Prop) (b: bool) (H: reflect (exists x, P x) b) (x: T):
@@ -361,7 +361,7 @@ Lemma min_seqP (S : seq R) (v : R) :
 Proof.
 case: (altP (S =P [::])) => [->|].
 - by constructor.
-- move/(min_seq_eq v)/hasP => [x [x_in_S]]; rewrite inE eq_sym => /eqP x_eq.
+- move/(min_seq_eq v)/hasP => [x x_in_S]; rewrite inE eq_sym => /eqP x_eq.
   constructor; split.
   + by rewrite -x_eq.
   + exact: min_seq_ler.

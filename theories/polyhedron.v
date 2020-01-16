@@ -1138,7 +1138,7 @@ Lemma compact_pointed P :
   compact P -> pointed P.
 Proof.
 case: (emptyP P) => [->| P_neq0 P_compact]; rewrite ?pointed0 //.
-apply: contraT => /pointedPn [Ω [c]] [c_neq0 /poly_subsetP hl_sub].
+apply: contraT => /pointedPn [Ω [c]] c_neq0 /poly_subsetP hl_sub.
 suff: ~~ (bounded P c) by move/(compactP P_neq0)/(_ c) : P_compact => ->.
 apply/boundedPn => // K.
 pose μ := ((K - 1 - '[c,Ω])/'[| c |]^2)%R.

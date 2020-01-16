@@ -10,7 +10,7 @@
 
 Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
-Require Import extra_misc inner_product extra_matrix vector_order row_submx.
+Require Import extra_misc inner_product extra_matrix xorder vector_order row_submx.
 Require Import hpolyhedron polyhedron barycenter.
 
 Import Order.Theory.
@@ -1135,7 +1135,7 @@ have U_eq: U = <[w-v]>%VS.
   + by rewrite dimU1 dim_vline subr_eq0 eq_sym v_neq_w.
   + rewrite -memvE -in_mk_affine -(hullP_eq _ v_in_P).
     by apply/(poly_subsetP (subset_hull _)).
-have {hullP_eq} hullP_eq : hull P = `[line (w-v) & v].
+have {}hullP_eq : hull P = `[line (w-v) & v].
 - by rewrite line_affine -U_eq -hullP_eq.
 apply/poly_subset_anti; last first.
 - by apply/conv_subset => x /fset2P; case => ->.
@@ -2110,3 +2110,122 @@ by apply/ltnW/card_vertex_set; rewrite ?dimP.
 Qed.
 *)
 End Connectness.
+
+(* -------------------------------------------------------------------- *)
+Section PointedType.
+Context (R : realFieldType) (n : nat).
+
+Record pointedPoly : predArgType :=
+  { pointed_poly :> 'poly[R]_n; _ : pointed pointed_poly }.
+
+Canonical pointedPoly_subType := Eval hnf in [subType for pointed_poly].
+Definition pointedPoly_eqMixin := Eval hnf in [eqMixin of pointedPoly by <:].
+Canonical pointedPoly_eqType := Eval hnf in EqType pointedPoly pointedPoly_eqMixin.
+Definition pointedPoly_choiceMixin := Eval hnf in [choiceMixin of pointedPoly by <:].
+Canonical pointedPoly_choiceType := Eval hnf in ChoiceType pointedPoly pointedPoly_choiceMixin.
+
+Definition pointedPoly_of of phant R := pointedPoly.
+Identity Coercion type_pointedPoly_of : pointedPoly_of >-> pointedPoly.
+End PointedType.
+
+Bind Scope ring_scope with pointedPoly_of.
+Bind Scope ring_scope with pointedPoly.
+
+Reserved Notation "''pointed[' R ]_ n"
+  (at level 8, n at level 2, format "''pointed[' R ]_ n").
+
+Notation "''pointed[' R ]_ n" := (@pointedPoly_of _ n (Phant R)).
+
+Section PointedTheory.
+Context {R : realFieldType} (n : nat).
+
+Canonical pointedPoly_of_subType := Eval hnf in [subType of 'pointed[R]_n].
+Canonical pointedPoly_of_eqType := Eval hnf in [eqType of 'pointed[R]_n].
+Canonical pointedPoly_of_choiceType := Eval hnf in [choiceType of 'pointed[R]_n].
+End PointedTheory.
+
+(* -------------------------------------------------------------------- *)
+Section PolyPO.
+Context (R : realFieldType) (n : nat).
+
+Implicit Types P Q : 'poly[R]_n.
+
+Local Lemma poly_proper_def P Q :
+  (P `<` Q) = (Q != P) && (P `<=` Q).
+Proof. by rewrite poly_properEneq eq_sym andbC. Qed.
+
+Local Lemma poly_subset_anti :
+  antisymmetric (@poly_subset R n).
+Proof. by move=> P Q /andP[]; apply: poly_subset_anti. Qed.
+
+Definition poly_porderMixin :=
+  LePOrderMixin poly_proper_def poly_subset_refl poly_subset_anti poly_subset_trans.
+Canonical poly_porderType :=
+  Eval hnf in POrderType ring_display 'poly[R]_n poly_porderMixin.
+
+Definition pointedPoly_porderMixin := [porderMixin of @pointedPoly R n by <:].
+Canonical pointedPoly_porderType :=
+  Eval hnf in POrderType ring_display (@pointedPoly R n) pointedPoly_porderMixin.
+
+Definition pointedPoly_of_porderType :=
+  Eval hnf in [porderType of 'pointed[R]_n].
+End PolyPO.
+
+(* -------------------------------------------------------------------- *)
+Section SeqSubPOrder.
+Context {disp : unit} (T : porderType disp) (s : seq T).
+
+Definition seqsub_porderMixin :=
+  [porderMixin of seq_sub s by <:].
+Canonical seqsub_porderType :=
+  Eval hnf in POrderType disp (seq_sub s) seqsub_porderMixin.
+End SeqSubPOrder.
+
+(* -------------------------------------------------------------------- *)
+Require Import graded.
+
+Section FacesSubType.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+
+Variant polyFaces : predArgType := PolyFace of seq_sub (face_set P).
+
+Definition poly_face F := let: PolyFace F := F in F.
+
+Canonical polyFaces_subType := Eval hnf in [newType for poly_face].
+Definition polyFaces_eqMixin := Eval hnf in [eqMixin of polyFaces by <:].
+Canonical polyFaces_eqType := Eval hnf in EqType polyFaces polyFaces_eqMixin.
+Definition polyFaces_choiceMixin := Eval hnf in [choiceMixin of polyFaces by <:].
+Canonical polyFaces_choiceType := Eval hnf in ChoiceType polyFaces polyFaces_choiceMixin.
+Definition polyFaces_countMixin := Eval hnf in [countMixin of polyFaces by <:].
+Canonical polyFaces_countType := Eval hnf in CountType polyFaces polyFaces_countMixin.
+Canonical polyFaces_subCountType := Eval hnf in [subCountType of polyFaces].
+Definition polyFaces_finMixin := Eval hnf in [finMixin of polyFaces by <:].
+Canonical polyFaces_finType := Eval hnf in FinType polyFaces polyFaces_finMixin.
+Canonical polyFaces_subFinType := Eval hnf in [subFinType of polyFaces].
+Definition polyFaces_porderMixin := Eval hnf in [porderMixin of polyFaces by <:].
+Canonical polyFaces_porderType := Eval hnf in POrderType ring_display polyFaces polyFaces_porderMixin.
+Canonical polyFaces_finPOrderType := Eval hnf in [finPOrderType of polyFaces].
+End FacesSubType.
+
+Bind Scope ring_scope with polyFaces.
+
+Reserved Notation "{ 'faces' P }" (at level 8, format "{ 'faces'  P }").
+
+Notation "{ 'faces' P }" := (@polyFaces _ _  P).
+
+(* -------------------------------------------------------------------- *)
+Section FacesLattice.
+
+Import MeetBTFinMixin.Exports.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+
+Lemma poly0_fp : `[poly0] \in face_set P.
+Proof. by apply: poly0_face_set. Qed.
+
+Lemma polyP_fp : P \in face_set P.
+Proof. by apply: face_set_self. Qed.
+(*
+Definition polyFaces_latticeMixin :=
+   @MeetBTFinMixin [finType of {faces P}] poly_subset.
+*)
+End FacesLattice.

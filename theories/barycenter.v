@@ -31,6 +31,10 @@ Reserved Notation "x \bary V"
   (at level 70, format "x  \bary  V").
 
 (* -------------------------------------------------------------------- *)
+Declare Scope conicfun_scope.
+Declare Scope convexfun_scope.
+
+(* -------------------------------------------------------------------- *)
 Notation "{ 'fsfun' T ~> R }" := {fsfun T -> R for fun => 0} : type_scope.
 
 (* -------------------------------------------------------------------- *)
@@ -663,7 +667,7 @@ Lemma bary_subset V1 V2 x :
   {subset V1 <= V2} -> x \bary V1 -> x \bary V2.
 Proof.
 move=> le_V1_V2 [w le_w_V1 ->]; exists w => //.
-by move=> {x}x /le_w_V1 /le_V1_V2.
+by move=> {}x /le_w_V1 /le_V1_V2.
 Qed.
 
 Lemma bary1 x : x \bary [fset x]%fset.

@@ -21,6 +21,7 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
+Declare Scope poly_scope.
 Delimit Scope poly_scope with PH.
 
 (* -------------------------------------------------------------------- *)
