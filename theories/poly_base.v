@@ -435,7 +435,7 @@ Lemma poly_has_base P :
   exists (x : { base : base_t[R,n] & {poly base}}),
     P == (tagged x) :> 'poly[R]_n.
 Proof.
-move: (is_poly_of_base P) => [base ->].
+move: (is_poly_of_base P) => [base /eqP ->].
 by exists (Tagged _ ('P(base)%:poly_base : {poly base})) => /=.
 Qed.
 
@@ -495,7 +495,7 @@ Lemma non_redundant_baseW (Pt : 'poly[R]_n -> Prop) :
     -> (forall P : 'poly[R]_n, Pt P).
 Proof.
 move => h P.
-move: (is_poly_of_base P) => [base ->].
+move: (is_poly_of_base P) => [base /eqP ->].
 rewrite -poly_of_non_redundant_base.
 have ->: 'P(mk_non_redundant_base base) = 'P(mk_non_redundant_base base)%:poly_base by [].
 by apply/h/mk_non_redundant_baseP.
@@ -2327,7 +2327,7 @@ Import OMorphism.Exports.
 
 Goal exists Q : 'poly[R]_n, exists f : {omorphism I -> {faces Q}}%O, bijective f.
 *)
- 
+
 (*
  * {faces P} est (face_set P) directement
  * Gradation de {faces P}
