@@ -385,6 +385,54 @@ Proof.
         case: leP => //.
 Qed.
 
+Fixpoint max_seq (S : seq R) (v : R) :=
+  match S with
+  | [::] => v
+  | [:: x] => x
+  | x :: S' => Num.max x (max_seq S' v)
+  end.
+
+Lemma max_seq_ger (S : seq R) v: forall i, i \in S -> max_seq S v >= i.
+Proof.
+elim: S => [ /= | x S' IH].
+- by move => ?; rewrite inE.
+- move => i; rewrite inE => /orP [/eqP -> | H].
+  + rewrite /=.
+    case: S' IH => // [?? _ ].
+    by rewrite lexU lexx.
+  + rewrite /=; move: H.
+    case H': S'; first by rewrite in_nil.
+    * by rewrite -H'; move => Hi; rewrite lexU; apply/orP; right; apply: IH.
+Qed.
+
+Lemma max_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | max_seq S v == i] S.
+Proof.
+elim: S => [ | x S']; first by done.
+- case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
+  + apply/hasP. case: (leP (max_seq S' v) x) => [H'' |].
+    * exists x; first by rewrite mem_head.
+      rewrite /= join_l //. by case H: S'.
+    * move/hasP: IH => [i Hi /= /eqP ->] ?.
+      exists i; first by rewrite mem_behead.
+      case H: S'; first by move: Hi; rewrite H in_nil.
+      by rewrite join_r // ltW.
+Qed.
+
+Variant max_seq_spec (S : seq R) (v : R) : R -> Prop :=
+| MaxSeqEmpty of (S = [::]) : max_seq_spec S v v
+| MaxSeqNonEmpty x of (x \in S /\ (forall y, y \in S -> y <= x)) : max_seq_spec S v x.
+
+Lemma max_seqP (S : seq R) (v : R) :
+  max_seq_spec S v (max_seq S v).
+Proof.
+case: (altP (S =P [::])) => [->|].
+- by constructor.
+- move/(max_seq_eq v)/hasP => [x x_in_S]; rewrite inE eq_sym => /eqP x_eq.
+  constructor; split.
+  + by rewrite -x_eq.
+  + exact: max_seq_ger.
+Qed.
+
 Lemma ltW_lt (x y z : R) : (x < y < z) -> (x <= y < z).
 Proof.
 by move => /andP [??]; rewrite ltW //=.

@@ -1412,10 +1412,6 @@ rewrite !in_fsetE in_oppbase (negbTE cNb) /=.
 by rewrite -(in_oppbase I) -(in_oppbase J) /= opprK.
 Qed.
 
-Lemma in_imfset0 {T U : choiceType} (f : T -> U) (A : {fset T}) x :
-  x \in A -> f x \in (f @` A)%fset.
-Proof. by move=> xA; apply/imfsetP; exists x. Qed.
-
 Lemma polyEq_of_polyEq
   (base : base_t[R,n]) (I : {fsubset base}) (J : {fsubset (baseEq base I)})
 :
@@ -2281,3 +2277,116 @@ by rewrite /mk_non_redundant_base inE in e_in_base.
 Qed.
 
 End NonRedundantBase.
+
+Section Projection.
+
+Variable (R : realFieldType) (n : nat) (base : base_t[R,n.+1]).
+
+Definition beproj0 (e : base_elt[R,n.+1]) : base_elt[R,n] := [< row' 0 e.1, e.2 >].
+
+Let get0 (e : base_elt[R,n.+1]) := e.1 0 0.
+
+Definition scale0 (e : base_elt[R,n.+1]) : base_elt[R,n.+1] :=
+  let α := get0 e in
+  if α > 0 then α^-1 *: e
+  else if α < 0 then (-α)^-1 *: e
+  else e.
+
+Lemma get0_scale0 e : get0 (scale0 e) = Num.sg (get0 e).
+Proof.
+rewrite /scale0; case: (ltrgt0P (get0 e)) => h; rewrite /get0 ?mxE.
+- by rewrite gtr0_sg ?mulVf ?lt0r_neq0.
+- by rewrite ltr0_sg ?invrN ?mulNr ?mulVf ?ltr0_neq0.
+- move: h; rewrite /get0 => ->.
+  by rewrite sgr0.
+Qed.
+
+Lemma hs_scale0 e : `[hs e] = `[hs (scale0 e)].
+Admitted.
+
+Let sbase := [fset (scale0 e) | e in base]%fset.
+Let base0    := [fset e in sbase | get0 e == 0]%fset.
+Let base_pos := [fset e in sbase | (get0 e == 1)]%fset.
+Let base_neg := [fset e in sbase | (get0 e == -1)]%fset.
+
+Lemma sbaseU : sbase = (base0 `|` base_pos `|` base_neg)%fset.
+Admitted.
+
+Definition lift0 (α : R) (x : 'cV[R]_n) := (col_mx α%:M x) : 'cV[R]_(n.+1).
+
+Lemma lift0K α x : row' 0 (lift0 α x) = x.
+Admitted.
+
+Lemma lift_in_base0 e α x :
+  e \in base0 -> (x \in `[hs (beproj0 e)] : 'poly[R]_n) -> lift0 α x \in `[hs e] : 'poly[R]_(n.+1).
+Admitted.
+
+Let gap (e : base_elt[R,n.+1]) x := e.2 - '[row' 0 e.1, x].
+
+Lemma lift_base_pos e α x :
+  e \in base_pos -> α >= gap e x -> (lift0 α x) \in `[hs e].
+Admitted.
+
+Lemma lift_base_neg e α x :
+  e \in base_neg -> α <= -(gap e x) -> (lift0 α x) \in `[hs e].
+Admitted.
+
+Fact poly_of_sbase : 'P(sbase) = 'P(base).
+Admitted.
+
+Definition proj0 : base_t[R,n] :=
+  let combine_pos_neg := [fset (e1 + e2)%R | e1 in base_pos, e2 in base_neg]%fset in
+  ([fset beproj0 e | e in base0] `|` [fset beproj0 e | e in combine_pos_neg])%fset.
+
+Lemma max_seq_nil (x : R) : max_seq [::] x = x.
+Admitted.
+
+Lemma min_seq_nil (x : R) : min_seq [::] x = x.
+Admitted.
+
+(*
+Lemma proj0P x :
+  reflect (exists2 y, x = row' 0 y & y \in 'P(base)) (x \in 'P(proj0)).
+Proof.
+apply/(iffP idP) => [ x_in | x_in ].
+- pose s_pos := [seq gap e x | e <- base_pos].
+  pose s_neg := [seq (-gap e x) | e <- base_neg].
+  pose α_pos := (max_seq s_pos (min_seq s_neg 0)).
+  pose α_neg := (min_seq s_neg (max_seq s_pos 0)).
+  have: forall y z, y \in s_pos -> z \in s_neg -> y <= z.
+  - move => ?? /mapP [e e_in ->] /mapP [e' e'_in ->].
+    rewrite -subr_ge0.
+
+  have: α_pos <= α_neg.
+  + rewrite /α_pos /α_neg.
+    case/altP: (s_pos =P [::]) => [-> | s_pos_nnil]; first by rewrite 2!max_seq_nil.
+    case/altP : (s_neg =P [::]) => [-> | s_neg_nnil]; first by rewrite 2!min_seq_nil.
+
+
+    case: max_seqP => [->| z [z_in h] ]; first by rewrite max_seq_nil.
+    case: min_seqP => [| ]. first by rewrite min_seq_nil.
+
+
+    Search _ max_seq.
+
+
+  have α_ge : forall e, e \in base_pos -> α >= gap e x.
+  - Search _ min_seq.
+
+  admit.
+  have α_le : forall e, e \in base_neg -> α <= -(gap e x).
+  admit.
+  exists (lift0 α x); first by rewrite lift0K.
+  rewrite -poly_of_sbase; apply/in_poly_of_baseP => e.
+  rewrite sbaseU => /fsetUP; case; first move/fsetUP; case.
+  + move => e_in_base0; rewrite lift_in_base0 //.
+    apply/poly_subsetP/poly_of_base_subset_hs: x_in.
+    by apply/fsetUP; left; rewrite in_imfset.
+  + move => e_in_base_pos.
+    by apply/lift_base_pos => //; apply/α_ge.
+  + move => e_in_base_neg.
+    by apply/lift_base_neg => //; apply/α_le.
+- admit.
+Admitted.
+*)
+End Projection.
