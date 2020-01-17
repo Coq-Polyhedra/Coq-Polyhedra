@@ -189,7 +189,7 @@ Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (hrepr P) (hrepr Q).
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
 Definition bounded (P : 'poly[R]_n) c := H.bounded (hrepr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (hrepr P).
-Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (hrepr P)].
+(*Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (hrepr P)].*)
 Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (hrepr P)].
 
 Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
@@ -509,11 +509,12 @@ apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
   by move: x x_in_Q; apply/poly_subsetP; exact: forall_Q_subset.
 Qed.
 
+(*
 Lemma projP {k : nat} {P : 'poly[R]_(k+n)} {x} :
   reflect (exists y, col_mx y x \in P) (x \in proj P).
 Proof.
 by rewrite repr_equiv; apply/(iffP (H.projP _ _)) => [[y h]| [y h]]; exists y; rewrite mem_polyE in h *.
-Qed.
+Qed.*)
 
 Lemma in_lift_poly (k : nat) (P : 'poly[R]_n) x :
   (x \in lift_poly k P) = (usubmx x \in P).
@@ -534,7 +535,7 @@ Admitted.
 
 Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
 Proof.
-move => x y x_in y_in α [/andP [α_ge0 α_le1]]; rewrite !inE -!ltNge in x_in y_in *.
+move => x y x_in y_in α /andP [α_ge0 α_le1]; rewrite !inE -!ltNge in x_in y_in *.
 rewrite vdotDr !vdotZr.
 case: (ltrP '[e.1,x] '[e.1,y]) => [/ltW ?|?].
 - apply/le_lt_trans: y_in.
@@ -1190,13 +1191,13 @@ rewrite in_poly_of_base. apply: (iffP forallP) => /= h.
 Qed.
 
 Lemma is_poly_of_base (P : 'poly[R]_n) :
-  exists base : base_t[R,n], P = 'P(base).
+  exists base : base_t[R,n], P == 'P(base).
 Proof.
 case: {2}(hrepr P) (erefl (hrepr P)) => m A b eq.
 exists [fset [<(row i A)^T, b i 0>] | i : 'I_m]%fset.
 have equiv: forall i x, (x \in `[hs [<(row i A)^T, b i 0>]]) = ((A *m x) i 0 >= b i 0)
   by move => ??; rewrite inE /= row_vdot.
-apply/poly_eqP => x; rewrite mem_polyE eq inE.
+apply/eqP/poly_eqP => x; rewrite mem_polyE eq inE.
 apply/forallP/in_poly_of_baseP => [h ? /imfsetP [i /= _ ->] | h i].
 - by rewrite equiv; apply/h.
 - by rewrite -equiv; apply/h/in_imfset.
@@ -1490,6 +1491,225 @@ Notation "\polyI_ ( i 'in' A ) F" :=
   (\big[polyI/`[polyT]%PH]_(i in A) F%PH) : poly_scope.
 
 Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, inE).
+
+Module Proj0.
+Section Proj0.
+
+Variable (R : realFieldType) (n : nat) (base : base_t[R,n.+1]).
+
+Notation "'beproj0' e" := [< row' 0 e.1, e.2 >] (at level 40).
+Notation "'get0' e" := (e.1 0 0) (at level 40).
+
+Definition scale0 (e : base_elt[R,n.+1]) : base_elt[R,n.+1] :=
+  let α := get0 e in
+  if α > 0 then α^-1 *: e
+  else if α < 0 then (-α)^-1 *: e
+  else e.
+
+Lemma get0_scale0 e : get0 (scale0 e) = Num.sg (get0 e).
+Proof.
+rewrite /scale0; case: (ltrgt0P (get0 e)) => h; rewrite ?mxE.
+- by rewrite gtr0_sg ?mulVf ?lt0r_neq0.
+- by rewrite ltr0_sg ?invrN ?mulNr ?mulVf ?ltr0_neq0.
+- by rewrite h sgr0.
+Qed.
+
+Lemma hs_scale0 e : `[hs e] = `[hs (scale0 e)].
+Proof.
+apply/poly_eqP => x; rewrite 2!in_hs.
+rewrite /scale0; case: (ltrgt0P (get0 e)) => ?;
+by rewrite ?vdotZl ?ler_pmul2l ?invr_gt0 ?oppr_gt0.
+Qed.
+
+Let sbase    := [fset (scale0 e) | e in base]%fset.
+Let base0    := [fset e in sbase | get0 e == 0]%fset.
+Let base_pos := [fset e in sbase | (get0 e == 1)]%fset.
+Let base_neg := [fset e in sbase | (get0 e == -1)]%fset.
+
+Lemma sbaseU : sbase = (base0 `|` base_pos `|` base_neg)%fset.
+Proof.
+apply/fsetP => e; rewrite !inE; apply/idP/idP.
+- move/imfsetP => [{}e e_in ->]; rewrite get0_scale0.
+  case/sgrP: (get0 e) => h.
+  + do 2![apply/orP; left].
+    by rewrite in_imfset /=.
+  + apply/orP; left; apply/orP; right.
+    by rewrite in_imfset /=.
+  + apply/orP; right.
+    by rewrite in_imfset /=.
+- by rewrite -orbA; move/or3P; case => /andP [].
+Qed.
+
+Definition lift0 (α : R) (x : 'cV[R]_n) := (col_mx α%:M x) : 'cV[R]_(n.+1).
+
+Lemma lift0K α x : row' 0 (lift0 α x) = x.
+Proof.
+apply/colP => i; rewrite !mxE /=; case: splitP => j.
+- by rewrite [j]ord1_eq0 fintype.lift0 //.
+- by rewrite fintype.lift0 => /succn_inj/ord_inj ->.
+Qed.
+
+Lemma vdot11 (x y : R) : '[x%:M, y%:M] = x*y.
+Proof.
+apply/(scalar_mx_inj (ltn0Sn 0)).
+by rewrite vdotC vdot_def tr_scalar_mx scalar_mxM.
+Qed.
+
+Lemma col_mx_row'0 (x : 'cV[R]_(n.+1)) :
+  x = col_mx (x 0 0)%:M (row' 0 x).
+Proof.
+apply/colP => i; case: (splitP' (m := 1) i) => [k -> | k ->].
+- by rewrite [k]ord1_eq0 (col_mxEu (m1 := 1)) lshift0 !mxE mulr1n.
+- by rewrite (col_mxEd (m1 := 1)) !mxE rshift1.
+Qed.
+
+Lemma vdot_lift0 (e : base_elt[R,n.+1]) α x :
+  '[e.1, lift0 α x] = (get0 e) * α + '[(beproj0 e).1, x].
+Proof.
+by rewrite {1}[e.1]col_mx_row'0 (vdot_col_mx (n := 1)) vdot11.
+Qed.
+
+Lemma row0'_in_hs (e : base_elt[R,n.+1]) x : get0 e = 0 -> (x \in `[hs e]) -> row' 0 x \in `[hs beproj0 e].
+Proof.
+rewrite 2!in_hs {2}[e.1]col_mx_row'0 {1}[x]col_mx_row'0 (vdot_col_mx (n := 1)).
+by move => ->; rewrite raddf0 vdot0l add0r.
+Qed.
+
+Lemma lift_in_base0 e α x :
+  e \in base0 -> (x \in `[hs (beproj0 e)] : 'poly[R]_n) -> lift0 α x \in `[hs e] : 'poly[R]_(n.+1).
+Proof.
+rewrite in_fset => /andP[_ /eqP get0_eq0].
+by rewrite !in_hs vdot_lift0 get0_eq0 mul0r add0r.
+Qed.
+
+Let gap (e : base_elt[R,n.+1]) x := e.2 - '[row' 0 e.1, x].
+
+Lemma lift_in_base_pos e α x :
+  e \in base_pos -> α >= gap e x -> (lift0 α x) \in `[hs e].
+rewrite in_fset => /andP[_ /eqP get0_eq1].
+by rewrite in_hs vdot_lift0 get0_eq1 mul1r ler_sub_addr.
+Qed.
+
+Lemma lift_in_base_neg e α x :
+  e \in base_neg -> α <= -(gap e x) -> (lift0 α x) \in `[hs e].
+rewrite in_fset => /andP[_ /eqP get0_eqN1].
+rewrite in_hs vdot_lift0 get0_eqN1 mulN1r addrC ler_sub_addr -ler_sub_addl.
+by rewrite opprD opprK addrC.
+Qed.
+
+Fact poly_of_sbase : 'P(sbase) = 'P(base).
+Proof.
+apply/poly_eqP => x.
+apply/in_poly_of_baseP/in_poly_of_baseP => [x_in ?? | x_in ? /imfsetP [i i_in ->]].
+by rewrite hs_scale0; apply/x_in; rewrite in_imfset.
+by rewrite -hs_scale0; apply/x_in.
+Qed.
+
+Definition proj0 : base_t[R,n] :=
+  let combine_pos_neg := [fset (e1 + e2)%R | e1 in base_pos, e2 in base_neg]%fset in
+  ([fset beproj0 (val e) | e in base0] `|` [fset beproj0 (val e) | e in combine_pos_neg])%fset.
+
+Lemma proj0P x :
+  reflect (exists2 y, x = row' 0 y & y \in 'P(base)) (x \in 'P(proj0)).
+Proof.
+rewrite /proj0.
+apply/(iffP idP) => [ x_in | [y ->] ].
+- pose s_pos := [seq gap e x | e <- base_pos].
+  pose s_neg := [seq (-gap e x) | e <- base_neg].
+  have pos_le_neg : forall y z, y \in s_pos -> z \in s_neg -> y <= z.
+  + move => ?? /mapP [e e_in ->] /mapP [e' e'_in ->].
+    rewrite -subr_le0 opprK addrACA -opprD -vdotDl -linearD /=.
+    rewrite subr_le0 -in_hs.
+    have ->: [<row' 0 (e.1 + e'.1), e.2 + e'.2>] = beproj0 (e+e') by [].
+    apply/poly_subsetP/poly_of_base_subset_hs: x_in.
+    by apply/fsetUP; right; rewrite in_imfset ?in_imfset2.
+  pose α_pos := (max_seq s_pos (min_seq s_neg 0)).
+  pose α_neg := (min_seq s_neg (max_seq s_pos 0)).
+  have {}pos_le_neg: α_pos <= α_neg.
+  + rewrite /α_pos /α_neg.
+    case: max_seqP => [-> //= | y [y_in _]].
+    case: min_seqP => [_ | z [z_in _]]; first by rewrite max_seq_ger.
+    by apply/pos_le_neg.
+  exists (lift0 α_pos x); first by rewrite lift0K.
+  rewrite -poly_of_sbase; apply/in_poly_of_baseP => e.
+  rewrite sbaseU => /fsetUP; case. move/fsetUP; case.
+  + move => e_in_base0; rewrite lift_in_base0 //.
+    apply/poly_subsetP/poly_of_base_subset_hs: x_in.
+    by apply/fsetUP; left; rewrite in_imfset.
+  + move => e_in_base_pos; apply/lift_in_base_pos => //.
+    have: gap e x \in s_pos by apply/map_f.
+    by apply/max_seq_ger.
+  + move => e_in_base_neg; apply/lift_in_base_neg => //.
+    apply/(le_trans pos_le_neg).
+    have: - (gap e x) \in s_neg by apply/map_f.
+    by apply/min_seq_ler.
+- rewrite -poly_of_sbase => y_in; apply/in_poly_of_baseP => e.
+  move/fsetUP; case; move/imfsetP => [{}e e_in ->].
+  + apply/row0'_in_hs; move: e_in; rewrite !inE => /andP[e_in /eqP] //.
+    by move => _; rewrite -in_hs; apply/poly_subsetP/poly_of_base_subset_hs: y_in.
+  + move: e_in => /imfset2P [{}e e_in] [e' e'_in] ->.
+    move: e_in e'_in; rewrite !inE => /andP [e_in /eqP get0e] /andP [e'_in /eqP get0e'].
+    rewrite -in_hs; apply/row0'_in_hs => /=.
+    * by rewrite mxE get0e get0e' addrN.
+    * by rewrite inE /= vdotDl; apply/ler_add; rewrite -in_hs;
+      apply/poly_subsetP/poly_of_base_subset_hs: y_in.
+Qed.
+
+End Proj0.
+End Proj0.
+
+Section Projection.
+
+Section Proj0.
+
+Context {R : realFieldType} {n : nat}.
+
+Definition proj0 (P : 'poly[R]_n.+1) :=
+  let base := xchoose (is_poly_of_base P) in
+  'P(Proj0.proj0 base).
+
+Lemma proj0P {P} {x} :
+  reflect (exists2 y, x = row' 0 y & y \in P) (x \in proj0 P).
+Proof.
+rewrite /proj0; move: (xchooseP (is_poly_of_base P)) => /eqP {1}->.
+exact: Proj0.proj0P.
+Qed.
+
+End Proj0.
+
+Section Proj.
+
+Context {R : realFieldType} {n : nat}.
+
+Fixpoint proj (k : nat) : 'poly[R]_(k+n) -> 'poly[R]_n :=
+  match k with
+  | 0 => id
+  | (km1.+1)%N as k => (proj (k := km1)) \o (proj0)
+  end.
+
+Lemma projP {k : nat} {P : 'poly[R]_(k+n)} {x} :
+  reflect (exists y, col_mx y x \in P) (x \in proj P).
+Proof.
+elim: k P => [ P | k Hind P].
+- apply: (iffP idP) => [x_in_proj | [?]].
+  + by exists 0; rewrite col_mx0l.
+  + by rewrite col_mx0l.
+- apply: (iffP (Hind _)) => [[y H] | [y H]].
+  + move/proj0P: H => [y' eq y'_in_P]. (* TODO: n needs to be explicitly specified *)
+    exists (usubmx (m1 := k.+1) y'); suff ->: x = dsubmx (m1 := k.+1) y' by rewrite vsubmxK.
+    apply/colP => i.
+    move/colP/(_ (@rshift k n i)): eq; rewrite !mxE.
+    case: splitP'; last first.
+    * move => ? /rshift_inj <- ->; apply: congr2; last done.
+      by apply/ord_inj => /=.
+    * move => ? /eqP; by rewrite eq_sym (negbTE (lrshift_distinct _ _)).
+  + exists (row' ord0 y); apply/proj0P.
+    exists (col_mx y x); by rewrite -?row'Ku.
+Qed.
+
+End Proj.
+
+End Projection.
 
 Section Map.
 
@@ -2277,116 +2497,3 @@ by rewrite /mk_non_redundant_base inE in e_in_base.
 Qed.
 
 End NonRedundantBase.
-
-Section Projection.
-
-Variable (R : realFieldType) (n : nat) (base : base_t[R,n.+1]).
-
-Definition beproj0 (e : base_elt[R,n.+1]) : base_elt[R,n] := [< row' 0 e.1, e.2 >].
-
-Let get0 (e : base_elt[R,n.+1]) := e.1 0 0.
-
-Definition scale0 (e : base_elt[R,n.+1]) : base_elt[R,n.+1] :=
-  let α := get0 e in
-  if α > 0 then α^-1 *: e
-  else if α < 0 then (-α)^-1 *: e
-  else e.
-
-Lemma get0_scale0 e : get0 (scale0 e) = Num.sg (get0 e).
-Proof.
-rewrite /scale0; case: (ltrgt0P (get0 e)) => h; rewrite /get0 ?mxE.
-- by rewrite gtr0_sg ?mulVf ?lt0r_neq0.
-- by rewrite ltr0_sg ?invrN ?mulNr ?mulVf ?ltr0_neq0.
-- move: h; rewrite /get0 => ->.
-  by rewrite sgr0.
-Qed.
-
-Lemma hs_scale0 e : `[hs e] = `[hs (scale0 e)].
-Admitted.
-
-Let sbase := [fset (scale0 e) | e in base]%fset.
-Let base0    := [fset e in sbase | get0 e == 0]%fset.
-Let base_pos := [fset e in sbase | (get0 e == 1)]%fset.
-Let base_neg := [fset e in sbase | (get0 e == -1)]%fset.
-
-Lemma sbaseU : sbase = (base0 `|` base_pos `|` base_neg)%fset.
-Admitted.
-
-Definition lift0 (α : R) (x : 'cV[R]_n) := (col_mx α%:M x) : 'cV[R]_(n.+1).
-
-Lemma lift0K α x : row' 0 (lift0 α x) = x.
-Admitted.
-
-Lemma lift_in_base0 e α x :
-  e \in base0 -> (x \in `[hs (beproj0 e)] : 'poly[R]_n) -> lift0 α x \in `[hs e] : 'poly[R]_(n.+1).
-Admitted.
-
-Let gap (e : base_elt[R,n.+1]) x := e.2 - '[row' 0 e.1, x].
-
-Lemma lift_base_pos e α x :
-  e \in base_pos -> α >= gap e x -> (lift0 α x) \in `[hs e].
-Admitted.
-
-Lemma lift_base_neg e α x :
-  e \in base_neg -> α <= -(gap e x) -> (lift0 α x) \in `[hs e].
-Admitted.
-
-Fact poly_of_sbase : 'P(sbase) = 'P(base).
-Admitted.
-
-Definition proj0 : base_t[R,n] :=
-  let combine_pos_neg := [fset (e1 + e2)%R | e1 in base_pos, e2 in base_neg]%fset in
-  ([fset beproj0 e | e in base0] `|` [fset beproj0 e | e in combine_pos_neg])%fset.
-
-Lemma max_seq_nil (x : R) : max_seq [::] x = x.
-Admitted.
-
-Lemma min_seq_nil (x : R) : min_seq [::] x = x.
-Admitted.
-
-(*
-Lemma proj0P x :
-  reflect (exists2 y, x = row' 0 y & y \in 'P(base)) (x \in 'P(proj0)).
-Proof.
-apply/(iffP idP) => [ x_in | x_in ].
-- pose s_pos := [seq gap e x | e <- base_pos].
-  pose s_neg := [seq (-gap e x) | e <- base_neg].
-  pose α_pos := (max_seq s_pos (min_seq s_neg 0)).
-  pose α_neg := (min_seq s_neg (max_seq s_pos 0)).
-  have: forall y z, y \in s_pos -> z \in s_neg -> y <= z.
-  - move => ?? /mapP [e e_in ->] /mapP [e' e'_in ->].
-    rewrite -subr_ge0.
-
-  have: α_pos <= α_neg.
-  + rewrite /α_pos /α_neg.
-    case/altP: (s_pos =P [::]) => [-> | s_pos_nnil]; first by rewrite 2!max_seq_nil.
-    case/altP : (s_neg =P [::]) => [-> | s_neg_nnil]; first by rewrite 2!min_seq_nil.
-
-
-    case: max_seqP => [->| z [z_in h] ]; first by rewrite max_seq_nil.
-    case: min_seqP => [| ]. first by rewrite min_seq_nil.
-
-
-    Search _ max_seq.
-
-
-  have α_ge : forall e, e \in base_pos -> α >= gap e x.
-  - Search _ min_seq.
-
-  admit.
-  have α_le : forall e, e \in base_neg -> α <= -(gap e x).
-  admit.
-  exists (lift0 α x); first by rewrite lift0K.
-  rewrite -poly_of_sbase; apply/in_poly_of_baseP => e.
-  rewrite sbaseU => /fsetUP; case; first move/fsetUP; case.
-  + move => e_in_base0; rewrite lift_in_base0 //.
-    apply/poly_subsetP/poly_of_base_subset_hs: x_in.
-    by apply/fsetUP; left; rewrite in_imfset.
-  + move => e_in_base_pos.
-    by apply/lift_base_pos => //; apply/α_ge.
-  + move => e_in_base_neg.
-    by apply/lift_base_neg => //; apply/α_le.
-- admit.
-Admitted.
-*)
-End Projection.
