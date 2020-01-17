@@ -515,7 +515,7 @@ Definition poly_subset P Q :=
     (~~ Simplex.feasible A b) ||
       [forall i, (Simplex.bounded A b (row i A')^T) && (Simplex.opt_value A b (row i A')^T >= b' i 0)].
 
-Lemma poly_subsetP {P Q : 'hpoly[R]_n} :
+(*Lemma poly_subsetP {P Q : 'hpoly[R]_n} :
   reflect {subset P <= Q} (poly_subset P Q).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
@@ -542,31 +542,47 @@ apply: (iffP idP) => [/orP poly_subset_P_Q | subset_P_Q].
   move => x /subset_P_Q x_in_Q.
   rewrite row_vdot.
   exact: ((forallP x_in_Q) i).
-Qed.
+Qed.*)
 
 Lemma poly_subsetPn {P Q : 'hpoly[R]_n} :
   reflect (exists2 x, x \in P & x \notin Q) (~~ (poly_subset P Q)).
 Proof. (* RK *)
 case: P => m A b; case: Q => m' A' b'.
-apply: (iffP idP) => [| [?] ? not_in_Q];
-  last by move: not_in_Q; apply/contra; move/poly_subsetP ->.
-rewrite negb_or negbK negb_forall.
-move/andP => [feasible_P /existsP [i /nandP unbounded_or]].
-have unbounded_suff:
-  ~~ Simplex.bounded A b (row i A')^T -> exists2 x : 'cV_n, (x \in HPoly A b) & (x \notin HPoly A' b').
-  rewrite -(Simplex.unbounded_is_not_bounded _ feasible_P) => /Simplex.unboundedP unbounded_P_row_i_A'.
-  move: (unbounded_P_row_i_A' (b' i 0)) => [x [x_in_P ineq]].
-  exists x; try by done.
-  move: ineq; apply: contraL => x_in_Q.
-  rewrite -leNgt row_vdot.
-  exact: ((forallP x_in_Q) i).
-case: unbounded_or; first exact: unbounded_suff.
-case: (boolP (Simplex.bounded A b (row i A')^T)) => [? | ? _]; last by apply: unbounded_suff.
-rewrite -ltNge => ineq.
-exists (Simplex.opt_point A b (row i A')^T); first exact: Simplex.opt_point_is_feasible.
-move: ineq; apply: contraL => opt_point_in_Q.
-rewrite -leNgt /Simplex.opt_value row_vdot.
-exact: ((forallP opt_point_in_Q) i).
+apply: (iffP idP) => [| [x] x_in_P not_in_Q]; last first.
+- move: not_in_Q; apply/contra; rewrite /poly_subset.
+  move/orP; case => [empty_P | /forallP hs_incl].
+  + move: empty_P; apply/contraR => _.
+    by apply/Simplex.feasibleP; exists x.
+  + apply/forallP => i.
+    move/andP: (hs_incl i) => [/Simplex.boundedP [_ opt_is_opt] ?].
+    apply: (@le_trans _ _ (Simplex.opt_value A b (row i A')^T) _ _); first by done.
+    by rewrite -row_vdot; apply: opt_is_opt.
+- rewrite negb_or negbK negb_forall.
+  move/andP => [feasible_P /existsP [i /nandP unbounded_or]].
+  have unbounded_suff:
+    ~~ Simplex.bounded A b (row i A')^T -> exists2 x : 'cV_n, (x \in HPoly A b) & (x \notin HPoly A' b').
+  + rewrite -(Simplex.unbounded_is_not_bounded _ feasible_P) => /Simplex.unboundedP unbounded_P_row_i_A'.
+    move: (unbounded_P_row_i_A' (b' i 0)) => [x [x_in_P ineq]].
+    exists x; try by done.
+    move: ineq; apply: contraL => x_in_Q.
+    rewrite -leNgt row_vdot.
+    exact: ((forallP x_in_Q) i).
+  case: unbounded_or; first exact: unbounded_suff.
+  case: (boolP (Simplex.bounded A b (row i A')^T)) => [? | ? _]; last by apply: unbounded_suff.
+  rewrite -ltNge => ineq.
+  exists (Simplex.opt_point A b (row i A')^T); first exact: Simplex.opt_point_is_feasible.
+  move: ineq; apply: contraL => opt_point_in_Q.
+  rewrite -leNgt /Simplex.opt_value row_vdot.
+  exact: ((forallP opt_point_in_Q) i).
+Qed.
+
+Lemma poly_subsetP {P Q : 'hpoly[R]_n} :
+  reflect {subset P <= Q} (poly_subset P Q).
+Proof.
+apply/(iffP idP) => [P_sub_Q x x_in_P | P_sub_Q].
+- move: P_sub_Q; apply: contraTT => x_notin_Q.
+  by apply/poly_subsetPn; exists x.
+- by apply: contraT; move/poly_subsetPn => [x] /P_sub_Q ->.
 Qed.
 
 Lemma boundedP (P : 'hpoly[R]_n) c :
