@@ -301,13 +301,13 @@ End RowSubmxPerm.
 
 Section SplitExtra.
 
-CoInductive split1_spec (n: nat) : 'I_(n.+1) -> Type :=
+(*CoInductive split1_spec (n: nat) : 'I_(n.+1) -> Type :=
 | Split1Lo : split1_spec ord0
 | Split1Hi (k : 'I_n) : split1_spec (@rshift 1 _ k).
 
 Lemma split1P (n : nat) (i : 'I_(n.+1)) : split1_spec i.
 Proof.
-Admitted.
+Admitted.*)
 
 Variable m n: nat.
 

@@ -770,7 +770,10 @@ Definition lift_poly (P : 'hpoly[R]_n) : 'hpoly[R]_(n+k) :=
 
 Lemma lift_polyP (P : 'hpoly[R]_n) x :
   (x \in lift_poly P) = (usubmx x \in P).
-Admitted.
+Proof.
+rewrite /lift_poly; case: P => m A b.
+by rewrite !inE -{1}[x]vsubmxK mul_row_col mul0mx addr0.
+Qed.
 
 End Lift.
 
