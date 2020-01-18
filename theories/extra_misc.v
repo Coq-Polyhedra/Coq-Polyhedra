@@ -770,7 +770,9 @@ Canonical fsubset_slice e A :=
 
 Lemma fsubset_unsliceP e (A : {fsubset (fslice e S)}) :
   funslice e A `<=` S.
-Admitted.
+Proof.
+by rewrite fsubDset (valP A).
+Qed.
 
 Canonical fsubset_unslice e (A : {fsubset (fslice e S)}) :=
   @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_unsliceP A).
@@ -788,7 +790,8 @@ Qed.
 Lemma fsubset_properT (A : {fsubset S}) :
   (A `<` S)%fset = (A != S%:fsub).
 Proof.
-Admitted.
+by rewrite fproperEneq (valP A) andbT.
+Qed.
 
 End FSubsetOther.
 

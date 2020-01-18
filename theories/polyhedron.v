@@ -528,11 +528,6 @@ Proof.
 by move => ??????; apply/H.convexP2.
 Qed.
 
-Lemma hs_convex (e : base_elt[R,n]) : convex_pred (mem (`[hs e])).
-Proof.
-(*move => x y x_in y_in α α01.*)
-Admitted.
-
 Lemma hsC_convex (e : base_elt[R,n]) : convex_pred [predC `[hs e]].
 Proof.
 move => x y x_in y_in α /andP [α_ge0 α_le1]; rewrite !inE -!ltNge in x_in y_in *.
@@ -909,10 +904,6 @@ Lemma argmin_lower_bound {c x y} P :
 Proof. (* RK *)
 by rewrite in_argmin; move/andP => [_ /poly_subset_hsP/(_ y)].
 Qed.
-
-Lemma le_in_argmin {c x y} P :
-  x \in argmin P c -> '[c,y] <= '[c,x] -> y \in argmin P c.
-Admitted.
 
 Lemma subset_opt_value P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
   argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q. (* RK *)
@@ -1569,7 +1560,7 @@ Proof.
 by rewrite {1}[e.1]col_mx_row'0 (vdot_col_mx (n := 1)) vdot11.
 Qed.
 
-Lemma row0'_in_hs (e : base_elt[R,n.+1]) x : get0 e = 0 -> (x \in `[hs e]) -> row' 0 x \in `[hs beproj0 e].
+Lemma row'0_in_hs (e : base_elt[R,n.+1]) x : get0 e = 0 -> (x \in `[hs e]) -> row' 0 x \in `[hs beproj0 e].
 Proof.
 rewrite 2!in_hs {2}[e.1]col_mx_row'0 {1}[x]col_mx_row'0 (vdot_col_mx (n := 1)).
 by move => ->; rewrite raddf0 vdot0l add0r.
@@ -1645,11 +1636,11 @@ apply/(iffP idP) => [ x_in | [y ->] ].
     by apply/min_seq_ler.
 - rewrite -poly_of_sbase => y_in; apply/in_poly_of_baseP => e.
   move/fsetUP; case; move/imfsetP => [{}e e_in ->].
-  + apply/row0'_in_hs; move: e_in; rewrite !inE => /andP[e_in /eqP] //.
+  + apply/row'0_in_hs; move: e_in; rewrite !inE => /andP[e_in /eqP] //.
     by move => _; rewrite -in_hs; apply/poly_subsetP/poly_of_base_subset_hs: y_in.
   + move: e_in => /imfset2P [{}e e_in] [e' e'_in] ->.
     move: e_in e'_in; rewrite !inE => /andP [e_in /eqP get0e] /andP [e'_in /eqP get0e'].
-    rewrite -in_hs; apply/row0'_in_hs => /=.
+    rewrite -in_hs; apply/row'0_in_hs => /=.
     * by rewrite mxE get0e get0e' addrN.
     * by rewrite inE /= vdotDl; apply/ler_add; rewrite -in_hs;
       apply/poly_subsetP/poly_of_base_subset_hs: y_in.
@@ -1695,7 +1686,7 @@ elim: k P => [ P | k Hind P].
   + by exists 0; rewrite col_mx0l.
   + by rewrite col_mx0l.
 - apply: (iffP (Hind _)) => [[y H] | [y H]].
-  + move/proj0P: H => [y' eq y'_in_P]. (* TODO: n needs to be explicitly specified *)
+  + move/proj0P: H => [y' eq y'_in_P].
     exists (usubmx (m1 := k.+1) y'); suff ->: x = dsubmx (m1 := k.+1) y' by rewrite vsubmxK.
     apply/colP => i.
     move/colP/(_ (@rshift k n i)): eq; rewrite !mxE.
@@ -1759,12 +1750,6 @@ Definition cone V :=
 
 Definition conv V :=
   map_poly (mat_fset V) (orthant `&` `[hp [<const_mx 1, 1>]]).
-
-Lemma vdot_combineE (w : {fsfun 'cV[R]_n ~> R}) (V : {fset 'cV[R]_n}) :
-  (finsupp w `<=` V)%fset ->
-  forall c, '[c,combine w] = \sum_(x : V) (w (fsval x)) * '[c, (fsval x)].
-Proof.
-Admitted.
 
 Lemma combine_mulmxE (w : {fsfun 'cV[R]_n ~> _}) (V : {fset 'cV[R]_n}) :
   (finsupp w `<=` V)%fset -> combine w = mat_fset V *m vect_fset V w.
@@ -1839,7 +1824,10 @@ by move/fset0Pn => [v ?];  apply/proper0P; exists v; apply/in_conv.
 Qed.
 
 Lemma convS : {homo conv : P Q / (P `<=` Q)%fset >-> P `<=` Q}.
-Admitted.
+Proof.
+move => V W /fsubsetP sub.
+by apply/conv_subset => ? /sub; exact: in_conv.
+Qed.
 
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
   reflect
@@ -2027,6 +2015,16 @@ Lemma affineS1 (U : {vspace base_elt[R,n]}) (e : base_elt[R,n]) :
   e \in U -> affine U `<=` `[hp e].
 Proof.
 by move => e_in_U; apply/poly_subsetP => ? /in_affine /(_ _ e_in_U).
+Qed.
+
+Lemma affine1 (e : base_elt[R,n]) :
+  affine <[ e ]>%VS = `[hp e].
+Proof.
+apply/poly_subset_anti.
+- by rewrite affineS1 ?memv_line.
+- apply/poly_subsetP => x; rewrite in_hp => /eqP x_in_hp.
+  apply/in_affine => ? /vlineP [μ ->].
+  by rewrite in_hp /= -x_in_hp vdotZl.
 Qed.
 
 Lemma affine_vbasis (U : {vspace base_elt[R,n]}) :
