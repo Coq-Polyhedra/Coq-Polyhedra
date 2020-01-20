@@ -412,8 +412,7 @@ elim/polybW: P => base P.
 rewrite face_setE; exact: poly_subset_refl.
 Qed.
 
-(*
-Lemma in_face_setP (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) & (F \in face_set P) :
+(*Lemma in_face_setP (base : base_t[R,n]) (F : 'poly[R]_n) (P : {poly base}) & (F \in face_set P) :
   F%:poly_base `<=` P.
 Proof.
 by rewrite -face_setE.
@@ -1053,6 +1052,14 @@ Proof.
 by move => ? dim_eq; apply/face_dim_geq; rewrite ?dim_eq.
 Qed.
 
+Lemma face_dim_lt (P Q : 'poly[R]_n) :
+  P \in face_set Q -> P `<` Q -> (dim P < dim Q)%N.
+Proof.
+move => P_face; apply/contraTT.
+rewrite -leqNgt => /(face_dim_geq P_face) ->.
+by rewrite poly_properxx.
+Qed.
+
 Lemma dim_pt (x : 'cV[R]_n) :
   dim (`[pt x]) = 1%N.
 Proof.
@@ -1279,9 +1286,8 @@ have i_not_in_affP: i \notin << {eq P} >>%VS.
 rewrite !dimN0_eq ?facet_proper0 //; apply: congr1.
 rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.
 suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
-have S_face : pval S \in face_set P by rewrite face_setE; exact: poly_properW.
-move/contra_neqN/(_ (poly_proper_neq S_prop_P)): (face_dim_geq S_face).
-by rewrite -ltnNge; apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
+move/poly_properW: (S_prop_P); rewrite -face_setE => /face_dim_lt/(_ S_prop_P).
+by apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
 Qed.
 
 End Facet.
