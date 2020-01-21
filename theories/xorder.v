@@ -11,6 +11,14 @@ Unset Printing Implicit Defensive.
 Local Open Scope order_scope.
 
 (* -------------------------------------------------------------------- *)
+Section Misc.
+Context (d : unit) (T : latticeType d).
+
+Lemma leIU (x y : T) : meet x y <= join x y.
+Proof. exact: (le_trans (leIl _ _) (leUl _ _)). Qed.
+End Misc.
+
+(* -------------------------------------------------------------------- *)
 Module MeetBTFinMixin.
 Section MeetBTFinMixin.
 Context (d : unit) (T : finPOrderType d).
@@ -99,6 +107,7 @@ Section ClassDef.
 
 Record mixin_of d (T : finLatticeType d) := Mixin {
   rank : T -> nat;
+  _ : rank bottom = 0%N;
   _ : forall x y : T, x < y -> (rank x < rank y)%N;
   _ : forall x y : T, ((rank x).+1 < rank y)%N -> exists z, x < z < y
 }.
@@ -110,6 +119,10 @@ Record class_of (T : Type) := Class {
 }.
 
 Local Coercion base : class_of >-> FinLattice.class_of.
+Local Coercion base2 T (c : class_of T) : Finite.class_of T :=
+  @Finite.Class T c c.
+Local Coercion base3 T (c : class_of T) : FinPOrder.class_of T :=
+  @FinPOrder.Class T c c.
 
 Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
 
@@ -153,6 +166,8 @@ End ClassDef.
 
 Module Exports.
 Coercion base : class_of >-> FinLattice.class_of.
+Coercion base2 : class_of >-> Finite.class_of.
+Coercion base3 : class_of >-> FinPOrder.class_of.
 Coercion sort : type >-> Sortclass.
 Coercion eqType : type >-> Equality.type.
 Coercion choiceType : type >-> Choice.type.
@@ -173,6 +188,7 @@ Canonical finPOrderType.
 Canonical latticeType.
 Canonical bLatticeType.
 Canonical tbLatticeType.
+Canonical finLatticeType.
 Canonical count_latticeType.
 Canonical count_bLatticeType.
 Canonical count_tbLatticeType.
@@ -212,6 +228,20 @@ Context {T : gradedFinLatticeType}.
 Definition rank : T -> nat := GradedFinLattice.rank
   (GradedFinLattice.mixin (GradedFinLattice.class T)). (* FIXME *)
 End GradedDef.
+
+(* -------------------------------------------------------------------- *)
+Section GradedTheory.
+Context (d : unit) (L : gradedFinLatticeType d).
+
+Lemma rank0 : rank (0 : L) = 0%N.
+Proof. by case: L => [? [? ? []]]. Qed.
+
+Lemma homo_rank : {homo (@rank d L) : x y / x < y >-> (x < y)%N}.
+Proof. by case: L => [? [? ? []]]. Qed.
+
+Lemma graded_rank (x y : L) : ((rank x).+1 < rank y)%N -> exists z, x < z < y.
+Proof. by case: L x y => [? [? ? []]]. Qed.
+End GradedTheory.
 
 (* -------------------------------------------------------------------- *)
 Module OMorphism.
@@ -505,9 +535,23 @@ Lemma intervalP (a b x : L) :
   reflect (a <= x /\ x <= b) (x \in '[< a; b >]).
 Proof. by apply: (iffP andP). Qed.
 
+Lemma intervalPL (a b x : L) :
+  x \in '[< a; b >] -> a <= x.
+Proof. by case/intervalP. Qed.
+
+Lemma intervalPR (a b x : L) :
+  x \in '[< a; b >] -> x <= b.
+Proof. by case/intervalP. Qed.
+
 Lemma intervalE (a b x : L) :
   (x \in '[< a; b >]) = (a <= x <= b).
 Proof. by []. Qed.
+
+Lemma intervalL (a b : L) : a <= b -> a \in '[< a; b >].
+Proof. by rewrite intervalE lexx. Qed.
+
+Lemma intervalR (a b : L) : a <= b -> b \in '[< a; b >].
+Proof. by rewrite intervalE lexx andbT. Qed.
 
 Lemma interval_is_lclosed a b : lattice_closed (interval a b).
 Proof.
@@ -528,7 +572,7 @@ Section IntervalLattice.
 Context (d : unit) (L : latticeType d) (a b : L).
 
 Inductive interval_of : predArgType :=
-  Interval x & x \in interval a b.
+  Interval x & x \in interval (meet a b) (join a b).
 
 Definition interval_val r := let: Interval x _ := r in x.
 
@@ -536,15 +580,122 @@ Canonical interval_subType := Eval hnf in [subType for interval_val].
 Definition interval_eqMixin := Eval hnf in [eqMixin of interval_of by <:].
 Canonical interval_eqType := Eval hnf in EqType interval_of interval_eqMixin.
 Definition interval_choiceMixin := [choiceMixin of interval_of by <:].
-Canonical interval_choiceType := ChoiceType interval_of interval_choiceMixin.
+Canonical interval_choiceType := Eval hnf in ChoiceType interval_of interval_choiceMixin.
 Definition interval_porderMixin := [porderMixin of interval_of by <:].
-Canonical interval_porderType := POrderType d interval_of interval_porderMixin.
+Canonical interval_porderType := Eval hnf in POrderType d interval_of interval_porderMixin.
 Definition interval_latticeMixin := [latticeMixin of interval_of by <:].
-Canonical interval_latticeType := LatticeType interval_of interval_latticeMixin.
+Canonical interval_latticeType := Eval hnf in LatticeType interval_of interval_latticeMixin.
 
 Lemma interval_val_is_omorphism : omorphism interval_val.
 Proof. by []. Qed.
+
 Canonical internval_omorphism := OMorphism interval_val_is_omorphism.
 End IntervalLattice.
 
 Notation "'[< a ; b >]" := (interval_of a b).
+
+(* -------------------------------------------------------------------- *)
+Section IntervalLatticeTheory.
+Context (d : unit) (L : latticeType d) (a b : L).
+
+Lemma intv_leIx (x : '[< a; b >]) : a `&` b <= val x.
+Proof. by case/intervalP: (valP x). Qed.
+
+Lemma intv_lexU (x : '[< a; b >]) : val x <= a `|` b.
+Proof. by case/intervalP: (valP x). Qed.
+End IntervalLatticeTheory.
+
+(* -------------------------------------------------------------------- *)
+Section IntervalTBLattice.
+Context (d : unit) (L : latticeType d) (a b : L).
+
+Let bottom := Interval (intervalL (leIU a b)).
+Let top    := Interval (intervalR (leIU a b)).
+
+Fact le0R (x : '[< a; b >]) : bottom <= x.
+Proof. by rewrite leEsub intv_leIx. Qed.
+
+Fact leR1 (x : '[< a; b >]) : x <= top.
+Proof. by rewrite leEsub intv_lexU. Qed.
+
+Definition interval_bLatticeMixin  := BLatticeMixin  le0R.
+Definition interval_tbLatticeMixin := TBLatticeMixin leR1.
+
+Canonical interval_blatticeType :=
+  Eval hnf in BLatticeType '[< a; b >] interval_bLatticeMixin.
+
+Canonical interval_tblatticeType :=
+  Eval hnf in TBLatticeType '[< a; b >] interval_tbLatticeMixin.
+End IntervalTBLattice.
+
+(* -------------------------------------------------------------------- *)
+Section IntervalFinLattice.
+Context (d : unit) (L : finLatticeType d) (a b : L).
+
+Definition interval_countMixin := [countMixin of '[< a; b >] by <:].
+Canonical interval_countType := Eval hnf in CountType '[< a; b >] interval_countMixin.
+Canonical interval_subCountType := [subCountType of '[< a; b >]].
+
+Definition interval_finMixin := [finMixin of '[< a; b >] by <:].
+Canonical interval_finType := Eval hnf in FinType '[< a; b >] interval_finMixin.
+Canonical interval_subFinType := [subFinType of '[< a; b >]].
+
+Canonical interval_finPOrderType := Eval hnf in [finPOrderType of '[< a; b >]].
+Canonical interval_finLatticeType := Eval hnf in [finLatticeType of '[< a; b >]].
+End IntervalFinLattice.
+
+(* -------------------------------------------------------------------- *)
+Section IntervalGradedLattice.
+Context (d : unit) (L : gradedFinLatticeType d) (a b : L).
+
+Definition vrank (x : '[< a; b >]) := rank (val x) - rank (meet a b).
+
+Lemma intv_rankL (x : '[< a; b >]) : (rank (a `&` b) <= rank (val x))%N.
+Proof. by apply/(ltW_homo (@homo_rank _ _))/intv_leIx. Qed.
+
+Lemma intv_rankR (x : '[< a; b >]) : (rank (val x) <= rank (a `|` b))%N.
+Proof. by apply/(ltW_homo (@homo_rank _ _))/intv_lexU. Qed.
+
+Lemma vrank0 : vrank 0 = 0.
+Proof. by rewrite /vrank subnn. Qed.
+
+Lemma homo_intv_rank (x y : '[< a; b >]) : x < y -> (vrank x < vrank y)%N.
+Proof.
+rewrite ltEsub /vrank => /homo_rank h; rewrite ltn_sub2r //.
+by rewrite (leq_trans _ h) // ltnS intv_rankL.
+Qed.
+
+Lemma graded_intv_rank (x y : '[< a; b >]) :
+  ((vrank x).+1 < vrank y)%N -> exists z : '[< a; b >], x < z < y.
+Proof.
+rewrite /vrank -subSn ?intv_rankL // ltn_subLR; last first.
++ by rewrite (leq_trans (intv_rankL x)).
+rewrite subnKC ?intv_rankL // => /graded_rank[z rg_z].
+exists (insubd (0 : '[< a; b >]) z).
+rewrite !ltEsub /insubd insubT //= intervalE.
+rewrite (le_trans (intervalPL (valP x))) //=; last by apply: ltW; case/andP: rg_z.
+by rewrite (le_trans _ (intervalPR (valP y))) //= ltW //; case/andP: rg_z.
+Qed.
+
+Definition interval_gradedFinLatticeMixin :=
+  GradedFinLatticeMixin vrank0 homo_intv_rank graded_intv_rank.
+Canonical interval_gradedFinLatticeType :=
+  Eval hnf in GradedFinLatticeType '[< a; b >] interval_gradedFinLatticeMixin.
+End IntervalGradedLattice.
+
+(* -------------------------------------------------------------------- *)
+Section Atomic.
+Context (d : unit) (L : finLatticeType d).
+
+Definition atom (a : L) :=
+  (0 < a) && ~~ [exists x : L, 0 < x < a].
+
+Definition coatom (a : L) :=
+  (a < 1) && ~~ [exists x : L, a < x < 1].
+
+Definition atomistic (a : L) :=
+  [exists S : {set L}, a == \join_(x in S) x].
+
+Definition coatomistic (a : L) :=
+  [exists S : {set L}, a == \meet_(x in S) x].
+End Atomic.
