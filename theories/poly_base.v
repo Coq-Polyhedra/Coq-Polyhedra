@@ -2385,12 +2385,35 @@ Qed.
 Lemma face_coatomic (F : face_set P) : coatomistic F.
 Proof. Admitted.
 
+Variable (v : vertex_set P) (e : base_elt[R,n]).
+
+Hypothesis (sep : [e separates fsval v from vertex_set P `\ fsval v]).
+
+Hypothesis (f : vertex_set P -> face_set P).
+
+Lemma vf_im F :
+  F \in face_set P -> val v \in F -> slice e F \in face_set (slice e P).
+Proof. Admitted.
+
+Definition lift_slice (F : '[< f v; 1 >]) :=
+  
+
+Lemma vf_inj' v e :
+  -> let L := [fset F in face_set P | v \in F] in
+     {in L &, injective (slice e)}.
+Proof. Admitted.
+
+Lemma vf_surj' 
+
 Lemma vertex_figure (x : face_set P) : atom x ->
   exists  Q : 'poly[R]_n,
   exists2 f : {omorphism '[< x; 1 >] -> face_set Q},
     bijective f & dim P = (dim Q).+1.
 Proof.
-case/atom_faceP=> y yP xE.
+case/atom_faceP=> y yP xE; have := sep_vertex Pcompact yP.
+case/conv_sep_hp=> e e_sep_y_PNy.
+
+
 Admitted.
   
 
