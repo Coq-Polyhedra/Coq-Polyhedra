@@ -1289,6 +1289,23 @@ move/poly_properW: (S_prop_P); rewrite -face_setE => /face_dim_lt/(_ S_prop_P).
 by apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
 Qed.
 
+Lemma facetP (F : {poly base}) :
+  (F `>` `[poly0]) -> dim P = (dim F).+1%N ->
+  exists i, exists2 h : (i \in base), i \notin ({eq P} : {fset _}) & F = 'P^=(base; [fset i])%:poly_base.
+Proof.
+move => F_prop0 dimF.
+suff: ~~ ({eq F} `<=` {eq P})%fset.
+- move/fsubsetPn => [i] [i_in_F i_notin_P].
+  have i_in_base: i \in base by move: i_in_F; apply/fsubsetP/fsubset_subP.
+  exists i; exists i_in_base => //.
+  apply/val_inj/face_dim_eq => /=; last first.
+  + by apply/succn_inj; rewrite -dimF -poly_dim_facet.
+  + by rewrite face_setE activeP /= fsub1set.
+- suff: ~~ (P `<=` F).
+  + by rewrite {1}[F]repr_active // activeP.
+  + by move: dimF; apply/contra_eqN; move/dimS; rewrite -ltnS ltn_neqAle => /andP [].
+Qed.
+
 End Facet.
 
 Section PointedFacet.
@@ -2441,6 +2458,8 @@ Proof.
 case/atom_faceP=> y yP xE; have := sep_vertex Pcompact yP.
 (*case/conv_sep_hp=> {}e e_sep_y_PNy.*)
 Admitted.
+
+End Theory.
 
 
 (*
