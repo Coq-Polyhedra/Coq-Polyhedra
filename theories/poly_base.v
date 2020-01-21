@@ -818,8 +818,7 @@ Lemma subset_hull P : P `<=` hull P.
 Proof.
 case: (emptyP P) => [->| ]; rewrite ?poly0_subset //.
 elim/polybW : P => base P; rewrite hullE /pb_hull => P_prop0.
-
-  by rewrite P_prop0; rewrite {1}[P]repr_active //= polyEq_affine poly_subsetIr.
+by rewrite P_prop0; rewrite {1}[P]repr_active //= polyEq_affine poly_subsetIr.
 Qed.
 
 Lemma hull0 : hull (`[poly0] : 'poly[R]_n) = `[poly0].
