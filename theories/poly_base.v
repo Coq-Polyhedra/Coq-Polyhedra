@@ -23,6 +23,113 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
+
+(* -------------------------------------------------------------------- *)
+Section PointedType.
+Context (R : realFieldType) (n : nat).
+
+Record pointedPoly : predArgType :=
+  Pointed { pointed_poly :> 'poly[R]_n; _ : pointed pointed_poly }.
+
+Canonical pointedPoly_subType := Eval hnf in [subType for pointed_poly].
+Definition pointedPoly_eqMixin := Eval hnf in [eqMixin of pointedPoly by <:].
+Canonical pointedPoly_eqType := Eval hnf in EqType pointedPoly pointedPoly_eqMixin.
+Definition pointedPoly_choiceMixin := Eval hnf in [choiceMixin of pointedPoly by <:].
+Canonical pointedPoly_choiceType := Eval hnf in ChoiceType pointedPoly pointedPoly_choiceMixin.
+
+Definition pointedPoly_of of phant R := pointedPoly.
+Identity Coercion type_pointedPoly_of : pointedPoly_of >-> pointedPoly.
+End PointedType.
+
+Bind Scope ring_scope with pointedPoly_of.
+Bind Scope ring_scope with pointedPoly.
+
+Reserved Notation "''pointed[' R ]_ n"
+  (at level 8, n at level 2, format "''pointed[' R ]_ n").
+
+Notation "''pointed[' R ]_ n" := (@pointedPoly_of _ n (Phant R)).
+
+Section PointedTheory.
+Context {R : realFieldType} (n : nat).
+
+Canonical pointedPoly_of_subType := Eval hnf in [subType of 'pointed[R]_n].
+Canonical pointedPoly_of_eqType := Eval hnf in [eqType of 'pointed[R]_n].
+Canonical pointedPoly_of_choiceType := Eval hnf in [choiceType of 'pointed[R]_n].
+
+Lemma pointed_slice (P : 'pointed[R]_n) e : pointed (slice e P).
+Admitted.
+Canonical pointed_slice_pointed (P : 'pointed[R]_n) e := Pointed (pointed_slice P e).
+
+End PointedTheory.
+
+(* -------------------------------------------------------------------- *)
+Section CompactType.
+Context (R : realFieldType) (n : nat).
+
+Record compactPoly : predArgType :=
+  mkCompact { compact_poly :> 'pointed[R]_n; _ : compact compact_poly }.
+
+Canonical compactPoly_subType := Eval hnf in [subType for compact_poly].
+Definition compactPoly_eqMixin := Eval hnf in [eqMixin of compactPoly by <:].
+Canonical compactPoly_eqType := Eval hnf in EqType compactPoly compactPoly_eqMixin.
+Definition compactPoly_choiceMixin := Eval hnf in [choiceMixin of compactPoly by <:].
+Canonical compactPoly_choiceType := Eval hnf in ChoiceType compactPoly compactPoly_choiceMixin.
+
+Definition compactPoly_of of phant R := compactPoly.
+Identity Coercion type_compactPoly_of : compactPoly_of >-> compactPoly.
+End CompactType.
+
+Bind Scope ring_scope with compactPoly_of.
+Bind Scope ring_scope with compactPoly.
+
+Reserved Notation "''compact[' R ]_ n"
+  (at level 8, n at level 2, format "''compact[' R ]_ n").
+
+Notation "''compact[' R ]_ n" := (@compactPoly_of _ n (Phant R)).
+
+Section CompactTheory.
+Context {R : realFieldType} (n : nat).
+
+Canonical compactPoly_of_subType := Eval hnf in [subType of 'compact[R]_n].
+Canonical compactPoly_of_eqType := Eval hnf in [eqType of 'compact[R]_n].
+Canonical compactPoly_of_choiceType := Eval hnf in [choiceType of 'compact[R]_n].
+End CompactTheory.
+
+(* -------------------------------------------------------------------- *)
+Section CompactPointed.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+
+Definition Compact (cp : compact P) :=
+  @mkCompact R n (Pointed (compact_pointed cp)) cp.
+End CompactPointed.
+
+(* -------------------------------------------------------------------- *)
+Section PolyPO.
+Context (R : realFieldType) (n : nat).
+
+Implicit Types P Q : 'poly[R]_n.
+
+Local Lemma poly_proper_def P Q :
+  (P `<` Q) = (Q != P) && (P `<=` Q).
+Proof. by rewrite poly_properEneq eq_sym andbC. Qed.
+
+Local Lemma poly_subset_anti_def :
+  antisymmetric (@poly_subset R n).
+Proof. by move=> P Q /andP[]; apply: poly_subset_anti. Qed.
+
+Definition poly_porderMixin :=
+  LePOrderMixin poly_proper_def poly_subset_refl poly_subset_anti_def poly_subset_trans.
+Canonical poly_porderType :=
+  Eval hnf in POrderType ring_display 'poly[R]_n poly_porderMixin.
+
+Definition pointedPoly_porderMixin := [porderMixin of @pointedPoly R n by <:].
+Canonical pointedPoly_porderType :=
+  Eval hnf in POrderType ring_display (@pointedPoly R n) pointedPoly_porderMixin.
+
+Definition pointedPoly_of_porderType :=
+  Eval hnf in [porderType of 'pointed[R]_n].
+End PolyPO.
+
 Section PolyBase.
 
 Variable (R : realFieldType) (n : nat).
@@ -511,32 +618,93 @@ Qed.
 End Face.
 
 
-(*
-Section Test.
+(* -------------------------------------------------------------------- *)
+Section FaceSetOrder.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
 
-Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
+Definition face_set_porderMixin :=
+  Eval hnf in [porderMixin of face_set P by <:].
+Canonical face_set_porderType :=
+  Eval hnf in POrderType ring_display (face_set P) face_set_porderMixin.
+Canonical face_set_finPOrderType :=
+  Eval hnf in [finPOrderType of face_set P].
+End FaceSetOrder.
 
-Variables (P Q : {poly base}) (Q' : 'poly[R]_n) (x : 'cV[R]_n).
+(* -------------------------------------------------------------------- *)
+Section FacesSetOrderTheory.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
 
-Set Printing Coercions.
+Lemma leEfaces (F1 F2 : face_set P) :
+  (F1 <= F2) = (val F1 `<=` val F2).
+Proof. by rewrite !leEsub. Qed.
 
-Check (P `&` Q : 'poly[R]_n).
-Check (x \in P).
+Lemma ltEfaces (F1 F2 : face_set P) :
+  (F1 < F2) = (val F1 `<` val F2).
+Proof. by rewrite !ltEsub. Qed.
 
-Goal P `<=` Q' -> forall x, x \in P -> x \in Q'.
-move/poly_subsetP => H z z_in_P.
-by move/H: z_in_P.
+Definition lteEfaces := (leEfaces, ltEfaces).
+End FacesSetOrderTheory.
+
+(* -------------------------------------------------------------------- *)
+Import MeetBTFinMixin.Exports.
+
+Section FacesLattice.
+Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+
+Lemma poly0_fp : `[poly0] \in face_set P.
+Proof. by apply: poly0_face_set. Qed.
+
+Lemma polyP_fp : P \in face_set P.
+Proof. by apply: face_set_self. Qed.
+
+Let fp0 := [`poly0_fp]%fset.
+Let fp1 := [`polyP_fp]%fset.
+
+Definition fpI (F1 F2 : face_set P) : face_set P :=
+  [`face_set_polyI (valP F1) (valP F2)]%fset.
+
+Lemma fpIC : commutative fpI.
+Proof.
+move=> F1 F2; apply: val_inj; rewrite !SubK.
+by apply/poly_eqP=> x; rewrite !in_polyI andbC.
 Qed.
 
-Goal (P = Q' :> 'poly[R]_n) -> x \in P -> x \in Q'.
-move <-.
-done.
+Lemma fp_le_def (F1 F2 : face_set P) : (F1 <= F2) = (fpI F1 F2 == F1).
+Proof. by rewrite leEfaces -val_eqE fpIC; apply/idP/eqP => /polyIidPr. Qed.
+
+Lemma fp_lt_def (F1 F2 : face_set P) : (F1 < F2) = (F2 != F1) && (F1 <= F2).
+Proof. by rewrite !lteEfaces poly_properEneq andbC eq_sym. Qed.
+
+Lemma fpIA : associative fpI.
+Proof.
+move=> F1 F2 F3; apply: val_inj; rewrite !SubK.
+by apply/poly_eqP=> x; rewrite !in_polyI andbA.
 Qed.
 
-Unset Printing Coercions.
+Lemma fpII : idempotent fpI.
+Proof.
+move=> F; apply: val_inj; rewrite !SubK.
+by apply/poly_eqP=> x; rewrite !in_polyI andbb.
+Qed.
 
-End Test.
-*)
+Lemma fp0I (F : face_set P) : fp0 <= F.
+Proof. by rewrite !leEsub /= /Order.le /= poly0_subset. Qed.
+
+Lemma fpI1 (F : face_set P) : F <= fp1.
+Proof. by rewrite !leEsub /= /Order.le /=; apply/face_subset/valP. Qed.
+
+Definition polyFaces_latticeMixin :=
+   MeetBTFinMixin fp_le_def fpIC fpIA fpII fp0I fpI1.
+
+Canonical face_set_latticeType :=
+  Eval hnf in LatticeType (face_set P) polyFaces_latticeMixin.
+Canonical face_set_bLatticeType :=
+  Eval hnf in BLatticeType (face_set P) polyFaces_latticeMixin.
+Canonical face_set_tbLatticeType :=
+  Eval hnf in TBLatticeType (face_set P) polyFaces_latticeMixin.
+Canonical face_set_finLatticeType :=
+  Eval hnf in [finLatticeType of (face_set P)].
+End FacesLattice.
 
 Section Active.
 
@@ -549,19 +717,6 @@ Definition active (P : {poly base}) := (* TODO: fix broken notation *)
     ((\big[@fsetU _/fset0]_(I : {fsubset base} | (P `<=` 'P^=(base; I))) I)%:fsub).
 
 Notation "'{eq'  P }" := (active P) : poly_scope.
-
-(*
-Section Test.
-Variable (P : {poly base}).
-Check {eq P}.
-Goal {eq P} = fset0%:fsub :> {fsubset base}.
-Set Printing Coercions.
-apply/fsubset_inj => /=.
-Abort.
-Check 'P^=(base; {eq P}) : 'poly[R]_n.
-Check 'P^=(base; {eq P})%:poly_base : {poly base}.
-End Test.
- *)
 
 Lemma repr_active (P : {poly base}) :
   P `>` (`[poly0]) -> P = ('P^=(base; {eq P}))%:poly_base.
@@ -1441,14 +1596,16 @@ Qed.
 
 End VertexSet.
 
-Section Graded.
+Section FaceSetGraded.
 
-Context {R : realFieldType} {n : nat}.
+Context {R : realFieldType} {n : nat} .
 
-Lemma graded (P Q : 'poly[R]_n) :
-  pointed P -> Q \in face_set P -> Q != P -> ~~ [exists S : face_set P, (Q `<` (val S) `<` P)] -> dim P = (dim Q).+1%N.
+Implicit Type P : 'pointed[R]_n.
+
+Lemma graded P (Q : 'poly[R]_n) :
+   Q \in face_set P -> Q != P -> ~~ [exists S : face_set P, (Q `<` (val S) `<` P)] -> dim P = (dim Q).+1%N.
 Proof.
-elim/non_redundant_baseW : P => base non_redundant.
+case: P => /=; elim/non_redundant_baseW => base non_redundant.
 set P := 'P(base)%:poly_base => P_pointed.
 case/face_setP => {}Q Q_sub_P Q_neq_P.
 have {Q_sub_P Q_neq_P} Q_prop_P : Q `<` P by rewrite poly_properEneq Q_sub_P.
@@ -1483,7 +1640,23 @@ case: (emptyP Q) => [ -> P_cover0 | Q_prop0 P_cover_Q ].
   exact: poly_dim_facet.
 Qed.
 
-End Graded.
+Lemma dimfs0 P : dim (val (0%O : face_set P)) = 0%N.
+Proof. by rewrite dim0. Qed.
+
+Lemma homo_dim P (x y : face_set P) :
+  x < y -> (dim (val x) < dim (val y))%N.
+Proof. Admitted.
+
+Lemma dim_graded P (x y : face_set P) :
+  ((dim (val x)).+1 < dim (val y))%N -> exists z, x < z < y.
+Proof. Admitted.
+
+Definition face_set_gradedFinLatticeMixin P :=
+  GradedFinLatticeMixin (dimfs0 P) (@homo_dim P) (@dim_graded P).
+Canonical face_set_gradedFinLatticeType P :=
+  Eval hnf in GradedFinLatticeType (face_set P) (face_set_gradedFinLatticeMixin P).
+
+End FaceSetGraded.
 
 Section Minkowski.
 
@@ -2141,231 +2314,6 @@ by apply/ltnW/card_vertex_set; rewrite ?dimP.
 Qed.
 *)
 End Connectness.
-
-(* -------------------------------------------------------------------- *)
-Section PointedType.
-Context (R : realFieldType) (n : nat).
-
-Record pointedPoly : predArgType :=
-  Pointed { pointed_poly :> 'poly[R]_n; _ : pointed pointed_poly }.
-
-Canonical pointedPoly_subType := Eval hnf in [subType for pointed_poly].
-Definition pointedPoly_eqMixin := Eval hnf in [eqMixin of pointedPoly by <:].
-Canonical pointedPoly_eqType := Eval hnf in EqType pointedPoly pointedPoly_eqMixin.
-Definition pointedPoly_choiceMixin := Eval hnf in [choiceMixin of pointedPoly by <:].
-Canonical pointedPoly_choiceType := Eval hnf in ChoiceType pointedPoly pointedPoly_choiceMixin.
-
-Definition pointedPoly_of of phant R := pointedPoly.
-Identity Coercion type_pointedPoly_of : pointedPoly_of >-> pointedPoly.
-End PointedType.
-
-Bind Scope ring_scope with pointedPoly_of.
-Bind Scope ring_scope with pointedPoly.
-
-Reserved Notation "''pointed[' R ]_ n"
-  (at level 8, n at level 2, format "''pointed[' R ]_ n").
-
-Notation "''pointed[' R ]_ n" := (@pointedPoly_of _ n (Phant R)).
-
-Section PointedTheory.
-Context {R : realFieldType} (n : nat).
-
-Canonical pointedPoly_of_subType := Eval hnf in [subType of 'pointed[R]_n].
-Canonical pointedPoly_of_eqType := Eval hnf in [eqType of 'pointed[R]_n].
-Canonical pointedPoly_of_choiceType := Eval hnf in [choiceType of 'pointed[R]_n].
-
-Lemma pointed_slice (P : 'pointed[R]_n) e : pointed (slice e P).
-Admitted.
-Canonical pointed_slice_pointed (P : 'pointed[R]_n) e := Pointed (pointed_slice P e).
-
-End PointedTheory.
-
-(* -------------------------------------------------------------------- *)
-Section CompactType.
-Context (R : realFieldType) (n : nat).
-
-Record compactPoly : predArgType :=
-  mkCompact { compact_poly :> 'pointed[R]_n; _ : compact compact_poly }.
-
-Canonical compactPoly_subType := Eval hnf in [subType for compact_poly].
-Definition compactPoly_eqMixin := Eval hnf in [eqMixin of compactPoly by <:].
-Canonical compactPoly_eqType := Eval hnf in EqType compactPoly compactPoly_eqMixin.
-Definition compactPoly_choiceMixin := Eval hnf in [choiceMixin of compactPoly by <:].
-Canonical compactPoly_choiceType := Eval hnf in ChoiceType compactPoly compactPoly_choiceMixin.
-
-Definition compactPoly_of of phant R := compactPoly.
-Identity Coercion type_compactPoly_of : compactPoly_of >-> compactPoly.
-End CompactType.
-
-Bind Scope ring_scope with compactPoly_of.
-Bind Scope ring_scope with compactPoly.
-
-Reserved Notation "''compact[' R ]_ n"
-  (at level 8, n at level 2, format "''compact[' R ]_ n").
-
-Notation "''compact[' R ]_ n" := (@compactPoly_of _ n (Phant R)).
-
-Section CompactTheory.
-Context {R : realFieldType} (n : nat).
-
-Canonical compactPoly_of_subType := Eval hnf in [subType of 'compact[R]_n].
-Canonical compactPoly_of_eqType := Eval hnf in [eqType of 'compact[R]_n].
-Canonical compactPoly_of_choiceType := Eval hnf in [choiceType of 'compact[R]_n].
-End CompactTheory.
-
-(* -------------------------------------------------------------------- *)
-Section CompactPointed.
-Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
-
-Definition Compact (cp : compact P) :=
-  @mkCompact R n (Pointed (compact_pointed cp)) cp.
-End CompactPointed.
-
-(* -------------------------------------------------------------------- *)
-Section PolyPO.
-Context (R : realFieldType) (n : nat).
-
-Implicit Types P Q : 'poly[R]_n.
-
-Local Lemma poly_proper_def P Q :
-  (P `<` Q) = (Q != P) && (P `<=` Q).
-Proof. by rewrite poly_properEneq eq_sym andbC. Qed.
-
-Local Lemma poly_subset_anti :
-  antisymmetric (@poly_subset R n).
-Proof. by move=> P Q /andP[]; apply: poly_subset_anti. Qed.
-
-Definition poly_porderMixin :=
-  LePOrderMixin poly_proper_def poly_subset_refl poly_subset_anti poly_subset_trans.
-Canonical poly_porderType :=
-  Eval hnf in POrderType ring_display 'poly[R]_n poly_porderMixin.
-
-Definition pointedPoly_porderMixin := [porderMixin of @pointedPoly R n by <:].
-Canonical pointedPoly_porderType :=
-  Eval hnf in POrderType ring_display (@pointedPoly R n) pointedPoly_porderMixin.
-
-Definition pointedPoly_of_porderType :=
-  Eval hnf in [porderType of 'pointed[R]_n].
-End PolyPO.
-
-(* -------------------------------------------------------------------- *)
-Section SeqSubPOrder.
-Context {disp : unit} (T : porderType disp) (s : seq T).
-
-Definition seqsub_porderMixin :=
-  [porderMixin of seq_sub s by <:].
-Canonical seqsub_porderType :=
-  Eval hnf in POrderType disp (seq_sub s) seqsub_porderMixin.
-End SeqSubPOrder.
-
-(* -------------------------------------------------------------------- *)
-Section FaceSetOrder.
-Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
-
-Definition face_set_porderMixin :=
-  Eval hnf in [porderMixin of face_set P by <:].
-Canonical face_set_porderType :=
-  Eval hnf in POrderType ring_display (face_set P) face_set_porderMixin.
-Canonical face_set_finPOrderType :=
-  Eval hnf in [finPOrderType of face_set P].
-End FaceSetOrder.
-
-(* -------------------------------------------------------------------- *)
-Section FacesSetOrderTheory.
-Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
-
-Lemma leEfaces (F1 F2 : face_set P) :
-  (F1 <= F2) = (val F1 `<=` val F2).
-Proof. by rewrite !leEsub. Qed.
-
-Lemma ltEfaces (F1 F2 : face_set P) :
-  (F1 < F2) = (val F1 `<` val F2).
-Proof. by rewrite !ltEsub. Qed.
-
-Definition lteEfaces := (leEfaces, ltEfaces).
-End FacesSetOrderTheory.
-
-(* -------------------------------------------------------------------- *)
-Import MeetBTFinMixin.Exports.
-
-Section FacesLattice.
-Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
-
-Lemma poly0_fp : `[poly0] \in face_set P.
-Proof. by apply: poly0_face_set. Qed.
-
-Lemma polyP_fp : P \in face_set P.
-Proof. by apply: face_set_self. Qed.
-
-Let fp0 := [`poly0_fp]%fset.
-Let fp1 := [`polyP_fp]%fset.
-
-Definition fpI (F1 F2 : face_set P) : face_set P :=
-  [`face_set_polyI (valP F1) (valP F2)]%fset.
-
-Lemma fpIC : commutative fpI.
-Proof.
-move=> F1 F2; apply: val_inj; rewrite !SubK.
-by apply/poly_eqP=> x; rewrite !in_polyI andbC.
-Qed.
-
-Lemma fp_le_def (F1 F2 : face_set P) : (F1 <= F2) = (fpI F1 F2 == F1).
-Proof. by rewrite leEfaces -val_eqE fpIC; apply/idP/eqP => /polyIidPr. Qed.
-
-Lemma fp_lt_def (F1 F2 : face_set P) : (F1 < F2) = (F2 != F1) && (F1 <= F2).
-Proof. by rewrite !lteEfaces poly_properEneq andbC eq_sym. Qed.
-
-Lemma fpIA : associative fpI.
-Proof.
-move=> F1 F2 F3; apply: val_inj; rewrite !SubK.
-by apply/poly_eqP=> x; rewrite !in_polyI andbA.
-Qed.
-
-Lemma fpII : idempotent fpI.
-Proof.
-move=> F; apply: val_inj; rewrite !SubK.
-by apply/poly_eqP=> x; rewrite !in_polyI andbb.
-Qed.
-
-Lemma fp0I (F : face_set P) : fp0 <= F.
-Proof. by rewrite !leEsub /= /Order.le /= poly0_subset. Qed.
-
-Lemma fpI1 (F : face_set P) : F <= fp1.
-Proof. by rewrite !leEsub /= /Order.le /=; apply/face_subset/valP. Qed.
-
-Definition polyFaces_latticeMixin :=
-   MeetBTFinMixin fp_le_def fpIC fpIA fpII fp0I fpI1.
-
-Canonical face_set_latticeType :=
-  Eval hnf in LatticeType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_bLatticeType :=
-  Eval hnf in BLatticeType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_tbLatticeType :=
-  Eval hnf in TBLatticeType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_finLatticeType :=
-  Eval hnf in [finLatticeType of (face_set P)].
-End FacesLattice.
-
-(* -------------------------------------------------------------------- *)
-Section FaceSetGraded.
-Context (R : realFieldType) (n : nat) (P : 'pointed[R]_n).
-
-Lemma dimfs0 : dim (val (0%O : face_set P)) = 0%N.
-Proof. by rewrite dim0. Qed.
-
-Lemma homo_dim (x y : face_set P) :
-  x < y -> (dim (val x) < dim (val y))%N.
-Proof. Admitted.
-
-Lemma dim_graded (x y : face_set P) :
-  ((dim (val x)).+1 < dim (val y))%N -> exists z, x < z < y.
-Proof. Admitted.
-
-Definition face_set_gradedFinLatticeMixin :=
-  GradedFinLatticeMixin dimfs0 homo_dim dim_graded.
-Canonical face_set_gradedFinLatticeType :=
-  Eval hnf in GradedFinLatticeType (face_set P) face_set_gradedFinLatticeMixin.
-End FaceSetGraded.
 
 (* -------------------------------------------------------------------- *)
 Local Open Scope order_scope.
