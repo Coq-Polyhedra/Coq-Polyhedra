@@ -1610,9 +1610,12 @@ Section FaceSetGraded.
 
 Context {R : realFieldType} {n : nat} .
 
-Lemma poly_properEdim (P Q : 'poly[R]_n) :
-  P `<` Q = (P `<=` Q) && (dim P < dim Q)%N.
-Admitted.
+Lemma dim_proper (P Q : 'poly[R]_n) :
+  (P `<=` Q) -> (dim P < dim Q)%N -> (P `<` Q).
+Proof.
+rewrite poly_properEneq => ->.
+by apply/contraTneq; rewrite -leqNgt => ->.
+Qed.
 
 Implicit Type P : 'pointed[R]_n.
 
@@ -1628,7 +1631,7 @@ move: Q' Q'_face Q'_pointed Q; elim/non_redundant_baseW => base non_redundant.
 set P := 'P(base)%:poly_base => P_face P_pointed Q.
 case/face_setP => {}Q Q_sub_P dim_lt.
 have {Q_sub_P} Q_prop_P : Q `<` P.
-- rewrite poly_properEdim Q_sub_P.
+- rewrite dim_proper //.
   by apply/ltn_trans: dim_lt.
 have P_prop0 : P `>` `[poly0] by apply/(poly_subset_proper (poly0_subset Q)).
 case: (emptyP Q) dim_lt => [ -> | Q_prop0].
@@ -1637,13 +1640,13 @@ case: (emptyP Q) dim_lt => [ -> | Q_prop0].
   rewrite in_vertex_setP => x_vtx.
   exists (`[pt x]).
   + by move: x_vtx; apply/fsubsetP/(face_setS P_face).
-  + by rewrite pt_proper0 poly_properEdim dim_pt face_subset.
+  + by rewrite pt_proper0 dim_proper ?dim_pt ?face_subset.
 - have eqQ_prop_eqP : ({eq P} `<` {eq Q})%fset by apply/active_proper.
   move/fproperP: (eqQ_prop_eqP) => [_ [i i_in_eqQ i_notin_eqP]].
   have i_in_base: (i \in base) by move: (i) i_in_eqQ; apply/fsubsetP: (valP {eq Q}).
   set S := 'P^=(base; [fset i])%:poly_base => dim_lt.
   have Q_prop_S : Q `<` S.
-  + rewrite poly_properEdim activeP fsub1set i_in_eqQ.
+  + rewrite dim_proper ?activeP ?fsub1set ?i_in_eqQ //.
     by move: dim_lt; rewrite (poly_dim_facet _ _ _ i_notin_eqP).
   have S_prop_P : S `<` P.
   + rewrite poly_properEneq; apply/andP; split.
