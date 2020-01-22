@@ -2161,7 +2161,7 @@ Lemma face_of_vtxK (P : 'pointed[R]_n) :
       cancel (@vtx_of_atom P) (@face_of_vtx P) }.
  *)
 
-Section Foo.
+Section LiftSlice.
 
 Variable (P : 'compact[R]_n) (Fv : face_set P).
 Hypothesis Fv_atom : atom Fv.
@@ -2169,7 +2169,9 @@ Let v := vtx_of_atom Fv_atom.
 Let e := xchoose (conv_sep_hp (sep_vertex (valP P) (valP v))).
 
 Local Lemma hyp : vf_hyp P (val v) e.
-Admitted.
+split; first apply/valP.
+by apply: (xchooseP (conv_sep_hp (sep_vertex (valP P) (valP v)))).
+Qed.
 
 Lemma lift_sliceP (F : face_set P) :
   F \in interval Fv 1%O -> slice e (val F) \in face_set (slice e P).
@@ -2197,7 +2199,7 @@ exists (insubd (0 : '[<Fv; 1>])%O [` F_face]%fset ).
 by apply/val_inj => /=; rewrite F_eq /insubd insubT //=.
 Qed.
 
-End Foo.
+End LiftSlice.
 
 Lemma inj_surj_bij (T1 T2: finType) (f : T1 -> T2) :
   injective f -> (forall y, exists x, y = f x) -> bijective f.
@@ -2212,30 +2214,37 @@ Qed.
 Lemma fin_joinE (disp : unit) (L : finLatticeType disp) (x y : L) :
   (x `|` y = \meet_(z : L | (z >= x) && (z >= y)) z)%O.
 Proof.
-Admitted.
+apply/le_anti/andP; split.
+- by apply/meetsP => z; rewrite leUx.
+- by apply/meets_inf; rewrite leUl leUr.
+Qed.
 
-Lemma fin_omorphism (disp : unit) (L L' : finLatticeType disp) (f : L -> L') :
-  f 1%O = 1%O -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> omorphism f.
+Lemma inj_mono (disp : unit)  (L L' : latticeType disp) (f : L -> L') :
+  injective f -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> {mono f : x y / x <= y}%O.
 Proof.
-move => f1 f_meet; split => //.
+move => f_inj f_meet x y.
+by rewrite !leEmeet -f_meet (inj_eq f_inj).
+Qed.
+
+Lemma bij_on_bij (I J : Type) (f : I -> J) (P : pred J) :
+  bijective f -> {on P, bijective f}.
+Proof.
+by move => [g fgK gfK]; exists g => ??; [ apply/fgK | apply/gfK ].
+Qed.
+
+Lemma bij_omorphism (disp : unit) (L L' : finLatticeType disp) (f : L -> L') :
+  bijective f -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> omorphism f.
+Proof.
+move => f_bij f_meet; split => //.
 move => x y; rewrite !fin_joinE.
-Admitted.
-(*Search _ BigBody in bigop.
+have f1 : f 1%O = 1%O.
+- case: f_bij => g fgK gfK; apply/le_anti; rewrite lex1 /=.
+  rewrite -[X in (X <= _)%O]gfK.
+  by rewrite inj_mono ?lex1 //; apply/can_inj: fgK.
 rewrite (big_morph f f_meet f1).
-Search _ BigBody "reindex".*)
-(*
-big_morph:
-  forall (R1 R2 : Type) (f : R2 -> R1) (id1 : R1) (op1 : R1 -> R1 -> R1)
-    (id2 : R2) (op2 : R2 -> R2 -> R2),
-  {morph f : x y / op2 x y >-> op1 x y} ->
-  f id2 = id1 ->
-  forall (I : Type) (r : seq I) (P : pred I) (F : I -> R2),
-  f (\big[op2/id2]_(i <- r | P i) F i) = \big[op1/id1]_(i <- r | P i) f (F i)
-
-have: f (\meet_(z : L | P z)
-
-Admitted.
- *)
+rewrite (reindex _ (bij_on_bij _ f_bij)) /=; apply/eq_bigl => z.
+by rewrite !inj_mono //; apply/bij_inj.
+Qed.
 
 Lemma vertex_figure (P : 'compact[R]_n) (x : face_set P) : atom x ->
   exists Q : 'compact[R]_n,
@@ -2246,16 +2255,14 @@ pose v := vtx_of_atom x_atom.
 pose e := xchoose (conv_sep_hp (sep_vertex (valP P) (valP v))).
 pose Q := Compact (compact_slice P e); exists Q.
 pose f := lift_slice x_atom.
-have f_omorph : omorphism f. split.
-- move => y z.
-  apply/val_inj => /=; rewrite -/e.
+have f_bij : bijective f.
+- apply/inj_surj_bij; by [apply/lift_slice_inj | apply/lift_slice_surj].
+have f_omorph : omorphism f.
+- apply/bij_omorphism => //.
+  move => y z; apply/val_inj => /=; rewrite -/e.
   by apply/poly_eqP => u; rewrite !inE andbACA andbb.
-- admit.
-pose f' := OMorphism f_omorph; exists f'.
-apply/inj_surj_bij.
-- by apply/lift_slice_inj.
-- by apply/lift_slice_surj.
-Admitted.
+by exists (OMorphism f_omorph).
+Qed.
 
 End VertexFigure.
 
