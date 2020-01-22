@@ -110,7 +110,7 @@ Record mixin_of d (T : finLatticeType d) := Mixin {
   rank : T -> nat;
   _ : rank bottom = 0%N;
   _ : forall x y : T, x < y -> (rank x < rank y)%N;
-  _ : forall x y : T, ((rank x).+1 < rank y)%N -> exists z, x < z < y
+  _ : forall x y : T, x <= y -> ((rank x).+1 < rank y)%N -> exists z, x < z < y
 }.
 
 Record class_of (T : Type) := Class {
@@ -243,7 +243,7 @@ Proof. by case: L => [? [? ? []]]. Qed.
 Lemma le_homo_rank : {homo (@rank d L) : x y / x <= y >-> (x <= y)%N}.
 Proof. by apply: (ltW_homo homo_rank). Qed.
 
-Lemma graded_rank (x y : L) : ((rank x).+1 < rank y)%N -> exists z, x < z < y.
+Lemma graded_rank (x y : L) : x <= y -> ((rank x).+1 < rank y)%N -> exists z, x < z < y.
 Proof. by case: L x y => [? [? ? []]]. Qed.
 
 Lemma rank_eq0 (x : L) : (rank x == 0) = (x == 0).
@@ -830,11 +830,11 @@ by rewrite (leq_trans _ h) // ltnS intv_rankL.
 Qed.
 
 Lemma graded_intv_rank (x y : '[< a; b >]) :
-  ((vrank x).+1 < vrank y)%N -> exists z : '[< a; b >], x < z < y.
+  x <= y -> ((vrank x).+1 < vrank y)%N -> exists z : '[< a; b >], x < z < y.
 Proof.
 rewrite /vrank -subSn ?intv_rankL // ltn_subLR; last first.
 + by rewrite (leq_trans (intv_rankL x)).
-rewrite subnKC ?intv_rankL // => /graded_rank[z rg_z].
+rewrite subnKC ?intv_rankL // => /graded_rank h /h [z rg_z].
 exists (insubd (0 : '[< a; b >]) z).
 rewrite !ltEsub /insubd insubT //= intervalE.
 rewrite (le_trans (intervalPL (valP x))) //=; last by apply: ltW; case/andP: rg_z.
@@ -930,7 +930,7 @@ apply/idP/eqP.
 + case: (posxP a) => [-> /atom0n //|gt0_a /atomP -/(_ gt0_a) h].
   rewrite (rwP eqP) eqn_leq rank_gt0 gt0_a andbT.
   rewrite leqNgt; apply/negP; rewrite -[0%N](@rank0 _ L).
-  by case/graded_rank => x /andP[]; rewrite lt0x => /h.
+  by case/(graded_rank (le0x _)) => x /andP[]; rewrite lt0x => /h.
 + move=> eq1_rk; have gt0_a: 0 < a by rewrite -rank_gt0 eq1_rk.
   apply/atomP=> // x nz_x /homo_rank; rewrite eq1_rk ltnS.
   by rewrite leqn0 rank_eq0 (negbTE nz_x).
