@@ -2211,13 +2211,14 @@ pose g y := xchoose (f_surj' y); exists g.
 - by move => y; apply/eqP; rewrite eq_sym (xchooseP (f_surj' y)).
 Qed.
 
+(*
 Lemma fin_joinE (disp : unit) (L : finLatticeType disp) (x y : L) :
   (x `|` y = \meet_(z : L | (z >= x) && (z >= y)) z)%O.
 Proof.
 apply/le_anti/andP; split.
 - by apply/meetsP => z; rewrite leUx.
 - by apply/meets_inf; rewrite leUl leUr.
-Qed.
+Qed.*)
 
 Lemma inj_mono (disp : unit)  (L L' : latticeType disp) (f : L -> L') :
   injective f -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> {mono f : x y / x <= y}%O.
@@ -2226,24 +2227,20 @@ move => f_inj f_meet x y.
 by rewrite !leEmeet -f_meet (inj_eq f_inj).
 Qed.
 
+(*
 Lemma bij_on_bij (I J : Type) (f : I -> J) (P : pred J) :
   bijective f -> {on P, bijective f}.
 Proof.
-by move => [g fgK gfK]; exists g => ??; [ apply/fgK | apply/gfK ].
-Qed.
+by move => [g fgK gfK]; exists g => ??; [ apply/fgK | apply/gfK ].*)
 
 Lemma bij_omorphism (disp : unit) (L L' : finLatticeType disp) (f : L -> L') :
   bijective f -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> omorphism f.
 Proof.
-move => f_bij f_meet; split => //.
-move => x y; rewrite !fin_joinE.
-have f1 : f 1%O = 1%O.
-- case: f_bij => g fgK gfK; apply/le_anti; rewrite lex1 /=.
-  rewrite -[X in (X <= _)%O]gfK.
-  by rewrite inj_mono ?lex1 //; apply/can_inj: fgK.
-rewrite (big_morph f f_meet f1).
-rewrite (reindex _ (bij_on_bij _ f_bij)) /=; apply/eq_bigl => z.
-by rewrite !inj_mono //; apply/bij_inj.
+case => g fgK gfK f_meet; split => //.
+have f_mono := (inj_mono (can_inj fgK) f_meet).
+move => x y; apply/le_anti/andP; split.
+- by rewrite -[X in (_ <= X)%O]gfK f_mono leUx -!f_mono gfK leUl leUr.
+- by rewrite leUx !f_mono leUl leUr.
 Qed.
 
 Lemma vertex_figure (P : 'compact[R]_n) (x : face_set P) : atom x ->
