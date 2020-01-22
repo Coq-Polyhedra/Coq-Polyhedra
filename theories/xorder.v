@@ -692,6 +692,9 @@ Import SubLattices.Exports.
 Reserved Notation "'[< a ; b >]"
   (at level 2, a, b at level 8, format "''[<' a ;  b '>]'").
 
+Reserved Notation "'[< a ; b >]_ R"
+  (at level 2, a, b at level 8, format "''[<' a ;  b '>]_' R").
+
 Section Interval.
 Context (d : unit) (L : latticeType d).
 
@@ -761,6 +764,7 @@ Canonical interval_omorphism := OMorphism interval_val_is_omorphism.
 End IntervalLattice.
 
 Notation "'[< a ; b >]" := (interval_of a b).
+Notation "'[< a ; b >]_ R" := (@interval_of _ R a b) (only parsing).
 
 Global Instance expose_le0x (disp : unit) (L : tbLatticeType disp) (x : L) :
   expose (0 <= x)%O := Expose (le0x x).
