@@ -2219,6 +2219,7 @@ Lemma fin_omorphism (disp : unit) (L L' : finLatticeType disp) (f : L -> L') :
 Proof.
 move => f1 f_meet; split => //.
 move => x y; rewrite !fin_joinE.
+Admitted.
 (*Search _ BigBody in bigop.
 rewrite (big_morph f f_meet f1).
 Search _ BigBody "reindex".*)
@@ -2249,23 +2250,12 @@ have f_omorph : omorphism f. split.
 - move => y z.
   apply/val_inj => /=; rewrite -/e.
   by apply/poly_eqP => u; rewrite !inE andbACA andbb.
-- move => y z; rewrite !bar.
-
-  !/Num.max /= /MeetBTFinMixin.join. /lpredU. /join.
-
-  rewrite meetAC
-
-  admit.
-- move => y z.
-  rewrite /=.
-  admit.
+- admit.
 pose f' := OMorphism f_omorph; exists f'.
 apply/inj_surj_bij.
 - by apply/lift_slice_inj.
 - by apply/lift_slice_surj.
-
-
-
+Admitted.
 
 End VertexFigure.
 
@@ -2512,18 +2502,6 @@ Local Open Scope order_scope.
 
 (* -------------------------------------------------------------------- *)
 Local Open Scope fset.
-
-Section Toto.
-
-Context (R : realFieldType) (n : nat) (P : 'pointed[R]_n).
-
-  Lemma vertex_set_face_set x : x \in vertex_set P -> `[pt x] \in face_set P.
-by rewrite in_vertex_setP.
-Qed.
-
-Definition face_of_vtx (x : vertex_set P) :=
-  [` vertex_set_face_set (valP x)] : face_set P.
-End Toto.
 
 Section Theory.
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
