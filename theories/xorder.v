@@ -1,5 +1,6 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint.
+Require Import extra_misc.
 
 Import Order.
 Import Order.Theory.
@@ -588,10 +589,10 @@ End Interval.
 
 (* -------------------------------------------------------------------- *)
 Section IntervalLattice.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : unit) (L : latticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
 Inductive interval_of : predArgType :=
-  Interval x & x \in interval (meet a b) (join a b).
+  Interval x & x \in interval a b.
 
 Definition interval_val r := let: Interval x _ := r in x.
 
@@ -613,8 +614,13 @@ End IntervalLattice.
 
 Notation "'[< a ; b >]" := (interval_of a b).
 
+Global Instance expose_le0x (disp : unit) (L : tbLatticeType disp) (x : L) :
+  expose (0 <= x)%O := Expose (le0x x).
+Global Instance expose_lex1 (disp : unit) (L : tbLatticeType disp) (x : L) :
+  expose (x <= 1)%O := Expose (lex1 x).
+
 (* -------------------------------------------------------------------- *)
-Section IntervalLatticeTheory.
+(*Section IntervalLatticeTheory.
 Context (d : unit) (L : latticeType d) (a b : L).
 
 Lemma intv_leIx (x : '[< a; b >]) : a `&` b <= val x.
@@ -622,20 +628,22 @@ Proof. by case/intervalP: (valP x). Qed.
 
 Lemma intv_lexU (x : '[< a; b >]) : val x <= a `|` b.
 Proof. by case/intervalP: (valP x). Qed.
-End IntervalLatticeTheory.
+End IntervalLatticeTheory.*)
 
 (* -------------------------------------------------------------------- *)
 Section IntervalTBLattice.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : unit) (L : latticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
-Let bottom := Interval (intervalL (leIU a b)).
-Let top    := Interval (intervalR (leIU a b)).
+Let bottom := Interval (intervalL a_le_b).
+Let top    := Interval (intervalR a_le_b).
 
 Fact le0R (x : '[< a; b >]) : bottom <= x.
-Proof. by rewrite leEsub intv_leIx. Qed.
+Proof. by rewrite leEsub /=; case/intervalP: (valP x).
+Qed.
 
 Fact leR1 (x : '[< a; b >]) : x <= top.
-Proof. by rewrite leEsub intv_lexU. Qed.
+Proof. by rewrite leEsub /=; case/intervalP: (valP x).
+Qed.
 
 Definition interval_bLatticeMixin  := BLatticeMixin  le0R.
 Definition interval_tbLatticeMixin := TBLatticeMixin leR1.
@@ -649,7 +657,7 @@ End IntervalTBLattice.
 
 (* -------------------------------------------------------------------- *)
 Section IntervalFinLattice.
-Context (d : unit) (L : finLatticeType d) (a b : L).
+Context (d : unit) (L : finLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
 Definition interval_countMixin := [countMixin of '[< a; b >] by <:].
 Canonical interval_countType := Eval hnf in CountType '[< a; b >] interval_countMixin.
@@ -665,15 +673,16 @@ End IntervalFinLattice.
 
 (* -------------------------------------------------------------------- *)
 Section IntervalGradedLattice.
-Context (d : unit) (L : gradedFinLatticeType d) (a b : L).
+Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
-Definition vrank (x : '[< a; b >]) := rank (val x) - rank (meet a b).
+Definition vrank (x : '[< a; b >]) := rank (val x) - rank a.
 
-Lemma intv_rankL (x : '[< a; b >]) : (rank (a `&` b) <= rank (val x))%N.
-Proof. by apply/(ltW_homo (@homo_rank _ _))/intv_leIx. Qed.
+Lemma intv_rankL (x : '[< a; b >]) : (rank a <= rank (val x))%N.
+Proof. by apply/(ltW_homo (@homo_rank _ _)); case/intervalP: (valP x). Qed.
 
-Lemma intv_rankR (x : '[< a; b >]) : (rank (val x) <= rank (a `|` b))%N.
-Proof. by apply/(ltW_homo (@homo_rank _ _))/intv_lexU. Qed.
+Lemma intv_rankR (x : '[< a; b >]) : (rank (val x) <= rank b)%N.
+Proof. by apply/(ltW_homo (@homo_rank _ _)); case/intervalP: (valP x). Qed.
+
 
 Lemma vrank0 : vrank 0 = 0.
 Proof. by rewrite /vrank subnn. Qed.
