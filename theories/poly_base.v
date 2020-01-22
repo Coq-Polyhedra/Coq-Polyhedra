@@ -93,15 +93,21 @@ Context {R : realFieldType} (n : nat).
 Canonical compactPoly_of_subType := Eval hnf in [subType of 'compact[R]_n].
 Canonical compactPoly_of_eqType := Eval hnf in [eqType of 'compact[R]_n].
 Canonical compactPoly_of_choiceType := Eval hnf in [choiceType of 'compact[R]_n].
+
 End CompactTheory.
 
 (* -------------------------------------------------------------------- *)
 Section CompactPointed.
-Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
+Context (R : realFieldType) (n : nat) .
 
-Definition Compact (cp : compact P) :=
+Definition Compact (P : 'poly[R]_n) (cp : compact P) :=
   @mkCompact R n (Pointed (compact_pointed cp)) cp.
+
+Lemma compact_slice (P : 'compact[R]_n) e : compact (slice e P).
+Admitted.
+Canonical compact_slice_compact P e := Compact (compact_slice P e).
 End CompactPointed.
+
 
 (* -------------------------------------------------------------------- *)
 Section PolyPO.
@@ -1656,6 +1662,16 @@ Definition face_set_gradedFinLatticeMixin P :=
 Canonical face_set_gradedFinLatticeType P :=
   Eval hnf in GradedFinLatticeType (face_set P) (face_set_gradedFinLatticeMixin P).
 
+Lemma atom_faceP (P : 'pointed[R]_n) (F : face_set P) :
+  reflect
+    (exists2 x : 'cV_n, x \in vertex_set P & val F = `[pt x])
+    (atom F).
+Proof.
+rewrite atomE /rank /=; apply: (iffP eqP).
++ by move/face_dim1 => /(_ _ (fsvalP _)) [x ->]; exists x.
++ by case=> x xP ->; rewrite dim_pt.
+Qed.
+
 End FaceSetGraded.
 
 Section Minkowski.
@@ -1679,6 +1695,28 @@ case: (emptyP P) => [-> _| P_prop0 P_compact].
     by apply/(argmin_lower_bound y_in_argmin).
   + apply/poly_subsetP/conv_subset.
     exact: vertex_set_subset.
+Qed.
+
+Lemma face_atomic (P : 'compact[R]_n) (F : face_set P) : atomistic F.
+Proof.
+pose S := vertex_set (val F).
+have h x : x \in S -> `[pt x] \in face_set P.
++ move=> xS; rewrite -in_vertex_setP.
+  by apply/fsubsetP/vertex_setS/valP: x xS.
+apply/atomisticP => /=; exists [set [` h _ (valP x)]%fset | x : S].
++ move=> F' /imsetP[/= x xS -> /=]; apply/atom_faceP.
+  case: x xS => /= x xS vxS; exists x => //.
+  by rewrite in_vertex_setP h.
+rewrite (rwP eqP) eq_le -(rwP andP); split; last first.
++ apply/joinsP=> /= F' /imsetP[/= x xS ->].
+  rewrite leEsub /= /Order.le /= pt_subset.
+  by apply: vertex_set_subset.
+rewrite leEsub [val F]conv_vertex_set; last first.
++ by apply/(subset_compact (valP P))/(lex1 F).
+apply: conv_subset => /= c cF.
+have: c \in fsval [` h _ cF]%fset by rewrite in_pt.
+apply: poly_subsetP; rewrite -leEfaces join_sup //.
+by apply/imsetP; exists [` cF]%fset => //; apply: val_inj.
 Qed.
 
 Lemma subset_hp (V : {fset 'cV[R]_n}) :
@@ -1848,6 +1886,15 @@ Qed.
 
 End FaceSegment.
 
+Section VertexFigureHyp.
+
+Context {R : realFieldType} {n : nat}.
+
+Definition vf_hyp (P : 'poly[R]_n) (v : 'cV[R]_n) (e : base_elt[R,n]) :=
+  ((v \in vertex_set P) * [e separates v from ((vertex_set P) `\ v)%fset])%type.
+
+End VertexFigureHyp.
+
 Module VertexFigurePolyBase.
 Section VertexFigurePolyBase.
 
@@ -1855,10 +1902,10 @@ Context {R : realFieldType} {n : nat}.
 
 Variable (base : base_t[R,n]) (P : {poly base}) (v : 'cV[R]_n) (e0 : base_elt[R,n]).
 Hypothesis P_compact : compact P.
-Hypothesis v_vtx : v \in vertex_set P.
-Hypothesis sep : [e0 separates v from ((vertex_set P) `\ v)%fset].
-Let sep_v := (sep_hpP sep).1.
-Let sep_other := (sep_hpP sep).2.
+Hypothesis hyp : vf_hyp P v e0.
+Let v_vtx := hyp.1.
+Let sep_v := (sep_hpP hyp.2).1.
+Let sep_other := (sep_hpP hyp.2).2.
 
 Let L := [fset F in face_set P | v \in F]%fset.
 Let Φ := (slice e0).
@@ -2033,7 +2080,7 @@ case: (emptyP F) => [->| F_prop0].
   by rewrite fsetU1K ?vf_e0_notin_eq ?vf_P_in_L.
 Qed.
 
-Lemma vf_dim (F : 'poly[R]_n) :
+(*Lemma vf_dim (F : 'poly[R]_n) :
   F \in L -> (dim F = (dim (Φ F)).+1)%N.
 Proof.
 move => F_in_L; move: (F_in_L); move/vf_L_face: F_in_L; case/face_setP => {}F F_sub_P F_in_L.
@@ -2046,7 +2093,7 @@ case: (ltnP 1 (dim F)) => [dim_gt1 | ?].
     apply/poly_subsetPn; exists v; first by rewrite vf_L_v_in.
     by move: sep_v; apply/contraNN/poly_subsetP/hp_subset_hs.
 - by rewrite [pval _]vf_dim1 // dim_pt vf_slice_pt dim0.
-Qed.
+Qed.*)
 
 End VertexFigurePolyBase.
 End VertexFigurePolyBase.
@@ -2055,26 +2102,171 @@ Section VertexFigure.
 
 Context {R : realFieldType} {n : nat}.
 
-Variable (P : 'poly[R]_n) (v : 'cV[R]_n) (e0 : base_elt[R,n]).
-Hypothesis P_compact : compact P.
-Hypothesis v_vtx : v \in vertex_set P.
-Hypothesis sep : [e0 separates v from ((vertex_set P) `\ v)%fset].
+Definition face_set_itv (P : 'poly[R]_n) F F' :=
+  [fset Q in face_set P | F `<=` Q `<=` F']%fset.
 
-Let L := [fset F in face_set P | v \in F]%fset.
+Lemma face_set_itv_vtx (P : 'poly[R]_n) v :
+  v \in vertex_set P ->
+  [fset Q in face_set P | v \in Q]%fset = face_set_itv P (`[pt v]) P.
+Admitted.
 
-Lemma vf_im F : F \in L -> (slice e0 F) \in face_set (slice e0 P).
+Lemma vf_im (P : 'compact[R]_n) v e F :
+  vf_hyp P v e ->
+    F \in face_set_itv P (`[pt v]) P -> (slice e F) \in face_set (slice e P).
 Proof.
+case: P => [[]]; elim/polybW => base P ? P_compact /= hyp F_in.
+by apply/(VertexFigurePolyBase.vf_im hyp); rewrite face_set_itv_vtx ?hyp.1.
+Qed.
 
+Lemma vf_inj (P : 'compact[R]_n) v e :
+  vf_hyp P v e -> {in face_set_itv P (`[pt v]) P &, injective (slice e)}.
+Proof.
+case: P => [[]]; elim/polybW => base P ? P_compact /= hyp Q Q' Q_in Q'_in ?.
+by apply/(VertexFigurePolyBase.vf_inj P_compact hyp); rewrite ?face_set_itv_vtx ?hyp.1.
+Qed.
+
+Lemma vf_surj (P : 'compact[R]_n) v e F :
+  vf_hyp P v e ->
+  F \in face_set (slice e P) -> exists2 F', F' \in face_set_itv P (`[pt v]) P & F = slice e F'.
+Proof.
+case: P => [[]]; elim/polybW => base P ? P_compact /= hyp.
+move/(VertexFigurePolyBase.vf_surj P_compact hyp) => [F' F'_in eq_slice].
+by exists F'; rewrite -?face_set_itv_vtx ?hyp.1.
+Qed.
+
+Lemma face_intervalE (P : 'pointed[R]_n) (F F' Q : face_set P) :
+  (Q \in interval F F') = (val Q \in face_set_itv P (val F) (val F')).
 Admitted.
 
-Lemma vf_inj : {in L &, injective (slice e0)}.
+Lemma face_of_vtxP (P : 'poly[R]_n) (v : vertex_set P) :
+  `[pt (val v)] \in face_set P.
+Proof.
+by rewrite -in_vertex_setP (valP v).
+Qed.
+Definition face_of_vtx (P : 'poly[R]_n) (v : vertex_set P) :=
+  [` face_of_vtxP v]%fset : face_set P.
+Lemma vtx_of_atomP (P : 'pointed[R]_n) (F : face_set P) :
+  atom F -> exists (v : vertex_set P), val F == `[pt (val v)].
+Proof.
+by move/atom_faceP => [x x_in ->]; exists [` x_in]%fset.
+Qed.
+Definition vtx_of_atom (P : 'pointed[R]_n) (F : face_set P) (F_atom : atom F) :=
+  xchoose (vtx_of_atomP F_atom).
+Lemma vtx_of_atomE (P : 'pointed[R]_n) (F : face_set P) (F_atom : atom F) :
+  `[pt (val (vtx_of_atom F_atom))] = val F.
+Admitted.
+  (*
+Lemma face_of_vtxK (P : 'pointed[R]_n) :
+  {in (@atom _ [finLatticeType of (face_set P)]),
+      cancel (@vtx_of_atom P) (@face_of_vtx P) }.
+ *)
+
+Section Foo.
+
+Variable (P : 'compact[R]_n) (Fv : face_set P).
+Hypothesis Fv_atom : atom Fv.
+Let v := vtx_of_atom Fv_atom.
+Let e := xchoose (conv_sep_hp (sep_vertex (valP P) (valP v))).
+
+Local Lemma hyp : vf_hyp P (val v) e.
 Admitted.
 
-Lemma vf_surj F : F \in face_set (slice e0 P) -> exists2 F', F' \in L & F = slice e0 F'.
+Lemma lift_sliceP (F : face_set P) :
+  F \in interval Fv 1%O -> slice e (val F) \in face_set (slice e P).
+Proof.
+by rewrite face_intervalE /= => ?; apply/(vf_im hyp); rewrite vtx_of_atomE.
+Qed.
+
+Definition lift_slice (F : '[< Fv; 1%O >]) := [` lift_sliceP (valP F) ]%fset.
+
+Lemma lift_slice_inj : injective lift_slice.
+Proof.
+move => F F' lift_eq.
+apply/val_inj/val_inj/(vf_inj hyp) => //.
+- by rewrite vtx_of_atomE; move: (valP F); rewrite face_intervalE /=.
+- by rewrite vtx_of_atomE; move: (valP F'); rewrite face_intervalE /=.
+- by move/(congr1 val): lift_eq.
+Qed.
+
+Lemma lift_slice_surj (F : face_set (slice e P)) : exists F', F = lift_slice F'.
+Proof.
+move: (vf_surj hyp (valP F)) => [F0].
+rewrite !inE /= => /andP [F_face v_in F_eq].
+rewrite vtx_of_atomE in v_in.
+exists (insubd (0 : '[<Fv; 1>])%O [` F_face]%fset ).
+by apply/val_inj => /=; rewrite F_eq /insubd insubT //=.
+Qed.
+
+End Foo.
+
+Lemma inj_surj_bij (T1 T2: finType) (f : T1 -> T2) :
+  injective f -> (forall y, exists x, y = f x) -> bijective f.
+Proof.
+move => f_inj f_surj.
+have f_surj': forall y, exists x, y == f x by move => y; move: (f_surj y) => [x ->]; exists x.
+pose g y := xchoose (f_surj' y); exists g.
+- by move => x; apply/f_inj/eqP; rewrite eq_sym (xchooseP (f_surj' (f x))).
+- by move => y; apply/eqP; rewrite eq_sym (xchooseP (f_surj' y)).
+Qed.
+
+Lemma fin_joinE (disp : unit) (L : finLatticeType disp) (x y : L) :
+  (x `|` y = \meet_(z : L | (z >= x) && (z >= y)) z)%O.
+Proof.
 Admitted.
 
-Lemma vf_dim F : F \in L -> (dim F = (dim (slice e0 F)).+1)%N.
+Lemma fin_omorphism (disp : unit) (L L' : finLatticeType disp) (f : L -> L') :
+  f 1%O = 1%O -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> omorphism f.
+Proof.
+move => f1 f_meet; split => //.
+move => x y; rewrite !fin_joinE.
+(*Search _ BigBody in bigop.
+rewrite (big_morph f f_meet f1).
+Search _ BigBody "reindex".*)
+(*
+big_morph:
+  forall (R1 R2 : Type) (f : R2 -> R1) (id1 : R1) (op1 : R1 -> R1 -> R1)
+    (id2 : R2) (op2 : R2 -> R2 -> R2),
+  {morph f : x y / op2 x y >-> op1 x y} ->
+  f id2 = id1 ->
+  forall (I : Type) (r : seq I) (P : pred I) (F : I -> R2),
+  f (\big[op2/id2]_(i <- r | P i) F i) = \big[op1/id1]_(i <- r | P i) f (F i)
+
+have: f (\meet_(z : L | P z)
+
 Admitted.
+ *)
+
+Lemma vertex_figure (P : 'compact[R]_n) (x : face_set P) : atom x ->
+  exists Q : 'compact[R]_n,
+  exists f : {omorphism '[< x; 1 >] -> face_set Q}%O, bijective f.
+Proof.
+move => x_atom.
+pose v := vtx_of_atom x_atom.
+pose e := xchoose (conv_sep_hp (sep_vertex (valP P) (valP v))).
+pose Q := Compact (compact_slice P e); exists Q.
+pose f := lift_slice x_atom.
+have f_omorph : omorphism f. split.
+- move => y z.
+  apply/val_inj => /=; rewrite -/e.
+  by apply/poly_eqP => u; rewrite !inE andbACA andbb.
+- move => y z; rewrite !bar.
+
+  !/Num.max /= /MeetBTFinMixin.join. /lpredU. /join.
+
+  rewrite meetAC
+
+  admit.
+- move => y z.
+  rewrite /=.
+  admit.
+pose f' := OMorphism f_omorph; exists f'.
+apply/inj_surj_bij.
+- by apply/lift_slice_inj.
+- by apply/lift_slice_surj.
+
+
+
+
 End VertexFigure.
 
 Section Graph.
@@ -2336,100 +2528,11 @@ End Toto.
 Section Theory.
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
-Lemma atom_faceP (F : face_set P) :
-  reflect
-    (exists2 x : 'cV_n, x \in vertex_set P & val F = `[pt x])
-    (atom F).
-Proof.
-rewrite atomE /rank /=; apply: (iffP eqP).
-+ by move/face_dim1 => /(_ _ (fsvalP _)) [x ->]; exists x.
-+ by case=> x xP ->; rewrite dim_pt.
-Qed.
-
-Lemma face_atomic (F : face_set P) : atomistic F.
-Proof.
-pose S := vertex_set (val F).
-have h x : x \in S -> `[pt x] \in face_set P.
-+ move=> xS; rewrite -in_vertex_setP.
-  by apply/fsubsetP/vertex_setS/valP: x xS.
-apply/atomisticP => /=; exists [set [` h _ (valP x)] | x : S].
-+ move=> F' /imsetP[/= x xS -> /=]; apply/atom_faceP.
-  case: x xS => /= x xS vxS; exists x => //.
-  by rewrite in_vertex_setP h.
-rewrite (rwP eqP) eq_le -(rwP andP); split; last first.
-+ apply/joinsP=> /= F' /imsetP[/= x xS ->].
-  rewrite leEsub /= /Order.le /= pt_subset.
-  by apply: vertex_set_subset.
-rewrite leEsub [val F]conv_vertex_set; last first.
-+ by apply/(subset_compact (valP P))/(lex1 F).
-apply: conv_subset => /= c cF.
-have: c \in fsval [` h _ cF] by rewrite in_pt.
-apply: poly_subsetP; rewrite -leEfaces join_sup //.
-by apply/imsetP; exists [` cF] => //; apply: val_inj.
-Qed.
-
 Lemma face_coatomic (F : face_set P) : coatomistic F.
 Proof. Admitted.
 
 Variable (v : vertex_set P) (e : base_elt[R,n]).
 Hypothesis (sep : [e separates fsval v from vertex_set P `\ fsval v]).
-
-
-Lemma contain_v (F : '[< face_of_vtx v; 1 >]) : val v \in val (val F). (* HORRIBLE!!! *)
-Admitted.
-
-Lemma vf_im' (F : face_set P) :
-  ((face_of_vtx v) <= F)%O -> slice e (val F) \in face_set (slice e P).
-Proof.
-move => /poly_subsetP sub; apply/(vf_im _ (valP v)) => //.
-by rewrite !inE fsvalP //= sub ?in_pt.
-Qed.
-
-(*Lemma f_v_le (F : face_set P) : F \in '[< face_of_vtx v; 1 >] -> (face_of_vtx v) <= F.*)
-Lemma f_v_le (F : '[< face_of_vtx v; 1 >]) : (face_of_vtx v) <= val F.
-Proof.
-move/intervalPL: (valP F).
-by rewrite {1}meet_l ?lex1.
-Qed.
-
-Definition lift_slice (F : '[< face_of_vtx v; 1 >]) :=
-  [`  vf_im' (f_v_le F) ].
-
-Lemma lift_slice_inj : injective lift_slice.
-Proof.
-move => F F' lift_eq.
-apply/val_inj/val_inj/(vf_inj _ (valP v) sep) => //;
-  try by rewrite !inE fsvalP contain_v.
-by move/(congr1 val): lift_eq.
-Qed.
-
-Lemma lift_slice_surj F : exists F', F = lift_slice F'.
-Proof.
-move: (vf_surj Pcompact (valP v) sep (valP F)) => [F0].
-rewrite !inE /= => /andP [F_face v_in F_eq].
-exists (insubd (0 : '[<(face_of_vtx v); 1>]) [` F_face] ).
-apply/val_inj => /=; rewrite F_eq /insubd insubT //=.
-rewrite intervalE joinx1 lex1 andbT meetx1.
-by rewrite leEsub /= /Order.le /= pt_subset.
-Qed.
-
-Lemma lift_slice_dim (F : '[< face_of_vtx v; 1 >]) :
-  rank F = (rank (lift_slice F)).+1%N.
-  (* doesn't typechecked because slice e P should be pointed *)
-Proof.
-rewrite {2}/rank /= -(vf_dim Pcompact (fsvalP v)) //.
-rewrite /rank /=/vrank [in X in (_ - X)%N]meetx1.
-rewrite {2}/rank /= dim_pt subn1.
-Admitted.
-
-Lemma vertex_figure (x : face_set P) : atom x ->
-  exists  Q : 'poly[R]_n,
-  exists2 f : {omorphism '[< x; 1 >] -> face_set Q},
-    bijective f & dim P = (dim Q).+1.
-Proof.
-case/atom_faceP=> y yP xE; have := sep_vertex Pcompact yP.
-(*case/conv_sep_hp=> {}e e_sep_y_PNy.*)
-Admitted.
 
 End Theory.
 
