@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint.
 
 Import Order.
 Import Order.Theory.
@@ -239,8 +239,27 @@ Proof. by case: L => [? [? ? []]]. Qed.
 Lemma homo_rank : {homo (@rank d L) : x y / x < y >-> (x < y)%N}.
 Proof. by case: L => [? [? ? []]]. Qed.
 
+Lemma le_homo_rank : {homo (@rank d L) : x y / x <= y >-> (x <= y)%N}.
+Proof. by apply: (ltW_homo homo_rank). Qed.
+
 Lemma graded_rank (x y : L) : ((rank x).+1 < rank y)%N -> exists z, x < z < y.
 Proof. by case: L x y => [? [? ? []]]. Qed.
+
+Lemma rank_eq0 (x : L) : (rank x == 0) = (x == 0).
+Proof.
+apply/eqP/eqP=> [zrk|->]; last by rewrite rank0.
+apply/contra_eq: zrk; rewrite -!(lt0x, lt0n).
+by move/homo_rank; rewrite rank0.
+Qed.
+
+Lemma rank_gt0 (x : L) : (0 < rank x)%N = (0 < x).
+Proof.
+apply/idP/idP => [gt0_rank|/homo_rank]; last by rewrite rank0.
+by rewrite lt_neqAle le0x eq_sym -rank_eq0 andbT -lt0n.
+Qed.
+
+Lemma rankI (x y : L) : (rank (x `&` y) <= minn (rank x) (rank y))%N.
+Proof. by rewrite leq_min !le_homo_rank // (leIl, leIr). Qed.
 End GradedTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -694,8 +713,57 @@ Definition coatom (a : L) :=
   (a < 1) && ~~ [exists x : L, a < x < 1].
 
 Definition atomistic (a : L) :=
-  [exists S : {set L}, a == \join_(x in S) x].
+  [exists S : {set L},
+     [forall x in S, atom x] && (a == \join_(x in S) x)].
 
 Definition coatomistic (a : L) :=
-  [exists S : {set L}, a == \meet_(x in S) x].
+  [exists S : {set L},
+     [forall x in S, atom x] && (a == \meet_(x in S) x)].
 End Atomic.
+
+(* -------------------------------------------------------------------- *)
+Section AtomicTheory.
+Context (d : unit) (L : finLatticeType d).
+
+Lemma atomP (a : L) : 0 < a ->
+  reflect (forall x, x != 0 -> ~ (x < a)) (atom a).
+Proof.
+move=> gt0_a; apply: (iffP andP).
++ case=> _ /existsPn h x nz_x; move/(_ x): h.
+  by rewrite negb_and lt_neqAle eq_sym nz_x le0x /= (rwP negP).
++ move=> ata; split=> //; apply/negP => /existsP[x].
+  by case/andP=> gt0_x; apply/ata; rewrite gt_eqF.
+Qed.
+
+Lemma atom0n : ~ (atom (0 : L)).
+Proof. by case/andP; rewrite ltxx. Qed.
+
+Lemma atomisticP (a : L) :
+  reflect
+    (exists2 S : {set L},
+       (forall x, x \in S -> atom x) & a = \join_(x in S) x)
+    (atomistic a).
+Proof. apply: (iffP idP).
++ case/existsP=> /= S /andP[/forallP h /eqP->].
+  by exists S=> // x; have/implyP := h x.
++ case=> S atx ->; apply/existsP; exists S; apply/andP; split=> //.
+  by apply/forallP => x; apply/implyP=> /atx.
+Qed.
+End AtomicTheory.
+
+(* -------------------------------------------------------------------- *)
+Section GradedAtomicTheory.
+Context (d : unit) (L : gradedFinLatticeType d).
+
+Lemma atomE (a : L) : (atom a) = (rank a == 1%N).
+Proof.
+apply/idP/eqP.
++ case: (posxP a) => [-> /atom0n //|gt0_a /atomP -/(_ gt0_a) h].
+  rewrite (rwP eqP) eqn_leq rank_gt0 gt0_a andbT.
+  rewrite leqNgt; apply/negP; rewrite -[0%N](@rank0 _ L).
+  by case/graded_rank => x /andP[]; rewrite lt0x => /h.
++ move=> eq1_rk; have gt0_a: 0 < a by rewrite -rank_gt0 eq1_rk.
+  apply/atomP=> // x nz_x /homo_rank; rewrite eq1_rk ltnS.
+  by rewrite leqn0 rank_eq0 (negbTE nz_x).
+Qed.
+End GradedAtomicTheory.
