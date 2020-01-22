@@ -264,6 +264,31 @@ Proof. by rewrite leq_min !le_homo_rank // (leIl, leIr). Qed.
 End GradedTheory.
 
 (* -------------------------------------------------------------------- *)
+Section RankInd.
+Context (d : unit) (L : gradedFinLatticeType d) (P : L -> Prop).
+
+Hypothesis PH :
+  forall x, (forall y, (rank y < rank x)%N -> P y) -> P x.
+
+Lemma rank_ind x : P x.
+Proof.
+move: {2}(rank x) (leqnn (rank x)) => n; elim: n x => [|n ih] x.
++ by rewrite leqn0 rank_eq0 => /eqP->; apply: PH => y; rewrite rank0.
+rewrite leq_eqVlt=> /orP[]; last by rewrite ltnS => /ih.
+by move/eqP => rkx; apply: PH => y; rewrite rkx ltnS => /ih.
+Qed.
+End RankInd.
+
+(* -------------------------------------------------------------------- *)
+Section GradedRankS.
+Context (d : unit) (L : gradedFinLatticeType d).
+
+Lemma graded_rankS (x : L) :
+  (0 < rank x)%N -> exists2 y : L, y < x & (rank y).+1 = rank x.
+Proof. Admitted.
+End GradedRankS.
+
+(* -------------------------------------------------------------------- *)
 Module OMorphism.
 Section ClassDef.
 
@@ -299,6 +324,17 @@ End OMorphism.
 Include OMorphism.Exports.
 
 (* -------------------------------------------------------------------- *)
+Section OMorphismP.
+Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
+
+Lemma omorphismP (f : L -> G) :
+     {morph f : x y / Order.meet x y}
+  -> {morph f : x y / Order.join x y}
+  -> omorphism f.
+Proof. by move=> *; do! split. Qed.
+End OMorphismP.
+
+(* -------------------------------------------------------------------- *)
 Section OMorphismTheory.
 Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
 Context (f : {omorphism L -> G}).
@@ -318,6 +354,59 @@ move=> inj_f x y; apply/idP/idP => [|/omorph_homo //].
 by rewrite !leEmeet -omorphI => /eqP /inj_f ->.
 Qed.
 End OMorphismTheory.
+
+(* -------------------------------------------------------------------- *)
+Section OMorphismRank.
+Context (dL dG : unit) (L : gradedFinLatticeType dL) (G : gradedFinLatticeType dG).
+
+Lemma can_omorphism (f : L -> G) (g : G -> L) :
+  cancel f g -> cancel g f -> omorphism f -> omorphism g.
+Proof.
+move=> fK gK [hD hM]; split.
++ by move=> x y; apply: (can_inj fK); rewrite gK hD !gK.
++ by move=> x y; apply: (can_inj fK); rewrite gK hM !gK.
+Qed.
+
+Lemma rank_morph (f : L -> G) x :
+  omorphism f -> injective f -> (rank x <= rank (f x))%N.
+Proof.
+move=> morph_f inj_f; elim/rank_ind: x => x ih.
+case: (x =P 0) => [->|]; first by rewrite rank0.
+move/eqP; rewrite -rank_eq0 -lt0n => /graded_rankS.
+case=> y lt_yx <-; apply: (leq_ltn_trans (ih _ _)).
++ by apply: homo_rank.
++ pose cf := OMorphism morph_f.
+  by apply/homo_rank/(inj_homo_lt inj_f (omorph_homo cf)).
+Qed.
+End OMorphismRank.
+
+(* -------------------------------------------------------------------- *)
+Section OMorphismBijRank.
+Context (dL dG : unit) (L : gradedFinLatticeType dL) (G : gradedFinLatticeType dG).
+
+Lemma rank_morph_bij (f : L -> G) x :
+  omorphism f -> bijective f -> rank (f x) = rank x.
+Proof.
+move=> morph_f bij_f; rewrite (rwP eqP) eqn_leq.
+rewrite rank_morph // ?andbT; last by apply/bij_inj.
+case: bij_f => g fK gK; pose morph_g := can_omorphism fK gK morph_f.
+by apply: (leq_trans (rank_morph (f x) morph_g (can_inj gK))); rewrite fK.
+Qed.
+End OMorphismBijRank.
+
+(* -------------------------------------------------------------------- *)
+Section OMorphismComp.
+Context (dL dG dH : unit).
+Context (L : latticeType dL).
+Context (G : latticeType dG).
+Context (H : latticeType dH).
+Context (fLG : {omorphism L -> G}) (fGH : {omorphism G -> H}).
+
+Lemma comp_is_omorphism : omorphism (fGH \o fLG).
+Proof. by apply/omorphismP=> x y /=; rewrite !(omorphI, omorphU). Qed.
+
+Canonical comp_omorphism := OMorphism comp_is_omorphism.
+End OMorphismComp.
 
 (* -------------------------------------------------------------------- *)
 Module BOMorphism.
@@ -367,6 +456,18 @@ End BOMorphism.
 Include BOMorphism.Exports.
 
 (* -------------------------------------------------------------------- *)
+Section BOMorphismP.
+Context (dL dG : unit) (L : bLatticeType dL) (G : bLatticeType dG).
+
+Lemma bomorphismP (f : L -> G) :
+     f 0 = 0
+  -> {morph f : x y / Order.meet x y}
+  -> {morph f : x y / Order.join x y}
+  -> bomorphism f.
+Proof. by move=> *; do! split. Qed.
+End BOMorphismP.
+
+(* -------------------------------------------------------------------- *)
 Section BOMorphismTheory.
 Context (dL dG : unit) (L : bLatticeType dL) (G : bLatticeType dG).
 Context (f : {bomorphism L -> G}).
@@ -374,6 +475,23 @@ Context (f : {bomorphism L -> G}).
 Lemma omorph0 : f 0 = 0.
 Proof. by case: (BOMorphism.class f). Qed.
 End BOMorphismTheory.
+
+(* -------------------------------------------------------------------- *)
+Section BOMorphismComp.
+Context (dL dG dH : unit).
+Context (L : bLatticeType dL).
+Context (G : bLatticeType dG).
+Context (H : bLatticeType dH).
+Context (fLG : {bomorphism L -> G}) (fGH : {bomorphism G -> H}).
+
+Lemma comp_is_bomorphism : bomorphism (fGH \o fLG).
+Proof.
+apply: bomorphismP => /=; first by rewrite !omorph0.
++ by apply: omorphI. + by apply: omorphU.
+Qed.
+
+Canonical comp_bomorphism := BOMorphism comp_is_bomorphism.
+End BOMorphismComp.
 
 (* -------------------------------------------------------------------- *)
 Module TBOMorphism.
@@ -426,6 +544,19 @@ End TBOMorphism.
 Include TBOMorphism.Exports.
 
 (* -------------------------------------------------------------------- *)
+Section TBOMorphismP.
+Context (dL dG : unit) (L : tbLatticeType dL) (G : tbLatticeType dG).
+
+Lemma tbomorphismP (f : L -> G) :
+     f 0 = 0
+  -> f 1 = 1
+  -> {morph f : x y / Order.meet x y}
+  -> {morph f : x y / Order.join x y}
+  -> tbomorphism f.
+Proof. by move=> *; do! split. Qed.
+End TBOMorphismP.
+
+(* -------------------------------------------------------------------- *)
 Section TBOMorphismTheory.
 Context (dL dG : unit) (L : tbLatticeType dL) (G : tbLatticeType dG).
 Context (f : {tbomorphism L -> G}).
@@ -433,6 +564,23 @@ Context (f : {tbomorphism L -> G}).
 Lemma omorph1 : f 1 = 1.
 Proof. by case: (TBOMorphism.class f). Qed.
 End TBOMorphismTheory.
+
+(* -------------------------------------------------------------------- *)
+Section TBOMorphismComp.
+Context (dL dG dH : unit).
+Context (L : tbLatticeType dL).
+Context (G : tbLatticeType dG).
+Context (H : tbLatticeType dH).
+Context (fLG : {tbomorphism L -> G}) (fGH : {tbomorphism G -> H}).
+
+Lemma comp_is_tbomorphism : tbomorphism (fGH \o fLG).
+Proof.
+apply: tbomorphismP => /=; rewrite ?(omorph0, omorph1) //.
++ by apply: omorphI. + by apply: omorphU.
+Qed.
+
+Canonical comp_tbomorphism := TBOMorphism comp_is_tbomorphism.
+End TBOMorphismComp.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeClosed.
@@ -609,7 +757,7 @@ Canonical interval_latticeType := Eval hnf in LatticeType interval_of interval_l
 Lemma interval_val_is_omorphism : omorphism interval_val.
 Proof. by []. Qed.
 
-Canonical internval_omorphism := OMorphism interval_val_is_omorphism.
+Canonical interval_omorphism := OMorphism interval_val_is_omorphism.
 End IntervalLattice.
 
 Notation "'[< a ; b >]" := (interval_of a b).
@@ -618,17 +766,6 @@ Global Instance expose_le0x (disp : unit) (L : tbLatticeType disp) (x : L) :
   expose (0 <= x)%O := Expose (le0x x).
 Global Instance expose_lex1 (disp : unit) (L : tbLatticeType disp) (x : L) :
   expose (x <= 1)%O := Expose (lex1 x).
-
-(* -------------------------------------------------------------------- *)
-(*Section IntervalLatticeTheory.
-Context (d : unit) (L : latticeType d) (a b : L).
-
-Lemma intv_leIx (x : '[< a; b >]) : a `&` b <= val x.
-Proof. by case/intervalP: (valP x). Qed.
-
-Lemma intv_lexU (x : '[< a; b >]) : val x <= a `|` b.
-Proof. by case/intervalP: (valP x). Qed.
-End IntervalLatticeTheory.*)
 
 (* -------------------------------------------------------------------- *)
 Section IntervalTBLattice.
@@ -709,6 +846,30 @@ Definition interval_gradedFinLatticeMixin :=
 Canonical interval_gradedFinLatticeType :=
   Eval hnf in GradedFinLatticeType '[< a; b >] interval_gradedFinLatticeMixin.
 End IntervalGradedLattice.
+
+(* -------------------------------------------------------------------- *)
+Section IntVInj.
+Context (d : unit) (L : latticeType d) (a b : L) (le_a_b : a <= b).
+
+Definition in_intv x := (insubd (0 : '[< a; b >])) x.
+End IntVInj.
+
+Notation "x %:I_[< a ; b >]" := (@in_intv _ _ a b _ x)
+  (at level 2, left associativity, format "x %:I_[<  a ;  b  >]").
+
+Section InIntVRank.
+Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (le_a_b : a <= b).
+
+Lemma in_intv_valE x : (a <= x <= b)%O -> val (in_intv le_a_b x) = x.
+Proof. by move=> h; rewrite /in_intv /insubd insubT. Qed.
+
+Lemma interval_valK (x : '[< a; b >]) : (in_intv le_a_b (val x)) = x.
+Proof. by rewrite /in_intv valKd. Qed.
+
+Lemma in_intv_rankE x : (a <= x <= b)%O ->
+  rank (in_intv le_a_b x) = (rank x - rank a)%N.
+Proof. by move=> inintv; rewrite {1}/rank /= /vrank /= in_intv_valE. Qed.
+End InIntVRank.
 
 (* -------------------------------------------------------------------- *)
 Section Atomic.

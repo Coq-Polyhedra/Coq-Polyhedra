@@ -2502,22 +2502,102 @@ Qed.
 End Connectness.
 
 (* -------------------------------------------------------------------- *)
-Local Open Scope order_scope.
+Section FullIntvMorphism.
+Context (d : unit) (L : latticeType d).
+
+End FullIntvMorphism.
 
 (* -------------------------------------------------------------------- *)
-Local Open Scope fset.
+Local Open Scope order_scope.
 
-Section Theory.
+Import Order.Theory.
+
+Section InvarianceByInterval.
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
-Lemma face_coatomic (F : face_set P) : coatomistic F.
-Proof. Admitted.
+Local Notation "P %:F" := [` face_set_self P]%fset
+  (at level 2, left associativity, format "P %:F").
 
-Variable (v : vertex_set P) (e : base_elt[R,n]).
-Hypothesis (sep : [e separates fsval v from vertex_set P `\ fsval v]).
+Lemma f1E : P%:F = 1.
+Proof. by apply: val_inj. Qed.
 
-End Theory.
+Lemma lef1 (x : face_set P) : (x <= P%:F)%R.
+Proof. by rewrite f1E lex1. Qed.
 
+(*
+Lemma invariance_by_interval (x : face_set P) :
+   exists Q : 'compact[R]_n,
+   exists2 f : {tbomorphism '[< x; 1 >] -> face_set Q},
+     bijective f & rank P%:F = (dim Q + rank x)%N.
+Proof.
+elim/rank_ind: x => /= x; case: (x =P 0) => [-> _|nz_x ih].
++ exists P.
+
+move: {2}(rank x) (erefl (rank x)) => m; elim: m x => [|m ih] x.
++ rewrite (rwP eqP) rank_eq0 => /eqP->; exists P, val; split.
+  * by apply: tbomorphismP => //=; rewrite (meet0x, join0x).
+  * exists (insubd (0 : '[< 0; (1 : face_set P) >])).
+    - by apply: valKd.
+    move=> /= z; rewrite insubdK // intervalE.
+    by rewrite meet0x join0x le0x lex1.
+  * by rewrite rank0 addn0.
++ move=> nz_rkx; have: exists2 x0 : face_set P, x0 < x & rank x0 = m.
+  * case: (graded_rankS (x := x)) => /=; first by rewrite nz_rkx.
+     by move=> x0 ?; rewrite nz_rkx => -[ <- ]; exists x0.
+  case=> x' lt_x'_x /esym mE; subst m; move/(_ x' (erefl _)): ih.
+  case=> [Q] [f] [morph_f bij_f hrk].
+  case: (@vertex_figure R n Q (f x%:I_[<x'; 1>])).
+  * rewrite atomE rank_morph_bij //= in_intv_rankE; last first.
+    - by rewrite meetx1 joinx1 lex1 ltW.
+    by rewrite meetx1 nz_rkx subSn // subnn.
+  move=> T [g bij_g domQE].
+  pose h (x : '[<x; 1>]) := g (f (val x)%:I_[<_; _>])%:I_[< _; _ >].
+  exists T, h; split.
+  * apply: tbomorphismP; rewrite /h /= ?(meetx1, joinx1).
+    + set z := f _; rewrite (_ : z%:I_[< _; _ >] = 0).
+      * by rewrite omorph0.
+      apply: val_inj; rewrite /= in_intv_valE.
+      * by rewrite meetx1.
+      * by rewrite meetx1 joinx1 lexx lex1.
+    + set z := (X in g X); rewrite (_ : z = 1) ?omorph1 // {}/z.
+      apply: val_inj; rewrite /= in_intv_valE !(meetx1, joinx1).
+      * rewrite [X in f X](_ : _ = 1); first by apply: (omorph1 (TBOMorphism morph_f)).
+        by apply: val_inj; rewrite /= in_intv_valE !(meetx1, joinx1) // !lex1.
+      * rewrite lex1 andbT; apply: (omorph_homo (TBOMorphism morph_f)).
+        rewrite leEsub /= !in_intv_valE ?(meetx1, joinx1) !lex1 //.
+        by rewrite andbT ltW.
+    + admit.
+    + admit.
+  * case: (bij_f) => /= fI fK Kf; case: (bij_g) => /= gI gK Kg.
+    pose hI z := (val (fI (val (gI z))))%:I_[<x; 1>]; exists hI.
+    - case=> z hz; apply: val_inj; rewrite /hI /h gK /=.
+      case/intervalP: hz => [+ _]; rewrite meetx1 => le_xz.
+      rewrite [in X in fI X]insubdK; last first.
+      + rewrite intervalE meetx1 joinx1 lex1 andbT.
+        apply: (omorph_homo (TBOMorphism morph_f)).
+        rewrite leEsub /= !in_intv_valE // meetx1 joinx1 lex1 andbT //.
+        * by apply/ltW/(lt_le_trans lt_x'_x le_xz).
+        * by apply/ltW.
+      rewrite fK !in_intv_valE // meetx1 joinx1 lex1 andbT //.
+      + by apply/ltW/(lt_le_trans lt_x'_x le_xz).
+      + by apply/ltW/(lt_le_trans lt_x'_x le_xz).
+    - move=> z; rewrite /hI /h /= in_intv_valE; last first.
+      + rewrite meetx1 joinx1 lex1 andbT.
+        have {1}-> : x = val (x%:I_[<x'; 1>]).
+        + by rewrite insubdK // intervalE meetx1 joinx1 lex1 ltW.
+        rewrite -leEsub -(omorph_mono (f := TBOMorphism morph_f)) /=; last first.
+        + by apply: bij_inj.
+        rewrite Kf; set gIz := (gI _); have := valP gIz.
+        by rewrite intervalE {1}meetx1 => /andP[].
+      by rewrite interval_valK Kf interval_valK Kg.
+  * rewrite nz_rkx addnS -addSn -domQE -[dim Q]/(rank Q%:F).
+    rewrite (_ : Q%:F = f 1); last first.
+    + by rewrite [f 1](omorph1 (TBOMorphism morph_f)); apply: val_inj.
+    rewrite rank_morph_bij // f1E {2}/rank /= /vrank /=.
+    by rewrite !(meetx1, joinx1) subnK //; apply/le_homo_rank/lex1.
+Admitted.
+*)
+End InvarianceByInterval.
 
 (*
 (* -------------------------------------------------------------------- *)
@@ -2543,6 +2623,8 @@ Goal exists Q : 'poly[R]_n, exists f : {omorphism I -> {faces Q}}%O, bijective f
  * - treillis triviaux (d'un point, d'un segment, d'un polyhedre de hg 2)
  * - tout intervalle de hauteur 2 dans un face lattice est un diamant
  *)
+
+
 
 (* Bijection monotone de treillis gradué qui préserve le rang à un delta pret =>
    morphisme de treillis gradué *)
