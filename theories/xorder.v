@@ -683,7 +683,6 @@ Proof. by apply/(ltW_homo (@homo_rank _ _)); case/intervalP: (valP x). Qed.
 Lemma intv_rankR (x : '[< a; b >]) : (rank (val x) <= rank b)%N.
 Proof. by apply/(ltW_homo (@homo_rank _ _)); case/intervalP: (valP x). Qed.
 
-
 Lemma vrank0 : vrank 0 = 0.
 Proof. by rewrite /vrank subnn. Qed.
 
