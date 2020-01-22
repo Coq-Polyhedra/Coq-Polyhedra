@@ -1212,11 +1212,14 @@ Proof.
 by move => ? dim_eq; apply/face_dim_geq; rewrite ?dim_eq.
 Qed.
 
-Lemma face_dim_lt (P Q : 'poly[R]_n) :
-  P \in face_set Q -> P `<` Q -> (dim P < dim Q)%N.
+Lemma face_dim_lt (P Q Q' : 'poly[R]_n) :
+  Q \in face_set P -> Q' \in face_set P -> Q `<` Q' -> (dim Q < dim Q')%N.
 Proof.
-move => P_face; apply/contraTT.
-rewrite -leqNgt => /(face_dim_geq P_face) ->.
+move => Q_face Q'_face Q_prop_Q'.
+have {Q_face Q'_face} Q_face_Q': Q \in face_set Q'
+  by rewrite (face_set_of_face Q'_face) !inE Q_face poly_properW.
+move: Q_prop_Q'; apply/contraTT.
+rewrite -leqNgt => /(face_dim_geq Q_face_Q') ->.
 by rewrite poly_properxx.
 Qed.
 
@@ -1651,6 +1654,9 @@ Proof. by rewrite dim0. Qed.
 
 Lemma homo_dim P (x y : face_set P) :
   x < y -> (dim (val x) < dim (val y))%N.
+Proof.
+Search _ dim face_set.
+
 Proof. Admitted.
 
 Lemma dim_graded P (x y : face_set P) :
