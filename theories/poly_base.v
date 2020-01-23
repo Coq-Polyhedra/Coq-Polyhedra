@@ -2541,7 +2541,7 @@ case: (@vertex_figure R n Q (f x%:I)).
 + rewrite atomE rank_morph_bij //; last by case: {+}f.
   by rewrite intv_rankE /= rkxE subSn // subnn.
 move=> T [g bij_g]; exists T.
-set h : _ -> face_set Q := fun (z : '[<x; 1>]) => f (z%:I_[< <- y ; >]).
+set h : _ -> face_set Q := fun (z : '[<x; 1>]) => f (z%:I_[< <~ y ; >]).
 have hcodom z : h z \in interval (f x%:I) 1.
 + rewrite intervalE lex1 andbT /h; apply: omorph_homo.
   by rewrite leEsub /= (intervalPL (valP z)).
@@ -2566,7 +2566,8 @@ have morph_k: omorphism k; first apply/omorphismP=> z1 z2.
     by apply: val_inj.
 exists (OMorphism morph_k) => //=; rewrite rkxE -addSnnS.
 have ->: dim T = rank (k 1).
-+ by have /= -> :=omorph1 (TBOMorphism (bij_omorphism_tbomorphism bij_k morph_k)).
++ set ok := bij_omorphism_tbomorphism bij_k morph_k.
+  by have /= -> := omorph1 (TBOMorphism ok).
 rewrite rank_morph_bij // {1}/rank /= /vrank /=.
 by rewrite addSnnS -rkxE subnK //; apply/le_homo_rank/lex1.
 Qed.
@@ -2574,8 +2575,46 @@ Qed.
 Lemma invariance_by_interval (x y : face_set P) : (x <= y)%O ->
    exists Q : 'compact[R]_n,
    exists2 f : {omorphism '[< x; y >] -> face_set Q},
-     bijective f & dim P = (dim Q + rank x)%N.
+     bijective f & rank y = (dim Q + rank x)%N.
 Proof.
 case: (invariance_by_interval_r x) => Q [f bij_f dimPE] le_xy.
-Abort.
+set I : face_set Q := f y%:I; have cI: compact (val I).
++ by apply/(face_compact (valP Q))/valP.
+have gI (z : '[<x; y>]) : val (f z%:I_[< ; 1%O ~> >]) \in face_set (val I).
++ rewrite (face_set_of_face (valP (f y%:I))).
+  set zc := _%:I_[< ; 1 ~> >]; have le_zy: zc <= y%:I.
+  - by rewrite leEsub /= (intervalPR (valP z)).
+  rewrite 2!inE /=; apply/andP; split; first by apply: valP.
+  by have := omorph_homo f le_zy; rewrite leEsub.
+pose g (z : '[<x; y>]) := [` gI z]%fset.
++ have bij_g: bijective g.
+  case: bij_f => /= fI fK Kf.
+  have hgK (z : face_set (val I)) : val z \in face_set Q.
+  * by have /fsubsetP := face_setS (valP I); apply; apply/valP.
+  pose gK (z : face_set (val I)) := fI [` hgK z ]%fset.
+  have h z: x <= val (gK z) <= y.
+  * rewrite (intervalPL (valP _)) /gK /=.
+    set qy := y%:I_[< x; 1 >]; suff: fI [`hgK z]%fset <= qy by [].
+    rewrite -(omorph_mono (can_inj fK)) Kf leEsub /qy /=.
+    by apply: face_subset.
+  exists (fun z => Interval (h z)).
+  * case=> z hz /=; rewrite /gK /=; apply: val_inj=> /=.
+    set c := (X in fI {| fsval := fsval X |}).
+    rewrite [X in fI X](_ : _ = c) //; first by rewrite /c fK.
+    by apply: val_inj.
+  * case=> /= z hz /=; apply: val_inj; rewrite /g /=.
+    rewrite [_%:I_[< ; 1 ~> >]](_ : _ = gK [`hz]%fset).
+    - by rewrite Kf. - by apply: val_inj.
+have morph_g: omorphism g.
++ apply/bij_omorphism => // z1 z2; rewrite /g /=.
+  by apply: val_inj => /=; rewrite widdenRI omorphI.
+exists (Compact cI), (OMorphism morph_g) => //=.
+pose J : 'pointed[R]_n := Pointed (compact_pointed cI).
+pose JL := [gradedFinLatticeType of face_set J].
+have ->: dim (fsval I) = rank (g 1 : JL).
++ set og := bij_omorphism_tbomorphism bij_g morph_g.
+  by have /= -> := omorph1 (TBOMorphism og).
+rewrite rank_morph_bij // {2}/rank /= /vrank /=.
+by rewrite subnK //; apply/le_homo_rank.
+Qed.
 End InvarianceByInterval.
