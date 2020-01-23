@@ -1,8 +1,0 @@
-
-
-(* -------------------------------------------------------------------- *)
-(* 
- * - Mixin for building a finLattice from a "inf-semi-finite-lattice"
- * - poly_face is a finite lattice
- * - poly_face is graded when P is pointed
- *)
