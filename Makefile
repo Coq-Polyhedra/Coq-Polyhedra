@@ -3,6 +3,13 @@
 include Makefile.common
 
 # --------------------------------------------------------------------
+.PHONY: license dist
+
+# --------------------------------------------------------------------
+license:
+	scripts/license COPYRIGHT.yaml theories/*.v
+
+# --------------------------------------------------------------------
 DISTDIR := polyhedra
 TAROPT  := --posix --owner=0 --group=0
 TAR     ?= tar

@@ -1,0 +1,12 @@
+entities:
+  XAVIER  : "Xavier Allamigeon <xavier.allamigeon at inria.fr>"
+  RICARDO : "Ricardo D. Katz <katz@cifasis-conicet.gov.ar>"
+  PY      : "Pierre-Yves Strub <pierre-yves@strub.nu>"
+copyrights:
+  - pattern: ["theories/*.v"]
+    style: "coq"
+    license: "CeCILL-B-V1"
+    copyrights:
+      - { who: "XAVIER" , date: "2017--2020" }
+      - { who: "RICARDO", date: "2017--2020" }
+      - { who: "PY"     , date: "2019--2020" }
