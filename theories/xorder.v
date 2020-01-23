@@ -78,8 +78,33 @@ rewrite (le_def m); apply/eqP/eqP=> <-.
 + by rewrite joinKI.
 Qed.
 
+Lemma ge_joinL a b x : (x >= join a b) -> x >= a.
+Proof.
+rewrite /join => /(le_trans _); apply; elim: index_enum.
++ by rewrite big_nil lex1.
+move=> y ys ih; rewrite big_cons; case: ifP => //.
+case/andP=> le_ay _; rewrite !(le_def m) in le_ay, ih |- *.
+by rewrite meetA (eqP le_ay) (eqP ih).
+Qed.
+
+Lemma ge_joinP a b x : (x >= join a b) = (x >= a) && (x >= b).
+Proof.
+apply/idP/andP; last first.
++ case=> le_ax le_bx; rewrite /join (bigD1 x) ?(le_ax, le_bx) //=.
+  set y := (X in meet m x X); rewrite (le_def m) /=. 
+  by rewrite -meetA meetC -meetA meetxx meetC.
++ move=> h; split; first by apply: (ge_joinL h).
+  by rewrite joinC in h; apply: (ge_joinL h).
+Qed.
+
 Lemma joinA : associative join.
-Proof. Admitted.
+Proof.
+move=> y x z; pose P t := [&& x <= t, y <= t & z <= t].
+rewrite [X in X = _]/join (eq_bigl P); last first.
++ by move=> t; rewrite ge_joinP andbCA.
+apply/esym; rewrite [X in X = _]/join [in LHS](eq_bigl P) //.
++ by move=> t; rewrite ge_joinP -andbA andbCA.
+Qed.
 
 Definition latticeMixin : latticeMixin T :=
   @LatticeMixin d T
@@ -285,7 +310,30 @@ Context (d : unit) (L : gradedFinLatticeType d).
 
 Lemma graded_rankS (x : L) :
   (0 < rank x)%N -> exists2 y : L, y < x & (rank y).+1 = rank x.
-Proof. Admitted.
+Proof.
+rewrite lt0n rank_eq0 => nz_x; case/boolP: (rank x < 2)%N.
++ rewrite ltnS leq_eqVlt ltnS leqn0 rank_eq0 (negbTE nz_x) orbF.
+  by move=> /eqP->; exists 0; rewrite ?(lt0x) // rank0.
+rewrite -leqNgt => gt1_rkx; case: (graded_rank (le0x x)).
++ by rewrite rank0.
+move=> y; move: {2}(rank x - rank y) (leqnn (rank x - rank y)).
+move=> n; elim: n y => [|n ih] y.
++ rewrite leqn0  subn_eq0 => le_rk_xy.
+  by case/andP=> _ /homo_rank; rewrite ltnNge le_rk_xy.
+rewrite leq_eqVlt => /orP[]; last by rewrite ltnS => /ih.
+move=> h; have {h}: rank x = ((rank y).+1 + n)%N.
++ have: rank x - rank y != 0 by rewrite (eqP h).
+  rewrite subn_eq0 -ltnNge => lt_rk_yx.
+  by rewrite addSnnS -(eqP h) addnC subnK // ltnW.
+case: (n =P 0)%N => [{ih}-> rkxE /andP[_ lt_yx]|].
++ by exists y => //; rewrite rkxE addn0.
+move=> /eqP nz_n rkxE /andP[gt0_y lt_yx]; case: (graded_rank (ltW lt_yx)).
++ by rewrite rkxE -[X in (X < _)%N]addn0 ltn_add2l lt0n.
+move=> z /andP[lt_yz lt_zx]; case: (ih z).
++ by rewrite rkxE leq_subCl addnK; apply: homo_rank.
++ by rewrite (lt_trans gt0_y lt_yz) lt_zx.
+by move=> t lt_tx <-; exists t.
+Qed.
 End GradedRankS.
 
 (* -------------------------------------------------------------------- *)
