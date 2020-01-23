@@ -1722,8 +1722,24 @@ apply/fsetP => e; apply/idP/idP.
     by move: (fsvalP e'); rewrite in_fsetD => /andP[].
 Qed.
 
-Lemma face_coatomic (P : 'pointed[R]_n) (F : face_set P) : coatomistic F.
+Lemma face_coatomic (P : 'poly[R]_n) (F : face_set P) : coatomistic F.
 Proof.
+elim/non_redundant_baseW: P F => base non_redundant.
+set P := 'P(base) => F; apply/coatomisticP => /=.
+pose F' := insubd P%:poly_base (val F).
+have F'_eq: F' = val F :> 'poly[R]_n.
++ by rewrite /F' /insubd insubT //= (face_set_has_base (valP F)).
+have h i : i \in base -> 'P^=(base; [fset i]) \in face_set P.
++ by move => ?; rewrite face_setE /= polyEq_antimono0.
+pose S := [set [` h _ (valP i)]%fset |
+          i : base & (val i \in ({eq F'} `\` {eq P%:poly_base})%fset) ].
+exists S; last first.
+- apply/le_anti/andP; split.
+  * apply/meetsP => i /imsetP [{}i i_in -> /=].
+    rewrite leEsub -F'_eq /= /Order.le /=.
+    move: (fsvalP i) => ?.
+    rewrite activeP /=.
+    rewrite fsub1set.
 Admitted.
 
 End FaceSetGraded.
