@@ -18,3 +18,4 @@ We provide a Makefile. Simply type `make`.
 
 * Xavier Allamigeon (<xavier.allamigeon@inria.fr>)
 * Ricardo D. Katz (<katz@cifasis-conicet.gov.ar>)
+* Pierre-Yves Strub (<pierre-yves@strub.nu>)

@@ -1,6 +1,10 @@
 # This MANIFEST
 MANIFEST
 
+# COPYRIGHT & LICENSE
+COPYRIGHT.yaml
+LICENSE
+
 # Dev
 Makefile
 Makefile.common
@@ -10,3 +14,5 @@ theories/*.v
 # Build scripts
 scripts/install-sh
 scripts/distribution.py
+scripts/license
+scripts/COPYRIGHT.meta.yaml
