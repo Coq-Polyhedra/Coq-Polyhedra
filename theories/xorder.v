@@ -78,12 +78,33 @@ rewrite (le_def m); apply/eqP/eqP=> <-.
 + by rewrite joinKI.
 Qed.
 
+Lemma ge_joinL a b x : (x >= join a b) -> x >= a.
+Proof.
+rewrite /join => /(le_trans _); apply; elim: index_enum.
++ by rewrite big_nil lex1.
+move=> y ys ih; rewrite big_cons; case: ifP => //.
+case/andP=> le_ay _; rewrite !(le_def m) in le_ay, ih |- *.
+by rewrite meetA (eqP le_ay) (eqP ih).
+Qed.
+
+Lemma ge_joinP a b x : (x >= join a b) = (x >= a) && (x >= b).
+Proof.
+apply/idP/andP; last first.
++ case=> le_ax le_bx; rewrite /join (bigD1 x) ?(le_ax, le_bx) //=.
+  set y := (X in meet m x X); rewrite (le_def m) /=. 
+  by rewrite -meetA meetC -meetA meetxx meetC.
++ move=> h; split; first by apply: (ge_joinL h).
+  by rewrite joinC in h; apply: (ge_joinL h).
+Qed.
+
 Lemma joinA : associative join.
 Proof.
-move=> y x z; rewrite /join.
-
-
- Admitted.
+move=> y x z; pose P t := [&& x <= t, y <= t & z <= t].
+rewrite [X in X = _]/join (eq_bigl P); last first.
++ by move=> t; rewrite ge_joinP andbCA.
+apply/esym; rewrite [X in X = _]/join [in LHS](eq_bigl P) //.
++ by move=> t; rewrite ge_joinP -andbA andbCA.
+Qed.
 
 Definition latticeMixin : latticeMixin T :=
   @LatticeMixin d T
