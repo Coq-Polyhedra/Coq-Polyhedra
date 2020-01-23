@@ -1,13 +1,12 @@
-(*************************************************************************)
-(* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
-(*                                                                       *)
-(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
-(*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
-(*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
-(* All rights reserved.                                                  *)
-(* You may distribute this file under the terms of the CeCILL-B license  *)
-(*************************************************************************)
+(* --------------------------------------------------------------------
+ * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ *
+ * Distributed under the terms of the CeCILL-B-V1 license
+ * -------------------------------------------------------------------- *)
 
+(* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter.
