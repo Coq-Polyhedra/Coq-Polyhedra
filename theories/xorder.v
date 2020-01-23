@@ -913,9 +913,9 @@ Notation "x %:I" := x%:I_[< _; _ >]
 (* -------------------------------------------------------------------- *)
 Section IntvWiddenL.
 Context (d : unit) (L : latticeType d) (a b : L).
-Context (a' : L) (le_a : expose (a <= a')) (x : '[< a'; b >]).
+Context (a' : L) (le_a : expose (a' <= a)) (x : '[< a; b >]).
 
-Local Lemma in_intervalL : val x \in interval a b.
+Local Lemma in_intervalL : val x \in interval a' b.
 Proof.
 rewrite intervalE (intervalPR (valP x)) andbT.
 by rewrite (le_trans le_a) // (intervalPL (valP x)).
@@ -924,12 +924,61 @@ Qed.
 Definition intv_widdenL := Interval in_intervalL.
 End IntvWiddenL.
 
-Notation "x %:I_[< a <- a' ; b >]" := (@intv_widdenL _ _ a b a' _ x)
- (at level 2, format "x %:I_[< a <- a' ;  b >]").
+Notation "x %:I_[< a <~ a' ; b >]" := (@intv_widdenL _ _ a b a' _ x)
+ (at level 2, format "x %:I_[< a <~ a' ;  b >]").
 
-Notation "x %:I_[< <- a' ; >]" := (@intv_widdenL _ _ a' _ _ _ x)
- (at level 2, format "x %:I_[<  <-  a' ;  >]").
+Notation "x %:I_[< <~ a' ; >]" := (x %:I_[< _ <~ a' ;  _ >])
+ (at level 2, format "x %:I_[<  <~  a' ;  >]").
 
+(* -------------------------------------------------------------------- *)
+Section IntvWiddenR.
+Context (d : unit) (L : latticeType d) (a b : L).
+Context (b' : L) (le_b : expose (b <= b')) (x : '[< a; b >]).
+
+Local Lemma in_intervalR : val x \in interval a b'.
+Proof.
+rewrite intervalE (intervalPL (valP x)) /=.
+by rewrite (le_trans _ le_b) // (intervalPR (valP x)).
+Qed.
+
+Definition intv_widdenR := Interval in_intervalR.
+End IntvWiddenR.
+
+Notation "x %:I_[< a ; b' ~> b >]" := (@intv_widdenR _ _ a b b' _ x)
+ (at level 2, format "x %:I_[< a ;  b' ~> b  >]").
+
+Notation "x %:I_[< ; b' ~> >]" := (x %:I_[< _ ; b' ~> _ >])
+ (at level 2, format "x %:I_[<  ;  b' ~>  >]").
+
+(* -------------------------------------------------------------------- *)
+Section WiddenLMorph.
+Context (d : unit) (L : latticeType d) (a b : L).
+Context (a' : L) (le_b : expose (a' <= a)).
+
+Let wd (z : '[< a; b >]) := z%:I_[< <~ a'; >].
+
+Lemma widdenLI (z1 z2 : '[<a; b>]) : wd (z1 `&` z2) = wd z1 `&` wd z2.
+Proof. by apply: val_inj. Qed.
+
+Lemma widdenLU (z1 z2 : '[<a; b>]) : wd (z1 `|` z2) = wd z1 `|` wd z2.
+Proof. by apply: val_inj. Qed.
+End WiddenLMorph.
+
+(* -------------------------------------------------------------------- *)
+Section WiddenRMorph.
+Context (d : unit) (L : latticeType d) (a b : L).
+Context (b' : L) (le_b : expose (b <= b')).
+
+Let wd (z : '[< a; b >]) := z%:I_[< ; b' ~> >].
+
+Lemma widdenRI (z1 z2 : '[<a; b>]) : wd (z1 `&` z2) = wd z1 `&` wd z2.
+Proof. by apply: val_inj. Qed.
+
+Lemma widdenRU (z1 z2 : '[<a; b>]) : wd (z1 `|` z2) = wd z1 `|` wd z2.
+Proof. by apply: val_inj. Qed.
+End WiddenRMorph.
+
+(* -------------------------------------------------------------------- *)
 Section IntvRankE.
 Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (le_ab: expose (a <= b)).
 Context (x : '[< a ; b >]).
@@ -937,7 +986,6 @@ Context (x : '[< a ; b >]).
 Lemma intv_rankE : rank x = (rank (val x) - rank a)%N.
 Proof. by []. Qed.
 End IntvRankE.
-
 
 (* -------------------------------------------------------------------- *)
 Section FullIntvMorphism.
