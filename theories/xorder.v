@@ -91,7 +91,7 @@ Lemma ge_joinP a b x : (x >= join a b) = (x >= a) && (x >= b).
 Proof.
 apply/idP/andP; last first.
 + case=> le_ax le_bx; rewrite /join (bigD1 x) ?(le_ax, le_bx) //=.
-  set y := (X in meet m x X); rewrite (le_def m) /=. 
+  set y := (X in meet m x X); rewrite (le_def m) /=.
   by rewrite -meetA meetC -meetA meetxx meetC.
 + move=> h; split; first by apply: (ge_joinL h).
   by rewrite joinC in h; apply: (ge_joinL h).
@@ -1098,6 +1098,20 @@ Proof. apply: (iffP idP).
 + case=> S atx ->; apply/existsP; exists S; apply/andP; split=> //.
   by apply/forallP => x; apply/implyP=> /atx.
 Qed.
+
+Lemma coatomP (a : L) : a < 1 ->
+  reflect (forall x, x != 1 -> ~ (a < x)) (atom a).
+Proof. Admitted.
+
+Lemma coatom1n : ~ (coatom (1 : L)).
+Proof. Admitted.
+
+Lemma coatomisticP (a : L) :
+  reflect
+    (exists2 S : {set L},
+       (forall x, x \in S -> coatom x) & a = \meet_(x in S) x)
+    (coatomistic a).
+Proof. Admitted.
 End AtomicTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1115,4 +1129,7 @@ apply/idP/eqP.
   apply/atomP=> // x nz_x /homo_rank; rewrite eq1_rk ltnS.
   by rewrite leqn0 rank_eq0 (negbTE nz_x).
 Qed.
+
+Lemma coatomE (a : L) : (coatom a) = (rank (1 : L) == (rank a).+1%N).
+Proof. Admitted.
 End GradedAtomicTheory.
