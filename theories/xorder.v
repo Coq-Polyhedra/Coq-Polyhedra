@@ -79,7 +79,11 @@ rewrite (le_def m); apply/eqP/eqP=> <-.
 Qed.
 
 Lemma joinA : associative join.
-Proof. Admitted.
+Proof.
+move=> y x z; rewrite /join.
+
+
+ Admitted.
 
 Definition latticeMixin : latticeMixin T :=
   @LatticeMixin d T
@@ -285,7 +289,30 @@ Context (d : unit) (L : gradedFinLatticeType d).
 
 Lemma graded_rankS (x : L) :
   (0 < rank x)%N -> exists2 y : L, y < x & (rank y).+1 = rank x.
-Proof. Admitted.
+Proof.
+rewrite lt0n rank_eq0 => nz_x; case/boolP: (rank x < 2)%N.
++ rewrite ltnS leq_eqVlt ltnS leqn0 rank_eq0 (negbTE nz_x) orbF.
+  by move=> /eqP->; exists 0; rewrite ?(lt0x) // rank0.
+rewrite -leqNgt => gt1_rkx; case: (graded_rank (le0x x)).
++ by rewrite rank0.
+move=> y; move: {2}(rank x - rank y) (leqnn (rank x - rank y)).
+move=> n; elim: n y => [|n ih] y.
++ rewrite leqn0  subn_eq0 => le_rk_xy.
+  by case/andP=> _ /homo_rank; rewrite ltnNge le_rk_xy.
+rewrite leq_eqVlt => /orP[]; last by rewrite ltnS => /ih.
+move=> h; have {h}: rank x = ((rank y).+1 + n)%N.
++ have: rank x - rank y != 0 by rewrite (eqP h).
+  rewrite subn_eq0 -ltnNge => lt_rk_yx.
+  by rewrite addSnnS -(eqP h) addnC subnK // ltnW.
+case: (n =P 0)%N => [{ih}-> rkxE /andP[_ lt_yx]|].
++ by exists y => //; rewrite rkxE addn0.
+move=> /eqP nz_n rkxE /andP[gt0_y lt_yx]; case: (graded_rank (ltW lt_yx)).
++ by rewrite rkxE -[X in (X < _)%N]addn0 ltn_add2l lt0n.
+move=> z /andP[lt_yz lt_zx]; case: (ih z).
++ by rewrite rkxE leq_subCl addnK; apply: homo_rank.
++ by rewrite (lt_trans gt0_y lt_yz) lt_zx.
+by move=> t lt_tx <-; exists t.
+Qed.
 End GradedRankS.
 
 (* -------------------------------------------------------------------- *)
