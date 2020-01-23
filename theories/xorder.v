@@ -409,6 +409,18 @@ Canonical comp_omorphism := OMorphism comp_is_omorphism.
 End OMorphismComp.
 
 (* -------------------------------------------------------------------- *)
+Section OMorphismInv.
+Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
+Context (f : L -> G) (fI : G -> L) (fK : cancel f fI) (Kf : cancel fI f).
+
+Lemma inv_is_omorphism : omorphism f -> omorphism fI.
+Proof. case=> hfI hfU; split=> x y.
++ by rewrite -{1}[x]Kf -{1}[y]Kf -hfI fK.
++ by rewrite -{1}[x]Kf -{1}[y]Kf -hfU fK.
+Qed.
+End OMorphismInv.
+
+(* -------------------------------------------------------------------- *)
 Module BOMorphism.
 Section ClassDef.
 Context (dL dG : unit) (L : bLatticeType dL) (G : bLatticeType dG).
@@ -581,6 +593,32 @@ Qed.
 
 Canonical comp_tbomorphism := TBOMorphism comp_is_tbomorphism.
 End TBOMorphismComp.
+
+(* -------------------------------------------------------------------- *)
+Section BijOMorphismB.
+Context (d : unit) (L G : bLatticeType d) (f : L -> G).
+
+Lemma bij_omorphism_bomorphism : bijective f -> omorphism f -> bomorphism f.
+Proof.
+case=> [fI fK Kf] mF; case: (mF) => [hfI hfU]; apply/bomorphismP => //.
+rewrite (rwP eqP) eq_le le0x andbT; have mFI := inv_is_omorphism fK Kf mF.
+by rewrite -(omorph_mono (f := OMorphism mFI) (can_inj Kf)) /= fK le0x.
+Qed.
+End BijOMorphismB.
+
+(* -------------------------------------------------------------------- *)
+Section BijOMorphismTB.
+Context (d : unit) (L G : tbLatticeType d) (f : L -> G).
+
+Lemma bij_omorphism_tbomorphism : bijective f -> omorphism f -> tbomorphism f.
+Proof.
+case=> [fI fK Kf] mF; case: (mF) => [hfI hfU]; apply/tbomorphismP => //.
++ have mbF := bij_omorphism_bomorphism (Bijective fK Kf) mF.
+  by have := (omorph0 (BOMorphism mbF)).
+rewrite (rwP eqP) eq_le lex1 /=; have mFI := inv_is_omorphism fK Kf mF.
+by rewrite -(omorph_mono (f := OMorphism mFI) (can_inj Kf)) /= fK lex1.
+Qed.
+End BijOMorphismTB.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeClosed.
@@ -852,28 +890,70 @@ Canonical interval_gradedFinLatticeType :=
 End IntervalGradedLattice.
 
 (* -------------------------------------------------------------------- *)
-Section IntVInj.
-Context (d : unit) (L : latticeType d) (a b : L) (le_a_b : a <= b).
+Section InIntvExpose.
+Context (d : unit) (L : latticeType d) (a b : L).
+Context (x : L) (hx0 : expose (a <= x)) (hx1 : expose (x <= b)).
 
-Definition in_intv x := (insubd (0 : '[< a; b >])) x.
-End IntVInj.
+Local Lemma in_interval : x \in interval a b.
+Proof. by rewrite intervalE !(hx0, hx1). Qed.
 
-Notation "x %:I_[< a ; b >]" := (@in_intv _ _ a b _ x)
-  (at level 2, left associativity, format "x %:I_[<  a ;  b  >]").
+Definition intv_inject := Interval in_interval.
+End InIntvExpose.
 
-Section InIntVRank.
-Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (le_a_b : a <= b).
+Global Instance expose_ltW
+  (disp : unit) (L : tbLatticeType disp) (x y : L) (h : expose (x < y))
+: expose (x <= y)%O := Expose (ltW h).
 
-Lemma in_intv_valE x : (a <= x <= b)%O -> val (in_intv le_a_b x) = x.
-Proof. by move=> h; rewrite /in_intv /insubd insubT. Qed.
+Notation "x %:I_[< a ; b >]" := (@intv_inject _ _ a b x _ _)
+  (at level 2, only parsing).
 
-Lemma interval_valK (x : '[< a; b >]) : (in_intv le_a_b (val x)) = x.
-Proof. by rewrite /in_intv valKd. Qed.
+Notation "x %:I" := x%:I_[< _; _ >]
+  (at level 2, format "x %:I").
 
-Lemma in_intv_rankE x : (a <= x <= b)%O ->
-  rank (in_intv le_a_b x) = (rank x - rank a)%N.
-Proof. by move=> inintv; rewrite {1}/rank /= /vrank /= in_intv_valE. Qed.
-End InIntVRank.
+(* -------------------------------------------------------------------- *)
+Section IntvWiddenL.
+Context (d : unit) (L : latticeType d) (a b : L).
+Context (a' : L) (le_a : expose (a <= a')) (x : '[< a'; b >]).
+
+Local Lemma in_intervalL : val x \in interval a b.
+Proof.
+rewrite intervalE (intervalPR (valP x)) andbT.
+by rewrite (le_trans le_a) // (intervalPL (valP x)).
+Qed.
+
+Definition intv_widdenL := Interval in_intervalL.
+End IntvWiddenL.
+
+Notation "x %:I_[< a <- a' ; b >]" := (@intv_widdenL _ _ a b a' _ x)
+ (at level 2, format "x %:I_[< a <- a' ;  b >]").
+
+Notation "x %:I_[< <- a' ; >]" := (@intv_widdenL _ _ a' _ _ _ x)
+ (at level 2, format "x %:I_[<  <-  a' ;  >]").
+
+Section IntvRankE.
+Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (le_ab: expose (a <= b)).
+Context (x : '[< a ; b >]).
+
+Lemma intv_rankE : rank x = (rank (val x) - rank a)%N.
+Proof. by []. Qed.
+End IntvRankE.
+
+
+(* -------------------------------------------------------------------- *)
+Section FullIntvMorphism.
+Context (d : unit) (L : tbLatticeType d).
+
+Let ival := (@val _ _ [subType of '[< 0%O; 1%O >]_L]).
+
+Lemma bij_full_intv_val : bijective ival.
+Proof.
+exists (insubd (0%O : '[< 0%O; 1%O >]_L)); first by apply: valKd.
+by move=> x; apply: insubdK; rewrite intervalE le0x lex1.
+Qed.
+
+Lemma omorph_full_intv_val : tbomorphism ival.
+Proof. by apply/tbomorphismP. Qed.
+End FullIntvMorphism.
 
 (* -------------------------------------------------------------------- *)
 Section Atomic.

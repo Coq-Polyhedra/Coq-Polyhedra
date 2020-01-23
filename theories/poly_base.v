@@ -2520,87 +2520,15 @@ Qed.
 End Connectness.
 
 (* -------------------------------------------------------------------- *)
-Section FullIntvMorphism.
-Context (d : unit) (L : tbLatticeType d).
-
-Let ival := (@val _ _ [subType of '[< 0%O; 1%O >]_L]).
-
-Lemma bij_full_intv_val : bijective ival.
-Proof.
-exists (insubd (0%O : '[< 0%O; 1%O >]_L)); first by apply: valKd.
-by move=> x; apply: insubdK; rewrite intervalE le0x lex1.
-Qed.
-
-Lemma omorph_full_intv_val : tbomorphism ival.
-Proof. by apply/tbomorphismP. Qed.
-End FullIntvMorphism.
-
-(* -------------------------------------------------------------------- *)
 Local Open Scope order_scope.
-
-Import Order.Theory.
 
 Section InvarianceByInterval.
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
-Local Notation "P %:F" := [` face_set_self P]%fset
-  (at level 2, left associativity, format "P %:F").
-
-Lemma f1E : P%:F = 1.
-Proof. by apply: val_inj. Qed.
-
-Lemma lef1 (x : face_set P) : (x <= P%:F)%R.
-Proof. by rewrite f1E lex1. Qed.
-
-Section InIntvExpose.
-Context (d : unit) (L : latticeType d) (a b : L).
-Context (x : L) (hx0 : expose (a <= x)) (hx1 : expose (x <= b)).
-
-Local Lemma in_interval : x \in interval a b.
-Proof. by rewrite intervalE !(hx0, hx1). Qed.
-
-Definition intv_inject := Interval in_interval.
-End InIntvExpose.
-
-Global Instance expose_ltW
-  (disp : unit) (L : tbLatticeType disp) (x y : L) (h : expose (x < y))
-: expose (x <= y)%O := Expose (ltW h).
-
-Notation "x %:I_[< a ; b >]" := (@intv_inject _ _ a b x _ _).
-Notation "x %:I" := x%:I_[< _; _ >] (at level 2, format "x %:I").
-
-(* -------------------------------------------------------------------- *)
-Section IntvWiddenL.
-Context (d : unit) (L : latticeType d) (a b : L).
-Context (a' : L) (le_a : expose (a <= a')) (x : '[< a'; b >]).
-
-Local Lemma in_intervalL : val x \in interval a b.
-Proof.
-rewrite intervalE (intervalPR (valP x)) andbT.
-by rewrite (le_trans le_a) // (intervalPL (valP x)).
-Qed.
-
-Definition intv_widdenL := Interval in_intervalL.
-End IntvWiddenL.
-
-Notation "x %:I_[< a <- a' ; b >]" := (@intv_widdenL _ _ a b a' _ x)
- (at level 2, format "x %:I_[< a <- a' ;  b >]").
-
-Notation "x %:I_[< <- a' ; >]" := (@intv_widdenL _ _ a' _ _ _ x)
- (at level 2, format "x %:I_[<  <-  a' ;  >]").
-
-Section IntvRankE.
-Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (le_ab: expose (a <= b)).
-Context (x : '[< a ; b >]).
-
-Lemma intv_rankE : rank x = (rank (val x) - rank a)%N.
-Proof. by []. Qed.
-End IntvRankE.
-
-Lemma invariance_by_interval (x : face_set P) :
+Lemma invariance_by_interval_r (x : face_set P) :
    exists Q : 'compact[R]_n,
    exists2 f : {omorphism '[< x; 1 >] -> face_set Q},
-     bijective f & rank P%:F = (dim Q + rank x)%N.
+     bijective f & dim P = (dim Q + rank x)%N.
 Proof.
 elim/rank_ind: x => /= x; case: (x =P 0) => [-> _|/eqP nz_x ih].
 + pose h := omorph_full_intv_val [tbLatticeType of face_set P].
@@ -2623,8 +2551,8 @@ have morph_k: omorphism k; first apply/omorphismP=> z1 z2.
   by rewrite /h /= -omorphI; congr (f _); apply/val_inj.
 + rewrite -omorphU; congr (g _); apply: val_inj => /=.
   by rewrite /h /= -omorphU; congr (f _); apply/val_inj.
-exists (OMorphism morph_k) => /=.
-+ apply: bij_comp => //; case: (bij_f) => fI fK Kf.
++ have bij_k: bijective k.
+  apply: bij_comp => //; case: (bij_f) => fI fK Kf.
   set hI := fun (z : '[<f x%:I; 1>]) => fI (val z).
   have hcodomI z : val (hI z) \in interval x 1.
   * rewrite intervalE lex1 andbT /hI.
@@ -2636,13 +2564,18 @@ exists (OMorphism morph_k) => /=.
   * case=> /= [z hz] /=; apply: val_inj; rewrite /h /=.
     rewrite [X in f X](_ : _ = hI (Interval hz)) ?Kf //=.
     by apply: val_inj.
-+ rewrite rkxE -addSnnS.
-(*
-  * rewrite nz_rkx addnS -addSn -domQE -[dim Q]/(rank Q%:F).
-    rewrite (_ : Q%:F = f 1); last first.
-    + by rewrite [f 1](omorph1 (TBOMorphism morph_f)); apply: val_inj.
-    rewrite rank_morph_bij // f1E {2}/rank /= /vrank /=.
-    by rewrite !(meetx1, joinx1) subnK //; apply/le_homo_rank/lex1.
-*)
-Admitted.
+exists (OMorphism morph_k) => //=; rewrite rkxE -addSnnS.
+have ->: dim T = rank (k 1).
++ by have /= -> :=omorph1 (TBOMorphism (bij_omorphism_tbomorphism bij_k morph_k)).
+rewrite rank_morph_bij // {1}/rank /= /vrank /=.
+by rewrite addSnnS -rkxE subnK //; apply/le_homo_rank/lex1.
+Qed.
+
+Lemma invariance_by_interval (x y : face_set P) : (x <= y)%O ->
+   exists Q : 'compact[R]_n,
+   exists2 f : {omorphism '[< x; y >] -> face_set Q},
+     bijective f & dim P = (dim Q + rank x)%N.
+Proof.
+case: (invariance_by_interval_r x) => Q [f bij_f dimPE] le_xy.
+Abort.
 End InvarianceByInterval.
