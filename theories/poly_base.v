@@ -1454,7 +1454,7 @@ Qed.
 Lemma polyI_facet (F : {poly base}) :
   (`[ poly0 ]) `<` F -> (F `<` P) -> F = \polyI_(i : ({eq F} `\` {eq P})%fset) 'P^=(base; [fset (val i)]) :> 'poly[R]_n.
 Proof.
-move => P F_prop0 F_prop_P.
+move => F_prop0 F_prop_P.
 set Q := (RHS).
 have /fproperP [_ [i i_in i_notin]] : ({eq P} `<` {eq F})%fset
   by rewrite active_proper.
