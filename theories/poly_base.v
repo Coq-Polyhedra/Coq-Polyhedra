@@ -2618,3 +2618,68 @@ rewrite rank_morph_bij // {2}/rank /= /vrank /=.
 by rewrite subnK //; apply/le_homo_rank.
 Qed.
 End InvarianceByInterval.
+
+(* -------------------------------------------------------------------- *)
+Global Instance expose_lexx (disp : unit) (L : porderType disp) (x : L) :
+  expose (x <= x)%O := Expose (lexx x).
+
+(* -------------------------------------------------------------------- *)
+Section DiamondProperty.
+Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
+
+Lemma diamond (x y : face_set P) :
+  rank y = (rank x).+2 -> x <= y ->
+  exists z1 z2 : face_set P,
+    [/\ forall z : '[<x; y>], val z \in [:: x; y; z1; z2]
+      , rank z1 = (rank x).+1
+      , rank z2 = (rank x).+1
+      , x <= z1 <= y & x <= z2 <= y].
+Proof.
+move=> rkyE le_xy; case: (invariance_by_interval le_xy)=> [Q] [f bij_f].
+rewrite {}rkyE -addn2 addnC => /addIn /esym.
+case/dim2P => [|/= z1 [z2] QE ne_z]; first by case: {+}Q.
+have hz1: `[pt z1] \in face_set Q.
++ by rewrite QE face_set_segm !inE eqxx !(orbT, orTb).
+have hz2: `[pt z2] \in face_set Q.
++ by rewrite QE face_set_segm !inE eqxx !(orbT, orTb).
+case: (bij_f) => /= fI fK Kf.
+pose y1 := fI [` hz1]%fset; pose y2 := fI [` hz2]%fset.
+exists (val y1), (val y2); split; first move=> z.
++ rewrite [in X in _ \in [:: X, _ & _]](_ : x = val x%:I_[< x; y >]) //.
+  rewrite [in X in _ \in [:: _, X & _]](_ : y = val y%:I_[< x; y >]) //.
+  set s := [:: x%:I; y%:I; y1; y2]; set s' := (X in _ \in X).
+  have ->: s' = map val s by [].
+  rewrite {s'}/s; rewrite mem_map; last by apply: val_inj.
+  rewrite -(mem_map (f := val \o f)); last first.
+  * by apply/inj_comp; [apply/val_inj | apply/(can_inj fK)].
+  have /= := valP (f z); rewrite [in X in _ \in X -> _]QE.
+  rewrite face_set_segm ![in X in X -> _]inE -!orbA.
+  rewrite mem_seq4 -[X in _ -> X](rwP or4P) => /or4P[] /eqP->.
+  * constructor 1; have ->: x%:I_[<x; y>] = 0 by apply: val_inj.
+    case: {+}f bij_f => /= g morph_g bij_g.
+    set h := bij_omorphism_tbomorphism bij_g morph_g.
+    by have /= -> := (omorph0 (TBOMorphism h)).
+  * by constructor 3; rewrite Kf.
+  * by constructor 4; rewrite Kf.
+  * constructor 2; have ->: y%:I_[<x; y>] = 1 by apply: val_inj.
+    case: {+}f bij_f => /= g morph_g bij_g.
+    set h := bij_omorphism_tbomorphism bij_g morph_g.
+    by have /= -> := (omorph1 (TBOMorphism h)); rewrite -QE.
++ have: rank y1 = (rank x%:I_[<x; y>]).+1; last first.
+  * rewrite {1 2}/rank /= /vrank /= subnn -[in X in _ -> X]addn1 => <-.
+    rewrite subnKC //; apply/le_homo_rank/(intervalPL (valP y1)).
+  rewrite (_ : x%:I = 0) ?rank0 /y1; last by apply: val_inj.
+  (rewrite rank_morph_bij; last by exists f); last first.
+  * by apply: (inv_is_omorphism fK Kf); case: {+}(f).
+  by rewrite /rank /= dim_pt.
++ have: rank y2 = (rank x%:I_[<x; y>]).+1; last first.
+  * rewrite {1 2}/rank /= /vrank /= subnn -[in X in _ -> X]addn1 => <-.
+    rewrite subnKC //; apply/le_homo_rank/(intervalPL (valP y2)).
+  rewrite (_ : x%:I = 0) ?rank0 /y1; last by apply: val_inj.
+  (rewrite rank_morph_bij; last by exists f); last first.
+  * by apply: (inv_is_omorphism fK Kf); case: {+}(f).
+  by rewrite /rank /= dim_pt.
++ by apply: (valP y1).
++ by apply: (valP y2).
+Qed.
+End DiamondProperty.
