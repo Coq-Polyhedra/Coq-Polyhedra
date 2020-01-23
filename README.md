@@ -22,11 +22,11 @@ via the opam OCaml packages manager.
      where $OVERSION is a valid OCaml version (e.g. 4.07.1)
 
   1. Add the Coq repository:
-
-	    $> opam repo add coq-released https://coq.inria.fr/opam/released && \
-	    $> opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev && \
-	    $> opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev && \
-        $> opam update
+  
+       $> opam repo add coq-released https://coq.inria.fr/opam/released
+       $> opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
+       $> opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
+       $> opam update
 
   2. Pin the development packages:
   
@@ -36,7 +36,7 @@ via the opam OCaml packages manager.
         $> opam pin add -n coq-mathcomp-field     https://github.com/strub/math-comp.git\#coqpolyhedra
 
   3. Installing the dependencies:
-
+  
         $> opam install coq coq-mathcomp-field coq-mathcomp-finmap
 
 Opam can be easily installed from source or via your packages manager:
