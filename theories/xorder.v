@@ -1079,6 +1079,36 @@ Definition coatomistic (a : L) :=
 End Atomic.
 
 (* -------------------------------------------------------------------- *)
+Section CoatomAtom.
+Lemma coatom_atom (d : unit) (L : finLatticeType d) (a : L) :
+  coatom a -> atom (L := [finLatticeType of converse L]) a.
+Proof.
+case/andP=> gt0_a /existsPn h; apply/andP.
+split; first by apply: gt0_a.
+by apply/existsPn => /= x; rewrite andbC h.
+Qed.
+
+Lemma coatom_atom_V (d : unit) (L : finLatticeType d) (a : L) :
+  coatom (L := [finLatticeType of converse L]) a -> atom  a.
+Proof. by apply/coatom_atom. Qed.
+End CoatomAtom.
+
+(* -------------------------------------------------------------------- *)
+Section AtomCoatom.
+Lemma atom_coatom (d : unit) (L : finLatticeType d) (a : L) :
+  atom a -> coatom (L := [finLatticeType of converse L]) a.
+Proof.
+case/andP=> gt0_a /existsPn h; apply/andP.
+split; first by apply: gt0_a.
+by apply/existsPn => /= x; rewrite andbC h.
+Qed.
+
+Lemma atom_coatom_V (d : unit) (L : finLatticeType d) (a : L) :
+  atom (L := [finLatticeType of converse L]) a -> coatom a.
+Proof. by apply/atom_coatom. Qed.
+End AtomCoatom.
+
+(* -------------------------------------------------------------------- *)
 Section AtomicTheory.
 Context (d : unit) (L : finLatticeType d).
 
@@ -1106,13 +1136,25 @@ Proof. apply: (iffP idP).
 + case=> S atx ->; apply/existsP; exists S; apply/andP; split=> //.
   by apply/forallP => x; apply/implyP=> /atx.
 Qed.
+End AtomicTheory.
 
-Lemma coatomP (a : L) : a < 1 ->
-  reflect (forall x, x != 1 -> ~ (a < x)) (atom a).
-Proof. Admitted.
+(* -------------------------------------------------------------------- *)
+Section CoatomicTheory.
+Context (d : unit) (L : finLatticeType d).
 
 Lemma coatom1n : ~ (coatom (1 : L)).
-Proof. Admitted.
+Proof. by move=> /coatom_atom /atom0n. Qed.
+
+Lemma coatomP (a : L) : a < 1 ->
+  reflect (forall x, x != 1 -> ~ (a < x)) (coatom a).
+Proof.
+move=> gt1_a; apply: (iffP idP).
++ by move/coatom_atom/atomP=> -/(_ gt1_a); apply.
+move=> h; apply/atom_coatom_V/andP; split.
+- by apply: gt1_a.
+apply/existsPn=> /= x; apply/negP=> /andP[gt0_x].
+by move/h; apply; rewrite lt_eqF.
+Qed.
 
 Lemma coatomisticP (a : L) :
   reflect
@@ -1120,7 +1162,7 @@ Lemma coatomisticP (a : L) :
        (forall x, x \in S -> coatom x) & a = \meet_(x in S) x)
     (coatomistic a).
 Proof. Admitted.
-End AtomicTheory.
+End CoatomicTheory.
 
 (* -------------------------------------------------------------------- *)
 Section GradedAtomicTheory.
