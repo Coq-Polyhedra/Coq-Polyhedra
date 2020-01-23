@@ -1,3 +1,11 @@
+(* --------------------------------------------------------------------
+ * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ *
+ * Distributed under the terms of the CeCILL-B-V1 license
+ * -------------------------------------------------------------------- *)
+
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 Import Order.Theory.
@@ -481,39 +489,6 @@ apply/negP=> /eqP zw; have := wgt1_fconvex w.
 by rewrite weightE zw big_fset0 (rwP eqP) eq_sym oner_eq0.
 Qed.
 End SubConvexTheory.
-
-(* -------------------------------------------------------------------- *)
-(*Section ConvexUniform.
-Context {T : choiceType} {R : numDomainType}.
-
-Implicit Type S : {fset T}.
-
-Lemma fconvexu_r S : S != fset0 -> @convex T R [fsfun _ in S => 1/((#|` S|)%:R)].
-Proof.
-move => S_neq0.
-apply/convexP; split.
-- move => x /(fsubsetP (finsupp_sub _ _ _)) x_in;
-  by rewrite fsfunE ifT // ?divr_ge0 ?ler01 ?ler0n.
-- rewrite weightE big_seq.
-  rewrite (@eq_bigr _ _ _ _ _ _ _ (fun x => 1/((#|` S|)%:R))).
-  move => i; rewrite fsfunE ifT //.
-  by move/(fsubsetP (finsupp_sub _ _ _)): (valP i).
-  rewrite sumr_const /= cardfE .
-Admitted.
-
-Definition fconvexu (S : {fset T}) (H : S != fset0) : {convex T ~> R} :=
-  mkConvexfun (fconvexu_r H).
-
-Lemma fconvexuE S x (H : S != fset0) : fconvexu H x = ((x \in S)%:R/((#|` S|)%:R)).
-Proof. by rewrite fsfunE; case: ifP; rewrite ?mul0r.
-Qed.
-
-Lemma finsupp_fconvexu S (H : S != fset0) : finsupp (fconvexu H) = S.
-Proof.
-apply/fsetP => y; rewrite mem_finsupp fconvexuE.
-Admitted.
-
-End ConvexUniform.*)
 
 (* -------------------------------------------------------------------- *)
 Section CvxDirac.

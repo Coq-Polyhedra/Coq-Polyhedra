@@ -1,0 +1,18 @@
+# This MANIFEST
+MANIFEST
+
+# COPYRIGHT & LICENSE
+COPYRIGHT.yaml
+LICENSE
+
+# Dev
+Makefile
+Makefile.common
+_CoqProject
+theories/*.v
+
+# Build scripts
+scripts/install-sh
+scripts/distribution.py
+scripts/license
+scripts/COPYRIGHT.meta.yaml

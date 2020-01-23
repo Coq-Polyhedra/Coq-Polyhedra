@@ -1,20 +1,17 @@
-(**************************************************************************)
-(* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect           *)
-(*                                                                        *)
-(* Parts taken from classfun.v:                                           *)
-(* (c) Copyright Microsoft Corporation and Inria.                         *)
-(* You may distribute this file under the terms of the CeCILL-B license   *)
-(*                                                                        *)
-(* Parts taken from dft.v:                                                *)
-(* (c) Copyright 2015, CRI, MINES ParisTech, PSL Research University      *)
-(* All rights reserved.                                                   *)
-(* You may distribute this file under the terms of the CeCILL-B license   *)
-(*                                                                        *)
-(* (c) Copyright 2017, Xavier Allamigeon (xavier.allamigeon at inria.fr)  *)
-(*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)   *)
-(* All rights reserved.                                                   *)
-(* You may distribute this file under the terms of the CeCILL-B license   *)
-(**************************************************************************)
+(* --------------------------------------------------------------------
+ * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ *
+ * Distributed under the terms of the CeCILL-B-V1 license
+ * -------------------------------------------------------------------- *)
+
+(* -------------------------------------------------------------------- *)
+
+(* ==================================================================== *)
+(* Parts taken from dft.v:                                              *)
+(* (c) Copyright 2015, CRI, MINES ParisTech, PSL Research University    *)
+(* ==================================================================== *)
 
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import bigop ssralg ssrnum zmodp matrix vector fingroup perm order.

@@ -1,13 +1,12 @@
-(*************************************************************************)
-(* Coq-Polyhedra: formalizing convex polyhedra in Coq/SSReflect          *)
-(*                                                                       *)
-(* (c) Copyright 2019, Xavier Allamigeon (xavier.allamigeon at inria.fr) *)
-(*                     Ricardo D. Katz (katz at cifasis-conicet.gov.ar)  *)
-(*                     Vasileios Charisopoulos (vharisop at gmail.com)   *)
-(* All rights reserved.                                                  *)
-(* You may distribute this file under the terms of the CeCILL-B license  *)
-(*************************************************************************)
+(* --------------------------------------------------------------------
+ * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ *
+ * Distributed under the terms of the CeCILL-B-V1 license
+ * -------------------------------------------------------------------- *)
 
+(* -------------------------------------------------------------------- *)
 Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product extra_matrix xorder vector_order row_submx.
@@ -1337,25 +1336,6 @@ case/altP: (e.1 =P 0) => /= [_| e1_neq0].
   apply/colP => i; move: (valP i) => /=.
   by rewrite {2}n_eq0 ltn0.
 Qed.
-
-(*
-Lemma dimW (Pt : 'poly[R]_n -> Prop) :
-  Pt (`[poly0]) -> (forall k, forall Q : 'poly[R]_n, (dim Q = k.+1)%N -> Pt Q) -> (forall P : 'poly[R]_n, Pt P).
-Admitted.
- *)
-
-(*
-Lemma hull_conv (V : {fset 'cV[R]_n}) Ω :
-  Ω \in V -> hull (conv V) = `[affine << [fset (v - Ω) | v in V]%fset >>%VS & Ω].
-Proof.
-set P := conv V.
-move => Ω_in_V.
-have : Ω \in (hull P)
-  by apply/(poly_subsetP (subset_hull _))/in_conv.
-have : P `>` `[poly0] by admit.
-elim/polybW : P => base P P_prop0.
-Admitted.
-*)
 
 End Dimension.
 
