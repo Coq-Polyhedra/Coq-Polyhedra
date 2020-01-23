@@ -1337,25 +1337,6 @@ case/altP: (e.1 =P 0) => /= [_| e1_neq0].
   by rewrite {2}n_eq0 ltn0.
 Qed.
 
-(*
-Lemma dimW (Pt : 'poly[R]_n -> Prop) :
-  Pt (`[poly0]) -> (forall k, forall Q : 'poly[R]_n, (dim Q = k.+1)%N -> Pt Q) -> (forall P : 'poly[R]_n, Pt P).
-Admitted.
- *)
-
-(*
-Lemma hull_conv (V : {fset 'cV[R]_n}) Ω :
-  Ω \in V -> hull (conv V) = `[affine << [fset (v - Ω) | v in V]%fset >>%VS & Ω].
-Proof.
-set P := conv V.
-move => Ω_in_V.
-have : Ω \in (hull P)
-  by apply/(poly_subsetP (subset_hull _))/in_conv.
-have : P `>` `[poly0] by admit.
-elim/polybW : P => base P P_prop0.
-Admitted.
-*)
-
 End Dimension.
 
 Notation "\dim P" := (pb_dim P) (at level 10, P at level 8) : poly_scope.
