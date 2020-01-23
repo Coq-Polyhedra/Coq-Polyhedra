@@ -1690,6 +1690,42 @@ rewrite atomE /rank /=; apply: (iffP eqP).
 + by case=> x xP ->; rewrite dim_pt.
 Qed.
 
+Lemma face_coatomic_aux base (F : {poly base}) :
+  let P := 'P(base)%:poly_base in
+    (`[ poly0 ]) `<` F -> (F `<` P) -> F = \polyI_(i : ({eq F} `\` {eq P})%fset) 'P^=(base; [fset (val i)]) :> 'poly[R]_n.
+Proof.
+move => P F_prop0 F_prop_P.
+set Q := (RHS).
+have /fproperP [_ [i i_in i_notin]] : ({eq P} `<` {eq F})%fset
+  by rewrite active_proper.
+have {i_notin} {}i_in: i \in ({eq F} `\` {eq P})%fset
+  by rewrite inE i_notin.
+have Q_sub : Q `<=` P.
+- by rewrite (big_polyI_min (j := [` i_in]%fset)) ?polyEq1 ?poly_subsetIl.
+have <-: P `&` Q = Q by apply/polyIidPr.
+rewrite /Q polyEq_big_polyI; last by apply/pred0Pn; exists [` i_in]%fset.
+rewrite {1}[P]repr_active ?polyEq_polyI; last by apply/poly_proper_trans: F_prop_P.
+rewrite {1}[F]repr_active //=; apply/congr1.
+apply/fsetP => e; apply/idP/idP.
+- case: (boolP (e \in ({eq P} : {fset _}))).
+  + by rewrite in_fsetU => ->.
+  + move => e_notin e_in.
+    rewrite inE; apply/orP; right.
+    have {e_notin} {}e_in: e \in ({eq F} `\` {eq P})%fset by rewrite inE e_notin.
+    apply/bigfcupP; exists ([`e_in]%fset).
+    * by rewrite andbT /index_enum unlock -enumT mem_enum.
+    * by rewrite in_fset1.
+- rewrite inE; case/orP.
+  + by apply/fsubsetP/activeS/poly_base_subset.
+  + case/bigfcupP => e' _.
+    rewrite in_fset1 => /eqP ->.
+    by move: (fsvalP e'); rewrite in_fsetD => /andP[].
+Qed.
+
+Lemma face_coatomic (P : 'pointed[R]_n) (F : face_set P) : coatomistic F.
+Proof.
+Admitted.
+
 End FaceSetGraded.
 
 Section Minkowski.
