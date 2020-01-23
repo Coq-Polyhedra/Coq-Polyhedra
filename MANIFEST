@@ -1,0 +1,12 @@
+# This MANIFEST
+MANIFEST
+
+# Dev
+Makefile
+Makefile.common
+_CoqProject
+theories/*.v
+
+# Build scripts
+scripts/install-sh
+scripts/distribution.py
