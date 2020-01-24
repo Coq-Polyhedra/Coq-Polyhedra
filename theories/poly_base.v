@@ -494,7 +494,7 @@ Qed.
 Lemma face_set_has_base (base : base_t[R,n]) (P : {poly base}) (Q : 'poly[R]_n) :
   Q \in face_set P -> [Q has \base base].
 Proof.
-rewrite face_set_mono => /imfsetP [{}Q _ ->].
+rewrite face_set_morph => /imfsetP [{}Q _ ->].
 exact: pvalP.
 Qed.
 
@@ -513,7 +513,7 @@ set X := (X in (X * _)%type).
 suff hX: X.
 - split => //.
   move => F F_base; have ->: F = PolyBase F_base by []; exact: hX.
-- move => F; rewrite face_set_mono.
+- move => F; rewrite face_set_morph.
   apply/imfsetP/idP => [[{}F H ->]| F_sub_P]; first by rewrite inE in H.
   by exists F; rewrite ?inE.
 Qed.
