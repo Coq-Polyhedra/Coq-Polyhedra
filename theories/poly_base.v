@@ -473,7 +473,7 @@ Variable (R : realFieldType) (n : nat).
 Definition face_set (P : 'poly[R]_n) :=
   [fset pval x | x in \face_set (\repr P)]%fset.
 
-Lemma face_set_mono (base : base_t[R,n]) (P : {poly base}) :
+Lemma face_set_morph (base : base_t[R,n]) (P : {poly base}) :
   face_set P = [fset pval x | x in \face_set P]%fset.
 Proof.
 suff H: forall base1 base2 (P1 : {poly base1}) (P2 : {poly base2}),
