@@ -295,7 +295,7 @@ apply/has_baseP => _; exists (I `|` I')%fset%:fsub; by rewrite polyEq_polyI.
 Qed.
 Canonical polyI_base P Q := PolyBase (polyI_baseP (Phantom _ P) (Phantom _ Q)).
 
-Lemma slice_baseP (e : base_elt) (P : {poly base}) :
+Lemma slice_baseP (e : lrel) (P : {poly base}) :
   [(slice e P) has \base (e +|` base)].
 Proof.
 case: (poly_baseP P) => [->| I [-> _]]; first by rewrite /= slice0 (valP (`[poly0]%:poly_base)).
@@ -446,7 +446,7 @@ case: (emptyP ('P(base) : 'poly[R]_n))
 - case: (poly_baseP Q) => [-> | ]; first constructor.
   move => I [Q_eq Q_prop0].
   rewrite inE; move => Q_sub_P.
-  pose w : {conic base_elt ~> R} := (fconicu I).
+  pose w : {conic lrel ~> R} := (fconicu I).
   pose c := (combine w).1.
   have c_bounded : bounded ('P(base) : 'poly[R]_n) c.
   + apply: dual_sol_bounded => //; rewrite finsupp_fconicu; exact: fsubset_subP.
@@ -881,8 +881,8 @@ Lemma in_span_active base (P : {poly base}) e :
 Proof.
 move/coord_span ->.
 apply/poly_subsetP => x x_in_P; rewrite inE; apply/eqP.
-rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : base_elt[R,n] => x.1)) //.
-rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : base_elt[R,n] => x.2)) //=.
+rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : lrel[R]_n => x.1)) //.
+rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : lrel[R]_n => x.2)) //=.
 rewrite vdot_sumDl; under eq_big do [| rewrite /= vdotZl].
 apply/eq_bigr => i _; apply: congr1.
 apply/eqP; rewrite -in_hp; move: x_in_P; apply/poly_subsetP/poly_base_subset_hp.
@@ -1133,7 +1133,7 @@ Proof.
 move: (mk_affine_prop0 U Ω).
 rewrite /mk_affine.
 set V := (X in affine X).
-set base := [fset e in ((vbasis V) : seq _)]%fset : {fset base_elt[R,n]}.
+set base := [fset e in ((vbasis V) : seq _)]%fset : {fset lrel[R]_n}.
 have eq: V = << base >>%VS.
 - move: (vbasisP V) => /andP [/eqP <- _].
   apply/subv_anti/andP; split; apply/sub_span;
@@ -1339,7 +1339,7 @@ apply/poly_subset_anti; last first.
       by rewrite -ler_subr_addr ger_pmull ?subr_gt0.
 Qed.
 
-Lemma dim_hp (e : base_elt[R,n]) :
+Lemma dim_hp (e : lrel[R]_n) :
   (`[hp e] `>` `[poly0]) -> (dim (`[hp e]) = (e.1 == 0%R) + n)%N.
 Proof.
 move/proper0P => [x].
@@ -1365,7 +1365,7 @@ Hypothesis non_redundant : non_redundant_base base.
 Let P := 'P(base)%:poly_base.
 Hypothesis P_prop0 : P `>` `[poly0].
 
-Lemma activeU1 (e : base_elt) & (e \in base) :
+Lemma activeU1 (e : lrel) & (e \in base) :
   {eq 'P^=(base; [fset e])%:poly_base } = ({eq P} `|` [fset e])%fset%:fsub.
 Proof.
 case: (boolP (e \in ({eq P} : base_t))).
@@ -1404,7 +1404,7 @@ case: (boolP (e \in ({eq P} : base_t))).
         by rewrite !inE i_neq_e.
 Qed.
 
-Lemma facet_proper (i : base_elt) & (i \in base) :
+Lemma facet_proper (i : lrel) & (i \in base) :
   i \notin ({eq P} : {fset _}) -> 'P^=(base; [fset i])%:poly_base `<` P.
 Proof.
 move => i_notin_eqP.
@@ -1414,7 +1414,7 @@ rewrite poly_properEneq; apply/andP; split.
   rewrite -fsub1set; exact: active_polyEq.
 Qed.
 
-Lemma facet_proper0 (i : base_elt) & (i \in base) : (* A LOT IN COMMON WITH activeU1 *)
+Lemma facet_proper0 (i : lrel) & (i \in base) : (* A LOT IN COMMON WITH activeU1 *)
   i \notin ({eq P} : {fset _}) -> 'P^=(base; [fset i])%:poly_base `>` `[poly0].
 Proof.
 move => i_notin_eqP.
@@ -1433,7 +1433,7 @@ case: (j =P i) => [-> _| /eqP j_neq_i j_in_base].
   by apply/poly_subsetP/poly_of_base_subset_hs; rewrite !inE j_neq_i.
 Qed.
 
-Lemma poly_dim_facet (i : base_elt) & (i \in base) :
+Lemma poly_dim_facet (i : lrel) & (i \in base) :
   i \notin ({eq P} : {fset _}) -> dim P = (dim 'P^=(base; [fset i])%:poly_base).+1%N.
 Proof.
 set S := 'P^=(_; _)%:poly_base.
@@ -1808,7 +1808,7 @@ by apply/imsetP; exists [` cF]%fset => //; apply: val_inj.
 Qed.
 
 Lemma subset_hp (V : {fset 'cV[R]_n}) :
-  (0 < #|` V | <= n)%N -> exists2 e : base_elt[R,n], (e.1 != 0) & {subset V <= `[hp e]}.
+  (0 < #|` V | <= n)%N -> exists2 e : lrel[R]_n, (e.1 != 0) & {subset V <= `[hp e]}.
 Proof.
 rewrite cardfs_gt0 => /andP [/fset0Pn [v v_in] cardV_le].
 pose U := <<[seq w - v | w <- (V `\ v)%fset]>>%VS.
@@ -1894,12 +1894,12 @@ have {x_in}: val x \in argmin P c by rewrite argmin_polyIN inE x_in andbT in_con
 rewrite -eq_argmin in_pt => /eqP <-; exact: fsvalP.
 Qed.
 
-Definition sep_hp (e : base_elt[R,n]) (V : {fset 'cV_n}) (x : 'cV_n) :=
+Definition sep_hp (e : lrel[R]_n) (V : {fset 'cV_n}) (x : 'cV_n) :=
   (x \notin `[hs e]) && [forall v : V, (val v) \notin `[hs -e]].
 
 Notation "[ e 'separates' x 'from' V ]" := (sep_hp e V x) : poly_scope.
 
-Lemma sep_hpP {e : base_elt[R,n]} {V : {fset 'cV_n}} {x : 'cV_n} :
+Lemma sep_hpP {e : lrel[R]_n} {V : {fset 'cV_n}} {x : 'cV_n} :
   reflect ((x \notin `[hs e]) /\ (forall y, y \in conv V -> y \notin `[hs -e]))
           ([e separates x from V]).
 Proof.
@@ -1913,7 +1913,7 @@ apply: (iffP andP) => [[? /forallP h] | [? h]]; split => //.
 Qed.
 
 Lemma conv_sep_hp (V : {fset 'cV_n}) (x : 'cV_n) :
-  x \notin conv V -> exists e : base_elt, [e separates x from V].
+  x \notin conv V -> exists e : lrel, [e separates x from V].
 Proof.
 move/separation => [e x_notin /poly_subsetP sub].
 rewrite in_hs -ltNge in x_notin.
@@ -1978,7 +1978,7 @@ Section VertexFigureHyp.
 
 Context {R : realFieldType} {n : nat}.
 
-Definition vf_hyp (P : 'poly[R]_n) (v : 'cV[R]_n) (e : base_elt[R,n]) :=
+Definition vf_hyp (P : 'poly[R]_n) (v : 'cV[R]_n) (e : lrel[R]_n) :=
   ((v \in vertex_set P) * [e separates v from ((vertex_set P) `\ v)%fset])%type.
 
 End VertexFigureHyp.
@@ -1988,7 +1988,7 @@ Section VertexFigurePolyBase.
 
 Context {R : realFieldType} {n : nat}.
 
-Variable (base : base_t[R,n]) (P : {poly base}) (v : 'cV[R]_n) (e0 : base_elt[R,n]).
+Variable (base : base_t[R,n]) (P : {poly base}) (v : 'cV[R]_n) (e0 : lrel[R]_n).
 Hypothesis P_compact : compact P.
 Hypothesis hyp : vf_hyp P v e0.
 Let v_vtx := hyp.1.

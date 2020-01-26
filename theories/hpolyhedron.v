@@ -24,10 +24,10 @@ Declare Scope poly_scope.
 Delimit Scope poly_scope with PH.
 
 (* -------------------------------------------------------------------- *)
-Reserved Notation "'base_elt' [ R , n ]"
-  (at level 8, format "'base_elt' [ R , n ]").
+Reserved Notation "'lrel' [ R ]_ n"
+  (at level 8, format "'lrel' [ R ]_ n").
 
-Reserved Notation "'base_elt'"
+Reserved Notation "'lrel'"
   (at level 8).
 
 Reserved Notation "'base_t' [ R , n ]"
@@ -60,51 +60,51 @@ Coercion base_elt_val b := let: BaseElt b := b in b.
 Canonical base_elt_subType := Eval hnf in [newType for base_elt_val].
 End Base.
 
-Notation "'base_elt' [ R , n ]" := (@base_elt_type R n).
-Notation "'base_elt'" := (base_elt[_,_]).
-Notation "'base_t' [ R , n ]" := {fset base_elt[R,n]}.
+Notation "'lrel' [ R ]_ n" := (@base_elt_type R n).
+Notation "'lrel'" := (lrel[_]_(_)).
+Notation "'base_t' [ R , n ]" := {fset lrel[R]_n}.
 Notation "'base_t'" := (base_t[_,_]).
 Notation "[< A , b >]" := (BaseElt (A, b)).
 
 (* -------------------------------------------------------------------- *)
 Definition be_eqMixin (R : eqType) n :=
-  Eval hnf in [eqMixin of base_elt[R,n] by <:].
+  Eval hnf in [eqMixin of lrel[R]_n by <:].
 Canonical be_eqType (R : eqType) n:=
-  Eval hnf in EqType base_elt[R,n]  (be_eqMixin R n).
+  Eval hnf in EqType lrel[R]_n  (be_eqMixin R n).
 Definition be_choiceMixin (R : choiceType) n :=
-  [choiceMixin of base_elt[R,n] by <:].
+  [choiceMixin of lrel[R]_n by <:].
 Canonical be_choiceType (R : choiceType) n :=
-  Eval hnf in ChoiceType base_elt[R,n] (be_choiceMixin R n).
+  Eval hnf in ChoiceType lrel[R]_n (be_choiceMixin R n).
 Definition be_countMixin (R : countType) n :=
-  [countMixin of base_elt[R,n] by <:].
+  [countMixin of lrel[R]_n by <:].
 Canonical be_countType (R : countType) n :=
-  Eval hnf in CountType base_elt[R,n] (be_countMixin R n).
+  Eval hnf in CountType lrel[R]_n (be_countMixin R n).
 Canonical be_subCountType (R : countType) n :=
-  Eval hnf in [subCountType of base_elt[R,n]].
+  Eval hnf in [subCountType of lrel[R]_n].
 Definition be_finMixin (R : finType) n :=
-  [finMixin of base_elt[R,n] by <:].
+  [finMixin of lrel[R]_n by <:].
 Canonical be_finType (R : finType) n :=
-  Eval hnf in FinType base_elt[R,n] (be_finMixin R n).
+  Eval hnf in FinType lrel[R]_n (be_finMixin R n).
 Canonical be_subFinType (R : finType) n :=
-  Eval hnf in [subFinType of base_elt[R,n]].
+  Eval hnf in [subFinType of lrel[R]_n].
 
 (* -------------------------------------------------------------------- *)
 Section BaseTheory.
 Context (R : Type) (n : nat).
 
-Lemma beW (P : base_elt[R,n] -> Prop) :
+Lemma beW (P : lrel[R]_n -> Prop) :
   (forall A b, P [<A, b>]) -> (forall b, P b).
 Proof. by move=> ih [[]]. Qed.
 
-Lemma beE (b : base_elt[R,n]) : [<b.1, b.2>] = b.
+Lemma beE (b : lrel[R]_n) : [<b.1, b.2>] = b.
 Proof. by elim/beW: b. Qed.
 End BaseTheory.
 
-Lemma be_eqE (R : eqType) n (b1 b2 : base_elt[R,n]) :
+Lemma be_eqE (R : eqType) n (b1 b2 : lrel[R]_n) :
   (b1 == b2) = [&& b1.1 == b2.1 & b1.2 == b2.2].
 Proof. by []. Qed.
 
-Lemma be_eqP (R : eqType) n (b1 b2 : base_elt[R,n]) :
+Lemma be_eqP (R : eqType) n (b1 b2 : lrel[R]_n) :
   reflect (b1.1 = b2.1 /\ b1.2 = b2.2) (b1 == b2).
 Proof.
 rewrite be_eqE; apply: (iffP andP).
@@ -115,10 +115,10 @@ Qed.
 Section BaseEncoding.
 Context {R : eqType} (n : nat).
 
-Definition base_elt_to_col (v : base_elt[R,n]) : 'cV[R]_(n+1) :=
+Definition base_elt_to_col (v : lrel[R]_n) : 'cV[R]_(n+1) :=
   col_mx v.1 (const_mx v.2).
 
-Definition col_to_base_elt (v : 'cV[R]_(n+1)) : base_elt[R,n] :=
+Definition col_to_base_elt (v : 'cV[R]_(n+1)) : lrel[R]_n :=
   [< usubmx v, dsubmx v 0 0 >].
 
 Lemma base_elt_to_colK : cancel col_to_base_elt base_elt_to_col.
@@ -153,7 +153,7 @@ End BaseEncodingTheory.
 Section BaseZmod.
 Context {R : zmodType} {n : nat}.
 
-Implicit Types (b : base_elt[R,n]).
+Implicit Types (b : lrel[R]_n).
 
 Definition be0         := [< (0 : 'cV[R]_n), (0 : R) >].
 Definition beadd b1 b2 := [< b1.1 + b2.1, b1.2 + b2.2 >].
@@ -177,7 +177,7 @@ Let beadd0r := let: And4 _ _ h _ := be_zmod_mixin in h.
 Let beaddNr := let: And4 _ _ _ h := be_zmod_mixin in h.
 
 Definition be_zmodMixin := ZmodMixin beaddA beaddC beadd0r beaddNr.
-Canonical be_zmodType := Eval hnf in ZmodType base_elt be_zmodMixin.
+Canonical be_zmodType := Eval hnf in ZmodType lrel be_zmodMixin.
 
 Lemma beaddE b1 b2 : b1 + b2 = [< b1.1 + b2.1, b1.2 + b2.2 >].
 Proof. by []. Qed.
@@ -203,7 +203,7 @@ End BaseEltEncodingZmodMorph.
 Section BaseLmod.
 Context {R : ringType} {n : nat}.
 
-Implicit Types (b : base_elt[R,n]).
+Implicit Types (b : lrel[R]_n).
 
 Definition bescale c b := [< c *: b.1, c * b.2 >].
 
@@ -225,7 +225,7 @@ Let bescaleDr := let: And4 _ _ h _ := be_lmod_mixin in h.
 Let bescaleDl := let: And4 _ _ _ h := be_lmod_mixin in h.
 
 Definition be_lmodMixin := LmodMixin bescaleA bescale1 bescaleDr bescaleDl.
-Canonical be_lmodType := Eval hnf in LmodType R base_elt be_lmodMixin.
+Canonical be_lmodType := Eval hnf in LmodType R lrel be_lmodMixin.
 
 Lemma bescaleE c b : c *: b = [< c *: b.1, c * b.2 >].
 Proof. by []. Qed.
@@ -248,7 +248,7 @@ End BaseEltEncodingLmodMorph.
 Section BaseMorph.
 Context {R : zmodType} {n : nat}.
 
-Implicit Types (b : base_elt[R,n]).
+Implicit Types (b : lrel[R]_n).
 
 Lemma beadd_p1E b1 b2 : (b1 + b2).1 = b1.1 + b2.1.
 Proof. by []. Qed.
@@ -261,14 +261,14 @@ End BaseMorph.
 Section BaseVect.
 Context {R : fieldType} {n : nat}.
 
-Fact be_vect_iso : Vector.axiom (n+1) base_elt[R,n].
+Fact be_vect_iso : Vector.axiom (n+1) lrel[R]_n.
   (* there should be a way to exploit the connection betwseen base_elt and 'cV[R]_n * R^o
    * for which there is a canonical vectType structure                                    *)
 Proof.
-pose f (e : base_elt[R,n]) := (col_mx e.1 (e.2%:M))^T.
+pose f (e : lrel[R]_n) := (col_mx e.1 (e.2%:M))^T.
 exists f.
 - move => ???; by rewrite /f raddfD /= -add_col_mx linearD /= -scale_scalar_mx -scale_col_mx linearZ.
-- pose g (x : 'rV_(n+1)) := [< (lsubmx x)^T, (rsubmx x) 0 0 >] : (base_elt[R,n]).
+- pose g (x : 'rV_(n+1)) := [< (lsubmx x)^T, (rsubmx x) 0 0 >] : (lrel[R]_n).
   exists g; move => x.
   + apply/eqP/be_eqP; split; rewrite /f /=.
     * by rewrite tr_col_mx row_mxKl trmxK.
@@ -278,7 +278,7 @@ exists f.
     * by rewrite /f mxE col_mxEd mxE [i']ord1_eq0 mulr1n /= mxE.
 Qed.
 Definition be_vectMixin := VectMixin be_vect_iso.
-Canonical be_vectType := VectType R base_elt[R,n] be_vectMixin.
+Canonical be_vectType := VectType R lrel[R]_n be_vectMixin.
 
 Lemma base_vect_subset (I I' : base_t[R,n]) :
   (I `<=` I')%fset -> (<< I >> <= << I' >>)%VS.
@@ -293,13 +293,13 @@ rewrite -span_cat; apply/eq_span => x.
 by rewrite inE mem_cat.
 Qed.
 
-Lemma span_fset1 (v : base_elt[R,n]) :
+Lemma span_fset1 (v : lrel[R]_n) :
   (<< [fset v]%fset >> = <[ v ]>)%VS.
 Proof.
 by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
 Qed.
 
-Lemma fst_lmorph : lmorphism (fst : base_elt[R,n] -> 'cV_n).
+Lemma fst_lmorph : lmorphism (fst : lrel[R]_n -> 'cV_n).
 by [].
 Qed.
 
@@ -376,7 +376,7 @@ End VectToFsFunTheory.
 Section Combine.
 Context {R : realFieldType} {n : nat} (base : base_t[R,n]).
 
-Implicit Types (w : {fsfun base_elt[R,n] ~> R}).
+Implicit Types (w : {fsfun lrel[R]_n ~> R}).
 
 Lemma combineb1E w : (finsupp w `<=` base)%fset ->
   (combine w).1 = \sum_(v : base) w (val v) *: (val v).1.
@@ -466,7 +466,7 @@ Notation "P .`b" := (hpoly_b P).
 Lemma in_hpolyE (P : 'hpoly[R]_n) x : (x \in P) = (P.`A *m x) >=m (P.`b).
 Proof. by case: P. Qed.
 
-Definition mk_hs (b : base_elt[R,n]) : 'hpoly[R]_n := HPoly (b.1)^T (b.2)%:M.
+Definition mk_hs (b : lrel[R]_n) : 'hpoly[R]_n := HPoly (b.1)^T (b.2)%:M.
 
 Lemma in_hs b x : x \in (mk_hs b ) = ('[b.1,x] >= b.2).
 Proof.
@@ -734,10 +734,10 @@ rewrite !inE big_andE; apply/forall_inP/forallP => /= h.
   by rewrite tr_col trmxK -row_mul row_cV.
 Qed.
 
-Lemma farkas (e : base_elt) :
+Lemma farkas (e : lrel) :
      ~~ (poly_subset P poly0)
   -> (poly_subset P (mk_hs e))
-  -> exists2 w : {conic base_elt ~> R},
+  -> exists2 w : {conic lrel ~> R},
          (finsupp w `<=` base)%fset
        & (combine w).1 = e.1 /\ (combine w).2 >= e.2.
 Proof.
