@@ -78,6 +78,8 @@ Reserved Notation "'[' 'polyT' ']'" (at level 0).
 Reserved Notation "[ 'hs' b ]" (at level 0, format "[ 'hs'  b ]").
 Reserved Notation "[ 'hp' b ]" (at level 0, format "[ 'hp'  b ]").
 
+Reserved Notation "'[' 'pt' Ω ']'" (at level 0, format "'[' 'pt'  Ω ']'").
+
 Reserved Notation "[ 'line' c & Ω ]"  (at level 0, format "[ 'line'  c  &  Ω ]").
 Reserved Notation "[ 'hline' c & Ω ]" (at level 0, format "[ 'hline'  c  &  Ω ]").
 
