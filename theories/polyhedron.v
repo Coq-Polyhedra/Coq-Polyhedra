@@ -1161,6 +1161,13 @@ Proof.
 move => ??; exact: polyIS.
 Qed.
 
+Lemma in_slice (e : lrel) (P : 'poly_n) c :
+  c \in slice e P = (c \in `[hp e]) && (c \in P).
+Proof. by apply: in_polyI. Qed.
+
+Lemma le_slice (e : lrel[R]_n) P : slice e P `<=` P.
+Proof. by apply/poly_subsetP=> x; rewrite in_slice => /andP[]. Qed.
+
 Definition poly_of_base (base : base_t) :=
   \polyI_(b : base) `[hs (val b)].
 
@@ -1300,10 +1307,6 @@ apply/poly_eqP=> c; rewrite in_polyI !in_polyEq andbC; congr (_ && _).
 apply/forallP/idP => /= [h| c_in_e]; first by apply: (h [` fset11 e]%fset).
 by case=> /= e'; rewrite in_fset1 => /eqP->.
 Qed.
-
-Lemma in_slice (e : lrel) (P : 'poly_n) c :
-  c \in slice e P = (c \in `[hp e]) && (c \in P).
-Proof. by apply: in_polyI. Qed.
 
 Lemma in_fslice {T : choiceType} (x : T) (A : {fset T}) y :
   y \in (x +|` A) = (y == x) || (y \in A).

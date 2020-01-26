@@ -56,7 +56,7 @@ Canonical pointedPoly_of_eqType := Eval hnf in [eqType of 'pointed[R]_n].
 Canonical pointedPoly_of_choiceType := Eval hnf in [choiceType of 'pointed[R]_n].
 
 Lemma pointed_slice (P : 'pointed[R]_n) e : pointed (slice e P).
-Admitted.
+Proof. by apply/(pointedS _ (valP P))/le_slice. Qed.
 Canonical pointed_slice_pointed (P : 'pointed[R]_n) e := Pointed (pointed_slice P e).
 
 End PointedTheory.
@@ -103,10 +103,9 @@ Definition Compact (P : 'poly[R]_n) (cp : compact P) :=
   @mkCompact R n (Pointed (compact_pointed cp)) cp.
 
 Lemma compact_slice (P : 'compact[R]_n) e : compact (slice e P).
-Admitted.
+Proof. by apply/(subset_compact (valP P))/le_slice. Qed.
 Canonical compact_slice_compact P e := Compact (compact_slice P e).
 End CompactPointed.
-
 
 (* -------------------------------------------------------------------- *)
 Section PolyPO.
