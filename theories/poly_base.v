@@ -2244,18 +2244,26 @@ Lemma face_of_vtxP (P : 'poly[R]_n) (v : vertex_set P) :
 Proof.
 by rewrite -in_vertex_setP (valP v).
 Qed.
+
 Definition face_of_vtx (P : 'poly[R]_n) (v : vertex_set P) :=
   [` face_of_vtxP v]%fset : face_set P.
+
 Lemma vtx_of_atomP (P : 'pointed[R]_n) (F : face_set P) :
   atom F -> exists (v : vertex_set P), val F == [pt (val v)].
 Proof.
 by move/atom_faceP => [x x_in ->]; exists [` x_in]%fset.
 Qed.
+
 Definition vtx_of_atom (P : 'pointed[R]_n) (F : face_set P) (F_atom : atom F) :=
   xchoose (vtx_of_atomP F_atom).
+
 Lemma vtx_of_atomE (P : 'pointed[R]_n) (F : face_set P) (F_atom : atom F) :
   [pt (val (vtx_of_atom F_atom))] = val F.
-Admitted.
+Proof.
+rewrite /vtx_of_atom; set s := (X in xchoose X).
+by case: (xchooseP s) => /eqP <-.
+Qed.
+
   (*
 Lemma face_of_vtxK (P : 'pointed[R]_n) :
   {in (@atom _ [finLatticeType of (face_set P)]),
