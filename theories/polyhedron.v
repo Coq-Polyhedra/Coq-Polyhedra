@@ -72,6 +72,9 @@ Reserved Notation "''poly_' n"
 Reserved Notation "''[' P ]"
   (at level 0, format "''[' P ]").
 
+Reserved Notation "[ 'segm' u '&' v ]"
+  (at level 8, format "[ 'segm'  u  '&'  v ]").
+
 Section Def.
 
 Context {R : realFieldType} (n : nat).
@@ -1753,6 +1756,8 @@ Definition cone V :=
 Definition conv V :=
   map_poly (mat_fset V) (orthant `&` `[hp [<const_mx 1, 1>]]).
 
+Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset).
+
 Lemma combine_mulmxE (w : {fsfun 'cV[R]_n ~> _}) (V : {fset 'cV[R]_n}) :
   (finsupp w `<=` V)%fset -> combine w = mat_fset V *m vect_fset V w.
 Proof.
@@ -1834,14 +1839,15 @@ Qed.
 Lemma in_segmP (Ω Ω' x : 'cV[R]_n) :
   reflect
     (exists2 μ, 0 <= μ <= 1 & x = (1 - μ) *: Ω + μ *: Ω')
-    (x \in conv [fset Ω; Ω']%fset).
+    (x \in [segm Ω & Ω']).
 Proof.
 apply: Bool.iff_reflect;
   rewrite -[X in _ <-> X](rwP (in_convP _ _));
   exact: cvxsegP.
 Qed.
 
-Lemma in_segm (v v' : 'cV[R]_n) : (v \in conv [fset v; v']%fset) * (v' \in conv [fset v; v']%fset).
+Lemma in_segm (v v' : 'cV[R]_n) :
+  (v \in [segm v & v']) * (v' \in [segm v & v']).
 Proof.
 split; by apply/in_conv; rewrite !inE eq_refl ?orbT.
 Qed.
@@ -1849,11 +1855,10 @@ Qed.
 Definition in_segml v v' := (in_segm v v').1.
 Definition in_segmr v v' := (in_segm v v').2.
 
-Lemma segm_prop0 (v v' : 'cV[R]_n) : (conv [fset v; v']%fset `>` `[poly0]).
+Lemma segm_prop0 (v v' : 'cV[R]_n) : [segm v & v'] `>` `[poly0].
 Proof.
 apply/proper0P; exists v; apply/in_segml.
 Qed.
-
 
 Lemma compact_conv (V : {fset 'cV[R]_n}) : compact (conv V).
 Proof.
@@ -2188,6 +2193,7 @@ End Affine.
 
 Notation "'`[' 'affine'  U & Ω  ']'" := (mk_affine U Ω) (at level 70) : poly_scope.
 Notation "'`[' 'pt'  Ω  ']'" := (`[affine 0%VS & Ω]) (at level 70) : poly_scope.
+Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset) : poly_scope.
 
 Section Duality.
 

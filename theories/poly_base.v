@@ -1040,7 +1040,7 @@ by apply/line_subset_hp; apply/(poly_subsetP (poly_base_subset_hp (valP _))).
 Qed.
 
 Lemma hull_line (v v' : 'cV[R]_n) :
-  hull (conv [fset v; v']%fset) = `[line (v' - v) & v].
+  hull [segm v & v'] = `[line (v' - v) & v].
 Proof.
 set S := conv _.
 apply/poly_subset_anti; last by apply/line_subset_hull; [rewrite in_segml | rewrite in_segmr].
@@ -1266,13 +1266,13 @@ case/altP: (d =P 0) => [->|]; first by rewrite /= line0 dim_pt.
 by rewrite line_affine dim_affine dim_vline => ->.
 Qed.
 
-Lemma dim_segm (v v' : 'cV[R]_n) : dim (conv [fset v; v']%fset) = (v != v').+1.
+Lemma dim_segm (v v' : 'cV[R]_n) : dim [segm v & v'] = (v != v').+1.
 Proof.
 by rewrite dim_hull hull_line dim_line subr_eq0 eq_sym.
 Qed.
 
 Lemma dim2P (P : 'poly[R]_n) :
-  compact P -> dim P = 2 -> exists v, exists2 w, P = conv [fset v; w]%fset & v != w.
+  compact P -> dim P = 2 -> exists v, exists2 w, P = [segm v & w] & v != w.
 Proof.
 elim/polybW: P => base P P_compact dimP2.
 have P_prop0 : P `>` `[poly0] by rewrite dimN0 dimP2.
@@ -1933,7 +1933,7 @@ Section FaceSegment.
 Context {R : realFieldType} {n : nat} .
 
 Lemma vertex_set_segm (v v' : 'cV[R]_n) :
-  vertex_set (conv [fset v; v']%fset) = [fset v; v']%fset.
+  vertex_set [segm v & v'] = [fset v; v']%fset.
 Proof.
 set V := [fset _; _]%fset; set S := conv _.
 have sub: (vertex_set S `<=` V)%fset by apply/vertex_set_conv_subset.
@@ -1951,7 +1951,7 @@ case/altP: (#|` vertex_set S| =P 0%N) => /= [ /cardfs0_eq -> _|].
 Qed.
 
 Lemma face_set_segm (v v' : 'cV[R]_n) :
-  face_set (conv [fset v; v']%fset) = [fset `[poly0]; `[pt v]; `[pt v']; (conv [fset v; v']%fset)]%fset.
+  face_set [segm v & v']) = [fset `[poly0]; `[pt v]; `[pt v']; [segm v & v]]%fset.
 Proof.
 set S := conv _.
 apply/eqP; rewrite eqEfsubset; apply/andP; split; last first.
@@ -2355,7 +2355,7 @@ Section Graph.
 Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
 
 Definition adj :=
-  [rel v w : 'cV[R]_n | (v != w) && (conv [fset v; w]%fset \in face_set P)].
+  [rel v w : 'cV[R]_n | (v != w) && [segm v & w] \in face_set P)].
 
 Lemma adj_sym v w : adj v w = adj w v. (*symmetric adj.*)
 Proof.
@@ -2433,11 +2433,11 @@ suff: x \in (`[ hs [<c, '[ c, v]>] ]).
   move/(dim2P (face_compact P_compact F_face)): dimF2 => [y [y' -> y_neq_y' yy'_face]].
   have adj_y_y': adj y y' by rewrite inE yy'_face y_neq_y'.
   move/vertex_setS: (yy'_face); rewrite vertex_set_segm => /fsubsetP sub_vtx v_in.
-  have slice_prop0 : slice e (conv [fset y; y']%fset) `>` `[poly0].
+  have slice_prop0 : slice e [segm y & y'] `>` `[poly0].
   - apply/(vertex_set_slice_dim1 v_vtx) => //; first by apply/(xchooseP sep).
     + by apply/in_conv.
     + by rewrite dim_segm y_neq_y'.
-  suff: slice e (conv [fset y; y']%fset) `<=` `[ hs [<c, '[ c, v]>] ]
+  suff: slice e [segm y & y'] `<=` `[ hs [<c, '[ c, v]>] ]
     by move/poly_subsetP/(_ _ (ppickP slice_prop0)).
   apply/(poly_subset_trans (poly_subsetIr _ _))/conv_subset.
   move: v_in adj_y_y' => /fset2P; case => <-;
