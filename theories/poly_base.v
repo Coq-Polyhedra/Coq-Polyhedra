@@ -1180,6 +1180,18 @@ have hullP : hull P = `[affine U & x].
 exists U => //; by rewrite dim_hull hullP dim_affine /=.
 Qed.
 
+
+Lemma dim_affine_lt (U V : {vspace base_elt[R,n]}) :
+  affine U `<` affine V -> (dim (affine U) < dim (affine V))%N.
+Proof.
+case: (emptyP (affine U)) => [->|/proper0P [x x_in_U]]; first by rewrite dim0 dimN0.
+move => U_prop_V; have U_sub_V := (poly_properW U_prop_V).
+have x_in_V : x \in affine V by apply/(poly_subsetP U_sub_V): x_in_U.
+move: U_prop_V; rewrite poly_properEneq U_sub_V /=.
+apply/contra_neqT; rewrite (affine_orth x_in_U) (affine_orth x_in_V) in U_sub_V *.
+rewrite 2!dim_affine. rewrite -leqNgt ltnS => dim_le.
+Admitted.
+
 Lemma dim_span_active (base : base_t[R,n]) (P : {poly base}) :
   P `>` (`[poly0]) -> (\dim << {eq P} >> <= n)%N.
 Proof.
@@ -1433,7 +1445,7 @@ case: (j =P i) => [-> _| /eqP j_neq_i j_in_base].
   by apply/poly_subsetP/poly_of_base_subset_hs; rewrite !inE j_neq_i.
 Qed.
 
-Lemma poly_dim_facet (i : base_elt) & (i \in base) :
+Lemma dim_facet (i : base_elt) & (i \in base) :
   i \notin ({eq P} : {fset _}) -> dim P = (dim 'P^=(base; [fset i])%:poly_base).+1%N.
 Proof.
 set S := 'P^=(_; _)%:poly_base.
@@ -1460,7 +1472,7 @@ suff: ~~ ({eq F} `<=` {eq P})%fset.
   have i_in_base: i \in base by move: i_in_F; apply/fsubsetP/fsubset_subP.
   exists i; exists i_in_base => //.
   apply/val_inj/face_dim_eq => /=; last first.
-  + by apply/succn_inj; rewrite -dimF -poly_dim_facet.
+  + by apply/succn_inj; rewrite -dimF -dim_facet.
   + by rewrite face_setE activeP /= fsub1set.
 - suff: ~~ (P `<=` F).
   + by rewrite {1}[F]repr_active // activeP.
@@ -1518,7 +1530,7 @@ case: (leqP (dim P) 1%N) => [dimP_le1 | dimP_gt1].
 - suff: ({eq P} `<` base)%fset.
   + move/fproperP => [_ [i i_base i_notin_eqP]].
     set F := 'P^=(base; [fset i]%fset)%:poly_base.
-    exists (pval F); last exact: poly_dim_facet.
+    exists (pval F); last exact: dim_facet.
     by rewrite face_setE poly_properW ?facet_proper.
   + move: P_pointed; apply: contraTT; rewrite fsubset_properT negbK => /eqP eqP_eq_base.
     move: (P_prop0) dimP_gt1; rewrite [P]repr_active //=.
@@ -1674,7 +1686,7 @@ case: (emptyP Q) dim_lt => [ -> | Q_prop0].
   set S := 'P^=(base; [fset i])%:poly_base => dim_lt.
   have Q_prop_S : Q `<` S.
   + rewrite dim_proper ?activeP ?fsub1set ?i_in_eqQ //.
-    by move: dim_lt; rewrite (poly_dim_facet _ _ _ i_notin_eqP).
+    by move: dim_lt; rewrite (dim_facet _ _ _ i_notin_eqP).
   have S_prop_P : S `<` P.
   + rewrite poly_properEneq; apply/andP; split.
     * by rewrite /= -polyEq0; apply: polyEq_antimono.
@@ -1756,7 +1768,7 @@ case/altP: (F =P 1)%O => [-> | F_neq_P].
         + by apply/val_inj => /=.
   +  move => Q; case/imsetP => i; rewrite in_set inE => /andP [i_notin _ ->].
      rewrite (@coatomE _ [gradedFinLatticeType of face_set P]).
-     rewrite /rank /= -(rwP eqP) (poly_dim_facet _ _ _ i_notin) ?fsvalP //.
+     rewrite /rank /= -(rwP eqP) (dim_facet _ _ _ i_notin) ?fsvalP //.
      by apply/poly_proper_trans: F'_prop_P.
 Qed.
 
