@@ -2193,10 +2193,17 @@ Context {R : realFieldType} {n : nat}.
 Definition face_set_itv (P : 'poly[R]_n) F F' :=
   [fset Q in face_set P | F `<=` Q `<=` F']%fset.
 
-Lemma face_set_itv_vtx (P : 'poly[R]_n) v :
+Lemma face_set_itv_vtx (P : 'poly[R]_n) (v : 'cV[R]_n) :
   v \in vertex_set P ->
   [fset Q in face_set P | v \in Q]%fset = face_set_itv P ([pt v]) P.
-Admitted.
+Proof.
+move=> vP; apply/fsetP=> /= x; apply/idP/idP.
++ case/imfsetP=> /= {}Q /andP[QP vQ] ->; apply/imfsetP => /=.
+  exists Q => //=; rewrite !inE QP /= pt_subset vQ /=.
+  by apply: face_subset.
++ case/imfsetP=> /= Q /andP[QP /andP[vQ _]] ->; apply/imfsetP => /=.
+  by exists Q => //; rewrite !inE QP /=; rewrite -pt_subset.
+Qed.
 
 Lemma vf_im (P : 'compact[R]_n) v e F :
   vf_hyp P v e ->
