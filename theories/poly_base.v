@@ -1179,8 +1179,7 @@ have hullP : hull P = [affine U & x].
 exists U => //; by rewrite dim_hull hullP dim_affine /=.
 Qed.
 
-
-Lemma dim_affine_lt (U V : {vspace base_elt[R,n]}) :
+Lemma dim_affine_lt (U V : {vspace lrel}) :
   affine U `<` affine V -> (dim (affine U) < dim (affine V))%N.
 Proof.
 case: (emptyP (affine U)) => [->|/proper0P [x x_in_U]]; first by rewrite dim0 dimN0.
