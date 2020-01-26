@@ -2231,7 +2231,13 @@ Qed.
 
 Lemma face_intervalE (P : 'pointed[R]_n) (F F' Q : face_set P) :
   (Q \in interval F F') = (val Q \in face_set_itv P (val F) (val F')).
-Admitted.
+Proof.
+apply/intervalP/idP => [[le_FQ le_QF']|].
++ apply/imfsetP=> /=; exists (val Q) => //; rewrite !inE.
+  by rewrite -!leEfaces le_FQ le_QF' (valP Q).
++ case/imfsetP=> /= Q' /andP[Q'P /andP[le_FQ' le_Q'F']] /esym Q'E.
+  by rewrite !leEfaces /= -Q'E le_FQ' le_Q'F'.
+Qed.
 
 Lemma face_of_vtxP (P : 'poly[R]_n) (v : vertex_set P) :
   [pt (val v)] \in face_set P.
