@@ -1052,6 +1052,19 @@ apply/conv_subset => x; rewrite !inE => /orP; case => /eqP ->; apply/in_lineP.
 - by exists 1; rewrite scale1r addrCA addrN addr0.
 Qed.
 
+Lemma face_hullI (P Q : 'poly[R]_n) :
+  Q \in face_set P -> Q = P `&` hull Q.
+Proof.
+elim/polybW : P => base P.
+case/face_setP => {}Q Q_sub_P.
+case: (emptyP Q) => [->| Q_prop0]; first by rewrite hull0 polyI0.
+rewrite hullN0_eq //.
+rewrite [Q in LHS]repr_active //= polyEq_affine.
+rewrite [P]repr_active /= ?polyEq_affine -?polyIA.
+move: (Q_sub_P) => /activeS/fsubsetP/sub_span/affineS/(polyIidPr _ _) -> //.
+by apply/poly_proper_subset: Q_sub_P.
+Qed.
+
 End AffineHull.
 
 Section Dimension.
@@ -1188,6 +1201,9 @@ Lemma face_dim_leqif_eq (P Q : 'poly[R]_n) :
 Proof.
 move => P_face_Q; split; first by apply/dimS; exact: face_subset.
 apply/eqP/eqP => [| -> //].
+(*case: (emptyP Q) => [->| Q_prop0]; first by rewrite dim0 dim_eq0.
+rewrite [dim P]dim_hull [dim Q]dim_hull {2}(face_hullI P_face_Q).
+case/dimP: Q P_face_Q => [_ /dim_eq0 //| base Q Q_prop0].*)
 case/dimP: Q P_face_Q => [_ /dim_eq0 //| base Q Q_prop0].
 case/face_setP => {}P P_sub_Q.
 case: (emptyP P) => [->| P_prop0]; rewrite ?dim0 //.
