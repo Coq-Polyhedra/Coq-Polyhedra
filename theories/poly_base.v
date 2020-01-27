@@ -462,6 +462,12 @@ case: (emptyP ('P(base) : 'poly[R]_n))
   apply/andP; split; [ by rewrite c_argmin | exact: poly_base_subset ].
 Qed.
 
+Lemma argmin_pb_face_set (P : {poly base}) c:
+  (argmin P c)%:poly_base \in \face_set P.
+Proof.
+by rewrite inE argmin_subset.
+Qed.
+
 End PolyBaseFace.
 
 Notation "\face_set P" := (pb_face_set P) (at level 40).
@@ -2724,10 +2730,10 @@ End Connectness.
 (* -------------------------------------------------------------------- *)
 Local Open Scope order_scope.
 
-Section InvarianceByInterval.
+Section ClosednessByInterval.
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
-Lemma invariance_by_interval_r (x : face_set P) :
+Lemma closed_by_interval_r (x : face_set P) :
    exists Q : 'compact[R]_n,
    exists2 f : {omorphism '[< x; 1 >] -> face_set Q},
      bijective f & dim P = (dim Q + rank x)%N.
@@ -2774,12 +2780,12 @@ rewrite rank_morph_bij // {1}/rank /= /vrank /=.
 by rewrite addSnnS -rkxE subnK //; apply/le_homo_rank/lex1.
 Qed.
 
-Lemma invariance_by_interval (x y : face_set P) : (x <= y)%O ->
+Lemma closed_by_interval (x y : face_set P) : (x <= y)%O ->
    exists Q : 'compact[R]_n,
    exists2 f : {omorphism '[< x; y >] -> face_set Q},
      bijective f & rank y = (dim Q + rank x)%N.
 Proof.
-case: (invariance_by_interval_r x) => Q [f bij_f dimPE] le_xy.
+case: (closed_by_interval_r x) => Q [f bij_f dimPE] le_xy.
 set I : face_set Q := f y%:I; have cI: compact (val I).
 + by apply/(face_compact (valP Q))/valP.
 have gI (z : '[<x; y>]) : val (f z%:I_[< ; 1%O ~> >]) \in face_set (val I).
@@ -2819,7 +2825,7 @@ have ->: dim (fsval I) = rank (g 1 : JL).
 rewrite rank_morph_bij // {2}/rank /= /vrank /=.
 by rewrite subnK //; apply/le_homo_rank.
 Qed.
-End InvarianceByInterval.
+End ClosednessByInterval.
 
 (* -------------------------------------------------------------------- *)
 Global Instance expose_lexx (disp : unit) (L : porderType disp) (x : L) :
@@ -2837,7 +2843,7 @@ Lemma diamond (x y : face_set P) :
       , rank z2 = (rank x).+1
       , x <= z1 <= y & x <= z2 <= y].
 Proof.
-move=> rkyE le_xy; case: (invariance_by_interval le_xy)=> [Q] [f bij_f].
+move=> rkyE le_xy; case: (closed_by_interval le_xy)=> [Q] [f bij_f].
 rewrite {}rkyE -addn2 addnC => /addIn /esym.
 case/dim2P => [|/= z1 [z2] QE ne_z]; first by case: {+}Q.
 have hz1: [pt z1] \in face_set Q.
