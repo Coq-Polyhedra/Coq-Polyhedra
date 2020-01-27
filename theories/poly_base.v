@@ -1187,8 +1187,10 @@ move => U_prop_V; have U_sub_V := (poly_properW U_prop_V).
 have x_in_V : x \in affine V by apply/(poly_subsetP U_sub_V): x_in_U.
 move: U_prop_V; rewrite poly_properEneq U_sub_V /=.
 apply/contra_neqT; rewrite (affine_orth x_in_U) (affine_orth x_in_V) in U_sub_V *.
-rewrite 2!dim_affine. rewrite -leqNgt ltnS => dim_le.
-Admitted.
+rewrite mk_affineS in U_sub_V.
+rewrite 2!dim_affine -leqNgt ltnS => dim_le.
+by apply/(congr1 ((@mk_affine R n)^~ x))/eqP; rewrite eqEdim U_sub_V.
+Qed.
 
 Lemma dim_span_active (base : base_t[R,n]) (P : {poly base}) :
   P `>` ([poly0]) -> (\dim << {eq P} >> <= n)%N.
@@ -1211,9 +1213,6 @@ Lemma face_dim_leqif_eq (P Q : 'poly[R]_n) :
 Proof.
 move => P_face_Q; split; first by apply/dimS; exact: face_subset.
 apply/eqP/eqP => [| -> //].
-(*case: (emptyP Q) => [->| Q_prop0]; first by rewrite dim0 dim_eq0.
-rewrite [dim P]dim_hull [dim Q]dim_hull {2}(face_hullI P_face_Q).
-case/dimP: Q P_face_Q => [_ /dim_eq0 //| base Q Q_prop0].*)
 case/dimP: Q P_face_Q => [_ /dim_eq0 //| base Q Q_prop0].
 case/face_setP => {}P P_sub_Q.
 case: (emptyP P) => [->| P_prop0]; rewrite ?dim0 //.
@@ -1728,49 +1727,6 @@ rewrite atomE /rank /=; apply: (iffP eqP).
 + by case=> x xP ->; rewrite dim_pt.
 Qed.
 
-Lemma face_coatomistic (P : 'pointed[R]_n) (F : face_set P) :
-  F != 0%O -> coatomistic F.
-Proof.
-case: P F; elim/non_redundant_baseW => base non_redundant P_pointed /=.
-set P := Pointed P_pointed => F F_neq0; apply/coatomisticP.
-case/altP: (F =P 1)%O => [-> | F_neq_P].
-- exists set0; first by move => x; rewrite inE.
-  by rewrite big_pred0 //; move => x; rewrite inE.
-- pose F' := insubd (val P)%:poly_base (val F).
-  have F'_eq: F' = val F :> 'poly[R]_n.
-  + by rewrite /F' /insubd insubT //= (face_set_has_base (valP F)).
-  have F'_prop_P : F' `<` P.
-  + rewrite poly_properEneq poly_base_subset /=.
-    by move: F_neq_P; apply/contra_neq => ?; apply/val_inj => /=; rewrite -F'_eq.
-  have F'_prop0 : F' `>` [poly0].
-  + rewrite -equiv0N_proper.
-    by move: F_neq0; apply/contra_neq => ?; apply/val_inj => /=; rewrite -F'_eq.
-  have h i : i \in base -> 'P^=(base; [fset i]) \in face_set P.
-  + by move => ?; rewrite face_setE /= polyEq_antimono0.
-  pose S := [set [` h _ (valP i)]%fset |
-    i : base & (val i \in ({eq F'} `\` {eq (val P)%:poly_base})%fset) ].
-  exists S; last first.
-  + apply/le_anti/andP; split.
-    * apply/meetsP => i /imsetP [{}i i_in -> /=].
-      rewrite leEsub -F'_eq /= /Order.le /=.
-      move: (fsvalP i) => ?; rewrite activeP /= fsub1set.
-      by move: i_in; rewrite in_set in_fsetD => /andP[].
-    * rewrite leEsub -F'_eq polyI_facet //.
-      - apply/big_polyIsP => i _.
-        + have i_in_base : val i \in base.
-          * move: (valP i); rewrite in_fsetD => /andP[_].
-            by apply/fsubsetP/fsubset_subP.
-        suff: (\meet_(x in S) x <= [` h _ i_in_base]%fset)%O
-          by rewrite leEsub; apply/le_trans => //.
-        apply/meets_inf/imsetP; exists [` i_in_base]%fset => //.
-        + by rewrite in_set /= fsvalP.
-        + by apply/val_inj => /=.
-  +  move => Q; case/imsetP => i; rewrite in_set inE => /andP [i_notin _ ->].
-     rewrite (@coatomE _ [gradedFinLatticeType of face_set P]).
-     rewrite /rank /= -(rwP eqP) (dim_facet _ _ _ i_notin) ?fsvalP //.
-     by apply/poly_proper_trans: F'_prop_P.
-Qed.
-
 End FaceSetGraded.
 
 Section Minkowski.
@@ -1854,6 +1810,144 @@ rewrite -conv_vertex_set // => sub.
 move/dimS: (sub); rewrite dim_hp ?e_neq0 //.
 by apply/poly_proper_subset: sub.
 Qed.
+
+Lemma card_vertex_set_gt1 (P : 'poly[R]_n) :
+  compact P -> (dim P > 1)%N -> (#|` vertex_set P | > 1)%N.
+Proof.
+move => P_compact.
+apply/contraTT; rewrite -2!ltnNge !ltnS.
+case: (emptyP P) => [->| P_prop0 card_le1]; first by rewrite dim0.
+have /eqP/cardfs1P [v]: #|` vertex_set P| = 1%N.
+- apply/anti_leq/andP; split => //.
+  by rewrite cardfs_gt0 vertex_setN0 ?compact_pointed.
+rewrite {2}[P]conv_vertex_set // => ->.
+by rewrite conv_pt dim_pt.
+Qed.
+
+Lemma polyEqT_poly0 (base : base_t[R,n]) (P : {poly base}) :
+  compact P -> (dim P > 1)%N -> 'P^=(base; base) = [poly0].
+Proof.
+move/card_vertex_set_gt1 => h /h card_gt1.
+have: (0 < #|` vertex_set P|)%N by apply/ltn_trans: card_gt1.
+rewrite cardfs_gt0 => /fset0Pn [v v_in].
+have: (0 < #|` (vertex_set P `\  v)%fset |)%N
+  by rewrite (@cardfsD1 _ v) v_in ltnS in card_gt1.
+rewrite cardfs_gt0 => /fset0Pn [w w_in].
+apply/eqP; rewrite -subset0_equiv.
+have <-: [pt v] `&` [pt w] = [poly0].
+- apply/poly_eqP => x; rewrite in_polyI 2!in_pt !inE.
+  apply/negbTE/negP; move/andP => [/eqP -> /eqP v_eq_w].
+  by move: w_in; rewrite v_eq_w !inE eq_refl.
+move: v_in (pt_proper0 v); rewrite in_vertex_setP.
+case/face_setP => Q Q_sub Q_prop0.
+move: w_in (pt_proper0 w); rewrite inE => /andP[_].
+rewrite in_vertex_setP; case/face_setP => Q' Q'_sub Q'_prop0.
+rewrite [Q]repr_active // [Q']repr_active //.
+rewrite polyEq_polyI polyEq_antimono //.
+by apply/fsubset_subP.
+Qed.
+
+
+Lemma face_coatomistic (P : 'compact[R]_n) (F : face_set P) :
+  coatomistic F.
+Proof.
+case: P F; case.
+elim/non_redundant_baseW => base non_redundant P_pointed P_compact /=.
+set P := Pointed P_pointed => F.
+set L := [gradedFinLatticeType of face_set P].
+case/altP: (F =P 0)%O => [-> | F_neq0]; last first.
+apply/coatomisticP.
+case/altP: (F =P 1)%O => [-> | F_neq_P].
+- exists set0; first by move => x; rewrite inE.
+  by rewrite big_pred0 //; move => x; rewrite inE.
+- pose F' := insubd (val P)%:poly_base (val F).
+  have F'_eq: F' = val F :> 'poly[R]_n.
+  + by rewrite /F' /insubd insubT //= (face_set_has_base (valP F)).
+  have F'_prop_P : F' `<` P.
+  + rewrite poly_properEneq poly_base_subset /=.
+    by move: F_neq_P; apply/contra_neq => ?; apply/val_inj => /=; rewrite -F'_eq.
+  have F'_prop0 : F' `>` [poly0].
+  + rewrite -equiv0N_proper.
+    by move: F_neq0; apply/contra_neq => ?; apply/val_inj => /=; rewrite -F'_eq.
+  have h i : i \in base -> 'P^=(base; [fset i]) \in face_set P.
+  + by move => ?; rewrite face_setE /= polyEq_antimono0.
+  pose S := [set [` h _ (valP i)]%fset |
+    i : base & (val i \in ({eq F'} `\` {eq (val P)%:poly_base})%fset) ].
+  exists S; last first.
+  + apply/le_anti/andP; split.
+    * apply/meetsP => i /imsetP [{}i i_in -> /=].
+      rewrite leEsub -F'_eq /= /Order.le /=.
+      move: (fsvalP i) => ?; rewrite activeP /= fsub1set.
+      by move: i_in; rewrite in_set in_fsetD => /andP[].
+    * rewrite leEsub -F'_eq polyI_facet //.
+      - apply/big_polyIsP => i _.
+        + have i_in_base : val i \in base.
+          * move: (valP i); rewrite in_fsetD => /andP[_].
+            by apply/fsubsetP/fsubset_subP.
+        suff: (\meet_(x in S) x <= [` h _ i_in_base]%fset)%O
+          by rewrite leEsub; apply/le_trans => //.
+        apply/meets_inf/imsetP; exists [` i_in_base]%fset => //.
+        + by rewrite in_set /= fsvalP.
+        + by apply/val_inj => /=.
+  +  move => Q; case/imsetP => i; rewrite in_set inE => /andP [i_notin _ ->].
+     rewrite (@coatomE _ L).
+     rewrite /rank /= -(rwP eqP) (dim_facet _ _ _ i_notin) ?fsvalP //.
+       by apply/poly_proper_trans: F'_prop_P.
+apply/coatomisticP.
+case: {2}(dim 'P(base)) (erefl (dim 'P(base))) => [dimP0|].
+- exists set0; first by move => ?; rewrite in_set0.
+  rewrite big_pred0; last by move => ?; rewrite in_set0.
+  symmetry; apply/eqP.
+  by rewrite -(@rank_eq0 _ L) /rank /= dimP0.
+- case => [dimP1 |k dimP].
+  + exists [set 0%O].
+    * move => ?; rewrite in_set1 => /eqP ->.
+      by rewrite (@coatomE _ L) !/rank /= dimP1 dim0.
+    * by rewrite (big_pred1 0%O) // => ?; rewrite !inE.
+  + move: (leq_addr k 2); rewrite add2n -{}dimP => dimP_gt1.
+    have h i : i \in base -> 'P^=(base; [fset i]) \in face_set P.
+    * by move => ?; rewrite face_setE /= polyEq_antimono0.
+    have P_prop0: 'P(base) `>` [poly0] by move: dimP_gt1; rewrite dimN0; apply/ltn_trans.
+    pose E := {eq ('P(base))%:poly_base} : {fset _}.
+    have E_prop : (E `<` base)%fset.
+    * rewrite /E fsubset_properT; move: (P_prop0); apply/contraTneq.
+      have {2}->: 'P(base) = 'P(base)%:poly_base by [].
+      rewrite {2}['P(base)%:poly_base]repr_active //= => ->.
+      by rewrite (polyEqT_poly0 P_compact) ?poly_properxx.
+    pose S := [set [` h _ (valP i)]%fset | i : base & (val i \notin E) ].
+    exists S; last first.
+    - apply/le_anti/andP; split; first by apply/le0x.
+      rewrite leEsub /= -(polyEqT_poly0 P_compact) //=.
+      suff ->: 'P^=(base; base) =
+        \polyI_(i : base | (val i) \notin E) 'P^=(base; [fset (val i)]).
+      + apply/big_polyIsP => i i_notin.
+        suff: (\meet_(x in S) x <= [` h _ (valP i)]%fset)%O.
+          by rewrite leEsub /=; apply/le_trans => //.
+        apply/meets_inf/imsetP; exists i => //; by rewrite in_set i_notin.
+      + rewrite polyEq_big_polyI;
+        last by apply/pred0Pn; move/fproperP: E_prop => [_] [e e_in ?]; exists [` e_in]%fset.
+        have ->: 'P^=(base; base) = 'P^=(base; (base `\` E) `|` E).
+        * apply/congr1; apply/fsetP => e; rewrite in_fsetU.
+          apply/idP/idP.
+          - rewrite in_fsetD => ->; rewrite andbT; by case: (e \in E).
+          - case/orP.
+            by rewrite in_fsetD => /andP [].
+            rewrite /E; apply/fsubsetP/fsubset_subP.
+        rewrite -polyEq_polyI {3}/E.
+        move: (@repr_active _ _ _ 'P(base)%:poly_base) => /(_ P_prop0)/(congr1 val) //= <-.
+        have /polyIidPl ->: 'P^=(base; base `\` E) `<=` 'P(base) by apply/polyEq_antimono0.
+        apply/congr1/fsetP => e; apply/idP/idP.
+        - rewrite in_fsetD => /andP [e_notin e_in].
+          apply/bigfcupP; exists ([`e_in]%fset) => //.
+          * by rewrite /index_enum unlock -enumT mem_enum /=.
+          * by rewrite in_fset1.
+        - case/bigfcupP => e'; rewrite in_fset1 => /andP [_ e'_not_in] /eqP ->.
+          by rewrite in_fsetD e'_not_in /= fsvalP.
+    - move => Q; case/imsetP => i; rewrite in_set => i_notin ->.
+      rewrite (@coatomE _ L).
+      rewrite /rank /= -(rwP eqP) (dim_facet _ _ _ i_notin) ?fsvalP //.
+Qed.
+
 
 End Minkowski.
 
@@ -2383,6 +2477,7 @@ Qed.
 
 End VertexFigure.
 
+(*
 Section Graph.
 
 Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
@@ -2620,6 +2715,7 @@ by apply/ltnW/card_vertex_set; rewrite ?dimP.
 Qed.
 *)
 End Connectness.
+*)
 
 (* -------------------------------------------------------------------- *)
 Local Open Scope order_scope.
