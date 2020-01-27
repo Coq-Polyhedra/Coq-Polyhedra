@@ -1811,6 +1811,12 @@ move/dimS: (sub); rewrite dim_hp ?e_neq0 //.
 by apply/poly_proper_subset: sub.
 Qed.
 
+End Minkowski.
+
+Section Coatomistic.
+
+Context {R : realFieldType} {n : nat}.
+
 Lemma card_vertex_set_gt1 (P : 'poly[R]_n) :
   compact P -> (dim P > 1)%N -> (#|` vertex_set P | > 1)%N.
 Proof.
@@ -1846,7 +1852,6 @@ rewrite [Q]repr_active // [Q']repr_active //.
 rewrite polyEq_polyI polyEq_antimono //.
 by apply/fsubset_subP.
 Qed.
-
 
 Lemma face_coatomistic (P : 'compact[R]_n) (F : face_set P) :
   coatomistic F.
@@ -1945,11 +1950,10 @@ case: {2}(dim 'P(base)) (erefl (dim 'P(base))) => [dimP0|].
           by rewrite in_fsetD e'_not_in /= fsvalP.
     - move => Q; case/imsetP => i; rewrite in_set => i_notin ->.
       rewrite (@coatomE _ L).
-      rewrite /rank /= -(rwP eqP) (dim_facet _ _ _ i_notin) ?fsvalP //.
+      by rewrite /rank /= -(rwP eqP) (dim_facet _ _ _ i_notin) ?fsvalP //.
 Qed.
 
-
-End Minkowski.
+End Coatomistic.
 
 Section SeparationVertex.
 
