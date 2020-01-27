@@ -2096,6 +2096,15 @@ apply/val_inj/injective_projections => //=.
 by move: x_in_e x_in_e'; do 2![rewrite inE => /eqP <-]; rewrite fst_eq.
 Qed.
 
+Lemma mk_affineS Ω :
+  {mono (mk_affine^~ Ω) : U V / (U <= V)%VS >-> (U `<=` V)%VS}.
+Proof.
+move => U V; apply/poly_subsetP/subvP => [sub v v_in| sub x].
+- have /sub: (Ω + v \in [affine U  &  Ω]) by apply/in_mk_affineP; exists v.
+  by rewrite in_mk_affine addrAC addrN add0r.
+- by rewrite !in_mk_affine; apply/sub.
+Qed.
+
 (*Lemma affine_dim_le (U : {vspace lrel[R]_n}) :
   affine U `>` ([poly0]) -> (\dim U <= n)%N.
 Proof.
