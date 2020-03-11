@@ -28,6 +28,13 @@ via the opam OCaml packages manager.
         $> opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
         $> opam update
 
+  * Pin the development packages:
+
+        $> opam pin add -n coq-mathcomp-ssreflect https://github.com/strub/math-comp.git\#coqpolyhedra
+        $> opam pin add -n coq-mathcomp-algebra   https://github.com/strub/math-comp.git\#coqpolyhedra
+        $> opam pin add -n coq-mathcomp-fingroup  https://github.com/strub/math-comp.git\#coqpolyhedra
+        $> opam pin add -n coq-mathcomp-field     https://github.com/strub/math-comp.git\#coqpolyhedra
+
   * Installing the dependencies:
 
         $> opam install coq coq-mathcomp-field coq-mathcomp-finmap
