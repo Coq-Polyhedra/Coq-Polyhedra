@@ -3,7 +3,12 @@
 include Makefile.common
 
 # --------------------------------------------------------------------
-.PHONY: license dist
+.PHONY: license dist run-in-docker
+
+# --------------------------------------------------------------------
+run-in-docker:
+	docker run --rm -ti -v $$PWD:/home/ci/project \
+	  coqpolyhedra/build-box opam config exec -- make -C project
 
 # --------------------------------------------------------------------
 license:

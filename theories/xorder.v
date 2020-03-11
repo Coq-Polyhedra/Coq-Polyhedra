@@ -925,7 +925,6 @@ End IntervalFinLattice.
 (* -------------------------------------------------------------------- *)
 Section IntervalGradedLattice.
 Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
-Check (GradedFinLattice.finLatticeType L).
 
 Definition vrank (x : '[< a; b >]) := rank (val x) - rank a.
 
