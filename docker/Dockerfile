@@ -35,9 +35,6 @@ RUN \
 	opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev && \
 	opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev && \
 	opam pin add -n coq 8.10.2 && \
-	opam pin add -n coq-mathcomp-ssreflect https://github.com/strub/math-comp.git\#coqpolyhedra && \
-	opam pin add -n coq-mathcomp-algebra   https://github.com/strub/math-comp.git\#coqpolyhedra && \
-	opam pin add -n coq-mathcomp-fingroup  https://github.com/strub/math-comp.git\#coqpolyhedra && \
-	opam pin add -n coq-mathcomp-field     https://github.com/strub/math-comp.git\#coqpolyhedra && \
+	opam pin add -n coq-mathcomp-ssreflect --dev-repo && \
 	opam install coq coq-mathcomp-field coq-mathcomp-finmap && \
 	opam clean
