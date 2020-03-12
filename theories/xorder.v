@@ -286,10 +286,26 @@ apply/contra_eq: zrk; rewrite -!(lt0x, lt0n).
 by move/homo_rank; rewrite rank0.
 Qed.
 
+Lemma rank_eq1 (x : L) : (rank x == rank ((1 : L))%O) = (x == 1).
+Proof.
+apply/eqP/idP=> [eqrk|/eqP ->//].
+have := lex1 x; rewrite le_eqVlt => /orP[] //.
+by move/homo_rank; rewrite eqrk ltnn.
+Qed.
+
 Lemma rank_gt0 (x : L) : (0 < rank x)%N = (0 < x).
 Proof.
 apply/idP/idP => [gt0_rank|/homo_rank]; last by rewrite rank0.
 by rewrite lt_neqAle le0x eq_sym -rank_eq0 andbT -lt0n.
+Qed.
+
+Lemma rank_le1 (x : L) : (rank x <= rank (1%O : L))%N.
+Proof. by apply/le_homo_rank/lex1. Qed.
+
+Lemma rank_gt1 (x : L) : (rank x < rank (1 : L)%O)%N = (x < 1).
+Proof.
+apply/idP/idP => [lt1_rank|/homo_rank //].
+by rewrite lt_neqAle lex1 andbT -rank_eq1 ltn_eqF.
 Qed.
 
 Lemma rankI (x y : L) : (rank (x `&` y) <= minn (rank x) (rank y))%N.
@@ -1075,13 +1091,13 @@ Definition atomistic (a : L) :=
 
 Definition coatomistic (a : L) :=
   [exists S : {set L},
-     [forall x in S, atom x] && (a == \meet_(x in S) x)].
+     [forall x in S, coatom x] && (a == \meet_(x in S) x)].
 End Atomic.
 
 (* -------------------------------------------------------------------- *)
 Section CoatomAtom.
 Lemma coatom_atom (d : unit) (L : finLatticeType d) (a : L) :
-  coatom a -> atom (L := [finLatticeType of converse L]) a.
+  coatom a -> atom (L := [finLatticeType of dual L]) a.
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
 split; first by apply: gt0_a.
@@ -1089,14 +1105,14 @@ by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
 Lemma coatom_atom_V (d : unit) (L : finLatticeType d) (a : L) :
-  coatom (L := [finLatticeType of converse L]) a -> atom  a.
+  coatom (L := [finLatticeType of dual L]) a -> atom  a.
 Proof. by apply/coatom_atom. Qed.
 End CoatomAtom.
 
 (* -------------------------------------------------------------------- *)
 Section AtomCoatom.
 Lemma atom_coatom (d : unit) (L : finLatticeType d) (a : L) :
-  atom a -> coatom (L := [finLatticeType of converse L]) a.
+  atom a -> coatom (L := [finLatticeType of dual L]) a.
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
 split; first by apply: gt0_a.
@@ -1104,7 +1120,7 @@ by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
 Lemma atom_coatom_V (d : unit) (L : finLatticeType d) (a : L) :
-  atom (L := [finLatticeType of converse L]) a -> coatom a.
+  atom (L := [finLatticeType of dual L]) a -> coatom a.
 Proof. by apply/atom_coatom. Qed.
 End AtomCoatom.
 
@@ -1161,7 +1177,13 @@ Lemma coatomisticP (a : L) :
     (exists2 S : {set L},
        (forall x, x \in S -> coatom x) & a = \meet_(x in S) x)
     (coatomistic a).
-Proof. Admitted.
+Proof.
+apply: (iffP existsP) => /= -[S].
++ move=> /andP [/forallP h /eqP->]; exists S => //.
+  by move=> x; move/(_ x): h => /implyP.
++ move=> h ->; exists S; rewrite eqxx andbT.
+  by apply/forallP=> x; apply/implyP=> /h.
+Qed.
 End CoatomicTheory.
 
 (* -------------------------------------------------------------------- *)
@@ -1179,7 +1201,21 @@ apply/idP/eqP.
   apply/atomP=> // x nz_x /homo_rank; rewrite eq1_rk ltnS.
   by rewrite leqn0 rank_eq0 (negbTE nz_x).
 Qed.
+End GradedAtomicTheory.
+(* -------------------------------------------------------------------- *)
+Section GradedCoAtomicTheory.
+Context (d : unit) (L : gradedFinLatticeType d).
 
 Lemma coatomE (a : L) : (coatom a) = (rank (1 : L) == (rank a).+1%N).
-Proof. Admitted.
-End GradedAtomicTheory.
+Proof.
+apply/idP/eqP.
++ have := lex1 a; rewrite le_eqVlt => /orP[/eqP-> /coatom1n //|].
+  move=> lt1_a /coatomP -/(_ lt1_a) h; move/homo_rank: lt1_a.
+  rewrite (rwP eqP) eqn_leq => ->; rewrite andbT leqNgt.
+  apply/negP => /(graded_rank (lex1 _)) [x].
+  by rewrite andbC lt_neqAle -andbA => /and3P[/h].
++ move=> h; have lt1_a: a < 1 by rewrite -rank_gt1 h.
+  apply/coatomP=> // x neq1_x /homo_rank; rewrite -ltnS -h.
+  by apply/negP; rewrite -leqNgt rank_gt1 lt_neqAle neq1_x lex1.
+Qed.
+End GradedCoAtomicTheory.
