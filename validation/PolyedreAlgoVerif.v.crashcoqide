@@ -16,7 +16,6 @@ Fixpoint scalar_product (A: seq bigQ) (B: seq bigQ) :=
 end.
 
 Definition Line := seq bigQ.
-Definition Point := seq bigQ.
 Definition Matrix := seq (Line).
 
 (*We assume that there is no size issues.
@@ -64,145 +63,155 @@ Fixpoint matrix_times_matrix (M:Matrix) (N:Matrix) :=
 
 (*Now we have basic tools on matrix, we can define data structures on polyhedrons.
 There will be Polyhedron, understood as a set like {x | Ax \leq b}
-And Basis, the set of the inequalities activated by a face, understood as {x | Ax = b} *)
+And ActiveFace, the set of the inequalities activated by a face, understood as {x | Ax = b} *)
 
-Definition Equation := prod Line bigQ.
-Definition System := seq Equation.
-Inductive Face := Fa : System -> Face.
-Inductive Polyhedron := Po : System -> Polyhedron.
+Record Polyhedron :=
+  Po { A : Matrix ; b : Line }.
 
+Record ActiveFace := AF {A' : Matrix; b' : Line}.
 
-Fixpoint isIn_system (x:Point) (S:System):= match S with
-  | nil  => true
-  | E :: S0 => match E with
-    |pair L v  =>  match (scalar_product x L) ?= v with
-      |Gt => false
-      |_ => isIn_system x S0
-       end
-     end
+Fixpoint isIn_matrix (x:Line) (A:Matrix) (b: Line):=
+  match A,b with
+  | nil, _ => true
+  | _, nil => true
+  | (L :: A0), (v :: b0) => match (scalar_product x L) ?= v with
+    |Gt => false
+    |_ => isIn_matrix x A0 b0
+    end
   end.
 
 Definition isIn (x:Line) (P : Polyhedron) := match P with
-  |Po S' => isIn_system x S'
+  |Po A b => isIn_matrix x A b
   end.
 
 
-Fixpoint Point_to_Face_system (x:Point) (S:System) := match S with
-  |nil => Fa nil
-  |(pair L v)::S0=> match (scalar_product x L) ?= v with
-    |Eq => match Point_to_Face_system x S0 with
-      |Fa S1 => Fa ((pair L v)::S1)
+Fixpoint Point_to_ActiveFace_matrix (x:Line) (A:Matrix) (b:Line) := match A,b with
+  |nil, _ => (AF nil nil)
+  |_, nil => (AF nil nil)
+  |L :: A0, v :: b0 => match (scalar_product x L) ?= v with
+    |Eq => match Point_to_ActiveFace_matrix x A0 b0 with
+      |AF A1 b1 => AF (L::A1) (v::b1)
       end
-    |_ => Point_to_Face_system x S0
+    |_ => Point_to_ActiveFace_matrix x A0 b0
     end
   end.
 
-Definition Point_to_Face (x:Line) (P : Polyhedron) := match P with
-  |Po S' => Point_to_Face_system x S'
+Definition Point_to_ActiveFace (x:Line) (P : Polyhedron) := match P with
+  |Po A b => Point_to_ActiveFace_matrix x A b
   end.
 
-Fixpoint System_to_Matrix (S:System) :Matrix := match S with
-  |nil => nil
-  |(pair L v)::S0 => L :: (System_to_Matrix S0)
-  end.
-
-Fixpoint Matrix_to_System (A:Matrix) (b:Line) :System := match A,b with
-  |nil,_ => nil
-  |_, nil => nil
-  |(L::A0), (v::b0) => (pair L v)::(Matrix_to_System A0 b0)
-  end.
+(*We need now the notion of matrix rank in order to compute the verification that a face is a vertex*)
 
 (*We compute here the Gauss Elimination*)
 
-Fixpoint remove_column (S:System) :System:=
-  match S with
+Fixpoint remove_column (M:Matrix) :=
+  match M with
   |nil => nil
-  |(pair nil v)::S0 => (pair nil v)::(remove_column S0)
-  |(pair (a::L) v)::S0 => (pair L v)::(remove_column S0)
+  |L :: M0 => match L with
+    |nil => nil :: (remove_column M0)
+    |a :: L0 => L0 :: (remove_column M0)
+    end
   end.
 
-Fixpoint finding_pivot (S:System):System:=
-    match S with
-    |nil => S
-    |(pair L v)::S0=> match L with
-      |nil => finding_pivot S0
+Print seq.
+
+Fixpoint finding_pivot_aux (A : Matrix) (b: Line) :=
+    match A, b with
+    |nil, _ => AF nil nil
+    |_, nil => AF nil nil
+    |L :: A0, v::b0 => match L with
+      |nil => finding_pivot_aux A0 b0
       |a :: L0 => match a ?= BigQ.zero with
-        |Eq => rcons (finding_pivot S0) (pair L v)
-        |_ => (pair (scale_line (BigQ.inv a) L) ((BigQ.inv a) * v) ) :: S0
+        |Eq => match finding_pivot_aux A0 b0 with
+          |AF A' b' => AF (rcons A' L) (rcons b' v)
+          end
+        |_ => AF ((scale_line (BigQ.inv a) L) :: A0) (((BigQ.inv a)*v) :: b0)
       end
     end
   end.
 
+Definition finding_pivot (Active : ActiveFace) := match Active with
+  |AF A b => finding_pivot_aux A b
+  end.
 
-Fixpoint elimination (E:Equation) (S:System) :System:= match E with
-  |pair L v => match S with
-    |nil => nil
-    |(pair L0 v0)::S0 => match L0 with
-      |nil => elimination E S0 
-      |a :: L1 => match a ?= BigQ.zero with
-        |Eq => (pair L0 v0)::(elimination E S0)
-        |_ => (pair (add_lines L (scale_line (- BigQ.inv a) L0)) ((v0*(- BigQ.inv a) + v)))::(elimination E S0)
+Fixpoint elimination_aux (L:Line) (v:bigQ) (A:Matrix) (b : Line):=
+  match A,b with
+  |nil, _ => AF nil nil
+  |_, nil => AF nil nil
+  |L0 :: A0, v0 :: b0 => match L0 with
+    |nil => elimination_aux L v A0 b0 
+    |a :: L1 => match elimination_aux L v A0 b0 with
+      |AF A1 b1 => match a ?= BigQ.zero with
+        |Eq => AF (L0::A1) (v0::b1)
+        |_ => AF ((add_lines L (scale_line (- BigQ.inv a) L0)) :: A1) ((v0*(- BigQ.inv a) + v):: b1)
         end
       end
     end
   end.
 
-
-Fixpoint add_column (S:System) :System:= match S with
-  |nil => nil
-  |(pair L v) :: S0 => (pair (0 :: L) v) :: (add_column S0)
+Definition elimination (L:Line) (v:bigQ) (Active:ActiveFace) := match Active with
+  |AF A b => elimination_aux L v A b
   end.
 
-Check add_column.
 
-Definition Gauss (S'':System) :System:= let fix aux (S':System) (n:nat) :=
-  match n with
-  |O => nil
-  |S(p) => match finding_pivot S' with
-    |nil => nil
-    |E :: S0=> match elimination E S0 with
-      |S1 => E :: (add_column (aux (remove_column S1) p))
+Fixpoint add_column (M:Matrix) := match M with
+  |nil => nil
+  |L :: M0 => (0 :: L) :: (add_column M0)
+  end.
+
+Print nat.
+
+Fixpoint Gauss_aux (Active: ActiveFace) (n:nat) := match n with
+  |O => AF nil nil
+  |S(p) => match finding_pivot Active with
+    |AF A b => match A,b with
+      |nil, _ => AF nil nil
+      |_, nil => AF nil nil
+      |L :: A0, v :: b0 => match elimination L v (AF A0 b0) with
+        |AF A1 b1 => match Gauss_aux (AF (remove_column A1) b1) p with
+          |AF A2 b2 => AF (L :: (add_column A2)) (v :: b2)
+          end
+        end
       end
+    end  
+  end.
+
+Definition Example : Matrix := [::  [:: 2; 1; 1];
+                              [:: 1; 0; 1];
+                              [:: 0; 0; 1]].
+
+Definition Ac := AF Example [:: 1;2;3;4].
+
+Compute Gauss_aux Ac 5.
+
+Definition Gauss (Active : ActiveFace) := match Active with
+  |AF A b => match A with
+    |nil => AF nil nil
+    |L :: A0 => Gauss_aux Active (length L)
     end
-  end in
-  aux S'' (length S'').
-
-
-Definition Example : System := [::  ([:: 2; 1; 1], 1);
-                              ([:: 1; 0; 1],2);
-                              ([:: 1; 1; 0],3)].
-
-Compute Gauss Example.
-
+  end.
 
 (*Now we have the reduced form, we will work on it to obtain what we want*)
 
-Definition rank (A:Matrix) : nat := let fix aux (S':System) (n:nat): nat:= match n with
-  |O => O
-  |S(p) => match S' with
-      |nil => O
-      |(pair L v)::S0 => match L with
+Print List.forallb.
+Print BigQ.eq_bool.
+
+
+
+Definition rank (Active: ActiveFace) : nat := let fix aux (A:Matrix) (b:Line) : nat:= 
+    match A,b with
+      |nil, _ => Nat.zero
+      |_, nil => Nat.zero
+      |(L::A0), (v::b0) => match L with
         |a::L0 => if BigQ.eq_bool BigQ.zero a
-          then aux (remove_column S0) p
-          else S (aux (remove_column S0) p)
-        |_ => aux S0 p
+          then aux (remove_column A0) b0
+          else S (aux (remove_column A0) b0)
+        |_ => aux A0 b0
         end
       end
-  end
-  in let S'' := (Gauss (Matrix_to_System A (nseq (length A) 0))) in  aux S''  (length S'').
-
-Compute rank (System_to_Matrix Example).
-
-Definition System_to_Point (S'':System) : Point:=
-  let fix aux (S':System)  (n:nat):= match n with
-    |O => nil
-    |S(p) => match S' with
-      |nil => nil
-      |(pair L v)::S0 => let P := aux (remove_column S0) p in (BigQ.red (v - (scalar_product (0::P) L)))::P
-      end
-    end
-  in aux (Gauss S'') (length S'').
-
+  in match (Gauss Active) with
+    |AF A b => aux A b
+    end.
 
 Definition isVertex (x:Line) (P:Polyhedron) := match P with
   |Po (L::A0) b => match Point_to_ActiveFace x P with
@@ -229,7 +238,15 @@ Compute isVertex PointEx PCube.
 
 (*We assume that for this function, the rank of the matrix is n, ie it's a vertex*)
 
-
+Definition ActiveFace_to_Point (Active : ActiveFace) :=
+  let fix aux (A:Matrix) (b:Line) := match A,b with
+    |nil, _ => nil
+    |_, nil => nil
+    |(L :: A0),(v::b0) => let P := aux (remove_column A0) b0 in (v - (scalar_product (0::P) L))::P
+    end
+  in match Gauss Active with
+  |AF A b => aux A b
+  end.
 
 Definition AC := Point_to_ActiveFace PointEx PCube.
 Compute ActiveFace_to_Point AC.

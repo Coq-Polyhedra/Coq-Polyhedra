@@ -5,3 +5,4 @@
 -arg -w -arg -uniform-inheritance
 
 VerifPolyedra.v
+PolyedreAlgoVerif.v
