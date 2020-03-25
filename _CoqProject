@@ -1,5 +1,4 @@
 -R theories Polyhedra
--R validation Polyhedra
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -redundant-canonical-projection
