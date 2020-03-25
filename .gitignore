@@ -4,6 +4,7 @@
 *.v.d
 #*.v#
 .coqdeps.d
+*.crashcoqide
 
 Makefile.coq
 Makefile.coq.conf
