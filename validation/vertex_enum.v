@@ -1,6 +1,7 @@
 From mathcomp Require Import all_ssreflect. (* all_algebra finmap.
 Require Import vector_order extra_matrix row_submx.*)
 
+Load order.
 Import Order.Theory.
 
 Set Implicit Arguments.
@@ -15,7 +16,7 @@ Section Abstract.
 Variable (T : finType) (P : pred T) (R : rel T) (neighbour: T -> {set T}).
 Hypothesis Pclosed : closed R P.
 Hypothesis Hconnected : forall x, x \in P -> (closure R (pred1 x) \subset P).
-Hypothesis Hneighbor : forall x y, R x y -> y \in neighbour x.
+Hypothesis Hneighbour : forall x y, R x y -> y \in neighbour x.
 
 Variable (L : {set T}).
 (* Check that L is precisely the set of inhabitants of T *)
@@ -26,10 +27,21 @@ Definition pivot_check x :=
 Definition closedness_check :=
   [forall x in L, pivot_check x].
 
+Locate "!=".
+Print set0Pn.
+
 Lemma foo :
   (L \subset P) -> L != set0 -> closedness_check -> L =i P.
-Admitted.
 
+Proof.
+move => LinP.
+move => LnotEmpty.
+move => Lclosed.
+unfold closedness_check in Lclosed.
+unfold pivot_check in Lclosed.
+case : (set0Pn  L) => [e | ne]; last first.
+
+Qed.
 End Abstract.
 
 (*
