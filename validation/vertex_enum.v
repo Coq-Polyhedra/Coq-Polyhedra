@@ -15,32 +15,39 @@ Section Abstract.
 
 Variable (T : finType) (P : pred T) (R : rel T) (neighbour: T -> {set T}).
 Hypothesis Pclosed : closed R P.
-Hypothesis Hconnected : forall x, x \in P -> (closure R (pred1 x) \subset P).
+Hypothesis Hconnected : forall x, x \in P -> (P \subset closure R (pred1 x)).
 Hypothesis Hneighbour : forall x y, R x y -> y \in neighbour x.
 
 Variable (L : {set T}).
 (* Check that L is precisely the set of inhabitants of T *)
 
 Definition pivot_check x :=
-  [forall y, (y \in neighbour x) ==> (x \in L)].
+  [forall y, (y \in neighbour x) ==> (y\in L)].
 
 Definition closedness_check :=
   [forall x in L, pivot_check x].
 
-Locate "!=".
-Print set0Pn.
 
 Lemma foo :
   (L \subset P) -> L != set0 -> closedness_check -> L =i P.
 
+Search "subset" "\in".
+
 Proof.
-move => LinP.
-move => LnotEmpty.
-move => Lclosed.
+move => LsubsetP LnotEmpty Lclosed.
+apply /subset_eqP.
+case /set0Pn: LnotEmpty => [x x_in_L].
 unfold closedness_check in Lclosed.
 unfold pivot_check in Lclosed.
-case : (set0Pn  L) => [e | ne]; last first.
+apply /andP.
+split.
+  by [].
 
+
+
+
+
+  
 Qed.
 End Abstract.
 
