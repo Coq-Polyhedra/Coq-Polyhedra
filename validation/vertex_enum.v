@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect. (* all_algebra finmap.
 Require Import vector_order extra_matrix row_submx.*)
 
-Load order.
+(*Load order.*)
 Import Order.Theory.
 
 Set Implicit Arguments.
@@ -30,24 +30,16 @@ Definition closedness_check :=
 
 Lemma foo :
   (L \subset P) -> L != set0 -> closedness_check -> L =i P.
-
-Search "subset" "\in".
-
+(*Search "subset" "\in".*)
 Proof.
-move => LsubsetP LnotEmpty Lclosed.
-apply /subset_eqP.
-case /set0Pn: LnotEmpty => [x x_in_L].
-unfold closedness_check in Lclosed.
-unfold pivot_check in Lclosed.
-apply /andP.
-split.
-  by [].
+move => LsubsetP /set0Pn [x0 x0_in_L] Lclosed.
+rewrite /closedness_check /pivot_check in Lclosed.
+apply/subset_eqP/andP; split => //.
+apply/subsetP => x x_in_P.
+have x0_in_P: x0 \in P.
+- by move: x0 x0_in_L; apply/subsetP.
+move/(_ _ x0_in_P): Hconnected.
 
-
-
-
-
-  
 Qed.
 End Abstract.
 
