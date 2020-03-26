@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect. (* all_algebra finmap.
 Require Import vector_order extra_matrix row_submx.*)
 
-(*Load order.*)
+Load order.
 Import Order.Theory.
 
 Set Implicit Arguments.
@@ -28,14 +28,27 @@ Context {T : eqType} (R : rel T) (P : pred T).
 Definition irelation :=
   [rel x y | [&& R x y, P x & P y]].
 
-Lemma irel_refl : reflexive R -> reflexive irelation.
-Proof. Admitted.
+Lemma irel_refl : reflexive R -> {in P, reflexive irelation}.
+Proof.
+by move=> reflx x /= px; rewrite [P x]px reflx.
+Qed.
 
 Lemma irel_sym : symmetric R -> symmetric irelation.
-Proof. Admitted.
+Proof.
+by move => symR x y /=; rewrite symR !andbA andbAC.
+Qed.
 
-Lemma irel_trans : transitive R -> transitive irelation.
-Proof. Admitted.
+
+Lemma irel_trans :transitive R -> transitive irelation.
+Proof.
+move => tr y x z /and3P [rxy px py] /and3P [ryz _ pz] /=.
+by rewrite (tr y) // px pz.
+Qed.
+
+
+
+
+
 End IRelation.
 
 Section Abstract.
