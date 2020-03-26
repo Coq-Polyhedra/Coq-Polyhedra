@@ -11,33 +11,69 @@ Unset Printing Implicit Defensive.
 (*Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.*)
 
-Section Abstract.
+(*
+On se donne un type fini T (par ex. les sous-ensembles de [m] de cardinal n), un predicat P sur T (par ex, le fait d'être une base admissible), et une relation R d'adjacence sur T.
+On veut montrer qu'une liste L informellement calculée est précisément l'ensemble des x : T vérifiant P x.
+On note R_P la relation induite par R sur P.
+Hypothèse : P est connexe au sens de R_P, ie étant donnés x, y vérifiant P, il existe un chemin dans le graphe de R_P qui relie x et y.
+Hypothese : on a une fonction qui, étant donné x : T, fournit un sur-ensemble des voisins de x selon R.
+Hypothèse : pour tout x \in L, et pour tout voisin y de X selon R, y vérifie P -> y \in L
 
+Thm : si L est non-vide et vérifie L \subset P, alors L =i P.
+*)
+
+Section IRelation.
+Context {T : eqType} (R : rel T) (P : pred T).
+
+Definition irelation :=
+  [rel x y | [&& R x y, P x & P y]].
+
+Lemma irel_refl : reflexive R -> reflexive irelation.
+Proof. Admitted.
+
+Lemma irel_sym : symmetric R -> symmetric irelation.
+Proof. Admitted.
+
+Lemma irel_trans : transitive R -> transitive irelation.
+Proof. Admitted.
+End IRelation.
+
+Section Abstract.
 Variable (T : finType) (P : pred T) (R : rel T) (neighbour: T -> {set T}).
-Hypothesis Pclosed : closed R P.
-Hypothesis Hconnected : forall x, x \in P -> (P \subset closure R (pred1 x)).
+
+Let R_P := irelation R P.
+
+Hypothesis R_P_connected : forall x y, x \in P -> y \in P -> connect R_P x y.
 Hypothesis Hneighbour : forall x y, R x y -> y \in neighbour x.
 
 Variable (L : {set T}).
 (* Check that L is precisely the set of inhabitants of T *)
 
 Definition pivot_check x :=
-  [forall y, (y \in neighbour x) ==> (y\in L)].
+  forall y, y \in neighbour x -> y \in P -> y \in L.
 
 Definition closedness_check :=
-  [forall x in L, pivot_check x].
-
+  forall x, x \in L -> pivot_check x.
 
 Lemma foo :
   (L \subset P) -> L != set0 -> closedness_check -> L =i P.
 (*Search "subset" "\in".*)
 Proof.
-move => LsubsetP /set0Pn [x0 x0_in_L] Lclosed.
-rewrite /closedness_check /pivot_check in Lclosed.
+(*
+tactic/view: pt-gen => pt-intro.
+pt-gen -> view -> tactic -> pt-intro.
+*)
+
+move=> LsubsetP /set0Pn [x0 x0_in_L] Lclosed.
+(* rewrite /closedness_check /pivot_check in Lclosed. *)
 apply/subset_eqP/andP; split => //.
+move/subsetP: (LsubsetP) => /(_ _ x0_in_L) x0_in_P.
+suff closed_RL: closed R L.
++ apply: (subset_trans (Hconnected x0_in_P)).
+  
+
 apply/subsetP => x x_in_P.
-have x0_in_P: x0 \in P.
-- by move: x0 x0_in_L; apply/subsetP.
+
 move/(_ _ x0_in_P): Hconnected.
 
 Qed.
