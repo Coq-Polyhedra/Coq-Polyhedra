@@ -1,7 +1,7 @@
 From mathcomp Require Import all_ssreflect. (* all_algebra finmap.
 Require Import vector_order extra_matrix row_submx.*)
 
-Load order.
+(*Load order.*)
 Import Order.Theory.
 
 Set Implicit Arguments.
@@ -45,11 +45,26 @@ move => tr y x z /and3P [rxy px py] /and3P [ryz _ pz] /=.
 by rewrite (tr y) // px pz.
 Qed.
 
-
-
-
-
 End IRelation.
+
+Section Connectedness.
+
+Context {T : finType} (P : pred T) (R : rel T).
+
+Let R_P := irelation R P.
+
+Definition connected := forall x y : T, x \in P -> y \in P -> connect R_P x y.
+
+Lemma connectedW (Q : pred T) :
+  connected -> forall x0, x0 \in P -> x0 \in Q -> (forall x y, x \in Q -> R_P x y -> y \in Q) -> {subset P <= Q}.
+Proof.
+move => Hconnected x0 x0_in_P x0_in_Q neighb x x_in_P.
+move/(_ _ _ x0_in_P x_in_P)/connectP: Hconnected => [p p_path ->].
+elim: p x0 {x0_in_P} x0_in_Q p_path => //= [y p' H_ind x0 x0_in_Q /andP [R_P_xy p'_path]].
+by apply/H_ind => //; apply/neighb: R_P_xy.
+Qed.
+
+End Connectedness.
 
 Section Abstract.
 Variable (T : finType) (P : pred T) (R : rel T) (neighbour: T -> {set T}).
@@ -83,7 +98,7 @@ apply/subset_eqP/andP; split => //.
 move/subsetP: (LsubsetP) => /(_ _ x0_in_L) x0_in_P.
 suff closed_RL: closed R L.
 + apply: (subset_trans (Hconnected x0_in_P)).
-  
+
 
 apply/subsetP => x x_in_P.
 
