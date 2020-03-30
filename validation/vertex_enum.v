@@ -72,16 +72,13 @@ Variable (T : finType) (P : pred T) (R : rel T) (neighbour: T -> {set T}).
 Let R_P := irelation R P.
 
 Hypothesis R_P_connected : forall x y, x \in P -> y \in P -> connect R_P x y.
-Hypothesis Hneighbour : forall x y, R x y -> y \in neighbour x.
+Hypothesis Hneighbour : forall x y, R_P x y -> y \in neighbour x.
 
 Variable (L : {set T}).
 (* Check that L is precisely the set of inhabitants of T *)
 
-Definition pivot_check x :=
-  forall y, y \in neighbour x -> y \in P -> y \in L.
-
 Definition closedness_check :=
-  forall x, x \in L -> pivot_check x.
+  forall x, x \in L -> forall y, y \in neighbour x -> y \in P -> y \in L.
 
 Lemma foo :
   (L \subset P) -> L != set0 -> closedness_check -> L =i P.
@@ -96,15 +93,13 @@ move=> LsubsetP /set0Pn [x0 x0_in_L] Lclosed.
 (* rewrite /closedness_check /pivot_check in Lclosed. *)
 apply/subset_eqP/andP; split => //.
 move/subsetP: (LsubsetP) => /(_ _ x0_in_L) x0_in_P.
-suff closed_RL: closed R L.
-+ apply: (subset_trans (Hconnected x0_in_P)).
-
-
-apply/subsetP => x x_in_P.
-
-move/(_ _ x0_in_P): Hconnected.
-
+apply/subsetP/(connectedW R_P_connected x0_in_P) => //.
+move => x y x_in_L R_P_x_y.
+apply/(Lclosed _ x_in_L).
+- exact: Hneighbour.
+- by case/and3P: R_P_x_y.
 Qed.
+
 End Abstract.
 
 (*
