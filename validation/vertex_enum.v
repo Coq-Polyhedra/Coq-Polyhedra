@@ -79,13 +79,22 @@ Definition connected := forall x y, x \in P -> y \in P -> (connect irel) x y.
 Lemma connectedW (Q : pred T) :
   connected -> closed irel Q -> forall x0, x0 \in P -> x0 \in Q -> {subset P <= Q}.
 Proof.
-move => (*/connectedP*) conn Q_closed x0 x0_in_P x0_in_Q x x_in_P.
+move => conn Q_closed x0 x0_in_P x0_in_Q x x_in_P.
 move/(_ _ _  x0_in_P x_in_P): conn => conn.
 by rewrite -(closed_connect Q_closed conn).
 Qed.
 
-End Connectedness.
+Lemma check_enum (Q : pred T) :
+  connected -> closed irel Q -> {subset Q <= P} -> forall x0, x0 \in Q -> Q =i P.
+Proof.
+move => conn Q_closed Q_sub_P x0 x0_in_Q x; apply/idP/idP.
+- exact: Q_sub_P.
+- by apply/(connectedW conn Q_closed _ x0_in_Q)/Q_sub_P.
+Qed.
 
+End IRelation.
+
+(*
 Section Abstract.
 Variable (T : finType) (P : pred T) (R : rel T) (neighbour: T -> {set T}).
 
@@ -114,3 +123,4 @@ apply/(Lclosed _ x_in_L).
 Qed.
 
 End Abstract.
+*)
