@@ -22,11 +22,10 @@ Thm : si L est non-vide et vérifie L \subset P, alors L =i P.
 *)
 
 Section IRelation.
-Context (T : finType) (e : rel T) (P : {pred T}).
+Context (T : finType) (e : rel T) (P : pred T).
 
 Definition irel :=
   [rel x y | [&& e x y, (x \in P) & (y \in P)]].
-
 
 Lemma irel_refl : reflexive e -> {in P, reflexive irel}.
 Proof.
@@ -61,6 +60,7 @@ Lemma connectedP :
 Proof.
 Admitted.*)
 
+(*
 Lemma connect_irel :
   closed e P -> forall x y, x \in P -> (connect e) x y -> (connect irel) x y.
 Proof.
@@ -72,7 +72,7 @@ have x_in_P: x \in P by rewrite -(e_closed _ _ e_xy).
 move/(_ _ x_in_P p_path): ind => /connectP [p' p'_path ->].
 apply/connectP; exists (x :: p') => //=.
 by apply/andP; split; first apply/and3P.
-Qed.
+Qed.*)
 
 Definition connected := forall x y, x \in P -> y \in P -> (connect irel) x y.
 
@@ -93,6 +93,19 @@ move => conn Q_closed Q_sub_P x0 x0_in_Q x; apply/idP/idP.
 Qed.
 
 End IRelation.
+
+Section Closedness.
+
+Variable (T : finType) (P : pred T) (e : rel T) (neighbors : T -> pred T) (L : pred T).
+
+Hypothesis Hneighbors: forall x y, (irel e P) x y -> y \in neighbors x.
+
+Definition point_check (x : T) :=
+  (x \in P) && [ forall y in (neighbors x), (y \in P) ==> (y \in L)] .
+
+Lemma closed_check L :
+  [forall x in L, point_check x] -> closed (irel e P) L.
+
 
 (*
 Section Abstract.
