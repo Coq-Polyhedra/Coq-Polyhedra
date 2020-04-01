@@ -1,14 +1,16 @@
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import all_ssreflect all_algebra.
+Require Import vector_order extra_matrix row_submx simplex.
 
 (*Load order.*)
 Import Order.Theory.
+Import Simplex.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
-(*Local Open Scope ring_scope.
-Import GRing.Theory Num.Theory.*)
+Local Open Scope ring_scope.
+Import GRing.Theory Num.Theory.
 
 (*
 On se donne un type fini T (par ex. les sous-ensembles de [m] de cardinal n), un predicat P sur T (par ex, le fait d'être une base admissible), et une relation R d'adjacence sur T.
@@ -96,16 +98,46 @@ End IRelation.
 
 Section Closedness.
 
-Variable (T : finType) (P : pred T) (e : rel T) (neighbors : T -> pred T) (L : pred T).
+Variable (T : finType) (P : pred T) (e : rel T) (neighbors : T -> pred T) (Q : pred T).
 
 Hypothesis Hneighbors: forall x y, (irel e P) x y -> y \in neighbors x.
 
 Definition point_check (x : T) :=
-  (x \in P) && [ forall y in (neighbors x), (y \in P) ==> (y \in L)] .
+  (x \in P) && [ forall y in (neighbors x), (y \in P) ==> (y \in Q)] .
 
-Lemma closed_check L :
-  [forall x in L, point_check x] -> closed (irel e P) L.
+Lemma closed_check :
+  [forall x in Q, point_check x] -> closed (irel e P) Q.
+Admitted.
 
+End Closedness.
+
+Section Foo.
+
+Variable (R : realFieldType) (m n : nat) (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
+
+Definition adj (I J : prebasis m n) := (#| I :&: J | == n-1)%N.
+
+Definition fbasis (bas : prebasis m n) :=
+  if row_free (row_submx A bas) then
+    let x := (qinvmx (prebasis_card bas) (row_submx A bas)) *m (row_submx b bas) in
+    (* A_bas *m x = b_bas *)
+    (A *m x) >=m b
+  else false.
+
+Definition admissible (bas : {set 'I_m}) (p : 'I_m * 'I_m) :=
+  (p.1 \in bas) && (p.2 \notin bas).
+
+Definition pivot (bas : {set 'I_m}) (p : 'I_m * 'I_m) :=
+  (p.2 |: (bas :\ p.1)).
+
+Lemma card_pivot (bas : prebasis m n) p :
+  admissible bas p -> #| (pivot bas p)| == n.
+Admitted.
+
+Definition neighbors (bas : prebasis m n) :=
+  [set (insubd bas (pivot bas p)) | p : ('I_m * 'I_m) & (admissible bas p)].
+
+End Foo.
 
 (*
 Section Abstract.
