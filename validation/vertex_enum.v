@@ -1,5 +1,4 @@
-From mathcomp Require Import all_ssreflect. (* all_algebra finmap.
-Require Import vector_order extra_matrix row_submx.*)
+From mathcomp Require Import all_ssreflect.
 
 (*Load order.*)
 Import Order.Theory.
@@ -23,45 +22,66 @@ Thm : si L est non-vide et vérifie L \subset P, alors L =i P.
 *)
 
 Section IRelation.
-Context {T : eqType} (R : rel T) (P : pred T).
+Context (T : finType) (e : rel T) (P : {pred T}).
 
-Definition irelation :=
-  [rel x y | [&& R x y, P x & P y]].
+Definition irel :=
+  [rel x y | [&& e x y, (x \in P) & (y \in P)]].
 
-Lemma irel_refl : reflexive R -> {in P, reflexive irelation}.
+
+Lemma irel_refl : reflexive e -> {in P, reflexive irel}.
 Proof.
-by move=> reflx x /= px; rewrite [P x]px reflx.
+by move=> reflx x /= px; rewrite px reflx.
 Qed.
 
-Lemma irel_sym : symmetric R -> symmetric irelation.
+Lemma irel_sym : symmetric e -> symmetric irel.
 Proof.
 by move => symR x y /=; rewrite symR !andbA andbAC.
 Qed.
 
-
-Lemma irel_trans :transitive R -> transitive irelation.
+Lemma irel_trans : transitive e -> transitive irel.
 Proof.
 move => tr y x z /and3P [rxy px py] /and3P [ryz _ pz] /=.
 by rewrite (tr y) // px pz.
 Qed.
 
-End IRelation.
+Lemma irel_mem x y : irel x y -> ((x \in P) * (y \in P))%type.
+Proof.
+by case/and3P => _ -> ->.
+Qed.
 
-Section Connectedness.
+Lemma closed_irel : closed irel P.
+Proof.
+by move => x y /irel_mem h; rewrite !h.
+Qed.
 
-Context {T : finType} (P : pred T) (R : rel T).
+(*Definition connected := (n_comp irel P == 1)%N.
 
-Let R_P := irelation R P.
+Lemma connectedP :
+  connect_sym irel -> reflect (forall x y, x \in P -> y \in P -> (connect irel) x y) connected.
+Proof.
+Admitted.*)
 
-Definition connected := forall x y : T, x \in P -> y \in P -> connect R_P x y.
+Lemma connect_irel :
+  closed e P -> forall x y, x \in P -> (connect e) x y -> (connect irel) x y.
+Proof.
+move => e_closed x y x_in_P.
+case/connectP => p p_path ->.
+elim: p x x_in_P p_path => [//= | x p /= ind].
+move => {}y y_in_P /andP [e_xy p_path].
+have x_in_P: x \in P by rewrite -(e_closed _ _ e_xy).
+move/(_ _ x_in_P p_path): ind => /connectP [p' p'_path ->].
+apply/connectP; exists (x :: p') => //=.
+by apply/andP; split; first apply/and3P.
+Qed.
+
+Definition connected := forall x y, x \in P -> y \in P -> (connect irel) x y.
 
 Lemma connectedW (Q : pred T) :
-  connected -> forall x0, x0 \in P -> x0 \in Q -> (forall x y, x \in Q -> R_P x y -> y \in Q) -> {subset P <= Q}.
+  connected -> closed irel Q -> forall x0, x0 \in P -> x0 \in Q -> {subset P <= Q}.
 Proof.
-move => Hconnected x0 x0_in_P x0_in_Q neighb x x_in_P.
-move/(_ _ _ x0_in_P x_in_P)/connectP: Hconnected => [p p_path ->].
-elim: p x0 {x0_in_P} x0_in_Q p_path => //= [y p' H_ind x0 x0_in_Q /andP [R_P_xy p'_path]].
-by apply/H_ind => //; apply/neighb: R_P_xy.
+move => (*/connectedP*) conn Q_closed x0 x0_in_P x0_in_Q x x_in_P.
+move/(_ _ _  x0_in_P x_in_P): conn => conn.
+by rewrite -(closed_connect Q_closed conn).
 Qed.
 
 End Connectedness.
@@ -82,15 +102,8 @@ Definition closedness_check :=
 
 Lemma foo :
   (L \subset P) -> L != set0 -> closedness_check -> L =i P.
-(*Search "subset" "\in".*)
 Proof.
-(*
-tactic/view: pt-gen => pt-intro.
-pt-gen -> view -> tactic -> pt-intro.
-*)
-
 move=> LsubsetP /set0Pn [x0 x0_in_L] Lclosed.
-(* rewrite /closedness_check /pivot_check in Lclosed. *)
 apply/subset_eqP/andP; split => //.
 move/subsetP: (LsubsetP) => /(_ _ x0_in_L) x0_in_P.
 apply/subsetP/(connectedW R_P_connected x0_in_P) => //.
@@ -101,39 +114,3 @@ apply/(Lclosed _ x_in_L).
 Qed.
 
 End Abstract.
-
-(*
-Section Enumeration.
-
-Context {R : realFieldType} {m n : nat}.
-Context {A : 'M[R]_(m,n)} {b : 'cV[R]_m} {L : {fset 'cV[R]_n}}.
-
-Lemma pivot_card (I : {set 'I_m}) (i j : 'I_m) :
-  i \in I -> j \notin I -> #| j |: (I :\ i) | = n.
-Admitted.
-
-Definition is_basis_of (x : 'cV[R]_n) (I : {set 'I_m}) :=
-  let A_I := row_submx A I in
-  (#| I | == n) && (row_free A_I) && (A_I *m x == row_submx b I).
-
-Definition pivot_check (I : {set 'I_m}) (i j : 'I_m) :=
-  match @idP (i \in I), @idP (j \notin I) with
-  | ReflectT i_in_I, ReflectT j_notin =>
-    let J := j |: (I :\ i) in
-    let A_J := row_submx A J in
-    if row_free A_J then
-      let y := (qinvmx (pivot_card i_in_I j_notin) A_J) *m (row_submx b J) in
-      ((A *m y) >=m b ==> (y \in L))
-    else
-      true
-  | _, _ => true
-  end.
-
-Definition neighborhood_check (x : 'cV[R]_n) :=
-  [forall I, is_basis_of x I ==> [forall i, [forall j, pivot_check I i j]]].
-
-Definition closedness_check (L : {fset 'cV[R]_n}) :=
-  [forall x : L, neighborhood_check (val x)].
-
-End Enumeration.
-*)
