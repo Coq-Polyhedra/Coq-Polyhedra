@@ -207,3 +207,11 @@ Time Eval vm_compute in
     all (check_point A b) (take 10%N bases_list0).
 
 End CheckPoint.
+
+Section Neighbour. 
+
+
+Definition neighbour (I J: seq nat) :bool :=
+  ((count (fun p => ~~(p.1 == p.2)) (zip I J)) == 1%N).
+
+End Neighbour.
