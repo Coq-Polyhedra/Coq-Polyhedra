@@ -1,4 +1,4 @@
--R . Polyhedra
+-R ../theories Polyhedra
 -arg -w -arg -notation-overridden
 -arg -w -arg -redundant-canonical-projection
 -arg -w -arg -projection-no-head-constant
