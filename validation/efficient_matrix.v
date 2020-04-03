@@ -1,4 +1,6 @@
 From mathcomp Require Import ssreflect ssrfun ssrbool seq ssrnat eqtype.
+Require Import bases_list.
+
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
@@ -97,10 +99,10 @@ Fixpoint find_pivot (top m : matrix) :=
 
 Fixpoint row_echelon (res m : matrix) n :=
   match n with
-  | 0 => res
+  | 0 => Some res
   | n'.+1 =>
     match find_pivot [::] m with
-    | None => [::]
+    | None => None
     | Some (x0, l0, bot, top) =>
       let bot' := scale_extract x0 l0 bot in
       (row_echelon ((x0 :: l0) :: res) (catrev top bot') n')
@@ -120,10 +122,9 @@ Fixpoint back_substitution (res : row) (m : matrix) :=
     end
   end.
 
-Definition solvem (m : matrix) (b : row) : row :=
+Definition solvem (m : matrix) (b : row) : option row :=
   let mext := col_block m (col_vector b) in
-  let mre := row_echelon [::] mext (row_size m) in
-  back_substitution [::] mre.
+  omap (back_substitution [::]) (row_echelon [::] mext (row_size m)).
 
 End Gauss.
 
@@ -131,10 +132,10 @@ Section Test.
 
 Let ex0 := [:: [:: 1; 2; 3]; [:: 10; 5; 6]; [:: 7; 8; 9]].
 Let pt0 := [:: 1; 4; 20].
-Let sol0 := solvem ex0 pt0.
+Let sol0 := odflt [::] (solvem ex0 pt0).
 Time Eval vm_compute in (subm (mapm BigQ.red (mulmtr ex0 [:: sol0])) (col_vector pt0)).
 
-Let A : matrix := [::
+Definition A : matrix := [::
 [::100;0;0;21;-7;0;0;0;0;0;0;0;0;0;0;1;1;0;0;0];
 [::100;0;0;16;-15;0;0;0;0;0;0;0;0;0;0;0;1;1;0;0];
 [::100;0;0;0;-32;0;0;0;0;0;0;0;0;0;0;0;0;1;1;0];
@@ -175,28 +176,34 @@ Let A : matrix := [::
 [::-100;-27;0;1#500;-1#80;0;0;0;0;0;0;0;0;100000;10000000;10000000;10000000;-100000000;0;0];
 [::-100;-27;0;1#500;-1#80;0;0;0;0;0;0;0;0;100000;10000000;10000000;10000000;100000000;-100000000;0];
 [::-100;-27;0;1#500;-1#80;0;0;0;0;0;0;0;0;100000;10000000;10000000;10000000;100000000;100000000;-1000000000]].
-Let b := nseq 40%N (-1).
+Definition b := nseq 40%N (-1).
 
-Let sol1 : row := [:: 338062210884181229/33806221088630922900;-196000/1239561439916467173;-56000/338062210886309229;1189000000/1239561439916467173;3713440000/3718684319749401519;-44903800/3718684319749401519;-71504098/6197807199582335865;35301640/112687403628769743;-4438000/1239561439916467173;-16982000/3718684319749401519;-5530000/1239561439916467173;-1918000/413187146638822391;-22316000/3718684319749401519;0;0;0;0;0;0;0].
+(*Let sol1 : row := [:: 338062210884181229/33806221088630922900;-196000/1239561439916467173;-56000/338062210886309229;1189000000/1239561439916467173;3713440000/3718684319749401519;-44903800/3718684319749401519;-71504098/6197807199582335865;35301640/112687403628769743;-4438000/1239561439916467173;-16982000/3718684319749401519;-5530000/1239561439916467173;-1918000/413187146638822391;-22316000/3718684319749401519;0;0;0;0;0;0;0].
 
 Time Eval vm_compute in (mapm BigQ.red (subm (mulmtr A [:: sol1]) (col_vector b))).
 Let A' : matrix := map (nth [::] A) (11 :: (iota 21 19))%N.
 Let b' : row := map (nth 0 b) (11 :: (iota 21 19))%N.
 Time Eval vm_compute in (subr (solvem A' b') sol1).
-
+*)
 
 End Test.
 
 Section CheckPoint.
 
-Definition check_point (I : seq nat) (A : matrix) (b: row):=
+Definition check_point (A : matrix) (b : row) (I : seq nat) :=
 (* calcule le point de base associé à I, et vérifie qu'il satisfait toutes les inégalités *)
-let A' := map (nth [::] A) I in
-let b' := map (nth 0 b) I in
-let x' := [:: solvem A' b'] in
-let r := trm (mulmtr A x') in
-if r is [:: r0] then
-  all (fun x => if x ?= 0 is Lt then false else true) (subr r0 b)
-  else false.
+  let A' := map (fun i => nth [::] A (i-1)%N) I in
+  let b' := map (fun i => (nth 0 b) (i-1)%N) I in
+  match solvem A' b' with
+  | None => false
+  | Some x' =>
+    let r := trm (mulmtr A [:: x']) in
+    if r is [:: r0] then
+      all (fun x => if x ?= 0 is Lt then false else true) (subr r0 b)
+    else false
+  end.
+
+Time Eval vm_compute in
+    all (check_point A b) (take 10%N bases_list0).
 
 End CheckPoint.
