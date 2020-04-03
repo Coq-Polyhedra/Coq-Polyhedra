@@ -189,8 +189,16 @@ End Test.
 
 Section CheckPoint.
 
-Definition check_point (I : seq nat) :=
-  (* calcule le point de base associé à I, et vérifie qu'il satisfait toutes les inégalités *)
-  false.
+
+Definition check_point (I : seq nat) (A : matrix) (b: row):=
+(* calcule le point de base associé à I, et vérifie qu'il satisfait toutes les inégalités *)
+let A' := map (nth [::] A) I in
+let b' := map (nth 0 b) I in
+let x' := [:: solvem A' b'] in
+let r := trm (mulmtr A x') in
+if r is [:: r0] then
+  all (fun x => if x ?= 0 is Lt then false else true) r0
+  else false.
+
 
 End CheckPoint.
