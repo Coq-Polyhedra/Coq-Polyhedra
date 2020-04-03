@@ -197,7 +197,7 @@ let b' := map (nth 0 b) I in
 let x' := [:: solvem A' b'] in
 let r := trm (mulmtr A x') in
 if r is [:: r0] then
-  all (fun x => if x ?= 0 is Lt then false else true) r0
+  all (fun x => if x ?= 0 is Lt then false else true) (subr r0 b)
   else false.
 
 
