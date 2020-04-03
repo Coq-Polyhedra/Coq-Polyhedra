@@ -200,3 +200,11 @@ if r is [:: r0] then
   else false.
 
 End CheckPoint.
+
+Section Neighbour. 
+
+
+Definition neighbour (I J: seq nat) :bool :=
+  ((count (fun p => ~~(p.1 == p.2)) (zip I J)) == 1%N).
+
+End Neighbour.
