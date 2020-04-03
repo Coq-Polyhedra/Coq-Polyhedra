@@ -6,5 +6,5 @@
 -arg -w -arg -ambiguous-paths
 -arg -w -arg -uniform-inheritance
 
-VerifPolyedra.v
-PolyedreAlgoVerif.v
+bases_list.v
+efficient_matrix.v
