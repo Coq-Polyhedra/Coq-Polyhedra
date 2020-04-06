@@ -216,8 +216,8 @@ End CheckPoint.
 Section Neighbour.
 
 Fixpoint add_elt (I:seq nat) (n:nat) := match I with
-  | [::] => [:: n]
-  | h::t => match Nat.compare h n with
+  |[::] => [:: n]
+  |h::t => match Nat.compare h n with
     |Eq => I
     |Lt => h::add_elt t n
     |Gt => n::h::t
@@ -240,5 +240,8 @@ Definition neighbour_search (I: seq nat) (m : nat) :=
 Definition check_neighbour (A:matrix) (b: row) (I: seq nat) :=
   let n_rows := size A in
   filter (check_point A b) (neighbour_search I n_rows).
+
+Definition test_neighbour (A:matrix) (b:row) (I:seq nat):=
+  size (check_neighbour A b I).S
 
 End Neighbour.
