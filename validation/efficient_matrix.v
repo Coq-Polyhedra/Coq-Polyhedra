@@ -108,34 +108,81 @@ Fixpoint row_echelon (res m : matrix) n :=
     end
   end.
 
-Fixpoint back_substitution (res : row) (m : matrix) :=
-  match m with
-  | [::] => res
-  | l :: m' =>
+Fixpoint back_substitution (res : row) (m : matrix) (b : row) :=
+  match m, b with
+  | [::], _ => res
+  | _, [::] => res
+  | l :: m', y :: b' =>
     match l with
     | [::] => [::]
     | x :: l' =>
-      let b := last x l' in
-      let y := BigQ.div_norm (BigQ.sub_norm b (dotr res l')) x in
-      back_substitution (y :: res) m'
+      let z := BigQ.div_norm (BigQ.sub_norm y (dotr res l')) x in
+      back_substitution (z :: res) m' b'
     end
   end.
 
 Definition solvem (m : matrix) (b : row) : option row :=
   let mext := col_block m (col_vector b) in
-  omap (back_substitution [::]) (row_echelon [::] mext (row_size m)).
+  match row_echelon [::] mext (row_size m) with
+  | None => None
+  | Some mext =>
+    let fix split_last (l : row) :=
+        match l with
+        | [::] => ([::], 0)
+        | [:: x] => ([::], x)
+        | x :: l' =>
+          let p := split_last l' in
+          (x :: p.1, p.2)
+        end
+    in
+    let (mext', b') :=
+        foldr
+          (fun l acc => let: (l', x) := split_last l in
+                     (l' :: acc.1, x :: acc.2))
+           ([::], [::]) mext
+    in
+    Some (back_substitution [::] mext' b')
+  end.
+
+(* TODO: implement the inverse computation (in cubic time) *)
+Definition invm (m : matrix) : option matrix :=
+  let nb_row := row_size m in
+  let mext := col_block m (identity nb_row) in
+  match row_echelon [::] mext nb_row with
+  | None => None
+  | Some mext =>
+    let fix split_last i (l : row) :=
+        match i with
+        | 0 => ([::], l)
+        | i'.+1 =>
+          match l with
+          | [::] => ([::], [::]) (* cannot happen because i > 0 *)
+          | x :: l' =>
+            let p := split_last i' l' in
+            (x :: p.1, p.2)
+          end
+        end
+    in
+    let: (_, (mext1, mext2)) :=
+        foldr (fun l p =>
+                 let: (i, res) := p in
+                 let: (l1, l2) := split_last i l in
+                 (i.-1, (l1 :: res.1, l2 :: res.2))) (nb_row, ([::], [::])) mext in
+    Some (trm (map (back_substitution [::] mext1) (trm mext2)))
+  end.
 
 End Gauss.
 
-(*
-Section Test.
+(*Section Test.
 
 Let ex0 := [:: [:: 1; 2; 3]; [:: 10; 5; 6]; [:: 7; 8; 9]].
 Let pt0 := [:: 1; 4; 20].
 Let sol0 := odflt [::] (solvem ex0 pt0).
-Time Eval vm_compute in (subm (mapm BigQ.red (mulmtr ex0 [:: sol0])) (col_vector pt0)).*)
+Time Eval vm_compute in (subm (mapm BigQ.red (mulmtr ex0 [:: sol0])) (col_vector pt0)).
+Let inv0 := odflt [::] (invm ex0).
+Time Eval vm_compute in (mulmtr ex0 (trm inv0)).
 
-(*Let sol1 : row := [:: 338062210884181229/33806221088630922900;-196000/1239561439916467173;-56000/338062210886309229;1189000000/1239561439916467173;3713440000/3718684319749401519;-44903800/3718684319749401519;-71504098/6197807199582335865;35301640/112687403628769743;-4438000/1239561439916467173;-16982000/3718684319749401519;-5530000/1239561439916467173;-1918000/413187146638822391;-22316000/3718684319749401519;0;0;0;0;0;0;0].
+Let sol1 : row := [:: 338062210884181229/33806221088630922900;-196000/1239561439916467173;-56000/338062210886309229;1189000000/1239561439916467173;3713440000/3718684319749401519;-44903800/3718684319749401519;-71504098/6197807199582335865;35301640/112687403628769743;-4438000/1239561439916467173;-16982000/3718684319749401519;-5530000/1239561439916467173;-1918000/413187146638822391;-22316000/3718684319749401519;0;0;0;0;0;0;0].
 
 Time Eval vm_compute in (mapm BigQ.red (subm (mulmtr A [:: sol1]) (col_vector b))).
 Let A' : matrix := map (nth [::] A) (11 :: (iota 21 19))%N.
