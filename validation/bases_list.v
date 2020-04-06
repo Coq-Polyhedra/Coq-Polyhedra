@@ -3645,7 +3645,9 @@ Definition bases_list0 :=
 [:: 13;14;15;18;20;22;23;24;25;27;28;30;31;33;34;35;36;37;38;40];
 [:: 12;13;14;15;20;22;23;24;25;27;28;30;31;33;34;35;36;37;38;40]]%N.
 
-Time Eval native_compute in all (check_point A b) bases_list0.
+Time Eval native_compute in all (check_point A b) (take 10%N bases_list0).
+
+End BasesList.
 
 (*Definition bases_list1 :=
 [::
