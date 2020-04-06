@@ -144,7 +144,7 @@ Definition solvem (m : matrix) (b : row) : option row :=
     Some (back_substitution [::] mext' b')
   end.
 
-(* TODO: implement the inverse computation (in cubic time) *)
+(* Implement the inverse computation (in cubic time) *)
 Definition invm (m : matrix) : option matrix :=
   let nb_row := row_size m in
   let mext := col_block m (identity nb_row) in
@@ -215,7 +215,30 @@ End CheckPoint.
 
 Section Neighbour.
 
-Definition neighbour (I J: seq nat) :bool :=
-  ((count (fun p => ~~(p.1 == p.2)) (zip I J)) == 1%N).
+Fixpoint add_elt (I:seq nat) (n:nat) := match I with
+  | [::] => [:: n]
+  | h::t => match Nat.compare h n with
+    |Eq => I
+    |Lt => h::add_elt t n
+    |Gt => n::h::t
+    end
+  end.
+
+Definition remove_except (I : seq nat) (n : nat) := 
+let fix foo acc res lis :=
+  match lis with
+  |[::] => res
+  |h::t => if (h == n)%N then foo (h::acc) res t
+    else foo (h::acc) ((catrev acc t)::res) t
+  end in
+  foo [::] [::] I.
+
+Definition neighbour_search (I: seq nat) (m : nat) :=
+  let J := filter (fun x => x \notin I) (iota 0 m) in
+  flatten (map (fun x => remove_except (add_elt I x) x) J).
+
+Definition check_neighbour (A:matrix) (b: row) (I: seq nat) :=
+  let n_rows := size A in
+  filter (check_point A b) (neighbour_search I n_rows).
 
 End Neighbour.
