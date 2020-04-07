@@ -245,51 +245,55 @@ Definition neighbour_search (I: seq positive) (m : nat) :=
   let J :=  notin_basis I m in
   let fix neigh acc I' res := match I' with
     |[::] => res
-    |i::I'' =>
-      neigh (i::acc) I'' ((map (fun j => let p := add_elt (catrev acc I'') j in (i,j, p.2)) J)::res)
-  end in
-  flatten (neigh [::] I [::]).
+    |i::I'' => neigh (i::acc) I'' ((i, (map (add_elt (catrev acc I'')) J))::res)
+  end in neigh [::] I [::].
 
+Compute neighbour_search [::1;2;3]%positive 5%nat.
 
-
-Definition adjacent_bases (A:matrix) (I: seq positive) :=
-  (*we assume that I is a basis*)
+Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
   let m := size A in
-  let neighbours := neighbour_search I m in
-  let M :=  map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
-  let M' := invtrm M in
-  match M' with
-  |None => [::]
-  |Some Mtr1 =>  
-    let fix foo nei res := match nei with
-      |[::] => res
-      |p::nei' =>
-        let SMdotr := (dotr (nth [::] A (nat_of_pos p.1.2)) (nth [::] Mtr1 (nat_of_pos p.1.1))) in
-        if (SMdotr ?= 0) is Eq
-        then foo nei' res
-        else foo nei' ((p,SMdotr)::res)
-        end in foo neighbours [::]
-    end.
- 
-
-(*
-Definition neighbours_in_polyhedron (A:matrix) (b:row) (I:seq positive) :=
-  let adj_bases := adjacent_bases A I in 
-  let AI:=  map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
-  let v := map (nth 0 b) (map (fun x => (nat_of_pos x).-1) I) in
-  let x' := solvem M v in
+  let all_neighbours := neighbour_search I m in
+  let AI := map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
+  let bI := map (nth 0 b) (map (fun x => (nat_of_pos x).-1) I) in
+  let x' := solvem AI bI in
   match x' with
     |None => [::]
-    |Some xI => let AI' := invtrm AI in
-      match AI' with
-        |None => [::]
-        |Some tAIinv => let fix foo adj res := match adj with
-          |[::] => res
-          |p::adj' => let c1 := scaler (BigQ.sub_norm (nth 0 b p.1.1.2) ()) 
-      end    
-    
-  end
-*)
+    |Some x1 => let A' := invtrm AI in
+    match A' with
+      |None => [::]
+      |Some trAIinv =>
+      let fix fooi adj resi := match adj with
+        |[::] => resi
+        |pi::adj' => let i := pi.1 in
+        let fix fooj nei max argmax resj := match nei with
+          |[::] => (catrev argmax resj)
+          |pj::nei' =>
+          let j := pj.1 in
+          let c := dotr (nth [::] A ((nat_of_pos j).-1)) (nth [::] trAIinv ((nat_of_pos i).-1)) in
+          let r := BigQ.sub_norm (dotr (nth [::] A ((nat_of_pos j).-1)) x1) (nth 0 b ((nat_of_pos j).-1)) in
+          match BigQ.compare c 0 with
+            |Eq => fooj nei' max argmax resj
+            |Gt => if BigQ.compare r 0 is Eq
+            then fooj nei' max argmax (pj.2::resj)
+            else fooj nei' max argmax resj
+            |Lt => let f := BigQ.div_norm r c in
+            match max with
+              |None => fooj nei' (Some f) [::pj.2] resj
+              |Some fmax => match BigQ.compare f fmax with
+                |Eq => fooj nei' max (pj.2::argmax) resj
+                |Lt => fooj nei' max argmax resj
+                |Gt => fooj nei' (Some f) [::pj.2] resj
+              end
+            end
+          end   
+        end in fooi adj' ((fooj pi.2 None [::] [::])::resi)
+      end in flatten (fooi all_neighbours [::])
+    end
+  end.
+
+Check polyhedron_neighbours.
+
+
 
 
 End Neighbour.
