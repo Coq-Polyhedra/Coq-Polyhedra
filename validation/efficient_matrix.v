@@ -1,6 +1,7 @@
 From Bignums Require Import BigQ BigN.
 From mathcomp Require Import ssreflect ssrfun ssrbool seq ssrnat eqtype.
 (*Require Import bases_list.*)
+Require Import BinNums BinPos.
 
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -144,8 +145,8 @@ Definition solvem (m : matrix) (b : row) : option row :=
     Some (back_substitution [::] mext' b')
   end.
 
-(* Implement the inverse computation (in cubic time) *)
-Definition invm (m : matrix) : option matrix :=
+(* Implement the transpose of the inverse matrix (in cubic time) *)
+Definition invtrm (m : matrix) : option matrix :=
   let nb_row := row_size m in
   let mext := col_block m (identity nb_row) in
   match row_echelon [::] mext nb_row with
@@ -168,8 +169,8 @@ Definition invm (m : matrix) : option matrix :=
                  let: (i, res) := p in
                  let: (l1, l2) := split_last i l in
                  (i.-1, (l1 :: res.1, l2 :: res.2))) (nb_row, ([::], [::])) mext in
-    Some (trm (map (back_substitution [::] mext1) (trm mext2)))
-  end.
+    Some (map (back_substitution [::] mext1) (trm mext2))
+    end.
 
 End Gauss.
 
@@ -194,10 +195,10 @@ End Test.
 
 Section CheckPoint.
 
-Definition check_point (A : matrix) (b : row) (I : seq nat) :=
+Definition check_point (A : matrix) (b : row) (I : seq positive) :=
 (* calcule le point de base associé à I, et vérifie qu'il satisfait toutes les inégalités *)
-  let A' := map (fun i => nth [::] A (i-1)%N) I in
-  let b' := map (fun i => (nth 0 b) (i-1)%N) I in
+  let A' := map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
+  let b' := map (nth 0 b) (map (fun x => (nat_of_pos x).-1) I) in
   match solvem A' b' with
   | None => false
   | Some x' =>
@@ -215,33 +216,84 @@ End CheckPoint.
 
 Section Neighbour.
 
-Fixpoint add_elt (I:seq nat) (n:nat) := match I with
-  |[::] => [:: n]
-  |h::t => match Nat.compare h n with
-    |Eq => I
-    |Lt => h::add_elt t n
-    |Gt => n::h::t
+Fixpoint add_elt (I:seq positive) (n:positive) := match I with
+  |[::] => (n, [:: n])
+  |h::t => match Pos.compare h n with
+    |Eq => (n,I)
+    |Lt => let p := (add_elt t n) in (n,(h::(p.2)))
+    |Gt => (n,(n::h::t))
     end
   end.
 
-Definition remove_except (I : seq nat) (n : nat) := 
-let fix foo acc res lis :=
-  match lis with
-  |[::] => res
-  |h::t => if (h == n)%N then foo (h::acc) res t
-    else foo (h::acc) ((catrev acc t)::res) t
+Definition notin_basis (I: seq positive) (m:nat):=
+  let candidates := map (fun x => pos_of_nat x x) (iota 0 m) in
+  let fix elimi I' C res := match I' with
+    |[::] => catrev res C
+    |i::I0 => match C with
+      |[::] => rev res (*A priori, it should never happens*)
+      |c::C' => match Pos.compare c i with
+        |Lt => elimi I' C' (c::res)
+        |Eq => elimi I0 C' res
+        |Gt => rev res (*Same, it should never happens*)
+        end
+      end
+    end in elimi I candidates [::].
+
+
+Definition neighbour_search (I: seq positive) (m : nat) :=
+  (*return a list of neighbours, with the form (i,j, (I - i + j) )*)
+  let J :=  notin_basis I m in
+  let fix neigh acc I' res := match I' with
+    |[::] => res
+    |i::I'' =>
+      neigh (i::acc) I'' ((map (fun j => let p := add_elt (catrev acc I'') j in (i,j, p.2)) J)::res)
   end in
-  foo [::] [::] I.
+  flatten (neigh [::] I [::]).
 
-Definition neighbour_search (I: seq nat) (m : nat) :=
-  let J := filter (fun x => x \notin I) (iota 0 m) in
-  flatten (map (fun x => remove_except (add_elt I x) x) J).
 
-Definition check_neighbour (A:matrix) (b: row) (I: seq nat) :=
-  let n_rows := size A in
-  filter (check_point A b) (neighbour_search I n_rows).
 
-Definition test_neighbour (A:matrix) (b:row) (I:seq nat):=
-  size (check_neighbour A b I).S
+Definition adjacent_bases (A:matrix) (I: seq positive) :=
+  (*we assume that I is a basis*)
+  let m := size A in
+  let neighbours := neighbour_search I m in
+  let M :=  map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
+  let M' := invtrm M in
+  match M' with
+  |None => [::]
+  |Some Mtr1 =>  
+    let fix foo nei res := match nei with
+      |[::] => res
+      |p::nei' =>
+        let SMdotr := (dotr (nth [::] A (nat_of_pos p.1.2)) (nth [::] Mtr1 (nat_of_pos p.1.1))) in
+        if (SMdotr ?= 0) is Eq
+        then foo nei' res
+        else foo nei' ((p,SMdotr)::res)
+        end in foo neighbours [::]
+    end.
+ 
+
+(*
+Definition neighbours_in_polyhedron (A:matrix) (b:row) (I:seq positive) :=
+  let adj_bases := adjacent_bases A I in 
+  let AI:=  map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
+  let v := map (nth 0 b) (map (fun x => (nat_of_pos x).-1) I) in
+  let x' := solvem M v in
+  match x' with
+    |None => [::]
+    |Some xI => let AI' := invtrm AI in
+      match AI' with
+        |None => [::]
+        |Some tAIinv => let fix foo adj res := match adj with
+          |[::] => res
+          |p::adj' => let c1 := scaler (BigQ.sub_norm (nth 0 b p.1.1.2) ()) 
+      end    
+    
+  end
+*)
+
 
 End Neighbour.
+
+(*TODO : Changement de structure de données entiers binaires dans les bases : CHECK *)
+(*TODO : liste de toutes les bases en AVL*)
+(*TODO : Shermann-Morrisson*)
