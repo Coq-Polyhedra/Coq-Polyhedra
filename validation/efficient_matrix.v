@@ -239,16 +239,18 @@ Definition notin_basis (I: seq positive) (m:nat):=
       end
     end in elimi I candidates [::].
 
-Definition neighbour_search (I: seq positive) (m : nat) :=
+(*Definition neighbour_search (I: seq positive) (m : nat) :=
   (*return a list of neighbours, with the form (i,j, (I - i + j) )*)
   let J :=  notin_basis I m in
   let fix neigh acc I' res := match I' with
     |[::] => res
     |i::I'' => neigh (i::acc) I'' ((i, (map (add_elt (catrev acc I'')) J))::res)
-  end in neigh [::] I [::].
+  end in neigh [::] I [::].*)
 
+(*
 Compute neighbour_search [::1;2;3]%positive 5%nat.
 Compute notin_basis [::1;2;3]%positive 5%nat.
+ *)
 
 Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
   let fix subseq_aux s I (i0 : positive) :=
@@ -271,81 +273,64 @@ Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
 Definition mem_list (I : seq positive) := true. (* TODO: replace with the membership
                                                 * test to the informal list *)
 
-(*Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
-  let m := size A in
+Definition check_point_and_neighbour (A : matrix) (b : row) (I : seq positive) :=
+  let m := row_size A in
+  let n := col_size A in
   (*let pos_iota = map (fun x => pos_of_nat x x) (iota 0 m) in*)
-  let all_neighbours := neighbour_search I m in
+  (*let all_neighbours := neighbour_search I m in*)
   let AI := subseq A I in
   let bI := subseq b I in
   match invtrm AI with
   | None => false
   | Some A' =>
-    let x := foldl (fun res p => addr res (scaler p.2 p.1)) (zip A' bI) in
-    let cI := notin_basis in
-    let AcI := subseq A cI in
-    let bcI := subset b cI in
-    let r := map (fun p => BigQ.sub_norm (dotr p.1 x) (p.2)) (zip AcI bcI) in
+    let x :=
+        foldl (fun res p => addr res (scaler p.2 p.1)) (zeror n) (zip A' bI)
+    in
+    let I' := notin_basis I m in
+    let AI' := subseq A I' in
+    let bI' := subseq b I' in
+    let r := map (fun p => BigQ.sub_norm (dotr p.1 x) (p.2)) (zip AI' bI') in
     if has (fun z => (if BigQ.compare z 0 is Lt then true else false)) r then
       false
     else
-      let I_A' := zip I A' in
       let search_i i_A' :=
           let: (i, A'_i) := i_A' in
-          let c_i := map (dotr A'_i) AcI in
+          let c_i := map (dotr A'_i) AI' in
           let argmax p q :=
-            let: (j,C,R) := p in
+            let: (j, C, R) := p in
             let: (max, arg) := q in
-            if C ?= 0 is Lt then 
+            if C ?= 0 is Lt then
               let F := BigQ.div_norm R C in
               match max with
-                |None => (Some F, [::j])
-                |Some Fmax => match F ?= Fmax with
-                  |Eq => (Some Fmax, (j::arg))
-                  |Lt => (Some Fmax, arg)
-                  |Gt => (Some F, [::j])
-                end
+                | None => (Some F, [:: j])
+                | Some Fmax =>
+                  match F ?= Fmax with
+                  | Eq => (Some Fmax, (j :: arg))
+                  | Lt => (Some Fmax, arg)
+                  | Gt => (Some F, [:: j])
+                  end
               end
             else (max, arg)
-          in let Arg := foldr argmax (None, [::]) (zip (zip cI c_i r)) in *)
-
-
-
-(*
-        match adj with
-        | [::] => true
-        | pi::adj' =>
-
-
-          let i := pi.1 in
-          let fix fooj nei max argmax resj :=
-              match nei with
-              | [::] => (catrev argmax resj)
-          |pj::nei' =>
-          let j := pj.1 in
-          let c := dotr (nth [::] A ((nat_of_pos j).-1)) (nth [::] trAIinv ((nat_of_pos i).-1)) in
-          let r := BigQ.sub_norm (dotr (nth [::] A ((nat_of_pos j).-1)) x1) (nth 0 b ((nat_of_pos j).-1)) in
-          match BigQ.compare c 0 with
-            |Eq => fooj nei' max argmax resj
-            |Gt => if BigQ.compare r 0 is Eq
-            then fooj nei' max argmax (pj.2::resj)
-            else fooj nei' max argmax resj
-            |Lt => let f := BigQ.div_norm r c in
-            match max with
-              |None => fooj nei' (Some f) [::pj.2] resj
-              |Some fmax => match BigQ.compare f fmax with
-                |Eq => fooj nei' max (pj.2::argmax) resj
-                |Lt => fooj nei' max argmax resj
-                |Gt => fooj nei' (Some f) [::pj.2] resj
-              end
-            end
-          end
-        end in fooi adj' ((fooj pi.2 None [::] [::])::resi)
-      end in flatten (fooi all_neighbours [::])
-    end
+          in
+          let: (_, arg) := foldr argmax (None, [::]) (zip (zip I' c_i) r) in
+          let I_minus_i :=
+              filter (fun j => if (Pos.compare i j) is Eq then false else true) I in
+          let new_bases := map (add_elt I_minus_i) I' in
+          all (fun p => let: (j, c_ij, r_j) := p in
+                     if BigQ.compare c_ij 0 is Eq then
+                       true
+                     else (* cij != 0 *)
+                       let (_, J) := add_elt I_minus_i j in
+                       if BigQ.compare r_j 0 is Eq then
+                         mem_list J
+                       else (* r_j > 0 *)
+                         if has (fun k => if Pos.compare j k is Eq then true else false) arg then (* to be improved *)
+                           mem_list J
+                         else
+                           true) (zip (zip I' c_i) r)
+      in
+      all search_i (zip I A')
   end.
-
-Check polyhedron_neighbours.
- *)
 
 End Neighbour.
 
