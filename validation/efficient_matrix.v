@@ -271,8 +271,7 @@ Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
 Definition mem_list (I : seq positive) := true. (* TODO: replace with the membership
                                                 * test to the informal list *)
 
-(*
-Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
+(*Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
   let m := size A in
   (*let pos_iota = map (fun x => pos_of_nat x x) (iota 0 m) in*)
   let all_neighbours := neighbour_search I m in
@@ -286,16 +285,32 @@ Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
     let AcI := subseq A cI in
     let bcI := subset b cI in
     let r := map (fun p => BigQ.sub_norm (dotr p.1 x) (p.2)) (zip AcI bcI) in
-    if has (fun z => (BigQ.compare z 0 = Lt)) r then
+    if has (fun z => (if BigQ.compare z 0 is Lt then true else false)) r then
       false
     else
       let I_A' := zip I A' in
       let search_i i_A' :=
           let: (i, A'_i) := i_A' in
-          let c := map (dotr A'_i) AcI in
+          let c_i := map (dotr A'_i) AcI in
+          let argmax p q :=
+            let: (j,C,R) := p in
+            let: (max, arg) := q in
+            if C ?= 0 is Lt then 
+              let F := BigQ.div_norm R C in
+              match max with
+                |None => (Some F, [::j])
+                |Some Fmax => match F ?= Fmax with
+                  |Eq => (Some Fmax, (j::arg))
+                  |Lt => (Some Fmax, arg)
+                  |Gt => (Some F, [::j])
+                end
+              end
+            else (max, arg)
+          in let Arg := foldr argmax (None, [::]) (zip (zip cI c_i r)) in *)
 
 
 
+(*
         match adj with
         | [::] => true
         | pi::adj' =>
