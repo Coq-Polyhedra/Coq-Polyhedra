@@ -22,7 +22,10 @@ Unset Printing Implicit Defensive.
 '''.lstrip()
 
 PRELUDE_EXT = r'''
-From mathcomp Require Import ssreflect ssrbool ssrnat eqtype seq.
+From mathcomp Require Import ssreflect ssrbool seq.
+Require Import BinNums BinPos.
+
+Open Scope positive_scope.
 
 Set   Implicit Arguments.
 Unset Strict Implicit.
@@ -41,7 +44,7 @@ Unset Printing Implicit Defensive.
 Require Import data_ine {name}.
 
 Definition output :=
-  Eval native_compute in all (check_point A b) {name}.
+  Eval native_compute in all (check_point_and_neighbour A b) {name}.
 '''.lstrip()
 
 COQPROJECT_PRELUDE = r'''
@@ -103,7 +106,7 @@ def extract(name):
         index = i // CHUNK; j = 0; fname = '%s_%.4d' % (FNAME, index)
         with open(_x(fname + '.v'), 'w') as stream:
             print(PRELUDE_EXT, file=stream)
-            print(f'Definition {fname} : seq (seq nat) := [::', file=stream)
+            print(f'Definition {fname} : seq (seq positive) := [::', file=stream)
             while i < len(data) and j < CHUNK:
                 sep  = ' ' if j == 0 else ';'
                 line = '; '.join(map(str, data[i]))
@@ -135,7 +138,7 @@ def extract(name):
         for i in range(index+1):
             print('job_%s_%.4d.v' % (FNAME, i), file=stream)
         print('job_' + FNAME + '.v', file=stream)
-    
+
     sp.check_call(
         'coq_makefile -f _CoqProject -o Makefile'.split(),
         cwd = name
