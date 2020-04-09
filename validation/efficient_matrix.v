@@ -239,7 +239,6 @@ Definition notin_basis (I: seq positive) (m:nat):=
       end
     end in elimi I candidates [::].
 
-
 Definition neighbour_search (I: seq positive) (m : nat) :=
   (*return a list of neighbours, with the form (i,j, (I - i + j) )*)
   let J :=  notin_basis I m in
@@ -249,24 +248,63 @@ Definition neighbour_search (I: seq positive) (m : nat) :=
   end in neigh [::] I [::].
 
 Compute neighbour_search [::1;2;3]%positive 5%nat.
+Compute notin_basis [::1;2;3]%positive 5%nat.
 
+Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
+  let fix subseq_aux s I (i0 : positive) :=
+      match s with
+      | [::] => [::]
+      | x :: s' =>
+        match I with
+        | [::] => [::]
+        | i :: I' =>
+          match Pos.compare i0 i with
+          | Lt => subseq_aux s' (i :: I') (i0+1)%positive
+          | Eq => x :: (subseq_aux s' I' (i0+1)%positive)
+          | Gt => [::]
+          end
+        end
+      end
+  in
+  subseq_aux s I 1%positive.
+
+Definition mem_list (I : seq positive) := true. (* TODO: replace with the membership
+                                                * test to the informal list *)
+
+(*
 Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
   let m := size A in
+  (*let pos_iota = map (fun x => pos_of_nat x x) (iota 0 m) in*)
   let all_neighbours := neighbour_search I m in
-  let AI := map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
-  let bI := map (nth 0 b) (map (fun x => (nat_of_pos x).-1) I) in
-  let x' := solvem AI bI in
-  match x' with
-    |None => [::]
-    |Some x1 => let A' := invtrm AI in
-    match A' with
-      |None => [::]
-      |Some trAIinv =>
-      let fix fooi adj resi := match adj with
-        |[::] => resi
-        |pi::adj' => let i := pi.1 in
-        let fix fooj nei max argmax resj := match nei with
-          |[::] => (catrev argmax resj)
+  let AI := subseq A I in
+  let bI := subseq b I in
+  match invtrm AI with
+  | None => false
+  | Some A' =>
+    let x := foldl (fun res p => addr res (scaler p.2 p.1)) (zip A' bI) in
+    let cI := notin_basis in
+    let AcI := subseq A cI in
+    let bcI := subset b cI in
+    let r := map (fun p => BigQ.sub_norm (dotr p.1 x) (p.2)) (zip AcI bcI) in
+    if has (fun z => (BigQ.compare z 0 = Lt)) r then
+      false
+    else
+      let I_A' := zip I A' in
+      let search_i i_A' :=
+          let: (i, A'_i) := i_A' in
+          let c := map (dotr A'_i) AcI in
+
+
+
+        match adj with
+        | [::] => true
+        | pi::adj' =>
+
+
+          let i := pi.1 in
+          let fix fooj nei max argmax resj :=
+              match nei with
+              | [::] => (catrev argmax resj)
           |pj::nei' =>
           let j := pj.1 in
           let c := dotr (nth [::] A ((nat_of_pos j).-1)) (nth [::] trAIinv ((nat_of_pos i).-1)) in
@@ -285,16 +323,14 @@ Definition polyhedron_neighbours (A:matrix) (b:row) (I:seq positive) :=
                 |Gt => fooj nei' (Some f) [::pj.2] resj
               end
             end
-          end   
+          end
         end in fooi adj' ((fooj pi.2 None [::] [::])::resi)
       end in flatten (fooi all_neighbours [::])
     end
   end.
 
 Check polyhedron_neighbours.
-
-
-
+ *)
 
 End Neighbour.
 
