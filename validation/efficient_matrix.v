@@ -214,18 +214,31 @@ Time Eval vm_compute in
 *)
 End CheckPoint.
 
-Section Neighbour.
+Section Bases.
 
-Fixpoint add_elt (I:seq positive) (n:positive) := match I with
-  |[::] => (n, [:: n])
-  |h::t => match Pos.compare h n with
-    |Eq => (n,I)
-    |Lt => let p := (add_elt t n) in (n,(h::(p.2)))
-    |Gt => (n,(n::h::t))
-    end
-  end.
+Definition basis := seq positive.
+(*Implements a sorted list of indexes associated to bases. We assume that manipulating them do not
+change their size, as all bases of a polyhedron have the same size*)
 
-Definition notin_basis (I: seq positive) (m:nat):=
+Definition switch_elt (I:basis) (i:positive) (j:positive) := (*Compute I - i + j*)
+  let fix switch I' i' oj' :=
+    match I' with
+      |[::] => if oj' is Some j' then [:: j'] else [::]
+      |h::t => match (h ?= i')%positive with
+        |Eq => switch t i' oj'
+        |_ => match oj' with
+          |None => h :: (switch t i oj') 
+          |Some j' =>
+            match (h ?= j')%positive with
+              |Eq => h:: switch t i' None
+              |Lt => h:: switch t i' (Some j') 
+              |Gt => j:: (h :: switch t i' None)
+            end
+          end
+        end
+      end in switch I i (Some j).
+
+Definition notin_basis (I: basis) (m:nat):=
   let candidates := map (fun x => pos_of_nat x x) (iota 0 m) in
   let fix elimi I' C res := match I' with
     |[::] => catrev res C
@@ -252,7 +265,7 @@ Compute neighbour_search [::1;2;3]%positive 5%nat.
 Compute notin_basis [::1;2;3]%positive 5%nat.
  *)
 
-Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
+Definition subseq {T : Type} (s : seq T) (I : basis)  :=
   let fix subseq_aux s I (i0 : positive) :=
       match s with
       | [::] => [::]
@@ -260,7 +273,7 @@ Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
         match I with
         | [::] => [::]
         | i :: I' =>
-          match Pos.compare i0 i with
+          match (i0 ?= i)%positive with
           | Lt => subseq_aux s' (i :: I') (i0+1)%positive
           | Eq => x :: (subseq_aux s' I' (i0+1)%positive)
           | Gt => [::]
@@ -270,10 +283,28 @@ Definition subseq {T : Type} (s : seq T) (I : seq positive)  :=
   in
   subseq_aux s I 1%positive.
 
-Definition mem_list (I : seq positive) := true. (* TODO: replace with the membership
+End Bases.
+
+Section Neighbour.
+
+Definition argmax {T: Type} (s: seq T) (p: T -> bool) (f: T -> bigQ) :=
+  let fix argmax_aux s' max arg := match s' with
+    |[::] => arg
+    |h::t => if p h then
+      match max with
+      |None => argmax_aux t (Some (f h)) [:: h]
+      |Some fmax => match fmax ?= (f h) with
+        |Eq => argmax_aux t (Some fmax) (h::arg)
+        |Lt => argmax_aux t (Some (f h)) [::h]
+        |Gt => argmax_aux t (Some fmax) arg
+        end
+      end else argmax_aux t max arg
+    end in argmax_aux s None [::]. 
+
+Definition mem_list (I : basis) := true. (* TODO: replace with the membership
                                                 * test to the informal list *)
 
-Definition check_point_and_neighbour (A : matrix) (b : row) (I : seq positive) :=
+Definition check_point_and_neighbour (A : matrix) (b : row) (I : basis) :=
   let m := row_size A in
   let n := col_size A in
   (*let pos_iota = map (fun x => pos_of_nat x x) (iota 0 m) in*)
@@ -296,44 +327,26 @@ Definition check_point_and_neighbour (A : matrix) (b : row) (I : seq positive) :
       let search_i i_A' :=
           let: (i, A'_i) := i_A' in
           let c_i := map (dotr A'_i) AI' in
-          let argmax p q :=
-            let: (j, C, R) := p in
-            let: (max, arg) := q in
-            if C ?= 0 is Lt then
-              let F := BigQ.div_norm R C in
-              match max with
-                | None => (Some F, [:: j])
-                | Some Fmax =>
-                  match F ?= Fmax with
-                  | Eq => (Some Fmax, (j :: arg))
-                  | Lt => (Some Fmax, arg)
-                  | Gt => (Some F, [:: j])
-                  end
-              end
-            else (max, arg)
-          in
-          let: (_, arg) := foldr argmax (None, [::]) (zip (zip I' c_i) r) in
-          let I_minus_i :=
-              filter (fun j => if (Pos.compare i j) is Eq then false else true) I in
-          let new_bases := map (add_elt I_minus_i) I' in
+          let prd := fun x => if x.1.2 ?= 0 is Lt then true else false in
+          let fct := fun x => BigQ.div_norm x.2 x.1.2 in
+          let arg := map (fun x => x.1.1) (argmax (zip (zip I' c_i) r) prd fct) in
           all (fun p => let: (j, c_ij, r_j) := p in
-                     if BigQ.compare c_ij 0 is Eq then
-                       true
-                     else (* cij != 0 *)
-                       let (_, J) := add_elt I_minus_i j in
-                       if BigQ.compare r_j 0 is Eq then
-                         mem_list J
-                       else (* r_j > 0 *)
-                         if has (fun k => if Pos.compare j k is Eq then true else false) arg then (* to be improved *)
-                           mem_list J
-                         else
-                           true) (zip (zip I' c_i) r)
+                if c_ij ?= 0 is Eq then
+                  true
+                else (* cij != 0 *)
+                  let J := switch_elt I i j in
+                  if r_j ?= 0 is Eq then
+                    mem_list J
+                  else (* r_j > 0 *)
+                    if has (fun k => if Pos.compare j k is Eq then true else false) arg then (* to be improved *)
+                      mem_list J
+                    else
+                      true) (zip (zip I' c_i) r)
       in
       all search_i (zip I A')
   end.
 
 End Neighbour.
 
-(*TODO : Changement de structure de données entiers binaires dans les bases : CHECK *)
 (*TODO : liste de toutes les bases en AVL*)
 (*TODO : Shermann-Morrisson*)
