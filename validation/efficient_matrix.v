@@ -8,6 +8,29 @@ Unset Printing Implicit Defensive.
 
 Open Scope bigQ_scope.
 
+Section Misc.
+
+Definition zip2 {T1 T2 T3 : Type} (s1 : seq T1) (s2 : seq T2) (s3 : seq T3)
+  := zip (zip s1 s2) s3.
+
+Definition argmax {T: Type} (s: seq T) (p: T -> bool) (f: T -> bigQ) :=
+  let fix argmax_aux s' max arg := match s' with
+    |[::] => arg
+    |h::t => if p h then
+      match max with
+      |None => argmax_aux t (Some (f h)) [:: h]
+      |Some fmax => match fmax ?= (f h) with
+        |Eq => argmax_aux t (Some fmax) (h::arg)
+        |Lt => argmax_aux t (Some (f h)) [::h]
+        |Gt => argmax_aux t (Some fmax) arg
+        end
+      end else argmax_aux t max arg
+    end in argmax_aux s None [::].
+
+Definition seq_equal (s1 s2 : seq (positive * positive)) := true.
+
+End Misc.
+
 Section Row.
 
 Definition row := seq bigQ.
@@ -193,27 +216,6 @@ Time Eval vm_compute in (subr (solvem A' b') sol1).
 End Test.
 *)
 
-Section CheckPoint.
-
-Definition check_point (A : matrix) (b : row) (I : seq positive) :=
-(* calcule le point de base associé à I, et vérifie qu'il satisfait toutes les inégalités *)
-  let A' := map (nth [::] A) (map (fun x => (nat_of_pos x).-1) I) in
-  let b' := map (nth 0 b) (map (fun x => (nat_of_pos x).-1) I) in
-  match solvem A' b' with
-  | None => false
-  | Some x' =>
-    let r := trm (mulmtr A [:: x']) in
-    if r is [:: r0] then
-      all (fun x => if x ?= 0 is Lt then false else true) (subr r0 b)
-    else false
-  end.
-
-(*
-Time Eval vm_compute in
-    all (check_point A b) (take 10%N bases_list0).
-*)
-End CheckPoint.
-
 Section Bases.
 
 Definition basis := seq positive.
@@ -227,18 +229,18 @@ Definition switch_elt (I:basis) (i:positive) (j:positive) := (*Compute I - i + j
       |h::t => match (h ?= i')%positive with
         |Eq => switch t i' oj'
         |_ => match oj' with
-          |None => h :: (switch t i oj') 
+          |None => h :: (switch t i oj')
           |Some j' =>
             match (h ?= j')%positive with
               |Eq => h:: switch t i' None
-              |Lt => h:: switch t i' (Some j') 
+              |Lt => h:: switch t i' (Some j')
               |Gt => j:: (h :: switch t i' None)
             end
           end
         end
       end in switch I i (Some j).
 
-Definition notin_basis (I: basis) (m:nat):=
+Definition compl (I: basis) (m:nat):=
   let candidates := map (fun x => pos_of_nat x x) (iota 0 m) in
   let fix elimi I' C res := match I' with
     |[::] => catrev res C
@@ -254,7 +256,7 @@ Definition notin_basis (I: basis) (m:nat):=
 
 (*Definition neighbour_search (I: seq positive) (m : nat) :=
   (*return a list of neighbours, with the form (i,j, (I - i + j) )*)
-  let J :=  notin_basis I m in
+  let J :=  compl I m in
   let fix neigh acc I' res := match I' with
     |[::] => res
     |i::I'' => neigh (i::acc) I'' ((i, (map (add_elt (catrev acc I'')) J))::res)
@@ -262,7 +264,7 @@ Definition notin_basis (I: basis) (m:nat):=
 
 (*
 Compute neighbour_search [::1;2;3]%positive 5%nat.
-Compute notin_basis [::1;2;3]%positive 5%nat.
+Compute compl [::1;2;3]%positive 5%nat.
  *)
 
 Definition subseq {T : Type} (s : seq T) (I : basis)  :=
@@ -287,66 +289,53 @@ End Bases.
 
 Section Neighbour.
 
-Definition argmax {T: Type} (s: seq T) (p: T -> bool) (f: T -> bigQ) :=
-  let fix argmax_aux s' max arg := match s' with
-    |[::] => arg
-    |h::t => if p h then
-      match max with
-      |None => argmax_aux t (Some (f h)) [:: h]
-      |Some fmax => match fmax ?= (f h) with
-        |Eq => argmax_aux t (Some fmax) (h::arg)
-        |Lt => argmax_aux t (Some (f h)) [::h]
-        |Gt => argmax_aux t (Some fmax) arg
-        end
-      end else argmax_aux t max arg
-    end in argmax_aux s None [::]. 
+Variable (m n : nat).
 
-Definition mem_list (I : basis) := true. (* TODO: replace with the membership
-                                                * test to the informal list *)
-
-Definition check_point_and_neighbour (A : matrix) (b : row) (I : basis) :=
-  let m := row_size A in
-  let n := col_size A in
-  (*let pos_iota = map (fun x => pos_of_nat x x) (iota 0 m) in*)
-  (*let all_neighbours := neighbour_search I m in*)
-  let AI := subseq A I in
-  let bI := subseq b I in
+Definition check_basis (A : matrix) (b : row) (I_s : basis * seq (positive * positive) ) :=
+  let: (I0, s) := I_s in
+  let AI := subseq A I0 in
+  let bI := subseq b I0 in
   match invtrm AI with
   | None => false
   | Some A' =>
     let x :=
         foldl (fun res p => addr res (scaler p.2 p.1)) (zeror n) (zip A' bI)
     in
-    let I' := notin_basis I m in
+    let I' := compl I0 m in
     let AI' := subseq A I' in
     let bI' := subseq b I' in
     let r := map (fun p => BigQ.sub_norm (dotr p.1 x) (p.2)) (zip AI' bI') in
-    if has (fun z => (if BigQ.compare z 0 is Lt then true else false)) r then
+    if has (fun z => (if z ?= 0 is Lt then true else false)) r then
       false
     else
-      let search_i i_A' :=
+      let search_i res i_A' :=
           let: (i, A'_i) := i_A' in
           let c_i := map (dotr A'_i) AI' in
           let prd := fun x => if x.1.2 ?= 0 is Lt then true else false in
           let fct := fun x => BigQ.div_norm x.2 x.1.2 in
-          let arg := map (fun x => x.1.1) (argmax (zip (zip I' c_i) r) prd fct) in
-          all (fun p => let: (j, c_ij, r_j) := p in
+          let arg := map (fun x => x.1.1) (argmax (zip2 I' c_i r) prd fct) in
+          foldl (fun res p => let: (j, c_ij, r_j) := p in
                 if c_ij ?= 0 is Eq then
-                  true
+                  res
                 else (* cij != 0 *)
-                  let J := switch_elt I i j in
+                  (*let J := switch_elt I0 i j in*)
                   if r_j ?= 0 is Eq then
-                    mem_list J
+                    (i,j) :: res
                   else (* r_j > 0 *)
                     if has (fun k => if Pos.compare j k is Eq then true else false) arg then (* to be improved *)
-                      mem_list J
+                      (i,j) :: res
                     else
-                      true) (zip (zip I' c_i) r)
+                      res) res (zip2 I' c_i r)
       in
-      all search_i (zip I A')
+      let res := foldl search_i [::] (zip I0 A') in
+      seq_equal res s
   end.
 
 End Neighbour.
 
-(*TODO : liste de toutes les bases en AVL*)
-(*TODO : Shermann-Morrisson*)
+(* TODO : test d'appartenance dans une base (simplification de check_point_and_neighbour) *)
+(* TODO : au lieu des AVL, on prend en entrée un graphe d'adjacence calculé informellement. Son type est seq (basis * (seq basis)). Pour chaque élément (I, s), on vérifie que I est bien une base admissible, et que s est précisément la liste des bases adjacentes à I. Remarque : on peut prétrier s de manière à ce que l'ordre des bases adjacentes soit précisément celui de la visite.
+   TODO : modifier le script python, trier la liste dans le bon sens
+*)
+
+(* TODO : Shermann-Morrisson *)
