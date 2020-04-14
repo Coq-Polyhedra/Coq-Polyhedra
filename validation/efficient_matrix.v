@@ -334,7 +334,8 @@ Definition check_basis (A : matrix) (b : row) (I_s : basis * seq (positive * pos
 End Neighbour.
 
 (* TODO : test d'appartenance dans une base (simplification de check_point_and_neighbour) *)
-(* TODO : au lieu des AVL, on prend en entrée un graphe d'adjacence calculé informellement. Son type est seq (basis * (seq basis)). Pour chaque élément (I, s), on vérifie que I est bien une base admissible, et que s est précisément la liste des bases adjacentes à I. Remarque : on peut prétrier s de manière à ce que l'ordre des bases adjacentes soit précisément celui de la visite.
+(* TODO : au lieu des AVL, on prend en entrée un graphe d'adjacence calculé informellement. Son type est seq (basis * seq (positive * positive)).
+Pour chaque élément (I, s), on vérifie que I est bien une base admissible, et que s est précisément la liste des bases adjacentes à I. Remarque : on peut prétrier s de manière à ce que l'ordre des bases adjacentes soit précisément celui de la visite.
    TODO : modifier le script python, trier la liste dans le bon sens
 *)
 
