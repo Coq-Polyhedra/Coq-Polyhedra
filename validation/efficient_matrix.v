@@ -10,6 +10,12 @@ Open Scope bigQ_scope.
 
 Section Misc.
 
+Fixpoint fast_all {T : Type} (a : pred T) (s : seq T)  :=
+  match s with
+  | [::] => true
+  | x :: s' => if a x then fast_all a s' else false
+  end.
+
 Definition zip2 {T1 T2 T3 : Type} (s1 : seq T1) (s2 : seq T2) (s3 : seq T3)
   := zip (zip s1 s2) s3.
 
@@ -315,7 +321,7 @@ Fixpoint seq_test (s s' : seq (positive*positive)) :=
         |_ => false
         end
       end
-    end. 
+    end.
 
 Definition check_basis (A : matrix) (b : row) (I_s : basis * seq (positive * positive) ) :=
   let: (I0, s) := I_s in
@@ -351,10 +357,10 @@ Definition check_basis (A : matrix) (b : row) (I_s : basis * seq (positive * pos
                     if mem j arg then
                       (i,j) :: res
                     else
-                      res) res (rev (zip2 I' c_i r))
+                      res) res (zip2 I' c_i r)
       in
-      let res := foldl search_i [::] (rev (zip I0 A')) in
-      seq_equal res s
+      let res := foldl search_i [::] (zip I0 A') in
+      seq_test res s
   end.
 
 End Neighbour.
