@@ -24,6 +24,7 @@ Unset Printing Implicit Defensive.
 PRELUDE_EXT = r'''
 From mathcomp Require Import ssreflect ssrbool seq.
 Require Import BinNums BinPos.
+(* ------- *) Require Import efficient_matrix.
 
 Open Scope positive_scope.
 
@@ -44,7 +45,7 @@ Unset Printing Implicit Defensive.
 Require Import data_ine {name}.
 
 Definition output :=
-  Eval native_compute in all (check_point_and_neighbour A b) {name}.
+  Eval native_compute in fast_all (check_basis m n A b) {name}.
 '''.lstrip()
 
 COQPROJECT_PRELUDE = r'''
@@ -58,6 +59,11 @@ COQPROJECT_PRELUDE = r'''
 # --------------------------------------------------------------------
 def bigq(x):
     return str(x)
+
+def neighbours(I,J):
+    I0 = [i for i in I if not i in J]
+    J0 = [j for j in J if not j in I]
+    return (len(I0) == 1 and len(J0) == 1), I0, J0
 
 # --------------------------------------------------------------------
 def extract(name):
@@ -100,17 +106,23 @@ def extract(name):
         print(file=stream)
         print('Definition b : seq bigQ :=', file=stream)
         print('  [:: {}].'.format('; '.join(map(bigq, b))), file=stream)
+        print(f'Definition m : nat := {len(A)}%N.', file=stream)
+        print(f'Definition n : nat := {len(A[0])}%N.', file=stream)
 
     i = 0
     while i < len(data):
         index = i // CHUNK; j = 0; fname = '%s_%.4d' % (FNAME, index)
         with open(_x(fname + '.v'), 'w') as stream:
             print(PRELUDE_EXT, file=stream)
-            print(f'Definition {fname} : seq (basis) := [::', file=stream)
+            print(f'Definition {fname} : seq (basis * seq (positive * positive)) := [::', file=stream)
             while i < len(data) and j < CHUNK:
                 sep  = ' ' if j == 0 else ';'
                 line = '; '.join(map(str, data[i]))
-                print(f'{sep}  [:: {line}]', file=stream)
+                nei = [(t[1][0],t[2][0]) for t in [neighbours(data[i],J) for J in data] if t[0]]
+                nei.sort()
+                nei.reverse()
+                line2 = '; '.join(map(str,nei))
+                print(f'{sep}  ([:: {line}], [:: {line2}])', file=stream)
                 i += 1; j += 1
             print('].', file=stream)
         with open(_x('job_' + fname + '.v'), 'w') as stream:
