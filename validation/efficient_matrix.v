@@ -1,6 +1,6 @@
 From Bignums Require Import BigQ BigN.
-From mathcomp Require Import ssreflect ssrfun ssrbool seq ssrnat eqtype.
 (*Require Import bases_list.*)
+From mathcomp Require Import ssreflect ssrfun ssrbool seq ssrnat eqtype.
 Require Import BinNums BinPos.
 
 Unset Strict Implicit.
@@ -285,11 +285,37 @@ Definition subseq {T : Type} (s : seq T) (I : basis)  :=
   in
   subseq_aux s I 1%positive.
 
+Fixpoint mem (j:positive) (I:basis) :=
+  match I with
+    |[::] => false
+    |h::t => match (j ?= h)%positive with
+      |Eq => true
+      |Lt => false
+      |Gt => mem j t
+      end
+    end.
+
 End Bases.
 
 Section Neighbour.
 
 Variable (m n : nat).
+
+Fixpoint seq_test (s s' : seq (positive*positive)) :=
+  match s, s' with
+    |[::], [::] => true
+    |[::], _ => false
+    |_, [::] => false
+    |p::t, p'::t' => match p,p' with
+      |(i,j),(i',j') => match (i ?= i')%positive with
+        |Eq => match (j ?= j')%positive with
+          |Eq => seq_test t t'
+          |_ => false
+          end
+        |_ => false
+        end
+      end
+    end. 
 
 Definition check_basis (A : matrix) (b : row) (I_s : basis * seq (positive * positive) ) :=
   let: (I0, s) := I_s in
@@ -322,20 +348,26 @@ Definition check_basis (A : matrix) (b : row) (I_s : basis * seq (positive * pos
                   if r_j ?= 0 is Eq then
                     (i,j) :: res
                   else (* r_j > 0 *)
-                    if has (fun k => if Pos.compare j k is Eq then true else false) arg then (* to be improved *)
+                    if mem j arg then
                       (i,j) :: res
                     else
-                      res) res (zip2 I' c_i r)
+                      res) res (rev (zip2 I' c_i r))
       in
-      let res := foldl search_i [::] (zip I0 A') in
+      let res := foldl search_i [::] (rev (zip I0 A')) in
       seq_equal res s
   end.
 
 End Neighbour.
 
-(* TODO : test d'appartenance dans une base (simplification de check_point_and_neighbour) *)
-(* TODO : au lieu des AVL, on prend en entrée un graphe d'adjacence calculé informellement. Son type est seq (basis * seq (positive * positive)).
-Pour chaque élément (I, s), on vérifie que I est bien une base admissible, et que s est précisément la liste des bases adjacentes à I. Remarque : on peut prétrier s de manière à ce que l'ordre des bases adjacentes soit précisément celui de la visite.
+(* TODO : test d'appartenance dans une base
+(simplification de check_point_and_neighbour) *)
+(* TODO : au lieu des AVL, on prend en entrée
+un graphe d'adjacence calculé informellement.
+Son type est seq (basis * seq (positive * positive)).
+Pour chaque élément (I, s), on vérifie que I est bien une base admissible,
+et que s est précisément la liste des bases adjacentes à I.
+Remarque : on peut prétrier s de manière à ce que l'ordre des bases adjacentes
+soit précisément celui de la visite.
    TODO : modifier le script python, trier la liste dans le bon sens
 *)
 
