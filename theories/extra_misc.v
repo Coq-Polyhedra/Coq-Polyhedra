@@ -381,8 +381,8 @@ Proof.
     + elim: S => [// | x S Hx].
         rewrite /= => /andP [Hxp H_].
         have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
-        case Haf: (S); first by apply: Hxp. rewrite -Haf.
-        case: leP => //.
+        case Haf: (S); first by apply: Hxp.
+        by rewrite -Haf ltexI Hxp.
 Qed.
 
 Fixpoint max_seq (S : seq R) (v : R) :=
