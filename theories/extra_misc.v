@@ -605,7 +605,8 @@ Definition tag3 x := tag2 x.
 Definition tag4 x := tag3 x.
 Definition tag5 x := tag4 x.
 Definition tag6 x := tag5 x.
-Canonical tag6.
+Definition tag7 x := tag6 x.
+Canonical tag7.
 
 Canonical fsubset_expose (A : {fset K})
           (H : expose (A `<=` S)%fset) := @FSubset (tag0 _) H.
@@ -633,6 +634,12 @@ Lemma fsubset_filterP (P : pred K) : [fset x in S | P x] `<=` S.
 Proof. by apply/fsubsetP=> x; rewrite !inE /= => /andP[]. Qed.
 
 Canonical fsubset_filter (P : pred K) := @FSubset (tag4 _) (fsubset_filterP P).
+
+Lemma fsubset_setDP (A B : {fset K}) :
+  B `<=` S -> B `\` A `<=` S.
+Admitted.
+Canonical fsubset_setD (A B : {fset K}) (HB : expose (B `<=` S)) :=
+  @FSubset (tag5 _) (fsubset_setDP A HB).
 
 Global Instance expose_valP (A : fsubset_t) : expose (A `<=` S) := Expose (valP A).
 Global Instance expose_funP (T : Type) (P : pred T) (f : T -> fsubset_t) :
@@ -692,7 +699,7 @@ Canonical fsubset_eqType.
 Canonical fsubset_choiceType.
 Canonical fsubset_countType.
 Canonical fsubset_finType.
-Canonical tag6.
+Canonical tag7.
 Canonical fsubset_expose.
 Canonical fsubset_fset0.
 Canonical fsubset_setU.
@@ -766,7 +773,7 @@ by move/leAS=> ->; rewrite orbT.
 Qed.
 
 Canonical fsubset_slice e A :=
-  @FSubset.FSubset _ _ (FSubset.tag5 _) (fsubset_sliceP e A).
+  @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e A).
 
 Lemma fsubset_unsliceP e (A : {fsubset (fslice e S)}) :
   funslice e A `<=` S.
@@ -775,7 +782,7 @@ by rewrite fsubDset (valP A).
 Qed.
 
 Canonical fsubset_unslice e (A : {fsubset (fslice e S)}) :=
-  @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_unsliceP A).
+  @FSubset.FSubset _ _ (FSubset.tag7 _) (fsubset_unsliceP A).
 
 Lemma fsubset_fsubsetP (A B : {fsubset S}) :
   reflect {in S, {subset (A : {fset K}) <= (B : {fset K})}} (A `<=` B)%fset.
