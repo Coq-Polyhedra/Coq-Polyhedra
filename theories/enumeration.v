@@ -22,6 +22,22 @@ Local Open Scope ring_scope.
 Local Open Scope poly_scope.
 Import GRing.Theory Num.Theory.
 
+(* Goal :
+
+On suppose qu'on est à la base admissible I, et on considère i \in I.
+
+Pour tout j \notin I, on note
+- c_ij := A_j * (col i A_I^{-1}) <- c_{ij} := '[j.1, d] pour j \in base `\` I, où
+d est tel que 'P^=(base; I \` i) = [line d & _] et '[i.1, d] = 1
+- r_j := A_j x^I - b_j (qui ne dépend pas de i)
+
+Proposition
+Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une base admissible ssi les conditions suivantes sont satisfaites :
+* c_ij != 0
+* r_j > 0 ==> j \in arg max_(k notin I | c_ik < 0) (r_k / c_ik).
+
+*)
+
 Section Basis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
@@ -36,6 +52,10 @@ Lemma card_basis I :
 Proof.
 by case/and3P => /eqP.
 Qed.
+
+Lemma basis_proper0 I :
+  is_basis I -> 'P^=(base; I) `>` [poly0].
+Admitted.
 
 Lemma basis_feasible I :
   is_basis I -> 'P^=(base; I) `<=` P.
