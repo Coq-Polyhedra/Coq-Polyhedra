@@ -55,14 +55,22 @@ Qed.
 
 Lemma basis_proper0 I :
   is_basis I -> 'P^=(base; I) `>` [poly0].
-Admitted.
+Proof.
+by case/and3P => ? /eqP H ?; rewrite dimN0 H.
+Qed.
 
 Lemma basis_feasible I :
   is_basis I -> 'P^=(base; I) `<=` P.
-Admitted.
+Proof.
+  case/and3P => Hcard Hdim1 Heq.
+  case/poly_baseP : P.
+  - move => H; move : Heq; rewrite H active0 => /= Hn.
+  move : (@polyEq_antimono _ _ base base I Hn) => /= Hsub.
+  
 
+  
 Lemma dim_span_basis I :
-  (\dim <<I>> = n)%N.
+  is_basis I -> (\dim <<I>> = n)%N.
 Admitted.
 
 Lemma basis_vertex I :

@@ -1,4 +1,4 @@
-#! /usr/bin/env python3
+#! /usr/bin/env python3.6
 
 # --------------------------------------------------------------------
 import sys, os, re, shutil, fractions as fc, subprocess as sp
