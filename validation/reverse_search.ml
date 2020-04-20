@@ -9,15 +9,17 @@
  * cf Theory of Linear and Integer Programming (Schrijver), Chapitre 11
  * 
  * Algo d'énumération : récursif sur la base
- * let rec enum I (c^I_kl : 'M(m, n)) (r^I_k : 'cV_m) :=
- *   S := {}
+ * let rec enum I (c^I_kl : 'M(m, n)) (r^I_k : 'cV_m) (g^I : 'cV_n) :=
+ *   S := {};
  *   for i \in I do
  *     for j \notin I do
  *       let J = I - i + j in 
- *         if J is a feasible basis
- *           S := {J} \cup S
+ *         if (c^I_ij != 0) && (r^I_j <= 0 || j \in arg max_(k notin I | c^I_ik < 0) (r^I_k / c^I_ik)) 
+ *           (* criterion for J to be a feasible basis *) then
+ *           S := {(J, c^J, r^J, g^J)} \cup S
  *     done
- *   done
- *   S' := filter [fun J => I == bland J] S;
+ *   done;
+ *   print S;
+ *   S' := filter [fun (J, c^J, r^J, g^J) => I == bland J c^J r^J g^J] S; (* bland should use the c^I and r^I *)
  *   iter enum S' 
  *)
