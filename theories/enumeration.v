@@ -41,6 +41,7 @@ Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une 
 Section Basis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
+Hypothesis Pprop0 : P `>` [poly0].
 
 Implicit Type (I : {fsubset base}).
 
@@ -66,9 +67,8 @@ Proof.
   case/poly_baseP : P.
   - move => H; move : Heq; rewrite H active0 => /= Hn.
   move : (@polyEq_antimono _ _ base base I Hn) => /= Hsub.
-  
 
-  
+
 Lemma dim_span_basis I :
   is_basis I -> (\dim <<I>> = n)%N.
 Admitted.
