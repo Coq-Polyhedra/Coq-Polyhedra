@@ -95,11 +95,24 @@ Proof.
 move => basis_I. case/eqP/dim1P: (dim_basis basis_I) => x ptPbaseI.
 move : (basis_feasible basis_I).
 rewrite ptPbaseI. move => ptx_subset_P; exists x => //.
-rewrite in_vertex_setP -ptPbaseI face_set_morph /=.
+rewrite in_vertex_setP -ptPbaseI face_setE.
+- by rewrite ptPbaseI.
+- by rewrite pvalP.
+Qed.
+
+Search "dim".
+
+Lemma foo I x:
+  'P^=(base; I) = [ pt x ] -> (#|` I| >= n)%nat.
+Proof.
 Admitted.
 
 Lemma vertex_basis x :
   x \in vertex_set P -> exists2 I, is_basis I & 'P^=(base; I) = [pt x].
+Proof.
+rewrite in_vertex_setP => ptx_face_P.
+move : (face_set_has_base ptx_face_P) => /has_baseP H.
+case : (H (pt_proper0 x)) => I pt_eq_PbaseI.
 Admitted.
 
 Lemma dim_basisD1 I i :
