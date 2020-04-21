@@ -91,6 +91,11 @@ Qed.
 
 Lemma basis_vertex I :
   is_basis I -> exists2 x, x \in vertex_set P & 'P^=(base; I) = [pt x].
+Proof.
+move => basis_I. case/eqP/dim1P: (dim_basis basis_I) => x ptPbaseI.
+move : (basis_feasible basis_I).
+rewrite ptPbaseI. move => ptx_subset_P; exists x => //.
+rewrite in_vertex_setP -ptPbaseI face_set_morph /=.
 Admitted.
 
 Lemma vertex_basis x :
