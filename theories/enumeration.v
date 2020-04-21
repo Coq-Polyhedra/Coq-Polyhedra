@@ -41,6 +41,7 @@ Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une 
 Section Basis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
+Hypothesis Pprop0 : P `>` [poly0].
 
 Implicit Type (I : {fsubset base}).
 
@@ -62,16 +63,17 @@ Qed.
 Lemma basis_feasible I :
   is_basis I -> 'P^=(base; I) `<=` P.
 Proof.
-  case/and3P => Hcard Hdim1 Heq.
-  case/poly_baseP : P.
-  - move => H; move : Heq; rewrite H active0 => /= Hn.
-  move : (@polyEq_antimono _ _ base base I Hn) => /= Hsub.
-  
+  case/and3P => ???.
+  move : (repr_active Pprop0) => ->.
+  by apply polyEq_antimono.
+Qed.
 
-  
 Lemma dim_span_basis I :
   is_basis I -> (\dim <<I>> = n)%N.
-Admitted.
+Proof.
+  case/and3P => /eqP Hcard Hdim Heq.
+  
+
 
 Lemma basis_vertex I :
   is_basis I -> exists2 x, x \in vertex_set P & 'P^=(base; I) = [pt x].
