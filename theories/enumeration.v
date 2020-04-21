@@ -97,9 +97,8 @@ Lemma vertex_basis x :
   x \in vertex_set P -> exists2 I, is_basis I & 'P^=(base; I) = [pt x].
 Admitted.
 
-(*
-Lemma dim_basisD1 I i : i \in I -> dim 'P^=(base; (I `\ i)%fset) = 2%N.
-  is_basis I -> (\dim <<I>> = n)%N.
-Admitted.*)
+Lemma dim_basisD1 I i :
+  (i \in (I : {fset _})) -> dim ('P^=(base; ((I `\ i)%fset)%:fsub)%:poly_base) = 2%N.
+Admitted.
 
 End Basis.

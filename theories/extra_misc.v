@@ -705,6 +705,7 @@ Canonical fsubset_fset0.
 Canonical fsubset_setU.
 Canonical fsubset_bigU.
 Canonical fsubset_filter.
+Canonical fsubset_setD.
 End Exports.
 End FSubset.
 
@@ -762,8 +763,22 @@ apply/negP; case: A => /= A leAS /(fsub_proper_trans leAS).
 by apply/negP/fproper_irrefl.
 Qed.
 
-Definition fslice e (A : {fset K}) := e |` A.
-Definition funslice e (A : {fset K}) := A `\ e.
+Fact fslice_key : unit. by []. Qed.
+Definition fslice e (A : {fset K}) := locked_with fslice_key e |` A.
+Fact funslice_key : unit. by []. Qed.
+Definition funslice e (A : {fset K}) := locked_with funslice_key A `\ e.
+
+Definition fsliceE e (A : {fset K}) :
+  fslice e A = e |` A.
+Proof.
+by rewrite /fslice unlock_with.
+Qed.
+
+Definition funsliceE e (A : {fset K}) :
+  funslice e A = A `\  e.
+Proof.
+by rewrite /funslice unlock_with.
+Qed.
 
 Lemma fsubset_sliceP e (A : {fsubset S}) : fslice e A `<=` fslice e S.
 Proof.
@@ -775,10 +790,17 @@ Qed.
 Canonical fsubset_slice e A :=
   @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e A).
 
+Lemma in_fslice x A y :
+  y \in (fslice x A) = (y == x) || (y \in A).
+Proof.
+rewrite fsliceE; by apply: in_fset1U.
+Qed.
+
 Lemma fsubset_unsliceP e (A : {fsubset (fslice e S)}) :
   funslice e A `<=` S.
 Proof.
-by rewrite fsubDset (valP A).
+rewrite funsliceE fsubDset.
+by move: (valP A); rewrite /fslice /= {2}unlock_with.
 Qed.
 
 Canonical fsubset_unslice e (A : {fsubset (fslice e S)}) :=
@@ -805,6 +827,7 @@ End FSubsetOther.
 Notation "e +|` A" := (fslice e A) (at level 52).
 Notation "A `|- e" := (funslice e A) (at level 52).
 
+
 (*Global Instance expose_valP (K : choiceType) (S : {fset K}) (A : {fsubset S}) : expose (A `<=` S)%fset := Expose (valP A).
 Global Instance expose_funP (K : choiceType) (S : {fset K}) (T : Type) (P : pred T) (f : T -> {fsubset S}) :
   expose (forall i, P i -> (f i `<=` S)%fset) := Expose (fun i _ => (valP (f i))).
@@ -812,19 +835,22 @@ Global Instance expose_funP (K : choiceType) (S : {fset K}) (T : Type) (P : pred
 (* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
 Global Instance expose_setT (K : choiceType) (S : {fset K}) : expose (S `<=` S)%fset := Expose (fsubset_refl S).*)
 
-(*
-Section Test.
 
-Variable (K : realFieldType) (S : {fset K}) (e : K) (A : {fsubset S}).
+(*Section Test.
+Variable (K : realFieldType) (S : {fset K}) (e e' : K) (A B : {fsubset S}) (P : pred K).
+Set Typeclasses Debug.
+Check (A `\ e)%fset%:fsub : {fsubset A}.
+Check ((A `\` B)%fset%:fsub : {fsubset S}).
+Check [fset x in S | P x]%fset%:fsub.
 Check ((e +|` A)%:fsub : {fsubset (e +|` S)}).
 Check ((e +|` fset0)%:fsub : {fsubset (e +|` S)}).
 Check ((e +|` S)%:fsub : {fsubset (e +|` S)}).
+Check (((e +|` S) `|- e)%:fsub) : {fsubset _}.
 Hypothesis He : ([fset e] `<=` S)%fset.
 Check ([fset e]%fset%:fsub : {fsubset S}).
 Check ((A `|` [fset e])%fset%:fsub : {fsubset S}).
-Check (([fset e] `|` A )%fset%:fsub : {fsubset _}). (* this should be a {fsubset S} *)
-End Test.
-*)
+Check (([fset e] `|` A )%fset%:fsub : {fsubset S}).
+End Test.*)
 
 Section Vector.
 

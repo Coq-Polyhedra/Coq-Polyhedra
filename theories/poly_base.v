@@ -2216,7 +2216,7 @@ case: (ltnP 1 (dim F)) => [dimF_gt1 | ?]; case: (ltnP 1 (dim F')) => [dimF'_gt1 
 - move/pval_inj/(congr1 active); rewrite ?vf_eq //=.
   rewrite {3}[F]repr_active 1?{3}[F']repr_active ?vf_L_prop0 //.
   move/(congr1 (fun (x : {fsubset _}) => (x `|- e0))) => /=.
-  by rewrite !/funslice !/fslice !fsetU1K ?vf_e0_notin_eq // => ->.
+  by rewrite !funsliceE !fsliceE !fsetU1K ?vf_e0_notin_eq // => ->.
 Qed.
 
 Lemma vf_mem_v (F : 'poly[R]_n) :
@@ -2253,14 +2253,16 @@ case: (emptyP F) => [->| F_prop0].
 - move: F_face F_prop0; case/face_setP => {}F F_sub F_prop0.
   set F' := 'P^=(base; ({eq F} `|- e0))%:poly_base.
   have F_eq : F = (Φ F') :> 'poly[R]_n.
-  + rewrite {1}[F]repr_active //= /Φ slice_polyEq /fslice fsetD1K //.
-    rewrite in_active ?inE ?eq_refl //.
+  + rewrite {1}[F]repr_active //= /Φ slice_polyEq.
+    apply/congr1 => /=.
+    rewrite ![in RHS](fsliceE, funsliceE) fsetD1K //.
+    rewrite in_active ?in_fslice ?eq_refl //.
     by apply/(poly_subset_trans F_sub)/poly_subsetIl.
   rewrite F_eq; exists (pval F') => //.
   suff F'_face: pval F' \in face_set P by rewrite 2!inE vf_mem_v ?andbT ?F'_face -?F_eq.
   rewrite face_setE [P]repr_active ?vf_L_prop0 ?vf_P_in_L ?polyEq_antimono //.
   move/activeS/(fsubset_trans (active_slice _ _))/(fsetSD [fset e0]%fset): F_sub.
-  by rewrite fsetU1K ?vf_e0_notin_eq ?vf_P_in_L.
+  by rewrite fsliceE fsetU1K ?vf_e0_notin_eq ?vf_P_in_L ?funsliceE.
 Qed.
 
 (*Lemma vf_dim (F : 'poly[R]_n) :

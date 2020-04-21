@@ -1331,10 +1331,6 @@ apply/forallP/idP => /= [h| c_in_e]; first by apply: (h [` fset11 e]%fset).
 by case=> /= e'; rewrite in_fset1 => /eqP->.
 Qed.
 
-Lemma in_fslice {T : choiceType} (x : T) (A : {fset T}) y :
-  y \in (x +|` A) = (y == x) || (y \in A).
-Proof. by apply: in_fset1U. Qed.
-
 Lemma nmono_in_poly_of_base (P Q : base_t[R,n]) :
   (Q `<=` P)%fset -> 'P(P) `<=` 'P(Q).
 Proof.
