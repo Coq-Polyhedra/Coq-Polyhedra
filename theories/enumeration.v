@@ -46,7 +46,7 @@ Hypothesis Pprop0 : P `>` [poly0].
 Implicit Type (I : {fsubset base}).
 
 Definition is_basis I :=
-  [&& (#|` I | == n)%N, (dim 'P^=(base; I) == 1%N) & ({eq P} `<=` I)%fset].
+  [&& (#|` I | == n)%N, (\dim <<I>> == n)%N & ([poly0] `<` 'P^=(base; I) `<=` P)].
 
 Lemma card_basis I :
   is_basis I -> #|` I | = n.
@@ -57,22 +57,37 @@ Qed.
 Lemma basis_proper0 I :
   is_basis I -> 'P^=(base; I) `>` [poly0].
 Proof.
-by case/and3P => ? /eqP H ?; rewrite dimN0 H.
+by case/and3P => _ _ /andP [].
 Qed.
 
 Lemma basis_feasible I :
   is_basis I -> 'P^=(base; I) `<=` P.
 Proof.
-  case/and3P => ???.
-  move : (repr_active Pprop0) => ->.
-  by apply polyEq_antimono.
+by case/and3P => _ _ /andP [].
 Qed.
 
 Lemma dim_span_basis I :
   is_basis I -> (\dim <<I>> = n)%N.
 Proof.
-  case/and3P => /eqP Hcard Hdim Heq.
-Admitted.
+by case/and3P => _ /eqP ->.
+Qed.
+
+Lemma span_basis I :
+  is_basis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
+Proof.
+case/and3P => _ /eqP dimI_eq_n /andP [PI_prop0 _].
+apply/eqP; rewrite eqEdim; apply/andP; split.
+- by apply/sub_span/fsubsetP/active_polyEq.
+- by rewrite dimI_eq_n; apply/dim_span_active.
+Qed.
+
+Lemma dim_basis I :
+  is_basis I -> dim 'P^=(base; I) = 1%N.
+Proof.
+move => I_basis.
+rewrite dimN0_eq ?basis_proper0 //.
+by rewrite -span_basis // dim_span_basis // subnn.
+Qed.
 
 Lemma basis_vertex I :
   is_basis I -> exists2 x, x \in vertex_set P & 'P^=(base; I) = [pt x].
