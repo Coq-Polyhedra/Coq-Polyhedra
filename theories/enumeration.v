@@ -140,7 +140,9 @@ exists I.
   move: (eq_span I_eq_X) => span_eq.
   move: (sub_span X_sub) => X_sub_eqQ.
   move => size_X; apply/eqP; apply anti_leq; apply /andP; split.
-  rewrite -size_X.
+  rewrite -span_eq -[Y in (_ <= Y)%N]size_X; exact: dim_span.
+  by rewrite -[Y in (Y <= _)%N]dim_eqQ; apply dimv_leqif_eq; rewrite -span_eq.
+  Search _ "dim".
   Search _ "size".
   Admitted.
   (*
