@@ -100,19 +100,34 @@ rewrite in_vertex_setP -ptPbaseI face_setE.
 - by rewrite pvalP.
 Qed.
 
-Search "dim".
-
-Lemma foo I x:
-  'P^=(base; I) = [ pt x ] -> (#|` I| >= n)%nat.
+Lemma vertexP (x : 'cV_n) :
+  x \in vertex_set P ->
+        exists Q : {poly base}, [/\ [pt x] = Q, dim Q = 1%N & (Q `<=` P)].
 Proof.
+case/imfsetP => Q /=; rewrite inE => /andP [].
+case/face_setP => {}Q ? /eqP ? ->.
+by exists Q; split; rewrite -?dim1_pt_ppick.
+Qed.
+
+Lemma foo (K : fieldType) (vT : vectType K) (X : seq vT) :
+  exists2 Y, {subset Y <= X} & basis_of <<X>>%VS Y.
 Admitted.
 
 Lemma vertex_basis x :
   x \in vertex_set P -> exists2 I, is_basis I & 'P^=(base; I) = [pt x].
 Proof.
-rewrite in_vertex_setP => ptx_face_P.
-move : (face_set_has_base ptx_face_P) => /has_baseP H.
-case : (H (pt_proper0 x)) => I pt_eq_PbaseI.
+case/vertexP => Q [-> dimQ_eq1 Q_sub_P].
+have dim_eqQ: (\dim <<{eq Q}>> = n)%N.
+- admit.
+case: (foo {eq Q}) => X X_sub X_basis.
+set I := [fset x in base | x \in X]%fset%:fsub.
+have I_eq_X : X =i (I : {fset _}).
+- admit.
+exists I.
+- apply/and3P; split.
+  Search _ uniq in finmap.
+  Search _ uniq in vector.
+  Search _ affine.
 Admitted.
 
 Lemma dim_basisD1 I i :
