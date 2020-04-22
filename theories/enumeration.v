@@ -118,17 +118,39 @@ Lemma vertex_basis x :
 Proof.
 case/vertexP => Q [-> dimQ_eq1 Q_sub_P].
 have dim_eqQ: (\dim <<{eq Q}>> = n)%N.
-- admit.
+- have : dim Q = 1%N => // dimQ_eq1bis.
+  move : dimQ_eq1. rewrite dimN0_eq.
+  rewrite -[X in _ = X]addn0 -addn1 [X in X = _]addnC => inj.
+  move : (addnI inj) => H. rewrite -[X in X = _]addn0 -H subnKC => //=.
+  by apply dim_span_active; rewrite dimN0 dimQ_eq1bis.
+  by rewrite dimN0 dimQ_eq1bis.
+Search "dim".
 case: (foo {eq Q}) => X X_sub X_basis.
 set I := [fset x in base | x \in X]%fset%:fsub.
 have I_eq_X : X =i (I : {fset _}).
 - admit.
 exists I.
 - apply/and3P; split.
++ admit.
++ have X_basis2 : basis_of <<{eq Q}>> X. by [].
+  move : X_basis; rewrite basisEfree dim_eqQ => /and3P [] freeX span_sub.
+  move : X_basis2; rewrite basisEdim dim_eqQ => /andP [] span_sub2.
+  move => leqn geqn.
+  have : size X = n. apply anti_leq; apply/andP; split => //.
+  move: (eq_span I_eq_X) => span_eq.
+  move: (sub_span X_sub) => X_sub_eqQ.
+  move => size_X; apply/eqP; apply anti_leq; apply /andP; split.
+  rewrite -size_X.
+  Search _ "size".
+  Admitted.
+  (*
+  Search _ span in vector.
+  Search _ size in vector.
+  Search _ basis_of in vector.
   Search _ uniq in finmap.
   Search _ uniq in vector.
   Search _ affine.
-Admitted.
+Admitted.*)
 
 Lemma dim_basisD1 I i :
   (i \in (I : {fset _})) -> dim ('P^=(base; ((I `\ i)%fset)%:fsub)%:poly_base) = 2%N.
