@@ -140,7 +140,13 @@ by rewrite [Y in _ = (pval Y)]hyp.
 exists I; last first.
 - by [].
 - apply/and3P; split.
-+ admit.
++ rewrite -[Y in _ == Y]dim_eqQ; move : (basis_free X_basis) => free_X.
+  move : (free_uniq free_X) => uniq_X.
+  have cardX : size X = (\dim <<{eq Q}>>)%N.
+  apply anti_leq; apply/andP; split.
+  * rewrite basisEdim in X_basis. by case/andP : X_basis.
+  * rewrite basisEfree in X_basis. by case/and3P : X_basis.
+  rewrite -cardX. rewrite -uniq_size_uniq //.
 + have X_basis2 : basis_of <<{eq Q}>> X. by [].
   move : X_basis; rewrite basisEfree dim_eqQ => /and3P [] freeX span_sub.
   move : X_basis2; rewrite basisEdim dim_eqQ => /andP [] span_sub2.
