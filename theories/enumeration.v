@@ -124,12 +124,21 @@ have dim_eqQ: (\dim <<{eq Q}>> = n)%N.
   move : (addnI inj) => H. rewrite -[X in X = _]addn0 -H subnKC => //=.
   by apply dim_span_active; rewrite dimN0 dimQ_eq1bis.
   by rewrite dimN0 dimQ_eq1bis.
-Search "dim".
 case: (foo {eq Q}) => X X_sub X_basis.
 set I := [fset x in base | x \in X]%fset%:fsub.
-have I_eq_X : X =i (I : {fset _}).
-- admit.
-exists I.
+have I_eq_X : (I : {fset _}) =i X.
+- rewrite /eq_mem => y; rewrite !inE /=. apply andb_idl => in_X.
+move : (X_sub y in_X) => in_eqQ.
+by move : (fsubset_incl in_eqQ).
+have Q_base_I: 'P^=(base; I) = Q.
+rewrite polyEq_affine.
+move : (eq_span I_eq_X) => span_eq.
+rewrite span_eq (vector.span_basis X_basis) -polyEq_affine.
+have hyp: Q = 'P^=(base; {eq Q})%:poly_base.
+by apply repr_active; rewrite dimN0 dimQ_eq1.
+by rewrite [Y in _ = (pval Y)]hyp.
+exists I; last first.
+- by [].
 - apply/and3P; split.
 + admit.
 + have X_basis2 : basis_of <<{eq Q}>> X. by [].
@@ -140,20 +149,14 @@ exists I.
   move: (eq_span I_eq_X) => span_eq.
   move: (sub_span X_sub) => X_sub_eqQ.
   move => size_X; apply/eqP; apply anti_leq; apply /andP; split.
-  rewrite -span_eq -[Y in (_ <= Y)%N]size_X; exact: dim_span.
-  by rewrite -[Y in (Y <= _)%N]dim_eqQ; apply dimv_leqif_eq; rewrite -span_eq.
-  Search _ "dim".
-  Search _ "size".
-  Admitted.
-  (*
-  Search _ span in vector.
-  Search _ size in vector.
-  Search _ basis_of in vector.
-  Search _ uniq in finmap.
-  Search _ uniq in vector.
-  Search _ affine.
-Admitted.*)
+  rewrite span_eq -[Y in (_ <= Y)%N]size_X; exact: dim_span.
+  by rewrite -[Y in (Y <= _)%N]dim_eqQ; apply dimv_leqif_eq; rewrite span_eq.
++ apply/andP; split; rewrite Q_base_I //.
+  by rewrite dimN0 dimQ_eq1.
+Proof.
 
+
+  
 Lemma dim_basisD1 I i :
   (i \in (I : {fset _})) -> dim ('P^=(base; ((I `\ i)%fset)%:fsub)%:poly_base) = 2%N.
 Admitted.
