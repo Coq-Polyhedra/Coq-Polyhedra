@@ -109,6 +109,17 @@ case/face_setP => {}Q ? /eqP ? ->.
 by exists Q; split; rewrite -?dim1_pt_ppick.
 Qed.
 
+Section FooBar.
+Variable (K : fieldType) (vT : vectType K) .
+
+Fixpoint mybasis (X res : seq vT) :=
+  match X with
+  | [::] => res
+  | x :: X' => if (x \in <<X' ++ res >>)%VS then mybasis X' res
+              else mybasis X' (x::res)
+  end.
+
+End FooBar.
 Lemma foo (K : fieldType) (vT : vectType K) (X : {fset vT}) :
   exists2 Y, (Y `<=` X)%fset & basis_of <<X>>%VS Y.
 Admitted.
