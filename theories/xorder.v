@@ -114,23 +114,31 @@ apply/esym; rewrite [X in X = _]/join [in LHS](eq_bigl P) //.
 + by move=> t; rewrite ge_joinP -andbA andbCA.
 Qed.
 
-Definition latticeMixin : latticeMixin T :=
-  @LatticeMixin d T
-    (meet m) join (meetC m) joinC
-    (meetA m) joinA joinKI meetKU (le_def m).
-
-Definition bLatticeMixin : bLatticeMixin T :=
-  @BLatticeMixin d T (bottom m) (le0x m).
-
-Definition tbLatticeMixin : tbLatticeMixin T :=
-  @TBLatticeMixin d T (top m) (lex1 m).
 End MeetBTFinMixin.
+
+Definition meetSemilatticeMixin d {T : finPOrderType d} (m : of_ T)
+  :  meetSemilatticeMixin T
+  := @MeetSemilatticeMixin d T (meet m) (meetC m) (meetA m) (meetxx m) (le_def m).
+
+Definition bSemilatticeMixin d {T : finPOrderType d} (m : of_ T)
+  :  bSemilatticeMixin T
+  := @BSemilatticeMixin d T _ (le0x m).
+
+Definition latticeMixin d {T : finPOrderType d} (m : of_ T) 
+  :  latticeMixin (MeetSemilatticeType T (meetSemilatticeMixin m))
+  := @LatticeMixin d (MeetSemilatticeType T (meetSemilatticeMixin m))
+       (join m) (joinC m) (joinA m) (joinKI m) (meetKU m).
+
+Definition tbLatticeMixin d {T : finPOrderType d} (m : of_ T)
+  :  tbLatticeMixin T
+  := @TBLatticeMixin d T (top m) (lex1 m).
 
 Module Exports.
 Notation meetBTFinMixin := of_.
 Notation MeetBTFinMixin := Build.
+Coercion meetSemilatticeMixin : meetBTFinMixin >-> MeetSemilattice.mixin_of.
+Coercion bSemilatticeMixin : meetBTFinMixin >-> BSemilattice.mixin_of.
 Coercion latticeMixin : meetBTFinMixin >-> Lattice.mixin_of.
-Coercion bLatticeMixin : meetBTFinMixin >-> BLattice.mixin_of.
 Coercion tbLatticeMixin : meetBTFinMixin >-> TBLattice.mixin_of.
 End Exports.
 End MeetBTFinMixin.
@@ -180,16 +188,24 @@ Definition countType := @Countable.Pack cT xclass.
 Definition finType := @Finite.Pack cT xclass.
 Definition porderType := @POrder.Pack disp cT xclass.
 Definition finPOrderType := @FinPOrder.Pack disp cT xclass.
+Definition meetSemilatticeType := @MeetSemilattice.Pack disp cT xclass.
+Definition BSemilatticeType := @BSemilattice.Pack disp cT xclass.
 Definition latticeType := @Lattice.Pack disp cT xclass.
 Definition bLatticeType := @BLattice.Pack disp cT xclass.
 Definition tbLatticeType := @TBLattice.Pack disp cT xclass.
 Definition finLatticeType := @FinLattice.Pack disp cT xclass.
+Definition count_meetSemilatticeType := @MeetSemilattice.Pack disp countType xclass.
+Definition count_bSemilatticeType := @BSemilattice.Pack disp countType xclass.
 Definition count_latticeType := @Lattice.Pack disp countType xclass.
 Definition count_bLatticeType := @BLattice.Pack disp countType xclass.
 Definition count_tbLatticeType := @TBLattice.Pack disp countType xclass.
+Definition fin_meetSemilatticeType := @MeetSemilattice.Pack disp finType xclass.
+Definition fin_bSemilatticeType := @BSemilattice.Pack disp finType xclass.
 Definition fin_latticeType := @Lattice.Pack disp finType xclass.
 Definition fin_bLatticeType := @BLattice.Pack disp finType xclass.
 Definition fin_tbLatticeType := @TBLattice.Pack disp finType xclass.
+Definition finPOrder_meetSemilatticeType := @MeetSemilattice.Pack disp finPOrderType xclass.
+Definition finPOrder_bSemilatticeType := @BSemilattice.Pack disp finPOrderType xclass.
 Definition finPOrder_latticeType := @Lattice.Pack disp finPOrderType xclass.
 Definition finPOrder_bLatticeType := @BLattice.Pack disp finPOrderType xclass.
 Definition finPOrder_tbLatticeType := @TBLattice.Pack disp finPOrderType xclass.
@@ -209,6 +225,8 @@ Coercion countType : type >-> Countable.type.
 Coercion finType : type >-> Finite.type.
 Coercion porderType : type >-> POrder.type.
 Coercion finPOrderType : type >-> FinPOrder.type.
+Coercion meetSemilatticeType : type >-> MeetSemilattice.type.
+Coercion BSemilatticeType : type >-> BSemilattice.type.
 Coercion latticeType : type >-> Lattice.type.
 Coercion bLatticeType : type >-> BLattice.type.
 Coercion tbLatticeType : type >-> TBLattice.type.
@@ -219,16 +237,24 @@ Canonical countType.
 Canonical finType.
 Canonical porderType.
 Canonical finPOrderType.
+Canonical meetSemilatticeType.
+Canonical BSemilatticeType.
 Canonical latticeType.
 Canonical bLatticeType.
 Canonical tbLatticeType.
 Canonical finLatticeType.
+Canonical count_meetSemilatticeType.
+Canonical count_bSemilatticeType.
 Canonical count_latticeType.
 Canonical count_bLatticeType.
 Canonical count_tbLatticeType.
+Canonical fin_meetSemilatticeType.
+Canonical fin_bSemilatticeType.
 Canonical fin_latticeType.
 Canonical fin_bLatticeType.
 Canonical fin_tbLatticeType.
+Canonical finPOrder_meetSemilatticeType.
+Canonical finPOrder_bSemilatticeType.
 Canonical finPOrder_latticeType.
 Canonical finPOrder_bLatticeType.
 Canonical finPOrder_tbLatticeType.
@@ -771,6 +797,9 @@ Proof. by move=> x y; apply: val_inj; rewrite !SubK meetC. Qed.
 Fact meetA : associative meetU.
 Proof. by move=> x y z; apply: val_inj; rewrite !SubK meetA. Qed.
 
+Fact meetxx : idempotent meetU.
+Proof. by move=> x; apply: val_inj; rewrite !SubK meetxx. Qed.
+
 Fact joinC : commutative joinU.
 Proof. by move=> x y; apply: val_inj; rewrite !SubK joinC. Qed.
 
@@ -786,11 +815,23 @@ Proof. by apply: val_inj; rewrite !SubK meetKU. Qed.
 Fact le_def (x y : U) : (x <= y) = (meetU x y == x).
 Proof. by rewrite -val_eqE !SubK -leEmeet leEsub. Qed.
 
+Definition meetSemilatticeMixin of phant U :=
+  MeetSemilatticeMixin meetC meetA meetxx le_def.
+
+Canonical sub_MeetSemilatticeType :=
+  Eval hnf in MeetSemilatticeType U (meetSemilatticeMixin (Phant U)).
+
 Definition latticeMixin of phant U :=
-  LatticeMixin meetC joinC meetA joinA joinKI meetKU le_def.
+  LatticeMixin joinC joinA joinKI meetKU.
+
+Canonical sub_LatticeType :=
+  Eval hnf in LatticeType U (latticeMixin (Phant U)).
 End Def.
 
 Module Exports.
+Notation "[ 'meetSemilatticeMixin' 'of' U 'by' <: ]" := (meetSemilatticeMixin (Phant U))
+  (at level 0, format "[ 'meetSemilatticeMixin'  'of'  U  'by'  <: ]") : form_scope.
+
 Notation "[ 'latticeMixin' 'of' U 'by' <: ]" := (latticeMixin (Phant U))
   (at level 0, format "[ 'latticeMixin'  'of'  U  'by'  <: ]") : form_scope.
 End Exports.
@@ -864,6 +905,8 @@ Definition interval_choiceMixin := [choiceMixin of interval_of by <:].
 Canonical interval_choiceType := Eval hnf in ChoiceType interval_of interval_choiceMixin.
 Definition interval_porderMixin := [porderMixin of interval_of by <:].
 Canonical interval_porderType := Eval hnf in POrderType d interval_of interval_porderMixin.
+Definition interval_meetSemilatticeMixin := [meetSemilatticeMixin of interval_of by <:].
+Canonical interval_meetSemilatticeType := Eval hnf in MeetSemilatticeType interval_of interval_meetSemilatticeMixin.
 Definition interval_latticeMixin := [latticeMixin of interval_of by <:].
 Canonical interval_latticeType := Eval hnf in LatticeType interval_of interval_latticeMixin.
 
@@ -896,11 +939,13 @@ Fact leR1 (x : '[< a; b >]) : x <= top.
 Proof. by rewrite leEsub /=; case/intervalP: (valP x).
 Qed.
 
-Definition interval_bLatticeMixin  := BLatticeMixin  le0R.
+Definition interval_bSemilatticeMixin := BSemilatticeMixin le0R.
 Definition interval_tbLatticeMixin := TBLatticeMixin leR1.
 
-Canonical interval_blatticeType :=
-  Eval hnf in BLatticeType '[< a; b >] interval_bLatticeMixin.
+Canonical interval_bSemilatticeType :=
+  Eval hnf in BSemilatticeType '[< a; b >] interval_bSemilatticeMixin.
+
+Canonical internal_bLatticeType := [bLatticeType of '[< a; b >]].
 
 Canonical interval_tblatticeType :=
   Eval hnf in TBLatticeType '[< a; b >] interval_tbLatticeMixin.
