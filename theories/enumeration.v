@@ -109,60 +109,48 @@ case/face_setP => {}Q ? /eqP ? ->.
 by exists Q; split; rewrite -?dim1_pt_ppick.
 Qed.
 
-Lemma foo (K : fieldType) (vT : vectType K) (X : seq vT) :
-  exists2 Y, {subset Y <= X} & basis_of <<X>>%VS Y.
+Lemma foo (K : fieldType) (vT : vectType K) (X : {fset vT}) :
+  exists2 Y, (Y `<=` X)%fset & basis_of <<X>>%VS Y.
 Admitted.
+
+(*
+  + rewrite -[in RHS]dim_eqQ.
+    apply anti_leq; apply/andP; split; move: X_basis.
+    *
+  have uniq_X : uniq X by apply/free_uniq/(basis_free X_basis).
+  by rewrite -[Y in _ == Y]size_X -uniq_size_uniq.
+*)
+
+Lemma vbasis_card (K : fieldType) (vT : vectType K) (U : {vspace vT}) (X : {fset vT}) :
+  basis_of U X -> #|` X | = (\dim U)%N.
+Proof.
+move => X_basis.
+apply/anti_leq/andP; split; move: X_basis.
++ by rewrite basisEdim => /andP [].
++ by rewrite basisEfree => /and3P [].
+Qed.
 
 Lemma vertex_basis x :
   x \in vertex_set P -> exists2 I, is_basis I & 'P^=(base; I) = [pt x].
 Proof.
 case/vertexP => Q [-> dimQ_eq1 Q_sub_P].
+have Q_prop0: Q `>` [poly0] by rewrite dimN0 dimQ_eq1.
 have dim_eqQ: (\dim <<{eq Q}>> = n)%N.
-- have : dim Q = 1%N => // dimQ_eq1bis.
-  move : dimQ_eq1. rewrite dimN0_eq.
-  rewrite -[X in _ = X]addn0 -addn1 [X in X = _]addnC => inj.
-  move : (addnI inj) => H. rewrite -[X in X = _]addn0 -H subnKC => //=.
-  by apply dim_span_active; rewrite dimN0 dimQ_eq1bis.
-  by rewrite dimN0 dimQ_eq1bis.
-case: (foo {eq Q}) => X X_sub X_basis.
-set I := [fset x in base | x \in X]%fset%:fsub.
-have I_eq_X : (I : {fset _}) =i X.
-- rewrite /eq_mem => y; rewrite !inE /=. apply andb_idl => in_X.
-move : (X_sub y in_X) => in_eqQ.
-by move : (fsubset_incl in_eqQ).
+- apply/anti_leq/andP; split; rewrite ?dim_span_active //.
+  move: dimQ_eq1; rewrite dimN0_eq // => /succn_inj/eqP.
+  by rewrite subn_eq0.
+case: (foo {eq Q}) => I I_sub I_basis.
+have I_sub_base: (I `<=` base)%fset. (* TODO: missing canonical in fsubset *)
+- by apply/(fsubset_trans I_sub)/fsubset_subP.
 have Q_base_I: 'P^=(base; I) = Q.
-rewrite polyEq_affine.
-move : (eq_span I_eq_X) => span_eq.
-rewrite span_eq (vector.span_basis X_basis) -polyEq_affine.
-have hyp: Q = 'P^=(base; {eq Q})%:poly_base.
-by apply repr_active; rewrite dimN0 dimQ_eq1.
-by rewrite [Y in _ = (pval Y)]hyp.
-exists I; last first.
-- by [].
-- apply/and3P; split.
-+ rewrite -[Y in _ == Y]dim_eqQ; move : (basis_free X_basis) => free_X.
-  move : (free_uniq free_X) => uniq_X.
-  have cardX : size X = (\dim <<{eq Q}>>)%N.
-  apply anti_leq; apply/andP; split.
-  * rewrite basisEdim in X_basis. by case/andP : X_basis.
-  * rewrite basisEfree in X_basis. by case/and3P : X_basis.
-  rewrite -cardX. rewrite -uniq_size_uniq //.
-+ have X_basis2 : basis_of <<{eq Q}>> X. by [].
-  move : X_basis; rewrite basisEfree dim_eqQ => /and3P [] freeX span_sub.
-  move : X_basis2; rewrite basisEdim dim_eqQ => /andP [] span_sub2.
-  move => leqn geqn.
-  have : size X = n. apply anti_leq; apply/andP; split => //.
-  move: (eq_span I_eq_X) => span_eq.
-  move: (sub_span X_sub) => X_sub_eqQ.
-  move => size_X; apply/eqP; apply anti_leq; apply /andP; split.
-  rewrite span_eq -[Y in (_ <= Y)%N]size_X; exact: dim_span.
-  by rewrite -[Y in (Y <= _)%N]dim_eqQ; apply dimv_leqif_eq; rewrite span_eq.
-+ apply/andP; split; rewrite Q_base_I //.
-  by rewrite dimN0 dimQ_eq1.
+- rewrite polyEq_affine (vector.span_basis I_basis) -polyEq_affine.
+  by rewrite [Q in RHS]repr_active //=.
+exists (I%:fsub) => //; apply/and3P; split.
+- by rewrite /= (vbasis_card I_basis) dim_eqQ.
+- by rewrite (vector.span_basis I_basis) dim_eqQ.
+- by rewrite Q_base_I; apply/andP; split.
 Proof.
 
-
-  
 Lemma dim_basisD1 I i :
   (i \in (I : {fset _})) -> dim ('P^=(base; ((I `\ i)%fset)%:fsub)%:poly_base) = 2%N.
 Admitted.
