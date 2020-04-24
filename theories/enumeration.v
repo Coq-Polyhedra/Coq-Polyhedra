@@ -119,10 +119,63 @@ Fixpoint mybasis (X res : seq vT) :=
               else mybasis X' (x::res)
   end.
 
-End FooBar.
-Lemma foo (K : fieldType) (vT : vectType K) (X : {fset vT}) :
+Definition mybasis_fset (X : {fset vT}) :=
+  let supp := [seq x | x <- X] in
+  [fset e in mybasis supp [::]]%fset.
+
+Lemma mybasis_subseq_aux (X : seq vT):
+  forall (res: seq vT) (x : vT), (x \in mybasis X res) -> x \in X ++ res.
+Proof.
+elim : X => //=.
+move => a l Hind res x. case : (a \in <<l ++ res>>%VS) => x_in_myb.
+- move : (Hind _ _ x_in_myb) => // x_in_cat.
+  by rewrite in_cons; apply/orP; right.
+- move : (Hind _ _ x_in_myb); rewrite in_cons !mem_cat in_cons.
+  by case/or3P; move => ->; [apply orbC | | rewrite Bool.orb_assoc orbC].
+Qed.
+
+Lemma mybasis_subseq (X: seq vT):
+  forall (x:vT), (x \in mybasis X [::]) -> x \in X.
+Proof.
+by move => x H; rewrite -(cats0 X); apply mybasis_subseq_aux.
+Qed.
+
+Lemma mybasis_free_aux (X : seq vT):
+  forall res, free res -> free (mybasis X res).
+Proof.
+elim : X => //.
+move => a l Hind res /=.
+have disjcase : (a \in <<l++res>>%VS)\/(a \notin <<l++res>>%VS).
+- apply/orP; case : (a \in <<l++res>>%VS) => //.
+- case : disjcase.
+  + move => ->; exact (Hind _).
+  + move => a_free res_free.
+    case : (a \in <<l++res>>%VS); apply Hind => //.
+    rewrite free_cons; apply/andP; split => //.
+    rewrite span_cat in a_free. move: a_free; apply contra => in_res.
+    rewrite -[Y in Y \in _]add0r; apply memv_add => //.
+    exact : mem0v.
+Qed.
+
+Lemma mybasis_free (X : seq vT) :
+  free (mybasis X [::]).
+Proof.
+apply mybasis_free_aux. exact : nil_free.
+Qed.
+
+Lemma mybasis_basis (X : seq vT) :
+  basis_of <<X>> (mybasis X [::]).
+Proof.
+elim : X => /=.
+- rewrite span_nil; exact (nil_basis _).
+- Admitted.
+
+Lemma foo (X : {fset vT}) :
   exists2 Y, (Y `<=` X)%fset & basis_of <<X>>%VS Y.
+Proof.
+exists (mybasis_fset X).
 Admitted.
+End FooBar.
 
 (*
   + rewrite -[in RHS]dim_eqQ.
