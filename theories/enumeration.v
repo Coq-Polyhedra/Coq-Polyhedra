@@ -163,12 +163,41 @@ Proof.
 apply mybasis_free_aux. exact : nil_free.
 Qed.
 
-Lemma mybasis_basis (X : seq vT) :
-  basis_of <<X>> (mybasis X [::]).
+Lemma mybasis_span_aux (X: seq vT) :
+  forall res, <<mybasis X res>>%VS == <<X++res>>%VS.
 Proof.
-elim : X => /=.
-- rewrite span_nil; exact (nil_basis _).
-- Admitted.
+elim : X => //=.
+move => a l Hind res.
+have disjcase : (a \in <<l++res>>%VS)\/(a \notin <<l++res>>%VS).
+- by apply/orP; case : (a \in <<l++res>>%VS).
+- case : disjcase.
+  + move => a_in_span.
+    rewrite a_in_span span_cons.
+    Check addv_idPl.
+    move/eqP : (Hind res) => ->; rewrite eq_sym.
+    by apply /eqP/addv_idPr.
+  + move => a_notin_span.
+    have : (a \in <<l++res>>%VS) = false
+    by move : a_notin_span; case : (a \in <<l++res>>%VS).
+    move => ->. move/eqP : (Hind (a::res)) => ->.
+    apply/eqP; apply /eq_span/perm_mem.
+    rewrite -cat_rcons -cat_cons. apply perm_cat => //.
+    apply/permPl. exact : perm_rcons.
+Qed.
+
+Lemma mybasis_span (X: seq vT) :
+  <<mybasis X [::]>>%VS == <<X>>%VS.
+Proof.
+rewrite -[Y in _ == <<Y>>%VS](cats0 X). exact : mybasis_span_aux.
+Qed.
+
+Lemma mybasis_basis (X: seq vT):
+  basis_of <<X>>%VS (mybasis X [::]).
+Proof.
+apply/andP; split.
+- exact : mybasis_span.
+- exact : mybasis_free.
+Qed.
 
 Lemma foo (X : {fset vT}) :
   exists2 Y, (Y `<=` X)%fset & basis_of <<X>>%VS Y.
