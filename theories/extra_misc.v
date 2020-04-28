@@ -370,19 +370,19 @@ Qed.
 Lemma min_seq_positive (S : seq R) (v : R) :
   (S != [::]) \/ (v > 0) -> (min_seq S v > 0) = (all [pred i | i > 0] S).
 Proof.
-  move => H.
-  apply/idP/idP.
-  - move => H'. apply/allP; rewrite /= => x Hx.
-    apply: (@lt_le_trans _ _ (min_seq S v) _ _); first by done.
-    + by apply: min_seq_ler.
-  - case: H => [Hne | He].
-    + move/allP => H' /=. move/hasP: (min_seq_eq v Hne) => [i Hi /eqP -> /=].
-      by apply: H'.
-    + elim: S => [// | x S Hx].
-        rewrite /= => /andP [Hxp H_].
-        have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
-        case Haf: (S); first by apply: Hxp. rewrite -Haf.
-        case: leP => //.
+move => H.
+apply/idP/idP.
+- move => H'. apply/allP; rewrite /= => x Hx.
+  apply: (@lt_le_trans _ _ (min_seq S v) _ _); first by done.
+  + by apply: min_seq_ler.
+- case: H => [Hne | He].
+  + move/allP => H' /=. move/hasP: (min_seq_eq v Hne) => [i Hi /eqP -> /=].
+    by apply: H'.
+  + elim: S => [// | x S Hx].
+      rewrite /= => /andP [Hxp H_].
+      have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
+      case Haf: (S); first by apply: Hxp. rewrite -Haf.
+      by case: (leP x).
 Qed.
 
 Fixpoint max_seq (S : seq R) (v : R) :=
