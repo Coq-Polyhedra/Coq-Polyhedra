@@ -120,8 +120,7 @@ Fixpoint mybasis (X res : seq vT) :=
   end.
 
 Definition mybasis_fset (X : {fset vT}) :=
-  let supp := [seq x | x <- X] in
-  [fset e in mybasis supp [::]]%fset.
+  [fset e in mybasis X [::]]%fset.
 
 Lemma mybasis_subseq_aux (X : seq vT):
   forall (res: seq vT) (x : vT), (x \in mybasis X res) -> x \in X ++ res.
@@ -202,8 +201,20 @@ Qed.
 Lemma foo (X : {fset vT}) :
   exists2 Y, (Y `<=` X)%fset & basis_of <<X>>%VS Y.
 Proof.
-exists (mybasis_fset X).
-Admitted.
+exists (mybasis_fset X); rewrite /mybasis_fset.
+- rewrite -[Y in (_ `<=` Y)%fset]imfset_id; apply subset_imfset.
+exact: mybasis_subseq.
+- apply/andP; split.
+  + move: (mybasis_span X) => /eqP <-; apply/eqP/eq_span => x.
+  by rewrite !in_fsetE.
+  + rewrite Imfset.imfsetE map_id => /=.
+    have: uniq (mybasis X [::]) by apply/free_uniq/mybasis_free.
+    move => /undup_id undup_mybX; rewrite undup_mybX.
+    have: free (seq_fset imfset_key (mybasis X [::])) = free (mybasis X [::]).
+    * apply perm_free; rewrite -[Y in perm_eq (_) (Y)]undup_mybX; exact: seq_fset_perm.
+    * move => ->; exact: mybasis_free.
+Qed.
+
 End FooBar.
 
 (*
@@ -242,7 +253,7 @@ exists (I%:fsub) => //; apply/and3P; split.
 - by rewrite /= (vbasis_card I_basis) dim_eqQ.
 - by rewrite (vector.span_basis I_basis) dim_eqQ.
 - by rewrite Q_base_I; apply/andP; split.
-Proof.
+Qed.
 
 Lemma dim_basisD1 I i :
   (i \in (I : {fset _})) -> dim ('P^=(base; ((I `\ i)%fset)%:fsub)%:poly_base) = 2%N.
