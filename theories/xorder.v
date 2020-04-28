@@ -1142,7 +1142,7 @@ End Atomic.
 (* -------------------------------------------------------------------- *)
 Section CoatomAtom.
 Lemma coatom_atom (d : unit) (L : finLatticeType d) (a : L) :
-  coatom a -> atom (L := [finLatticeType of dual L]) a.
+  coatom a -> atom (L := [finLatticeType of L^d]) a.
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
 split; first by apply: gt0_a.
@@ -1150,14 +1150,14 @@ by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
 Lemma coatom_atom_V (d : unit) (L : finLatticeType d) (a : L) :
-  coatom (L := [finLatticeType of dual L]) a -> atom  a.
+  coatom (L := [finLatticeType of L^d]) a -> atom  a.
 Proof. by apply/coatom_atom. Qed.
 End CoatomAtom.
 
 (* -------------------------------------------------------------------- *)
 Section AtomCoatom.
 Lemma atom_coatom (d : unit) (L : finLatticeType d) (a : L) :
-  atom a -> coatom (L := [finLatticeType of dual L]) a.
+  atom a -> coatom (L := [finLatticeType of L^d]) a.
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
 split; first by apply: gt0_a.
@@ -1165,7 +1165,7 @@ by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
 Lemma atom_coatom_V (d : unit) (L : finLatticeType d) (a : L) :
-  atom (L := [finLatticeType of dual L]) a -> coatom a.
+  atom (L := [finLatticeType of L^d]) a -> coatom a.
 Proof. by apply/atom_coatom. Qed.
 End AtomCoatom.
 
