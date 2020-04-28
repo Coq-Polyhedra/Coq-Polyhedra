@@ -586,14 +586,10 @@ by apply: (le_trans d_le_d' _).
 Qed.
 
 Lemma moner_neq0 : -1 != 0 :> R.
-by rewrite eq_sym -addr_eq0 add0r oner_neq0.
-Qed.
+Proof. by rewrite oppr_eq0 oner_eq0. Qed.
 
 Lemma divrNN (x y : R) : (-x)/(-y) = x/y.
-Proof.
-rewrite -[(-x)]mulN1r -[(-y)]mulN1r -mulf_div mulfV ?mul1r //.
-exact: moner_neq0.
-Qed.
+Proof. by rewrite invrN mulrNN. Qed.
 
 Lemma hp_itv (e : lrel[R]_n) (y z: 'cV[R]_n) :
   y \in [hs e] -> z \notin [hs e] ->
