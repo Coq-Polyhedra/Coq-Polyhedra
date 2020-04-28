@@ -44,15 +44,15 @@ Record of_ := Build {
   lex1   : forall x, x <= top;
 }.
 
-Local Lemma meet1x (m : of_) : left_id (top m) (meet m).
-Proof. by move=> x; rewrite (rwP eqP) meetC -le_def lex1. Qed.
-
-Local Lemma meetx1 (m : of_) : right_id (top m) (meet m).
-Proof. by move=> x; rewrite meetC meet1x. Qed.
-
 Variable (m : of_).
 
-Local Canonical meet_monoid := Monoid.Law (meetA m) (meet1x m) (meetx1 m).
+Local Lemma meet1x : left_id (top m) (meet m).
+Proof. by move=> x; rewrite (rwP eqP) meetC -le_def lex1. Qed.
+
+Local Lemma meetx1 : right_id (top m) (meet m).
+Proof. by move=> x; rewrite meetC meet1x. Qed.
+
+Local Canonical meet_monoid := Monoid.Law (meetA m) meet1x meetx1.
 Local Canonical meet_comoid := Monoid.ComLaw (meetC m).
 
 Definition join (x y : T) : T :=
@@ -77,13 +77,6 @@ rewrite (rwP eqP) -le_def; elim/big_ind: _.
 + by rewrite lex1.
 + by move=> x' y'; rewrite !(le_def m) meetA => /eqP-> /eqP->.
 + by move=> z /andP[/andP[]].
-Qed.
-
-Lemma le_def_dual x y : x <= y = (join x y == y).
-Proof.
-rewrite (le_def m); apply/eqP/eqP=> <-.
-+ by rewrite joinC meetC meetKU.
-+ by rewrite joinKI.
 Qed.
 
 Lemma ge_joinL a b x : (x >= join a b) -> x >= a.
@@ -114,32 +107,22 @@ apply/esym; rewrite [X in X = _]/join [in LHS](eq_bigl P) //.
 + by move=> t; rewrite ge_joinP -andbA andbCA.
 Qed.
 
+Definition latticeMixin : latticePOrderMixin T :=
+  @LatticePOrderMixin d T (meet m) join
+                      (meetC m) joinC (meetA m) joinA joinKI meetKU (le_def m).
+
+Definition bottomMixin : bottomMixin T := @BottomMixin d T _ (le0x m).
+
+Definition topMixin : topMixin T := @TopMixin d T _ (lex1 m).
+
 End MeetBTFinMixin.
-
-Definition meetSemilatticeMixin d {T : finPOrderType d} (m : of_ T)
-  :  meetSemilatticeMixin T
-  := @MeetSemilatticeMixin d T (meet m) (meetC m) (meetA m) (meetxx m) (le_def m).
-
-Definition bSemilatticeMixin d {T : finPOrderType d} (m : of_ T)
-  :  bSemilatticeMixin T
-  := @BSemilatticeMixin d T _ (le0x m).
-
-Definition latticeMixin d {T : finPOrderType d} (m : of_ T) 
-  :  latticeMixin (MeetSemilatticeType T (meetSemilatticeMixin m))
-  := @LatticeMixin d (MeetSemilatticeType T (meetSemilatticeMixin m))
-       (join m) (joinC m) (joinA m) (joinKI m) (meetKU m).
-
-Definition tbLatticeMixin d {T : finPOrderType d} (m : of_ T)
-  :  tbLatticeMixin T
-  := @TBLatticeMixin d T (top m) (lex1 m).
 
 Module Exports.
 Notation meetBTFinMixin := of_.
 Notation MeetBTFinMixin := Build.
-Coercion meetSemilatticeMixin : meetBTFinMixin >-> MeetSemilattice.mixin_of.
-Coercion bSemilatticeMixin : meetBTFinMixin >-> BSemilattice.mixin_of.
-Coercion latticeMixin : meetBTFinMixin >-> Lattice.mixin_of.
-Coercion tbLatticeMixin : meetBTFinMixin >-> TBLattice.mixin_of.
+Coercion latticeMixin : meetBTFinMixin >-> latticePOrderMixin.
+Coercion bottomMixin : meetBTFinMixin >-> BottomMixin.of_.
+Coercion topMixin : meetBTFinMixin >-> TopMixin.of_.
 End Exports.
 End MeetBTFinMixin.
 
@@ -797,9 +780,6 @@ Proof. by move=> x y; apply: val_inj; rewrite !SubK meetC. Qed.
 Fact meetA : associative meetU.
 Proof. by move=> x y z; apply: val_inj; rewrite !SubK meetA. Qed.
 
-Fact meetxx : idempotent meetU.
-Proof. by move=> x; apply: val_inj; rewrite !SubK meetxx. Qed.
-
 Fact joinC : commutative joinU.
 Proof. by move=> x y; apply: val_inj; rewrite !SubK joinC. Qed.
 
@@ -815,23 +795,17 @@ Proof. by apply: val_inj; rewrite !SubK meetKU. Qed.
 Fact le_def (x y : U) : (x <= y) = (meetU x y == x).
 Proof. by rewrite -val_eqE !SubK -leEmeet leEsub. Qed.
 
-Definition meetSemilatticeMixin of phant U :=
-  MeetSemilatticeMixin meetC meetA meetxx le_def.
+Definition latticeMixin of phant U :=
+  @LatticePOrderMixin d _ _ _ meetC joinC meetA joinA joinKI meetKU le_def.
 
 Canonical sub_MeetSemilatticeType :=
-  Eval hnf in MeetSemilatticeType U (meetSemilatticeMixin (Phant U)).
-
-Definition latticeMixin of phant U :=
-  LatticeMixin joinC joinA joinKI meetKU.
+  Eval hnf in MeetSemilatticeType U (latticeMixin (Phant U)).
 
 Canonical sub_LatticeType :=
   Eval hnf in LatticeType U (latticeMixin (Phant U)).
 End Def.
 
 Module Exports.
-Notation "[ 'meetSemilatticeMixin' 'of' U 'by' <: ]" := (meetSemilatticeMixin (Phant U))
-  (at level 0, format "[ 'meetSemilatticeMixin'  'of'  U  'by'  <: ]") : form_scope.
-
 Notation "[ 'latticeMixin' 'of' U 'by' <: ]" := (latticeMixin (Phant U))
   (at level 0, format "[ 'latticeMixin'  'of'  U  'by'  <: ]") : form_scope.
 End Exports.
@@ -905,9 +879,8 @@ Definition interval_choiceMixin := [choiceMixin of interval_of by <:].
 Canonical interval_choiceType := Eval hnf in ChoiceType interval_of interval_choiceMixin.
 Definition interval_porderMixin := [porderMixin of interval_of by <:].
 Canonical interval_porderType := Eval hnf in POrderType d interval_of interval_porderMixin.
-Definition interval_meetSemilatticeMixin := [meetSemilatticeMixin of interval_of by <:].
-Canonical interval_meetSemilatticeType := Eval hnf in MeetSemilatticeType interval_of interval_meetSemilatticeMixin.
 Definition interval_latticeMixin := [latticeMixin of interval_of by <:].
+Canonical interval_meetSemilatticeType := Eval hnf in MeetSemilatticeType interval_of interval_latticeMixin.
 Canonical interval_latticeType := Eval hnf in LatticeType interval_of interval_latticeMixin.
 
 Lemma interval_val_is_omorphism : omorphism interval_val.
@@ -939,16 +912,16 @@ Fact leR1 (x : '[< a; b >]) : x <= top.
 Proof. by rewrite leEsub /=; case/intervalP: (valP x).
 Qed.
 
-Definition interval_bSemilatticeMixin := BSemilatticeMixin le0R.
-Definition interval_tbLatticeMixin := TBLatticeMixin leR1.
+Definition interval_bottomMixin := BottomMixin le0R.
+Definition interval_topMixin := TopMixin leR1.
 
 Canonical interval_bSemilatticeType :=
-  Eval hnf in BSemilatticeType '[< a; b >] interval_bSemilatticeMixin.
+  Eval hnf in BSemilatticeType '[< a; b >] interval_bottomMixin.
 
 Canonical internal_bLatticeType := [bLatticeType of '[< a; b >]].
 
 Canonical interval_tblatticeType :=
-  Eval hnf in TBLatticeType '[< a; b >] interval_tbLatticeMixin.
+  Eval hnf in TBLatticeType '[< a; b >] interval_topMixin.
 End IntervalTBLattice.
 
 (* -------------------------------------------------------------------- *)
