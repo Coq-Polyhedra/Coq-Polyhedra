@@ -44,15 +44,15 @@ Record of_ := Build {
   lex1   : forall x, x <= top;
 }.
 
-Local Lemma meet1x (m : of_) : left_id (top m) (meet m).
-Proof. by move=> x; rewrite (rwP eqP) meetC -le_def lex1. Qed.
-
-Local Lemma meetx1 (m : of_) : right_id (top m) (meet m).
-Proof. by move=> x; rewrite meetC meet1x. Qed.
-
 Variable (m : of_).
 
-Local Canonical meet_monoid := Monoid.Law (meetA m) (meet1x m) (meetx1 m).
+Local Lemma meet1x : left_id (top m) (meet m).
+Proof. by move=> x; rewrite (rwP eqP) meetC -le_def lex1. Qed.
+
+Local Lemma meetx1 : right_id (top m) (meet m).
+Proof. by move=> x; rewrite meetC meet1x. Qed.
+
+Local Canonical meet_monoid := Monoid.Law (meetA m) meet1x meetx1.
 Local Canonical meet_comoid := Monoid.ComLaw (meetC m).
 
 Definition join (x y : T) : T :=
@@ -77,13 +77,6 @@ rewrite (rwP eqP) -le_def; elim/big_ind: _.
 + by rewrite lex1.
 + by move=> x' y'; rewrite !(le_def m) meetA => /eqP-> /eqP->.
 + by move=> z /andP[/andP[]].
-Qed.
-
-Lemma le_def_dual x y : x <= y = (join x y == y).
-Proof.
-rewrite (le_def m); apply/eqP/eqP=> <-.
-+ by rewrite joinC meetC meetKU.
-+ by rewrite joinKI.
 Qed.
 
 Lemma ge_joinL a b x : (x >= join a b) -> x >= a.
@@ -114,24 +107,22 @@ apply/esym; rewrite [X in X = _]/join [in LHS](eq_bigl P) //.
 + by move=> t; rewrite ge_joinP -andbA andbCA.
 Qed.
 
-Definition latticeMixin : latticeMixin T :=
-  @LatticeMixin d T
-    (meet m) join (meetC m) joinC
-    (meetA m) joinA joinKI meetKU (le_def m).
+Definition latticeMixin : latticePOrderMixin T :=
+  @LatticePOrderMixin d T (meet m) join
+                      (meetC m) joinC (meetA m) joinA joinKI meetKU (le_def m).
 
-Definition bLatticeMixin : bLatticeMixin T :=
-  @BLatticeMixin d T (bottom m) (le0x m).
+Definition bottomMixin : bottomMixin T := @BottomMixin d T _ (le0x m).
 
-Definition tbLatticeMixin : tbLatticeMixin T :=
-  @TBLatticeMixin d T (top m) (lex1 m).
+Definition topMixin : topMixin T := @TopMixin d T _ (lex1 m).
+
 End MeetBTFinMixin.
 
 Module Exports.
 Notation meetBTFinMixin := of_.
 Notation MeetBTFinMixin := Build.
-Coercion latticeMixin : meetBTFinMixin >-> Lattice.mixin_of.
-Coercion bLatticeMixin : meetBTFinMixin >-> BLattice.mixin_of.
-Coercion tbLatticeMixin : meetBTFinMixin >-> TBLattice.mixin_of.
+Coercion latticeMixin : meetBTFinMixin >-> latticePOrderMixin.
+Coercion bottomMixin : meetBTFinMixin >-> BottomMixin.of_.
+Coercion topMixin : meetBTFinMixin >-> TopMixin.of_.
 End Exports.
 End MeetBTFinMixin.
 
@@ -180,16 +171,24 @@ Definition countType := @Countable.Pack cT xclass.
 Definition finType := @Finite.Pack cT xclass.
 Definition porderType := @POrder.Pack disp cT xclass.
 Definition finPOrderType := @FinPOrder.Pack disp cT xclass.
+Definition meetSemilatticeType := @MeetSemilattice.Pack disp cT xclass.
+Definition BSemilatticeType := @BSemilattice.Pack disp cT xclass.
 Definition latticeType := @Lattice.Pack disp cT xclass.
 Definition bLatticeType := @BLattice.Pack disp cT xclass.
 Definition tbLatticeType := @TBLattice.Pack disp cT xclass.
 Definition finLatticeType := @FinLattice.Pack disp cT xclass.
+Definition count_meetSemilatticeType := @MeetSemilattice.Pack disp countType xclass.
+Definition count_bSemilatticeType := @BSemilattice.Pack disp countType xclass.
 Definition count_latticeType := @Lattice.Pack disp countType xclass.
 Definition count_bLatticeType := @BLattice.Pack disp countType xclass.
 Definition count_tbLatticeType := @TBLattice.Pack disp countType xclass.
+Definition fin_meetSemilatticeType := @MeetSemilattice.Pack disp finType xclass.
+Definition fin_bSemilatticeType := @BSemilattice.Pack disp finType xclass.
 Definition fin_latticeType := @Lattice.Pack disp finType xclass.
 Definition fin_bLatticeType := @BLattice.Pack disp finType xclass.
 Definition fin_tbLatticeType := @TBLattice.Pack disp finType xclass.
+Definition finPOrder_meetSemilatticeType := @MeetSemilattice.Pack disp finPOrderType xclass.
+Definition finPOrder_bSemilatticeType := @BSemilattice.Pack disp finPOrderType xclass.
 Definition finPOrder_latticeType := @Lattice.Pack disp finPOrderType xclass.
 Definition finPOrder_bLatticeType := @BLattice.Pack disp finPOrderType xclass.
 Definition finPOrder_tbLatticeType := @TBLattice.Pack disp finPOrderType xclass.
@@ -209,6 +208,8 @@ Coercion countType : type >-> Countable.type.
 Coercion finType : type >-> Finite.type.
 Coercion porderType : type >-> POrder.type.
 Coercion finPOrderType : type >-> FinPOrder.type.
+Coercion meetSemilatticeType : type >-> MeetSemilattice.type.
+Coercion BSemilatticeType : type >-> BSemilattice.type.
 Coercion latticeType : type >-> Lattice.type.
 Coercion bLatticeType : type >-> BLattice.type.
 Coercion tbLatticeType : type >-> TBLattice.type.
@@ -219,16 +220,24 @@ Canonical countType.
 Canonical finType.
 Canonical porderType.
 Canonical finPOrderType.
+Canonical meetSemilatticeType.
+Canonical BSemilatticeType.
 Canonical latticeType.
 Canonical bLatticeType.
 Canonical tbLatticeType.
 Canonical finLatticeType.
+Canonical count_meetSemilatticeType.
+Canonical count_bSemilatticeType.
 Canonical count_latticeType.
 Canonical count_bLatticeType.
 Canonical count_tbLatticeType.
+Canonical fin_meetSemilatticeType.
+Canonical fin_bSemilatticeType.
 Canonical fin_latticeType.
 Canonical fin_bLatticeType.
 Canonical fin_tbLatticeType.
+Canonical finPOrder_meetSemilatticeType.
+Canonical finPOrder_bSemilatticeType.
 Canonical finPOrder_latticeType.
 Canonical finPOrder_bLatticeType.
 Canonical finPOrder_tbLatticeType.
@@ -787,7 +796,13 @@ Fact le_def (x y : U) : (x <= y) = (meetU x y == x).
 Proof. by rewrite -val_eqE !SubK -leEmeet leEsub. Qed.
 
 Definition latticeMixin of phant U :=
-  LatticeMixin meetC joinC meetA joinA joinKI meetKU le_def.
+  @LatticePOrderMixin d _ _ _ meetC joinC meetA joinA joinKI meetKU le_def.
+
+Canonical sub_MeetSemilatticeType :=
+  Eval hnf in MeetSemilatticeType U (latticeMixin (Phant U)).
+
+Canonical sub_LatticeType :=
+  Eval hnf in LatticeType U (latticeMixin (Phant U)).
 End Def.
 
 Module Exports.
@@ -865,6 +880,7 @@ Canonical interval_choiceType := Eval hnf in ChoiceType interval_of interval_cho
 Definition interval_porderMixin := [porderMixin of interval_of by <:].
 Canonical interval_porderType := Eval hnf in POrderType d interval_of interval_porderMixin.
 Definition interval_latticeMixin := [latticeMixin of interval_of by <:].
+Canonical interval_meetSemilatticeType := Eval hnf in MeetSemilatticeType interval_of interval_latticeMixin.
 Canonical interval_latticeType := Eval hnf in LatticeType interval_of interval_latticeMixin.
 
 Lemma interval_val_is_omorphism : omorphism interval_val.
@@ -896,14 +912,16 @@ Fact leR1 (x : '[< a; b >]) : x <= top.
 Proof. by rewrite leEsub /=; case/intervalP: (valP x).
 Qed.
 
-Definition interval_bLatticeMixin  := BLatticeMixin  le0R.
-Definition interval_tbLatticeMixin := TBLatticeMixin leR1.
+Definition interval_bottomMixin := BottomMixin le0R.
+Definition interval_topMixin := TopMixin leR1.
 
-Canonical interval_blatticeType :=
-  Eval hnf in BLatticeType '[< a; b >] interval_bLatticeMixin.
+Canonical interval_bSemilatticeType :=
+  Eval hnf in BSemilatticeType '[< a; b >] interval_bottomMixin.
+
+Canonical internal_bLatticeType := [bLatticeType of '[< a; b >]].
 
 Canonical interval_tblatticeType :=
-  Eval hnf in TBLatticeType '[< a; b >] interval_tbLatticeMixin.
+  Eval hnf in TBLatticeType '[< a; b >] interval_topMixin.
 End IntervalTBLattice.
 
 (* -------------------------------------------------------------------- *)
@@ -1097,7 +1115,7 @@ End Atomic.
 (* -------------------------------------------------------------------- *)
 Section CoatomAtom.
 Lemma coatom_atom (d : unit) (L : finLatticeType d) (a : L) :
-  coatom a -> atom (L := [finLatticeType of dual L]) a.
+  coatom a -> atom (L := [finLatticeType of L^d]) a.
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
 split; first by apply: gt0_a.
@@ -1105,14 +1123,14 @@ by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
 Lemma coatom_atom_V (d : unit) (L : finLatticeType d) (a : L) :
-  coatom (L := [finLatticeType of dual L]) a -> atom  a.
+  coatom (L := [finLatticeType of L^d]) a -> atom  a.
 Proof. by apply/coatom_atom. Qed.
 End CoatomAtom.
 
 (* -------------------------------------------------------------------- *)
 Section AtomCoatom.
 Lemma atom_coatom (d : unit) (L : finLatticeType d) (a : L) :
-  atom a -> coatom (L := [finLatticeType of dual L]) a.
+  atom a -> coatom (L := [finLatticeType of L^d]) a.
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
 split; first by apply: gt0_a.
@@ -1120,7 +1138,7 @@ by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
 Lemma atom_coatom_V (d : unit) (L : finLatticeType d) (a : L) :
-  atom (L := [finLatticeType of dual L]) a -> coatom a.
+  atom (L := [finLatticeType of L^d]) a -> coatom a.
 Proof. by apply/atom_coatom. Qed.
 End AtomCoatom.
 

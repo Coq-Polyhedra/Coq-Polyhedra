@@ -686,10 +686,14 @@ Proof. by rewrite !leEsub /= /Order.le /=; apply/face_subset/valP. Qed.
 Definition polyFaces_latticeMixin :=
    MeetBTFinMixin fp_le_def fpIC fpIA fpII fp0I fpI1.
 
+Canonical face_set_MeetSemilatticeType :=
+  Eval hnf in MeetSemilatticeType (face_set P) polyFaces_latticeMixin.
+Canonical face_set_BSemilatticeType :=
+  Eval hnf in BSemilatticeType (face_set P) polyFaces_latticeMixin.
 Canonical face_set_latticeType :=
   Eval hnf in LatticeType (face_set P) polyFaces_latticeMixin.
 Canonical face_set_bLatticeType :=
-  Eval hnf in BLatticeType (face_set P) polyFaces_latticeMixin.
+  [bLatticeType of face_set P].
 Canonical face_set_tbLatticeType :=
   Eval hnf in TBLatticeType (face_set P) polyFaces_latticeMixin.
 Canonical face_set_finLatticeType :=
