@@ -1350,6 +1350,7 @@ apply/poly_eqP=> c; rewrite in_slice; apply/andP/idP.
   - by apply: ceI; rewrite in_fslice eqxx.
   apply/in_polyEqP; split; last first.
   - move: {ceI} c cPeb; apply/poly_subsetP.
+    rewrite fsliceE.
     by apply/nmono_in_poly_of_base/fsubsetU1.
   by move=> b bI; apply: ceI; rewrite in_fslice bI orbT.
 Qed.

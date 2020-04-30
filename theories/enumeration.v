@@ -28,7 +28,7 @@ On suppose qu'on est à la base admissible I, et on considère i \in I.
 
 Pour tout j \notin I, on note
 - c_ij := A_j * (col i A_I^{-1}) <- c_{ij} := '[j.1, d] pour j \in base `\` I, où
-d est tel que 'P^=(base; I \` i) = [line d & _] et '[i.1, d] = 1
+d est tel que affine << I \` i >> = [line d & _] et '[i.1, d] = 1
 - r_j := A_j x^I - b_j (qui ne dépend pas de i)
 
 Proposition
@@ -131,11 +131,39 @@ Search _ card_basis.
 - by rewrite Q_base_I; apply/andP; split.
 Qed.
 
-Lemma dim_pbasisD1 I i :
+Lemma pbasis_affine I :
+  is_pbasis I -> 'P^=(base; I) = affine << I >>%VS.
+Admitted.
+
+Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
+Definition adj_vertex x x' := ([segm x & x'] \in face_set P).
+
+Lemma adj_vertex_basis x x' :
+  adj_vertex x x' -> exists I, exists I',
+      [/\ is_pbasis I, is_pbasis I', 'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
+Admitted.
+
+(*Lemma dim_pbasisD1 I i :
   is_pbasis I -> (i \in (I : {fset _}))
-  -> dim ('P^=(base; ((I `\ i)%fset)%:fsub)%:poly_base) = 2%N.
+  -> dim (affine << (I `\ i)%fset >>%VS) = 2%N.
 Proof.
 move => I_pbasis i_in_I /=.
-Check polyEq_affine.
+Admitted.*)
+
+Lemma dim_pbasisD1' I i :
+  is_pbasis I -> i \in (I : {fset _}) ->
+    exists d, (affine << (I `\ i)%fset >> == [line d & (ppick 'P^=(base; I))]) && ('[i.1, d] == 1).
+Admitted.
+
+Definition dir I i (H : is_pbasis I) (H' : i \in (I : {fset _})) :=
+  xchoose (dim_pbasisD1' H H').
+
+Definition c I i (H : is_pbasis I) (H' : i \in (I : {fset _})) (j : lrel[R]_n) :=
+  '[j.1, dir H H'].
+
+Definition r I (j : lrel[R]_n) :=
+  '[j.1, ppick (affine << I >>%VS)] - j.2.
+
+
 
 End PBasis.

@@ -764,9 +764,9 @@ by apply/negP/fproper_irrefl.
 Qed.
 
 Fact fslice_key : unit. by []. Qed.
-Definition fslice e (A : {fset K}) := locked_with fslice_key e |` A.
+Definition fslice e (A : {fset K}) := locked_with fslice_key (e |` A).
 Fact funslice_key : unit. by []. Qed.
-Definition funslice e (A : {fset K}) := locked_with funslice_key A `\ e.
+Definition funslice e (A : {fset K}) := locked_with funslice_key (A `\ e).
 
 Definition fsliceE e (A : {fset K}) :
   fslice e A = e |` A.
@@ -782,10 +782,11 @@ Qed.
 
 Lemma fsubset_sliceP e (A : {fsubset S}) : fslice e A `<=` fslice e S.
 Proof.
-move/fsubsetP: (fsubset_subP A) => leAS; apply/fsubsetP=> x; rewrite !in_fset1U.
+Admitted.
+(*  move/fsubsetP: (fsubset_subP A) => leAS; apply/fsubsetP=> x; rewrite !in_fset1U.
 case/orP=> [/eqP->|]; first by rewrite eqxx.
 by move/leAS=> ->; rewrite orbT.
-Qed.
+Qed.*)
 
 Canonical fsubset_slice e A :=
   @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e A).
@@ -843,6 +844,7 @@ Check (A `\ e)%fset%:fsub : {fsubset A}.
 Check ((A `\` B)%fset%:fsub : {fsubset S}).
 Check [fset x in S | P x]%fset%:fsub.
 Check ((e +|` A)%:fsub : {fsubset (e +|` S)}).
+Check ((e +|` fset0)%:fsub).
 Check ((e +|` fset0)%:fsub : {fsubset (e +|` S)}).
 Check ((e +|` S)%:fsub : {fsubset (e +|` S)}).
 Check (((e +|` S) `|- e)%:fsub) : {fsubset _}.

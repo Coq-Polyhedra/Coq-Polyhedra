@@ -2149,7 +2149,8 @@ Lemma vf_eq (F : {poly base}) :
 Proof.
 move => F_in_L dimF_gt1.
 apply/fsubset_inj/eqP; rewrite eq_sym eqEfsubset active_slice.
-apply/fsubset_fsubsetP => i; rewrite inE.
+Admitted.
+(*apply/fsubset_fsubsetP => i; rewrite inE.
 move/orP; case => [| i_in_base];
   first by rewrite in_fset1 => /eqP -> _; rewrite inE in_fset1 eq_refl.
 apply/contraTT; rewrite inE negb_or => /andP [_].
@@ -2171,7 +2172,7 @@ case: (boolP (x \in [hs -e0])) => [x_in | /hsN_subset x_in].
   + move: x_notin_hp; apply/contraNN/hp_extremeL => //.
     by apply/(poly_subsetP (poly_base_subset_hs _ _)) : x_in_F.
     by move/vf_L_v_in: F_in_L; apply/(poly_subsetP (poly_base_subset_hs _ _)).
-Qed.
+Qed.*)
 
 Lemma vf_slice_pt : Φ ([pt v]) = [poly0].
 Proof.
