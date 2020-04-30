@@ -2149,30 +2149,29 @@ Lemma vf_eq (F : {poly base}) :
 Proof.
 move => F_in_L dimF_gt1.
 apply/fsubset_inj/eqP; rewrite eq_sym eqEfsubset active_slice.
-Admitted.
-(*apply/fsubset_fsubsetP => i; rewrite inE.
+apply/fsubset_fsubsetP => i /=. rewrite {1}fsliceE inE.
 move/orP; case => [| i_in_base];
-  first by rewrite in_fset1 => /eqP -> _; rewrite inE in_fset1 eq_refl.
-apply/contraTT; rewrite inE negb_or => /andP [_].
+  first by rewrite in_fset1 => /eqP -> _; rewrite fsliceE inE in_fset1 eq_refl.
+apply/contraTT; rewrite fsliceE inE negb_or => /andP [_].
 rewrite in_active // => /poly_subsetPn => [[x] x_in_F x_notin_hp].
 (* TODO : remove code duplication by introducing the right suff *)
 case: (boolP (x \in [hs -e0])) => [x_in | /hsN_subset x_in].
 - move: (vf_L_other_pt F_in_L dimF_gt1) => [w w_in_F w_notin].
   move: (hp_itv x_in w_notin) => [α α01].
     set y := _ + _; rewrite hpN => y_in_hp.
-    rewrite in_active ?inE ?i_in_base ?orbT //; apply/poly_subsetPn; exists y.
+    rewrite in_active ?fsliceE ?inE ?i_in_base ?orbT //; apply/poly_subsetPn; exists y.
     + by rewrite in_slice y_in_hp; apply/mem_poly_convex => //; apply/ltW_le.
       move: x_notin_hp; apply/contraNN/hp_extremeL => //.
       by apply/(poly_subsetP (poly_base_subset_hs _ _)) : x_in_F.
       by apply/(poly_subsetP (poly_base_subset_hs _ _)) : w_in_F.
 - move: (hp_itv x_in sep_v) => [α α01].
   set y := _ + _ => y_in_hp.
-  rewrite in_active ?inE ?i_in_base ?orbT //; apply/poly_subsetPn; exists y.
+  rewrite in_active ?fsliceE ?inE ?i_in_base ?orbT //; apply/poly_subsetPn; exists y.
   + by rewrite in_slice y_in_hp mem_poly_convex ?vf_L_v_in ?ltW_le.
   + move: x_notin_hp; apply/contraNN/hp_extremeL => //.
     by apply/(poly_subsetP (poly_base_subset_hs _ _)) : x_in_F.
     by move/vf_L_v_in: F_in_L; apply/(poly_subsetP (poly_base_subset_hs _ _)).
-Qed.*)
+Qed.
 
 Lemma vf_slice_pt : Φ ([pt v]) = [poly0].
 Proof.

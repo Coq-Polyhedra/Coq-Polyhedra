@@ -782,11 +782,12 @@ Qed.
 
 Lemma fsubset_sliceP e (A : {fsubset S}) : fslice e A `<=` fslice e S.
 Proof.
-Admitted.
-(*  move/fsubsetP: (fsubset_subP A) => leAS; apply/fsubsetP=> x; rewrite !in_fset1U.
+move/fsubsetP: (fsubset_subP A) => leAS.
+rewrite /fslice !unlock_with.
+apply/fsubsetP=> x; rewrite !in_fset1U.
 case/orP=> [/eqP->|]; first by rewrite eqxx.
 by move/leAS=> ->; rewrite orbT.
-Qed.*)
+Qed.
 
 Canonical fsubset_slice e A :=
   @FSubset.FSubset _ _ (FSubset.tag6 _) (fsubset_sliceP e A).
