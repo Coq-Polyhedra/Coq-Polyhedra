@@ -133,7 +133,13 @@ Qed.
 
 Lemma pbasis_affine I :
   is_pbasis I -> 'P^=(base; I) = affine << I >>%VS.
-Admitted.
+Proof.
+move => pbasisI; rewrite span_pbasis //.
+case: (pbasis_vertex pbasisI) => x xvert Pptx.
+rewrite -hullN0_eq. rewrite [Y in hull(Y)]Pptx {1}Pptx.
+
+Search _ polyEq.
+
 
 Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
 Definition adj_vertex x x' := ([segm x & x'] \in face_set P).
