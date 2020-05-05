@@ -626,11 +626,11 @@ Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
 
 Lemma leEfaces (F1 F2 : face_set P) :
   (F1 <= F2) = (val F1 `<=` val F2).
-Proof. by rewrite !leEsub. Qed.
+Proof. by []. Qed.
 
 Lemma ltEfaces (F1 F2 : face_set P) :
   (F1 < F2) = (val F1 `<` val F2).
-Proof. by rewrite !ltEsub. Qed.
+Proof. by []. Qed.
 
 Definition lteEfaces := (leEfaces, ltEfaces).
 End FacesSetOrderTheory.
@@ -678,10 +678,10 @@ by apply/poly_eqP=> x; rewrite !in_polyI andbb.
 Qed.
 
 Lemma fp0I (F : face_set P) : fp0 <= F.
-Proof. by rewrite !leEsub /= /Order.le /= poly0_subset. Qed.
+Proof. by apply: poly0_subset. Qed.
 
 Lemma fpI1 (F : face_set P) : F <= fp1.
-Proof. by rewrite !leEsub /= /Order.le /=; apply/face_subset/valP. Qed.
+Proof. by apply/face_subset/valP. Qed.
 
 Definition polyFaces_latticeMixin :=
    MeetBTFinMixin fp_le_def fpIC fpIA fpII fp0I fpI1.
@@ -810,7 +810,8 @@ case: (poly_baseP Q) => [->| J [Q_eq Q_prop0]]; first by rewrite active0 fsubset
 case: (poly_baseP P) => [->| I [P_eq P_prop0]]; first by [].
 rewrite {2}[Q]repr_active // => /fproperP [/fsubsetP eq_sub] [i i_in i_notin].
 rewrite [P]repr_active //.
-apply/andP; split; first exact: polyEq_antimono.
+apply/andP; split; last exact: polyEq_antimono.
+rewrite poly_eqE /poly_equiv andbC polyEq_antimono //=.
 apply/poly_subsetPn.
 move: i_notin; rewrite in_active.
 - move/poly_subsetPn => [x x_in_Q x_notin].
@@ -1039,6 +1040,15 @@ rewrite eq -hullP -eq. (* TODO: we shouldn't have to use /mk_affine *)
 apply/conv_subset => x; rewrite !inE => /orP; case => /eqP ->; apply/in_lineP.
 - by exists 0; rewrite scale0r addr0.
 - by exists 1; rewrite scale1r addrCA addrN addr0.
+Qed.
+
+Lemma hull_pt (v : 'cV[R]_n) : hull [pt v] = [pt v].
+Proof.
+have {1}->: [pt v] = [segm v & v].
++ apply/poly_eqP => x; rewrite in_pt; apply/eqP/idP.
+  * by move=> ->; rewrite in_segml.
+  by case/in_segmP=> u rgu; rewrite -scalerDl subrK scale1r.
+by rewrite hull_line subrr line0.
 Qed.
 
 Lemma face_hullI (P Q : 'poly[R]_n) :
@@ -1754,9 +1764,9 @@ apply/atomisticP => /=; exists [set [` h _ (valP x)]%fset | x : S].
   by rewrite in_vertex_setP h.
 rewrite (rwP eqP) eq_le -(rwP andP); split; last first.
 + apply/joinsP=> /= F' /imsetP[/= x xS ->].
-  rewrite leEsub /= /Order.le /= pt_subset.
+  rewrite leEfaces pt_subset.
   by apply: vertex_set_subset.
-rewrite leEsub [val F]conv_vertex_set; last first.
+rewrite leEfaces [val F]conv_vertex_set; last first.
 + by apply/(subset_compact (valP P))/(lex1 F).
 apply: conv_subset => /= c cF.
 have: c \in fsval [` h _ cF]%fset by rewrite in_pt.
@@ -1829,7 +1839,8 @@ rewrite cardfs_gt0 => /fset0Pn [v v_in].
 have: (0 < #|` (vertex_set P `\  v)%fset |)%N
   by rewrite (@cardfsD1 _ v) v_in ltnS in card_gt1.
 rewrite cardfs_gt0 => /fset0Pn [w w_in].
-apply/eqP; rewrite -subset0_equiv.
+(* FIXME: STRUB *)
+apply/(@eqP [eqType of 'poly[R]_n]); rewrite -subset0_equiv.
 have <-: [pt v] `&` [pt w] = [poly0].
 - apply/poly_eqP => x; rewrite in_polyI 2!in_pt !inE.
   apply/negbTE/negP; move/andP => [/eqP -> /eqP v_eq_w].
@@ -1871,16 +1882,17 @@ case/altP: (F =P 1)%O => [-> | F_neq_P].
   exists S; last first.
   + apply/le_anti/andP; split.
     * apply/meetsP => i /imsetP [{}i i_in -> /=].
-      rewrite leEsub -F'_eq /= /Order.le /=.
+      rewrite leEfaces -F'_eq /= /Order.le /=.
       move: (fsvalP i) => ?; rewrite activeP /= fsub1set.
       by move: i_in; rewrite in_set in_fsetD => /andP[].
-    * rewrite leEsub -F'_eq polyI_facet //.
+    * rewrite leEfaces -F'_eq polyI_facet //.
       - apply/big_polyIsP => i _.
         + have i_in_base : val i \in base.
           * move: (valP i); rewrite in_fsetD => /andP[_].
             by apply/fsubsetP/fsubset_subP.
-        suff: (\meet_(x in S) x <= [` h _ i_in_base]%fset)%O
-          by rewrite leEsub; apply/le_trans => //.
+        suff: (\meet_(x in S) x <= [` h _ i_in_base]%fset)%O.
+          rewrite leEfaces; apply: poly_subset_trans.
+          by apply: poly_subset_refl.
         apply/meets_inf/imsetP; exists [` i_in_base]%fset => //.
         + by rewrite in_set /= fsvalP.
         + by apply/val_inj => /=.
@@ -1912,12 +1924,13 @@ case: {2}(dim 'P(base)) (erefl (dim 'P(base))) => [dimP0|].
     pose S := [set [` h _ (valP i)]%fset | i : base & (val i \notin E) ].
     exists S; last first.
     - apply/le_anti/andP; split; first by apply/le0x.
-      rewrite leEsub /= -(polyEqT_poly0 P_compact) //=.
+      rewrite leEfaces /= -(polyEqT_poly0 P_compact) //=.
       suff ->: 'P^=(base; base) =
         \polyI_(i : base | (val i) \notin E) 'P^=(base; [fset (val i)]).
       + apply/big_polyIsP => i i_notin.
         suff: (\meet_(x in S) x <= [` h _ (valP i)]%fset)%O.
-          by rewrite leEsub /=; apply/le_trans => //.
+          rewrite leEfaces /=; apply/poly_subset_trans => //.
+          by apply: poly_subset_refl.
         apply/meets_inf/imsetP; exists i => //; by rewrite in_set i_notin.
       + rewrite polyEq_big_polyI;
         last by apply/pred0Pn; move/fproperP: E_prop => [_] [e e_in ?]; exists [` e_in]%fset.
@@ -2539,7 +2552,7 @@ have gI (z : '[<x; y>]) : val (f z%:I_[< ; 1%O ~> >]) \in face_set (val I).
   set zc := _%:I_[< ; 1 ~> >]; have le_zy: zc <= y%:I.
   - by rewrite leEsub /= (intervalPR (valP z)).
   rewrite 2!inE /=; apply/andP; split; first by apply: valP.
-  by have := omorph_homo f le_zy; rewrite leEsub.
+  by have := omorph_homo f le_zy; rewrite leEfaces.
 pose g (z : '[<x; y>]) := [` gI z]%fset.
 + have bij_g: bijective g.
   case: bij_f => /= fI fK Kf.
@@ -2549,7 +2562,7 @@ pose g (z : '[<x; y>]) := [` gI z]%fset.
   have h z: x <= val (gK z) <= y.
   * rewrite (intervalPL (valP _)) /gK /=.
     set qy := y%:I_[< x; 1 >]; suff: fI [`hgK z]%fset <= qy by [].
-    rewrite -(omorph_mono (can_inj fK)) Kf leEsub /qy /=.
+    rewrite -(omorph_mono (can_inj fK)) Kf leEfaces /qy /=.
     by apply: face_subset.
   exists (fun z => Interval (h z)).
   * case=> z hz /=; rewrite /gK /=; apply: val_inj=> /=.

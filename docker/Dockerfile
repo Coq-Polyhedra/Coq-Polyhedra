@@ -28,13 +28,13 @@ RUN \
 	opam clean
 
 RUN \
-	opam repo add coq-released https://coq.inria.fr/opam/released
-
-RUN \
-	opam repo add coq-released https://coq.inria.fr/opam/released && \
-	opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev && \
-	opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev && \
-	opam pin add -n coq 8.10.2 && \
-	opam pin add -n coq-mathcomp-ssreflect --dev-repo && \
-	opam install coq coq-mathcomp-field coq-mathcomp-finmap && \
-	opam clean
+  opam repo add coq-released https://coq.inria.fr/opam/released && \
+  opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev && \
+  opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev && \
+  opam pin add -n coq 8.11.1 && \
+  opam pin add -n coq-bignums 8.11.dev && \
+  opam pin add -n coq-mathcomp-ssreflect git+https://git@github.com/Coq-Polyhedra/mathcomp.git && \
+  opam pin add -n coq-mathcomp-algebra git+https://git@github.com/Coq-Polyhedra/mathcomp.git && \
+  opam pin add -n coq-mathcomp-finmap git+https://git@github.com/Coq-Polyhedra/finmap.git && \
+  opam install coq coq-mathcomp-algebra coq-mathcomp-finmap && \
+  opam clean

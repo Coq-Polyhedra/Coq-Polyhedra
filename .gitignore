@@ -8,6 +8,7 @@
 
 Makefile.coq
 Makefile.coq.conf
+.Makefile.coq.d
 
 /polyhedra/
 /polyhedra.tar.bz2
