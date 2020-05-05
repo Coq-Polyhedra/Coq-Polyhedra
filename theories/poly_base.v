@@ -1042,6 +1042,15 @@ apply/conv_subset => x; rewrite !inE => /orP; case => /eqP ->; apply/in_lineP.
 - by exists 1; rewrite scale1r addrCA addrN addr0.
 Qed.
 
+Lemma hull_pt (v : 'cV[R]_n) : hull [pt v] = [pt v].
+Proof.
+have {1}->: [pt v] = [segm v & v].
++ apply/poly_eqP => x; rewrite in_pt; apply/eqP/idP.
+  * by move=> ->; rewrite in_segml.
+  by case/in_segmP=> u rgu; rewrite -scalerDl subrK scale1r.
+by rewrite hull_line subrr line0.
+Qed.
+
 Lemma face_hullI (P Q : 'poly[R]_n) :
   Q \in face_set P -> Q = P `&` hull Q.
 Proof.
