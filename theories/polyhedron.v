@@ -202,18 +202,94 @@ Section PolyPred.
 
 Context {R : realFieldType} {n : nat}.
 
+Implicit Types (P Q : 'poly[R]_n).
+
 Definition poly0 : 'poly[R]_n := '[ H.poly0 ].
-Definition polyT : 'poly[R]_n := '[ H.polyT ].
-Definition polyI (P Q : 'poly[R]_n) : 'poly[R]_n := '[ H.polyI (hrepr P) (hrepr Q) ].
-Definition poly_subset (P Q : 'poly[R]_n) := H.poly_subset (hrepr P) (hrepr Q).
+Definition polyI P Q := '[ H.polyI (hrepr P) (hrepr Q) ].
+
+Lemma mem_poly0 x : x \in poly0 = false.
+Proof. by rewrite repr_equiv H.in_poly0. Qed.
+
+Lemma mem_polyI x P Q : x \in polyI P Q = (x \in P) && (x \in Q).
+Proof. by rewrite repr_equiv H.in_polyI. Qed.
+
+Definition poly_subset P Q := H.poly_subset (hrepr P) (hrepr Q).
+Definition poly_equiv  P Q := poly_subset P Q && poly_subset Q P.
+Definition poly_proper P Q := (Q != P) && poly_subset P Q.
+
+Lemma poly_subsetP {P Q : 'poly[R]_n} : reflect {subset P <= Q} (poly_subset P Q).
+Proof. by apply: (iffP H.poly_subsetP). Qed.
+
+Lemma poly_eqE P Q : (P == Q) = poly_equiv P Q.
+Proof.
+apply/eqP/idP=> [->|]; first by apply/andP; split; apply/poly_subsetP.
+case/andP=> /poly_subsetP le_PQ /poly_subsetP le_QP.
+by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
+Qed.
+
+Program Canonical poly_LtPOrderMixin :=
+  Eval hnf in POrderType total_display 'poly[R]_n
+    (@LePOrderMixin _ poly_subset poly_proper _ _ _ _).
+
+Next Obligation.
+by move=> P; apply/poly_subsetP.
+Qed.
+
+Next Obligation.
+move=> P Q /andP[] /poly_subsetP le_PQ /poly_subsetP le_QP.
+by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
+Qed.
+
+Next Obligation.
+move=> P2 P1 P3 /poly_subsetP le_12 /poly_subsetP le_23.
+by apply/poly_subsetP=> x /le_12 /le_23.
+Qed.
+
+Lemma poly_leE P Q : (P <= Q)%O = poly_subset P Q.
+Proof. by []. Qed.
+
+Lemma poly_leP P Q : reflect {subset P <= Q} (P <= Q)%O.
+Proof. by rewrite poly_leE; apply: (iffP poly_subsetP). Qed.
+
+Program Canonical poly_MeetSemilattice :=
+  Eval hnf in MeetSemilatticeType 'poly[R]_n
+    (@MeetSemilatticeMixin _ _ polyI _ _ _ _).
+
+Next Obligation.
+by move=> P Q; apply/poly_eqP=> x; rewrite !mem_polyI andbC.
+Qed.
+
+Next Obligation.
+by move=> P1 P2 P3; apply/poly_eqP=> x; rewrite !mem_polyI andbA.
+Qed.
+
+Next Obligation.
+by move=> P; apply/poly_eqP=> x; rewrite !mem_polyI andbb.
+Qed.
+
+Next Obligation.
+apply/poly_leP/eqP => [|<-]; last first.
++ by move=> c; rewrite mem_polyI => /andP[].
+move=> le_xy; apply/poly_eqP=> c; rewrite mem_polyI.
+by apply: andb_idr; apply: le_xy.
+Qed.
+
+Program Definition poly_bottomMixin :=
+  @BottomMixin total_display [porderType of 'poly[R]_n] poly0 _.
+Next Obligation. by apply/poly_leP=> v; rewrite mem_poly0. Qed.
+
+Program Canonical poly_B :=
+  Eval hnf in BSemilatticeType 'poly[R]_n poly_bottomMixin.
+
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
+Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
+
+Definition polyT : 'poly[R]_n := '[ H.polyT ].
+
 Definition bounded (P : 'poly[R]_n) c := H.bounded (hrepr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (hrepr P).
 (*Definition proj (k : nat) (P : 'poly[R]_(k+n)) : 'poly[R]_n := '[ H.proj (hrepr P)].*)
 Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (hrepr P)].
-
-Definition poly_equiv P Q := (poly_subset P Q) && (poly_subset Q P).
-Definition poly_proper P Q := ((poly_subset P Q) && (~~ (poly_subset Q P))).
 
 Notation "'[' 'poly0' ']'" := poly0 : poly_scope.
 Notation "'[' 'polyT' ']'" := polyT : poly_scope.
@@ -264,11 +340,6 @@ Qed.
 Lemma in_polyT : [polyT] =i predT.
 Proof.
 by move => ?; rewrite repr_equiv H.in_polyT.
-Qed.
-
-Lemma poly_subsetP {P Q : 'poly[R]_n} : reflect {subset P <= Q} (P `<=` Q).
-Proof.
-apply: (iffP H.poly_subsetP) => [H x | H x]; exact: H.
 Qed.
 
 Lemma poly_subset_mono (P Q : 'hpoly[R]_n) : ('[P] `<=` '[Q]) = (H.poly_subset P Q).
@@ -655,19 +726,19 @@ Qed.
 
 Lemma proper0N_equiv P : ~~ (P `>` [poly0]) = (P == [poly0]).
 Proof. (* RK *)
-rewrite negb_and negbK !poly0_subset //=.
-exact: subset0_equiv.
-Qed.
-
-Lemma subset0N_proper P : ~~ (P `<=` [poly0]) = (P `>` [poly0]).
-Proof. (* RK *)
-apply/idP/idP => [? | /andP [_ ?]]; last by done.
-by apply/andP; split; [exact: poly0_subset | done].
+by rewrite negb_and negbK !poly0_subset //= orbF.
 Qed.
 
 Lemma equiv0N_proper P : (P != [poly0]) = (P `>` [poly0]).
 Proof. (* RK *)
 by rewrite -proper0N_equiv negbK.
+Qed.
+
+Lemma subset0N_proper P : ~~ (P `<=` [poly0]) = (P `>` [poly0]).
+Proof. (* RK *)
+apply/idP/idP => [? | /andP [? _]].
++ by rewrite /poly_proper poly0_subset andbT -subset0_equiv.
++ by rewrite subset0_equiv.
 Qed.
 
 CoInductive empty_spec (P : 'poly[R]_n) : bool -> bool -> bool -> Set :=
@@ -708,10 +779,12 @@ Lemma poly_properP {P Q : 'poly[R]_n} :
   (* TODO: should {subset P <= Q} to (P `<=` Q) ? *)
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
-apply: (iffP andP) =>
-  [[/poly_subsetP ? /poly_subsetPn [x ??]] | [? [x ??]] ].
-- by split; [ done | exists x].
-- by split; [ apply/poly_subsetP | apply/poly_subsetPn; exists x].
+apply: (iffP andP).
++ case=> ne_QP le_PQ; split; first by apply/poly_subsetP.
+  move: ne_QP; rewrite poly_eqE /poly_equiv le_PQ andbT.
+  by move/poly_subsetPn.
+case=> /poly_subsetP => -> [x xQ xPN]; split=> //.
+by apply/negP=> /eqP/poly_eqP /(_ x); rewrite xQ (negbTE xPN).
 Qed.
 
 Lemma poly_subset_anti {P Q} :
@@ -729,9 +802,7 @@ apply/idP/andP => [/poly_properP [/poly_subsetP ?] [x x_in x_notin]| [P_sub_Q P_
 - split; first done.
   apply/eqP => P_eq_Q; rewrite P_eq_Q in x_notin.
   by move/negP: x_notin.
-- apply/andP; split; first done.
-  move: P_neq_Q; apply: contra => ?; apply/eqP.
-  exact: poly_subset_anti.
+- by apply/andP; rewrite eq_sym.
 Qed.
 
 Lemma poly_properW P Q :
@@ -742,7 +813,7 @@ Qed.
 
 Lemma poly_properxx P : (P `<` P) = false.
 Proof.
-by rewrite /poly_proper poly_subset_refl.
+by rewrite /poly_proper eqxx.
 Qed.
 
 Lemma poly_proper_neq (Q Q' : 'poly[R]_n) : Q `<` Q' -> Q != Q'.
@@ -774,13 +845,17 @@ Qed.
 Lemma poly_proper_subsetxx P Q : (* to be compared with lter_anti *)
   (P `<` Q `<=` P) = false.
 Proof. (* RK *)
-by apply/negbTE/nandP/orP; rewrite negb_and negbK -orbA orbC orbN.
+apply/negP=> /andP[le_PQ le_QP].
+suff: P `<` P  by move/poly_proper_neq; rewrite eqxx.
+by apply: (poly_proper_subset le_PQ).
 Qed.
 
 Lemma poly_subset_properxx P Q :
   (P `<=` Q `<` P) = false.
 Proof. (* RK *)
-by apply/negbTE/nandP/orP; rewrite negb_and negbK orbA orbC orbA orbN.
+apply/negP=> /andP[le_PQ le_QP].
+suff: P `<` P  by move/poly_proper_neq; rewrite eqxx.
+by apply: (poly_subset_proper le_PQ).
 Qed.
 
 Lemma boundedP {P : 'poly[R]_n} {c} :
@@ -1322,7 +1397,7 @@ Qed.
 Lemma polyEq1 {base: base_t[R,n]} {e} :
   'P^=(base; [fset e]%fset) = 'P(base) `&` [hp e].
 Proof.
-apply/poly_eqP=> c; rewrite in_polyI !in_polyEq andbC; congr (_ && _).
+apply/poly_eqP=> c. rewrite [RHS]in_polyI !in_polyEq andbC; congr (_ && _).
 apply/forallP/idP => /= [h| c_in_e]; first by apply: (h [` fset11 e]%fset).
 by case=> /= e'; rewrite in_fset1 => /eqP->.
 Qed.
