@@ -1,6 +1,6 @@
 *.aux
 *.glob
-*.vo
+*.vo*
 *.v.d
 #*.v#
 .coqdeps.d
