@@ -45,6 +45,10 @@ Hypothesis Pprop0 : P `>` [poly0].
 
 Implicit Type (I : {fsubset base}).
 
+(*Definition is_pbasis I :=
+   [&& (#|` I | == n)%N, (dim (affine <<I>>%VS) == 1)%N & (affine <<I>>%VS `<=` P)].
+ *)
+
 Definition is_pbasis I :=
   [&& (#|` I | == n)%N, (\dim <<I>> == n)%N & ([poly0] `<` 'P^=(base; I) `<=` P)].
 
@@ -54,8 +58,13 @@ Proof.
 by case/and3P => /eqP.
 Qed.
 
+(*Definition point_of_pbasis I := ppick (affine <<I>>%VS).
+Lemma point_of_pbasisP I :
+  is_pbasis I -> affine <<I>>%VS = [pt (point_of_pbasis I)].*)
+
+
 Lemma pbasis_proper0 I :
-  is_pbasis I -> 'P^=(base; I) `>` [poly0].
+  is_pbasis I -> 'P^=(base; I) `>` [poly0]. (*affine <<I>>%VS `>` .*)
 Proof.
 by case/and3P => _ _ /andP [].
 Qed.
@@ -105,7 +114,7 @@ Lemma vertexP (x : 'cV_n) :
         exists Q : {poly base}, [/\ [pt x] = Q, dim Q = 1%N & (Q `<=` P)].
 Proof.
 case/imfsetP => Q /=; rewrite inE => /andP [].
-case/face_setP => {}Q ? /eqP ? ->.
+case/face_setP => {}Q ? _ /eqP ? ->.
 by exists Q; split; rewrite -?dim1_pt_ppick.
 Qed.
 
@@ -135,39 +144,50 @@ Lemma pbasis_affine I :
 Proof.
 move => pbasisI; rewrite span_pbasis //.
 case: (pbasis_vertex pbasisI) => x xvert Pptx.
-rewrite -hullN0_eq. rewrite [Y in hull(Y)]Pptx {1}Pptx.
-symmetry; exact: hull_pt.
-rewrite [Y in _ `<` Y]Pptx; exact: pt_proper0.
+by rewrite -hullN0_eq ?[Y in hull(Y)]Pptx
+   ?[Y in _ `<` Y]Pptx ?pt_proper0 ?hull_pt.
 Qed.
 
-
-
 Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
-Definition adj_vertex x x' := ([segm x & x'] \in face_set P).
+Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
+
+Lemma span_polyEq (I J : base_t) :
+  (<<I>> = <<J>>)%VS -> 'P^=(base; I) = 'P^=(base; J).
+Proof.
+by rewrite !polyEq_affine => ->.
+Qed.
+
+Lemma basis_polyEq (I J : base_t) :
+  basis_of <<I>>%VS J -> 'P^=(base; I) = 'P^=(base; J).
+Proof.
+by move/span_basis/span_polyEq.
+Qed.
 
 Lemma adj_vertex_prebasis x x':
   adj_vertex x x' -> exists J,
-    'P^=(base; J) = [segm x & x'] /\ #|` J|%fset = (n - (x != x'))%N.
+    'P^=(base; J) = [segm x & x'] /\ #|` J|%fset = (n-1)%N.
 Proof.
-move/face_set_has_base/has_baseP => H.
-case: (H (segm_prop0 x x')) => J baseSegm.
-case: (ebasisP J) => J' J'sub J'basis; exists J'.
-have: 'P^=(base; J') = [segm x & x'].
-  by rewrite baseSegm !polyEq_affine; move: (span_basis J'basis) => ->.
-move => segmJ'; split => //.
-have: dim 'P^=(base; J') = (x!=x').+1 by rewrite segmJ'; exact: dim_segm.
-rewrite dimN0_eq.
-Admitted.
-
+rewrite /adj_vertex => /andP [x_neq_x'].
+case/face_setP => Q Q_sub_P Q_eq.
+have Q_prop0: Q `>` [poly0] by rewrite -Q_eq segm_prop0.
+case: (ebasisP {eq Q}) => J J_sub J_basis.
+exists J; split.
+- by rewrite [Q]repr_active //= (basis_polyEq J_basis).
+- have dimQ2: (dim Q) = 2%N by rewrite -Q_eq dim_segm x_neq_x'.
+  move/card_basis: (J_basis) ->.
+  move: dimQ2; rewrite dimN0_eq // => /succn_inj <-.
+  by rewrite subKn ?dim_span_active.
+Qed.
 
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
-      [/\ is_pbasis I, is_pbasis I', 'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
+      [/\ is_pbasis I, is_pbasis I',
+       'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
 Proof.
 Search _ face_set.
-move/face_setP.
-move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
-Search _ Imfset.imfset.
+case/andP => x_neq_x' /face_setP [].
+(*move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
+Search _ Imfset.imfset.*)
 Admitted.
 
 
@@ -191,7 +211,5 @@ Definition c I i (H : is_pbasis I) (H' : i \in (I : {fset _})) (j : lrel[R]_n) :
 
 Definition r I (j : lrel[R]_n) :=
   '[j.1, ppick (affine << I >>%VS)] - j.2.
-
-
 
 End PBasis.
