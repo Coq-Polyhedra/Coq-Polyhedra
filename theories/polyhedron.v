@@ -131,7 +131,7 @@ Local Notation "''poly[' R ]_ n" := (type_of n (Phant R)).
 
 Inductive poly_type : predArgType := Poly of 'poly[R]_n.
 
-Definition poly_of of phant ('poly[R]_n) := poly_type.
+Definition poly_of of phant R := poly_type.
 
 Identity Coercion type_of_poly : poly_of >-> poly_type.
 
@@ -139,35 +139,22 @@ Definition polyval P := let: Poly t := P in t.
 Coercion polyval : poly_type >-> type_of.
 
 Canonical poly_subType := Eval hnf in [newType for polyval].
+Definition poly_eqMixin := Eval hnf in [eqMixin of poly_type by <:].
+Canonical poly2_eqType := Eval hnf in EqType poly_type poly_eqMixin.
+Definition poly_choiceMixin := [choiceMixin of poly_type by <:].
+Canonical poly2_choiceType := Eval hnf in ChoiceType poly_type poly_choiceMixin.
 End Def.
 
 Section Def.
 Context (R : realFieldType) (n : nat).
 
-Notation "''poly[' R ]_ n" :=
-  (poly_of (Phant (type_of n (Phant R)))).
-Notation "''poly[' R ]" :=
-  ('poly[R]_(_)).
-Notation "''poly_' n" :=
-  ('poly[_]_n).
+Notation "''poly[' R ]_ n" := (poly_of n (Phant R)).
+Notation "''poly[' R ]"    := ('poly[R]_(_)).
+Notation "''poly_' n"      := ('poly[_]_n).
 
-Definition poly_eqMixin :=
-  Eval hnf in [eqMixin of @poly_type R n by <:].
-Canonical poly2_eqType :=
-  Eval hnf in EqType (@poly_type R n) poly_eqMixin.
-Definition poly_choiceMixin :=
-  [choiceMixin of (@poly_type R n) by <:].
-Canonical poly2_choiceType :=
-  Eval hnf in ChoiceType (@poly_type R n) poly_choiceMixin.
-
-Definition poly_of_eqMixin :=
-  Eval hnf in [eqMixin of 'poly[R]_n by <:].
-Canonical poly2_of_eqType :=
-  Eval hnf in EqType 'poly[R]_n poly_of_eqMixin.
-Definition poly_of_choiceMixin :=
-  [choiceMixin of 'poly[R]_n by <:].
-Canonical poly2_of_choiceType :=
-  Eval hnf in ChoiceType 'poly[R]_n poly_of_choiceMixin.
+Canonical poly2_of_subType    := [subType    of 'poly[R]_n].
+Canonical poly2_of_eqType     := [eqType     of 'poly[R]_n].
+Canonical poly2_of_choiceType := [choiceType of 'poly[R]_n].
 
 Canonical poly2_predType :=
   PredType (@mem_pred_sort R n : 'poly[R]_n -> pred 'cV[R]_n).
@@ -175,10 +162,9 @@ Canonical poly2_predType :=
 Definition hrepr (P : 'poly[R]_n) := repr (polyval P).
 End Def.
 
-Notation "''poly[' R ]_ n" :=
-  (poly_of (Phant (type_of n (Phant R)))).
-Notation "''poly[' R ]" := 'poly[R]__.
-Notation "''poly_' n" := 'poly[_]_n.
+Notation "''poly[' R ]_ n" := (poly_of n (Phant R)).
+Notation "''poly[' R ]"    := 'poly[R]_(_).
+Notation "''poly_' n"      := 'poly[_]_n.
 
 Notation "''[' P ]" := (Poly (mk_poly P)).
 
@@ -238,23 +224,37 @@ case/andP=> /poly_subsetP le_PQ /poly_subsetP le_QP.
 by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
 Qed.
 
-Program Canonical poly_LtPOrderMixin :=
-  Eval hnf in POrderType total_display 'poly[R]_n
-    (@LePOrderMixin _ poly_subset poly_proper _ _ _ _).
-
-Next Obligation.
+Lemma poly_subset_refl : reflexive poly_subset.
 by move=> P; apply/poly_subsetP.
 Qed.
 
-Next Obligation.
+Lemma poly_subset_anti : antisymmetric poly_subset.
 move=> P Q /andP[] /poly_subsetP le_PQ /poly_subsetP le_QP.
 by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
 Qed.
 
-Next Obligation.
+Lemma poly_subset_trans : transitive poly_subset.
 move=> P2 P1 P3 /poly_subsetP le_12 /poly_subsetP le_23.
 by apply/poly_subsetP=> x /le_12 /le_23.
 Qed.
+
+Definition poly_LtPOrderMixin := 
+  LePOrderMixin  (fun _ _ => erefl _) poly_subset_refl poly_subset_anti poly_subset_trans.
+
+Canonical poly_of_LtPOrderType :=
+  Eval hnf in POrderType total_display 'poly[R]_n poly_LtPOrderMixin.
+
+(*
+Canonical poly_LtPOrderType :=
+  Eval hnf in POrderType total_display [choiceType of (type_of n (Phant R))] poly_LtPOrderMixin.
+*)
+
+Set Printing All.
+
+Goal reflexive poly_subset.
+Proof.
+
+move=> x. apply: lexx. apply: (@lexx _ [porderType of 'poly[R]_n]).
 
 Lemma poly_leE P Q : (P <= Q)%O = poly_subset P Q.
 Proof. by []. Qed.
@@ -289,7 +289,7 @@ Program Definition poly_bottomMixin :=
   @BottomMixin total_display [porderType of 'poly[R]_n] poly0 _.
 Next Obligation. by apply/poly_leP=> v; rewrite mem_poly0. Qed.
 
-Program Canonical poly_B :=
+Canonical poly_B :=
   Eval hnf in BSemilatticeType 'poly[R]_n poly_bottomMixin.
 
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
@@ -362,7 +362,7 @@ apply/poly_subsetP/H.poly_subsetP => [H | H] x x_in_P.
 Qed.
 
 Lemma poly_subset_refl : reflexive poly_subset.
-Proof.
+Proof. apply: lexx.
 by move => P; apply/poly_subsetP.
 Qed.
 
