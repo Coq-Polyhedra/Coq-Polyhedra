@@ -146,17 +146,28 @@ Context (R : realFieldType) (n : nat).
 
 Notation "''poly[' R ]_ n" :=
   (poly_of (Phant (type_of n (Phant R)))).
-Notation "''poly[' R ]" := (type_of _ (Phant R)).
-Notation "''poly_' n" := (type_of n _).
+Notation "''poly[' R ]" :=
+  ('poly[R]_(_)).
+Notation "''poly_' n" :=
+  ('poly[_]_n).
 
 Definition poly_eqMixin :=
-  Eval hnf in [eqMixin of 'poly[R]_n by <:].
+  Eval hnf in [eqMixin of @poly_type R n by <:].
 Canonical poly2_eqType :=
-  Eval hnf in EqType 'poly[R]_n poly_eqMixin.
+  Eval hnf in EqType (@poly_type R n) poly_eqMixin.
 Definition poly_choiceMixin :=
-  [choiceMixin of 'poly[R]_n by <:].
+  [choiceMixin of (@poly_type R n) by <:].
 Canonical poly2_choiceType :=
-  Eval hnf in ChoiceType 'poly[R]_n poly_choiceMixin.
+  Eval hnf in ChoiceType (@poly_type R n) poly_choiceMixin.
+
+Definition poly_of_eqMixin :=
+  Eval hnf in [eqMixin of 'poly[R]_n by <:].
+Canonical poly2_of_eqType :=
+  Eval hnf in EqType 'poly[R]_n poly_of_eqMixin.
+Definition poly_of_choiceMixin :=
+  [choiceMixin of 'poly[R]_n by <:].
+Canonical poly2_of_choiceType :=
+  Eval hnf in ChoiceType 'poly[R]_n poly_of_choiceMixin.
 
 Canonical poly2_predType :=
   PredType (@mem_pred_sort R n : 'poly[R]_n -> pred 'cV[R]_n).

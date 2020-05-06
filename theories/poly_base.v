@@ -1839,8 +1839,7 @@ rewrite cardfs_gt0 => /fset0Pn [v v_in].
 have: (0 < #|` (vertex_set P `\  v)%fset |)%N
   by rewrite (@cardfsD1 _ v) v_in ltnS in card_gt1.
 rewrite cardfs_gt0 => /fset0Pn [w w_in].
-(* FIXME: STRUB *)
-apply/(@eqP [eqType of 'poly[R]_n]); rewrite -subset0_equiv.
+apply/eqP; rewrite -subset0_equiv.
 have <-: [pt v] `&` [pt w] = [poly0].
 - apply/poly_eqP => x; rewrite in_polyI 2!in_pt !inE.
   apply/negbTE/negP; move/andP => [/eqP -> /eqP v_eq_w].
