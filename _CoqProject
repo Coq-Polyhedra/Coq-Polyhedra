@@ -18,3 +18,4 @@ theories/hpolyhedron.v
 theories/polyhedron.v
 theories/poly_base.v
 theories/xvector.v
+theories/enumeration.v

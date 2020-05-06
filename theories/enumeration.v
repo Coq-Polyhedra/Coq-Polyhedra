@@ -125,7 +125,6 @@ have Q_base_I: 'P^=(base; I) = Q.
 - rewrite polyEq_affine (vector.span_basis I_basis) -polyEq_affine.
   by rewrite [Q in RHS]repr_active //=.
 exists (I%:fsub) => //; apply/and3P; split.
-Search _ card_basis.
 - by rewrite (card_basis I_basis) dim_eqQ.
 - by rewrite (vector.span_basis I_basis) dim_eqQ.
 - by rewrite Q_base_I; apply/andP; split.
@@ -137,17 +136,40 @@ Proof.
 move => pbasisI; rewrite span_pbasis //.
 case: (pbasis_vertex pbasisI) => x xvert Pptx.
 rewrite -hullN0_eq. rewrite [Y in hull(Y)]Pptx {1}Pptx.
+symmetry; exact: hull_pt.
+rewrite [Y in _ `<` Y]Pptx; exact: pt_proper0.
+Qed.
 
-Search _ polyEq.
 
 
 Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
 Definition adj_vertex x x' := ([segm x & x'] \in face_set P).
 
+Lemma adj_vertex_prebasis x x':
+  adj_vertex x x' -> exists J,
+    'P^=(base; J) = [segm x & x'] /\ #|` J|%fset = (n - (x != x'))%N.
+Proof.
+move/face_set_has_base/has_baseP => H.
+case: (H (segm_prop0 x x')) => J baseSegm.
+case: (ebasisP J) => J' J'sub J'basis; exists J'.
+have: 'P^=(base; J') = [segm x & x'].
+  by rewrite baseSegm !polyEq_affine; move: (span_basis J'basis) => ->.
+move => segmJ'; split => //.
+have: dim 'P^=(base; J') = (x!=x').+1 by rewrite segmJ'; exact: dim_segm.
+rewrite dimN0_eq.
+Admitted.
+
+
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
       [/\ is_pbasis I, is_pbasis I', 'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
+Proof.
+Search _ face_set.
+move/face_setP.
+move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
+Search _ Imfset.imfset.
 Admitted.
+
 
 (*Lemma dim_pbasisD1 I i :
   is_pbasis I -> (i \in (I : {fset _}))
