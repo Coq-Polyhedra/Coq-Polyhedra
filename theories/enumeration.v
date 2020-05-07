@@ -45,12 +45,23 @@ Hypothesis Pprop0 : P `>` [poly0].
 
 Implicit Type (I : {fsubset base}).
 
-(*Definition is_pbasis I :=
-   [&& (#|` I | == n)%N, (dim (affine <<I>>%VS) == 1)%N & (affine <<I>>%VS `<=` P)].
- *)
+Lemma span_polyEq (I J : base_t) :
+  (<<I>> = <<J>>)%VS -> 'P^=(base; I) = 'P^=(base; J).
+Proof.
+by rewrite !polyEq_affine => ->.
+Qed.
+
+Lemma basis_polyEq (I J : base_t) :
+  basis_of <<I>>%VS J -> 'P^=(base; I) = 'P^=(base; J).
+Proof.
+by move/span_basis/span_polyEq.
+Qed.
 
 Definition is_pbasis I :=
-  [&& (#|` I | == n)%N, (\dim <<I>> == n)%N & ([poly0] `<` 'P^=(base; I) `<=` P)].
+   [&& (#|` I | == n)%N, (dim (affine <<I>>%VS) == 1)%N & (affine <<I>>%VS `<=` P)].
+
+(*Definition is_pbasis I :=
+  [&& (#|` I | == n)%N, (\dim <<I>> == n)%N & ([poly0] `<` 'P^=(base; I) `<=` P)].*)
 
 Lemma card_pbasis I :
   is_pbasis I -> #|` I | = n.
@@ -64,49 +75,49 @@ Lemma point_of_pbasisP I :
 
 
 Lemma pbasis_proper0 I :
-  is_pbasis I -> 'P^=(base; I) `>` [poly0]. (*affine <<I>>%VS `>` .*)
+  is_pbasis I -> affine <<I>> `>` [poly0]. (*affine <<I>>%VS `>` .*)
 Proof.
-by case/and3P => _ _ /andP [].
+by case/and3P => _ /eqP dimI _; rewrite dimN0 dimI.
 Qed.
 
 Lemma pbasis_feasible I :
-  is_pbasis I -> 'P^=(base; I) `<=` P.
+  is_pbasis I -> affine <<I>> `<=` P.
 Proof.
-by case/and3P => _ _ /andP [].
+by case/and3P.
 Qed.
 
-Lemma dim_span_pbasis I :
-  is_pbasis I -> (\dim <<I>> = n)%N.
+Lemma dim_affine_pbasis I :
+  is_pbasis I -> (dim (affine <<I>>) = 1)%N.
 Proof.
-by case/and3P => _ /eqP ->.
+by case/and3P => _ /eqP.
 Qed.
+
+Lemma pbasis_active I :
+  is_pbasis I -> 'P^=(base; I) = affine <<I>>.
+Proof.
+move => pbasisI; rewrite polyEq_affine; apply/polyIidPr.
+move: (pbasis_feasible pbasisI) (poly_base_subset P).
+exact: poly_subset_trans.
+Qed.
+
+Search _ "{eq _ }".
 
 Lemma span_pbasis I :
   is_pbasis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
 Proof.
-case/and3P => _ /eqP dimI_eq_n /andP [PI_prop0 _].
-apply/eqP; rewrite eqEdim; apply/andP; split.
-- by apply/sub_span/fsubsetP/active_polyEq.
-- by rewrite dimI_eq_n; apply/dim_span_active.
-Qed.
-
-Lemma dim_pbasis I :
-  is_pbasis I -> dim 'P^=(base; I) = 1%N.
-Proof.
-move => I_pbasis.
-rewrite dimN0_eq ?pbasis_proper0 //.
-by rewrite -span_pbasis // dim_span_pbasis // subnn.
-Qed.
+move => pbasisI.
+(*rewrite pbasis_active*)
+Admitted.
 
 Lemma pbasis_vertex I :
-  is_pbasis I -> exists2 x, x \in vertex_set P & 'P^=(base; I) = [pt x].
+  is_pbasis I -> exists2 x, x \in vertex_set P & affine <<I>> = [pt x].
 Proof.
-move => pbasis_I. case/eqP/dim1P: (dim_pbasis pbasis_I) => x ptPbaseI.
+move => pbasis_I. case/eqP/dim1P: (dim_affine_pbasis pbasis_I) => x ptPbaseI.
 move : (pbasis_feasible pbasis_I).
-rewrite ptPbaseI. move => ptx_subset_P; exists x => //.
+rewrite ptPbaseI; move => ptx_subset_P; exists x => //.
 rewrite in_vertex_setP -ptPbaseI face_setE.
 - by rewrite ptPbaseI.
-- by rewrite pvalP.
+- by rewrite -pbasis_active // pvalP.
 Qed.
 
 Lemma vertexP (x : 'cV_n) :
@@ -133,35 +144,15 @@ have I_sub_base: (I `<=` base)%fset. (* TODO: missing canonical in fsubset *)
 have Q_base_I: 'P^=(base; I) = Q.
 - rewrite polyEq_affine (vector.span_basis I_basis) -polyEq_affine.
   by rewrite [Q in RHS]repr_active //=.
-exists (I%:fsub) => //; apply/and3P; split.
+exists (I%:fsub) => //; apply/and3P; split => /=.
 - by rewrite (card_basis I_basis) dim_eqQ.
-- by rewrite (vector.span_basis I_basis) dim_eqQ.
-- by rewrite Q_base_I; apply/andP; split.
-Qed.
-
-Lemma pbasis_affine I :
-  is_pbasis I -> 'P^=(base; I) = affine << I >>%VS.
-Proof.
-move => pbasisI; rewrite span_pbasis //.
-case: (pbasis_vertex pbasisI) => x xvert Pptx.
-by rewrite -hullN0_eq ?[Y in hull(Y)]Pptx
-   ?[Y in _ `<` Y]Pptx ?pt_proper0 ?hull_pt.
-Qed.
+- by rewrite (vector.span_basis I_basis) -hullN0_eq // -dim_hull dimQ_eq1.
+- by rewrite (vector.span_basis I_basis) -hullN0_eq //
+  (dim1_pt_ppick dimQ_eq1) hull_pt -dim1_pt_ppick.  
+Qed. 
 
 Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
 Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
-
-Lemma span_polyEq (I J : base_t) :
-  (<<I>> = <<J>>)%VS -> 'P^=(base; I) = 'P^=(base; J).
-Proof.
-by rewrite !polyEq_affine => ->.
-Qed.
-
-Lemma basis_polyEq (I J : base_t) :
-  basis_of <<I>>%VS J -> 'P^=(base; I) = 'P^=(base; J).
-Proof.
-by move/span_basis/span_polyEq.
-Qed.
 
 Lemma adj_vertex_prebasis x x':
   adj_vertex x x' -> exists J,
@@ -184,7 +175,6 @@ Lemma adj_vertex_basis x x' :
       [/\ is_pbasis I, is_pbasis I',
        'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
 Proof.
-Search _ face_set.
 case/andP => x_neq_x' /face_setP [].
 (*move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
 Search _ Imfset.imfset.*)
