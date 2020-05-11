@@ -103,8 +103,18 @@ Qed.
 Lemma span_pbasis I :
   is_pbasis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
 Proof.
-move => pbasisI.
-(*rewrite pbasis_active*)
+Locate fsubset_t.
+Set Printing Coercions.
+move => pbasisI; congr <<_ _>>%VS.
+apply FSubset.untag_inj.
+congr (FSubset.Tag _).
+Set Printing Coercions.
+Print FSubset.untag.
+rewrite ['P^=(_; _)]pbasis_active.
+
+Set Printing Coercions.
+Check val_inj.
+apply fsubset_inj.
 Admitted.
 
 Lemma pbasis_vertex I :
