@@ -244,17 +244,27 @@ Definition poly_LtPOrderMixin :=
 Canonical poly_of_LtPOrderType :=
   Eval hnf in POrderType total_display 'poly[R]_n poly_LtPOrderMixin.
 
-(*
 Canonical poly_LtPOrderType :=
-  Eval hnf in POrderType total_display [choiceType of (type_of n (Phant R))] poly_LtPOrderMixin.
-*)
+  Eval hnf in POrderType total_display (poly_type n) poly_LtPOrderMixin.
 
+From mathcomp Require Import ssrint.
+
+Goal forall x y : int, x + y = y + x.
+Proof.
+move=> x y.
 Set Printing All.
+
 
 Goal reflexive poly_subset.
 Proof.
+move=> x.
+Set Printing All.
+have h := @Order.le total_display.
 
-move=> x. apply: lexx. apply: (@lexx _ [porderType of 'poly[R]_n]).
+
+rewrite lexx.
+apply: (@lexx _ _ x).
+apply: lexx. apply: (@lexx _ [porderType of 'poly[R]_n]).
 
 Lemma poly_leE P Q : (P <= Q)%O = poly_subset P Q.
 Proof. by []. Qed.
