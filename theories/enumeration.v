@@ -103,18 +103,6 @@ Qed.
 Lemma span_pbasis I :
   is_pbasis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
 Proof.
-Locate fsubset_t.
-Set Printing Coercions.
-move => pbasisI; congr <<_ _>>%VS.
-apply FSubset.untag_inj.
-congr (FSubset.Tag _).
-Set Printing Coercions.
-Print FSubset.untag.
-rewrite ['P^=(_; _)]pbasis_active.
-
-Set Printing Coercions.
-Check val_inj.
-apply fsubset_inj.
 Admitted.
 
 Lemma pbasis_vertex I :
@@ -177,6 +165,15 @@ exists J; split.
   move: dimQ2; rewrite dimN0_eq // => /succn_inj <-.
   by rewrite subKn ?dim_span_active.
 Qed.
+
+Lemma foo x x' (J: {fsubset base}) :
+  'P^=(base; J) = [segm x & x'] ->
+    exists (K:{fsubset base}), {subset J <= K} /\ 'P^=(base; K) = [pt x]. 
+Proof.
+move => Pbasesegm.
+have face_segm: [pt x] \in face_set 'P^=(base; J).
+- rewrite Pbasesegm face_set_segm; do 2! [apply/fsetUP;left]; exact: fset22.
+- move: face_segm. Search _ face_set.
 
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
