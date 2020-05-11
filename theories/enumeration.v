@@ -100,8 +100,6 @@ move: (pbasis_feasible pbasisI) (poly_base_subset P).
 exact: poly_subset_trans.
 Qed.
 
-Search _ "{eq _ }".
-
 Lemma span_pbasis I :
   is_pbasis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
 Proof.
@@ -149,7 +147,7 @@ exists (I%:fsub) => //; apply/and3P; split => /=.
 - by rewrite (vector.span_basis I_basis) -hullN0_eq // -dim_hull dimQ_eq1.
 - by rewrite (vector.span_basis I_basis) -hullN0_eq //
   (dim1_pt_ppick dimQ_eq1) hull_pt -dim1_pt_ppick.  
-Qed. 
+Qed.
 
 Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
 Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
@@ -175,7 +173,8 @@ Lemma adj_vertex_basis x x' :
       [/\ is_pbasis I, is_pbasis I',
        'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
 Proof.
-case/andP => x_neq_x' /face_setP [].
+move => H; case: (adj_vertex_prebasis H) => J; case => PbaseJ cardJ. 
+case/andP: H => x_neq_x' /face_setP [] Q Q_sub_P Qeq.
 (*move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
 Search _ Imfset.imfset.*)
 Admitted.
