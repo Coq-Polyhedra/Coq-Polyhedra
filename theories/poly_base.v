@@ -263,8 +263,8 @@ Canonical poly_of_base_base := PolyBase (poly_of_baseP).
 Lemma polyI_baseP (P Q : {poly base}) & (phantom _ P) & (phantom _ Q):
   [pval P `&` pval Q has \base base].
 Proof.
-case: (poly_baseP P) => [->| I [-> _]]; first by rewrite /= poly0I (valP ([poly0]%:poly_base)).
-case: (poly_baseP Q) => [->| I' [-> _]]; first by rewrite /= polyI0 (valP ([poly0]%:poly_base)).
+case: (poly_baseP P) => [->| I [-> _]]; first by rewrite /= meet0x (valP ([poly0]%:poly_base)).
+case: (poly_baseP Q) => [->| I' [-> _]]; first by rewrite /= meetx0 (valP ([poly0]%:poly_base)).
 apply/has_baseP => _; exists (I `|` I')%fset%:fsub; by rewrite polyEq_polyI.
 Qed.
 Canonical polyI_base P Q := PolyBase (polyI_baseP (Phantom _ P) (Phantom _ Q)).
@@ -654,7 +654,7 @@ by apply/poly_eqP=> x; rewrite !in_polyI andbC.
 Qed.
 
 Lemma fp_le_def (F1 F2 : face_set P) : (F1 <= F2) = (fpI F1 F2 == F1).
-Proof. by rewrite leEfaces -val_eqE fpIC; apply/idP/eqP => /polyIidPr. Qed.
+Proof. by rewrite leEfaces -val_eqE fpIC /=; apply/esym/eq_meetr. Qed.
 
 Lemma fp_lt_def (F1 F2 : face_set P) : (F1 < F2) = (F2 != F1) && (F1 <= F2).
 Proof. by rewrite !lteEfaces poly_properEneq andbC eq_sym. Qed.
@@ -763,7 +763,7 @@ have e_in_base : ([fset e] `<=` base)%fset.
 set se := [fset e]%:fsub%fset : {fsubset base}.
 have: (se `<=` {eq P})%fset by  rewrite fsub1set.
 rewrite -activeP polyEq1 => P_sub.
-apply: (poly_subset_trans P_sub); exact: poly_subsetIr.
+by apply: (le_trans P_sub); exact: leIr.
 Qed.
 
 Lemma in_active {P : {poly base}} {e} :
@@ -774,8 +774,7 @@ apply/idP/idP; first exact: poly_base_subset_hp.
 set se := [fset e]%:fsub%fset : {fsubset base}.
 move => P_sub.
 suff: (se `<=` {eq P})%fset by  rewrite fsub1set.
-rewrite -activeP polyEq1.
-by apply/poly_subsetIP; split; try exact: poly_base_subset.
+by rewrite -activeP polyEq1 lexI poly_base_subset.
 Qed.
 
 Lemma activeS :
@@ -792,10 +791,7 @@ Qed.
 
 Lemma activeI (P Q : {poly base}) :
   ({eq P} `|` {eq Q} `<=` {eq ((pval P `&` pval Q)%PH)%:poly_base})%fset.
-Proof.
-rewrite -activeP -polyEq_polyI.
-by apply: polyISS; rewrite activeP.
-Qed.
+Proof. by rewrite -activeP -polyEq_polyI leI2 ?activeP. Qed.
 
 Lemma poly_base_proper (P Q : {poly base}) :
   ({eq Q} `<` {eq P})%fset -> pval P `<` pval Q.
@@ -962,7 +958,7 @@ Lemma subset_hull P : P `<=` hull P.
 Proof.
 case: (emptyP P) => [->| ]; rewrite ?poly0_subset //.
 elim/polybW : P => base P; rewrite hullE /pb_hull => P_prop0.
-by rewrite P_prop0; rewrite {1}[P]repr_active //= polyEq_affine poly_subsetIr.
+by rewrite P_prop0; rewrite {1}[P]repr_active //= polyEq_affine leIr.
 Qed.
 
 Lemma hull0 : hull ([poly0] : 'poly[R]_n) = [poly0].
@@ -1050,11 +1046,11 @@ Lemma face_hullI (P Q : 'poly[R]_n) :
 Proof.
 elim/polybW : P => base P.
 case/face_setP => {}Q Q_sub_P.
-case: (emptyP Q) => [->| Q_prop0]; first by rewrite hull0 polyI0.
+case: (emptyP Q) => [->| Q_prop0]; first by rewrite hull0 meetx0.
 rewrite hullN0_eq //.
 rewrite [Q in LHS]repr_active //= polyEq_affine.
 rewrite [P]repr_active /= ?polyEq_affine -?polyIA.
-move: (Q_sub_P) => /activeS/fsubsetP/sub_span/affineS/(polyIidPr _ _).
+move: (Q_sub_P) => /activeS/fsubsetP/sub_span/affineS/meet_r.
 by rewrite -meetA => ->.
 by apply/poly_proper_subset: Q_sub_P.
 Qed.
@@ -1307,7 +1303,7 @@ have dv_neq_dw: '[d,v] != '[d,w].
 - move: d_neq0; apply: contra_neq => dv_eq_dw.
   pose e := [< d, opt_value d_bounded >].
   have: pval P `<=` [hp e].
-  + apply/poly_subsetIP; split; first by apply/opt_value_lower_bound.
+  + rewrite lexI -(rwP andP); split; first by apply/opt_value_lower_bound.
     rewrite beoppE /= -d_v dv_eq_dw d_w opprK.
     by apply/opt_value_lower_bound.
   rewrite in_span_activeP // => /(memv_img befst).
@@ -1376,7 +1372,7 @@ Proof.
 case: (boolP (e \in ({eq P} : base_t))).
 - move => e_in_eqP.
   have ->: 'P^= (base; [fset e])%:poly_base = 'P(base)%:poly_base.
-  + apply/val_inj => /=; rewrite polyEq1; apply/polyIidPl.
+  + apply/val_inj => /=; rewrite polyEq1; apply/meet_l.
     by apply/poly_base_subset_hp.
   apply/fsubset_inj => /=.
   by move: e_in_eqP; rewrite -fsub1set => /fsetUidPl ->.
@@ -1446,7 +1442,7 @@ move => i_notin_eqP.
 move/(facet_proper H): (i_notin_eqP) => S_prop_P.
 have i_not_in_affP: i \notin << {eq P} >>%VS.
 - move: S_prop_P; apply/contraTN; move/in_span_active.
-  by rewrite /= polyEq1 => /polyIidPl ->; rewrite poly_properxx.
+  by rewrite /= polyEq1 => /meet_l ->; rewrite poly_properxx.
 rewrite !dimN0_eq ?facet_proper0 //; apply: congr1.
 rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.
 suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
@@ -1483,8 +1479,8 @@ have /fproperP [_ [i i_in i_notin]] : ({eq P} `<` {eq F})%fset
 have {i_notin} {}i_in: i \in ({eq F} `\` {eq P})%fset
   by rewrite inE i_notin.
 have Q_sub : Q `<=` P.
-- by rewrite (big_polyI_min (j := [` i_in]%fset)) ?polyEq1 ?poly_subsetIl.
-have <-: pval P `&` Q = Q by apply/polyIidPr.
+- by rewrite (big_polyI_min (j := [` i_in]%fset)) ?polyEq1 ?leIl.
+have <-: pval P `&` Q = Q by apply/meet_r.
 rewrite /Q polyEq_big_polyI; last by apply/pred0Pn; exists [` i_in]%fset.
 rewrite {1}[P]repr_active ?polyEq_polyI; last by apply/poly_proper_trans: F_prop_P.
 rewrite {1}[F]repr_active //=; apply/congr1.
@@ -1938,7 +1934,7 @@ case: {2}(dim 'P(base)) (erefl (dim 'P(base))) => [dimP0|].
             rewrite /E; apply/fsubsetP/fsubset_subP.
         rewrite -polyEq_polyI {3}/E.
         move: (@repr_active _ _ _ 'P(base)%:poly_base) => /(_ P_prop0)/(congr1 val) //= <-.
-        have /polyIidPl ->: 'P^=(base; base `\` E) `<=` 'P(base) by apply/polyEq_antimono0.
+        have /meet_l ->: 'P^=(base; base `\` E) `<=` 'P(base) by apply/polyEq_antimono0.
         apply/congr1/fsetP => e; apply/idP/idP.
         - rewrite in_fsetD => /andP [e_notin e_in].
           apply/bigfcupP; exists ([`e_in]%fset) => //.
@@ -2267,7 +2263,7 @@ case: (emptyP F) => [->| F_prop0].
   have F_eq : F = (Φ F') :> 'poly[R]_n.
   + rewrite {1}[F]repr_active //= /Φ slice_polyEq /fslice fsetD1K //.
     rewrite in_active ?inE ?eq_refl //.
-    by apply/(poly_subset_trans F_sub)/poly_subsetIl.
+    by apply/(le_trans F_sub)/leIl.
   rewrite F_eq; exists (pval F') => //.
   suff F'_face: pval F' \in face_set P by rewrite 2!inE vf_mem_v ?andbT ?F'_face -?F_eq.
   rewrite face_setE [P]repr_active ?vf_L_prop0 ?vf_P_in_L ?polyEq_antimono //.
