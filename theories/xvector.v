@@ -57,55 +57,68 @@ Section EBasis.
 
 Variable (K : fieldType) (vT : vectType K).
 
-Fixpoint ebasis (X : seq vT) :=
+Fixpoint ebasis (X Y: seq vT):=
   if X is x :: X' then
-    if (x \in <<X'>>) then ebasis X'
-    else x :: (ebasis X')
-  else [::].
+    if (x \in <<X' ++ Y>>) then ebasis X' Y
+    else x :: (ebasis X' Y)
+  else Y.
 
-Lemma ebasis_sub (X : seq vT) :
-  {subset (ebasis X) <= X}.
+Lemma ebasis_sub (X Y: seq vT) :
+  {subset (ebasis X Y) <= X ++ Y}.
 Proof.
-elim : X => [| a l Hind x] //=.
+elim: X => [| a l Hind x] //=.
 case: ifP => _.
 - by move/Hind; rewrite inE => ->; rewrite orbT.
 - by rewrite !inE => /orP; case => [| /Hind] ->; rewrite ?orbT.
 Qed.
 
-Lemma ebasis_free (X : seq vT):
-  free (ebasis X).
+Lemma ebasis_complete (X Y: seq vT) :
+  {subset Y <= (ebasis X Y)}.
 Proof.
-elim : X => [| a l Hind]; rewrite ?nil_free //=.
+elim: X => [| a l Hind] //=.
+case: ifP => _ // x xinY.
+by move: (Hind x xinY); rewrite inE => ->; rewrite orbT.
+Qed.
+
+
+Lemma ebasis_free (X Y: seq vT):
+  free Y -> free (ebasis X Y).
+Proof.
+move => freeY; elim : X => [| a l Hind]; rewrite ?nil_free //=.
 case: ifPn => [_ //| a_notin_span].
 rewrite free_cons Hind andbT.
 by apply/contra: a_notin_span; apply/subvP/sub_span/ebasis_sub.
 Qed.
 
-Lemma ebasis_span (X : seq vT) :
-  (<<ebasis X>> = <<X>>).
+Lemma ebasis_span (X Y : seq vT) :
+  (<<ebasis X Y>> = <<X++Y>>).
 Proof.
 elim: X => [| a l Hind] //=.
 case: ifP => [| _]; rewrite !span_cons Hind //.
 rewrite memvE => a_in; symmetry; by apply/addv_idPr.
 Qed.
 
-Lemma ebasis_basis (X : seq vT):
-  basis_of <<X>>%VS (ebasis X).
+Lemma ebasis_basis (X Y: seq vT):
+  free Y -> basis_of <<X++Y>>%VS (ebasis X Y).
 Proof.
-apply/andP; split.
+move => freeY; apply/andP; split.
 - by apply/eqP/ebasis_span.
 - exact: ebasis_free.
 Qed.
 
-Lemma ebasisP (X : {fset vT}) :
-  exists2 Y, (Y `<=` X)%fset & basis_of <<X>>%VS Y.
+Lemma ebasisP (X Y: {fset vT}) :
+free Y -> exists Z : {fset vT},
+[/\ (Z `<=` X `|` Y)%fset, (Y `<=` Z)%fset & basis_of <<(X `|` Y)%fset>> Z].
 Proof.
-pose Y := fset_of_seq (ebasis X).
-exists Y.
-- apply/fsubsetP => x; rewrite in_fset_of_seq.
-  by apply/ebasis_sub.
+move => freeY.
+pose Z := fset_of_seq (ebasis X Y).
+exists Z; split.
+- apply/fsubsetP => x; rewrite in_fset_of_seq /fsetU in_fset /=.
+  exact: ebasis_sub.
+- apply/fsubsetP => x; rewrite in_fset_of_seq; exact: ebasis_complete.
 - apply/andP; split.
-  + rewrite (eq_span (in_fset_of_seq _)); apply/eqP/ebasis_span.
+  + rewrite (eq_span (in_fset_of_seq _)); apply/eqP; rewrite ebasis_span.
+    by apply eq_span; rewrite /eq_mem /fsetU => x; rewrite in_fset /=.
   + by rewrite (perm_free (perm_eq_fset_of_seq _)) ?free_uniq ?ebasis_free.
 Qed.
 
