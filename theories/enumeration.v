@@ -136,6 +136,7 @@ have dim_eqQ: (\dim <<{eq Q}>> = n)%N.
   move: dimQ_eq1; rewrite dimN0_eq // => /succn_inj/eqP.
   by rewrite subn_eq0.
 case: (@ebasisP _ _ {eq Q} fset0 (nil_free _)) => I [].
+  (* TODO: use ebasisP0 instead *)
 rewrite !fsetU0 => I_sub ? I_basis.
 have I_sub_base: (I `<=` base)%fset. (* TODO: missing canonical in fsubset *)
 - by apply/(fsubset_trans I_sub)/fsubset_subP.
@@ -155,12 +156,13 @@ Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
 
 Lemma adj_vertex_prebasis x x':
   adj_vertex x x' -> exists J,
-    'P^=(base; J) = [segm x & x'] /\ #|` J|%fset = (n-1)%N.
+    'P^=(base; J) = [segm x & x'] /\ #|` J|%fset = (n-1)%N. (* /\ dim J = n-1 & free J *)
 Proof.
 rewrite /adj_vertex => /andP [x_neq_x'].
 case/face_setP => Q Q_sub_P Q_eq.
 have Q_prop0: Q `>` [poly0] by rewrite -Q_eq segm_prop0.
 case: (@ebasisP _ _ {eq Q} fset0 (nil_free _)) => J []; rewrite !fsetU0.
+  (* TODO: use ebasisP0 instead *)
 move => J_sub ? J_basis.
 exists J; split.
 - by rewrite [Q]repr_active //= (basis_polyEq J_basis).
@@ -170,6 +172,16 @@ exists J; split.
   by rewrite subKn ?dim_span_active.
 Qed.
 
+
+(* Proof sketch:
+ * start from x x' satisfying adj_vertex x x'
+ * extract J from adj_vertex_prebasis
+ * Then we have x \in 'P^=(base; J), so that
+ * J \subset {eq 'P^=(base; J)} \subset {eq [pt x]%:poly_base} (see activeS)
+ * apply ebasisP to complete J into a basis I of <<{eq [pt x]%:poly_base}>> containing J
+ * since dim <<{eq [pt x]%:poly_base}>> = n, then I is J + one element,
+ * apply the same proof to x', which provided I' such that #|` I `&` I'| = n.-1
+ *)
 
 Lemma face_free (Q: 'poly_n):
   Q `>` [ poly0 ] -> Q \in face_set P ->
@@ -186,6 +198,9 @@ exists K.
 - by rewrite (basis_free Kbasis).
 Qed.
 
+Lemma face_free' (Q : {poly base}) :
+  Q `>` [poly0] -> exists2 K, Q = 'P^=(base, K)
+
 
 Lemma foo x:
   (x \in vertex_set P) ->
@@ -198,7 +213,7 @@ rewrite fsetU0 => subJ ? basisJ; move: (basis_free basisJ) => freeJ.
 case: (ebasisP {eq Q} freeJ) => K [] subK overK basisK.
 have properQ : [ poly0 ] `<` Q by rewrite dimN0 dimQ.
 exists K; split.
-- 
+-
 (*rewrite in_vertex_setP.
 case/face_setP => Q' Q'_sub_Q Q'_eq.
 case: (@ebasisP _ _ {eq Q'} fset0 (nil_free _)) => K [].
@@ -206,7 +221,7 @@ rewrite !fsetU0 => sub_K proper_K K_basis.
 exists K; split.
 - *)
 Admitted.
-(*- apply/fsubset_ 
+(*- apply/fsubset_
 - by rewrite [Q' in RHS]repr_active // -Q'_eq pt_proper0.
 Qed.*)
 

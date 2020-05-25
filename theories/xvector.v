@@ -108,7 +108,9 @@ Qed.
 
 Lemma ebasisP (X Y: {fset vT}) :
 free Y -> exists Z : {fset vT},
-[/\ (Z `<=` X `|` Y)%fset, (Y `<=` Z)%fset & basis_of <<(X `|` Y)%fset>> Z].
+    [/\ (Z `<=` X `|` Y)%fset, (Y `<=` Z)%fset & basis_of <<(X `|` Y)%fset>> Z].
+(* TODO:
+   perhaps write into an exists2 and with (Y `<=` Z `<=` X `|` Y)%fset *)
 Proof.
 move => freeY.
 pose Z := fset_of_seq (ebasis X Y).
@@ -121,6 +123,15 @@ exists Z; split.
     by apply eq_span; rewrite /eq_mem /fsetU => x; rewrite in_fset /=.
   + by rewrite (perm_free (perm_eq_fset_of_seq _)) ?free_uniq ?ebasis_free.
 Qed.
+
+Lemma ebasisP' (X Y: {fset vT}) :
+Y `<=` X -> free Y -> exists2 Z : {fset vT}, (Y `<=` Z `<=` X)%fset & basis_of <<X>> Z.
+Admitted.
+
+(* TODO:
+Lemma ebasisP0 (X: {fset vT}) :
+exists2 Z : {fset vT}, (Z `<=` X)%fset & basis_of <<X>> Z.
+*)
 
 Lemma card_basis (U : {vspace vT}) (X : {fset vT}) :
   basis_of U X -> #|` X | = (\dim U)%N.
