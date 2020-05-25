@@ -170,18 +170,43 @@ exists J; split.
   by rewrite subKn ?dim_span_active.
 Qed.
 
-Lemma foo x (Q : {poly base}) :
-  (x \in vertex_set Q) ->
-    exists K,
-    [/\ ({eq Q} `<=` K)%fset, ('P^=(base; K) = [pt x]) & free K].
+
+Lemma face_free (Q: 'poly_n):
+  Q `>` [ poly0 ] -> Q \in face_set P ->
+    exists2 K, Q = 'P^=(base; K) & free K.
 Proof.
-rewrite in_vertex_setP.
+move=>Qproper.
+case/face_setP => Q0 Q0sub Q0eq.
+case: (@ebasisP _ _ {eq Q0} fset0 (nil_free _)) => K [].
+rewrite !fsetU0 => Ksub Kproper Kbasis.
+exists K.
+- rewrite [Y in pval Y = _]repr_active /=.
+  + by apply: span_polyEq; rewrite (span_basis Kbasis).
+  + by rewrite -Q0eq.
+- by rewrite (basis_free Kbasis).
+Qed.
+
+
+Lemma foo x:
+  (x \in vertex_set P) ->
+    exists K,
+    [/\ ({eq P} `<=` K)%fset, ('P^=(base; K) = [pt x]) & free K].
+Proof.
+case/vertexP => Q [] ptx dimQ subQ.
+case: (@ebasisP _ _ {eq P} fset0 (nil_free _)) => J [].
+rewrite fsetU0 => subJ ? basisJ; move: (basis_free basisJ) => freeJ.
+case: (ebasisP {eq Q} freeJ) => K [] subK overK basisK.
+have properQ : [ poly0 ] `<` Q by rewrite dimN0 dimQ.
+exists K; split.
+- 
+(*rewrite in_vertex_setP.
 case/face_setP => Q' Q'_sub_Q Q'_eq.
 case: (@ebasisP _ _ {eq Q'} fset0 (nil_free _)) => K [].
-rewrite fsetU0 => sub_K proper_K K_basis.
+rewrite !fsetU0 => sub_K proper_K K_basis.
 exists K; split.
+- *)
 Admitted.
-(*- apply/fsubset_
+(*- apply/fsubset_ 
 - by rewrite [Q' in RHS]repr_active // -Q'_eq pt_proper0.
 Qed.*)
 
@@ -206,7 +231,10 @@ Lemma adj_vertex_basis x x' :
       [/\ is_pbasis I, is_pbasis I',
        'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
 Proof.
-move => H; case: (adj_vertex_prebasis H) => J; case => PbaseJ cardJ.
+case/andP => x_neq_x' H; case: (face_free (segm_prop0 x x') H) => J segmJ freeJ.
+
+
+(*move => H; case: (adj_vertex_prebasis H) => J; case => PbaseJ cardJ.
 case/andP: H => x_neq_x' /face_setP [] Q Q_sub_P Qeq.
 have x_vtx: x \in vertex_set Q.
 - by rewrite -Qeq vertex_set_segm in_fset2 eq_refl.
@@ -215,7 +243,7 @@ case/face_setP: x_vtx => Qx Qx_sub_Q ptx_eq.
 have x'_vtx: x' \in vertex_set Q.
 - by rewrite -Qeq vertex_set_segm in_fset2 eq_refl orbT.
 rewrite in_vertex_setP in x'_vtx.
-case/face_setP: x'_vtx => Qx' Qx'_sub_Q ptx'_eq.
+case/face_setP: x'_vtx => Qx' Qx'_sub_Q ptx'_eq.*)
 
 (*move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
 Search _ Imfset.imfset.*)
