@@ -152,15 +152,23 @@ Qed.
 Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
 Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
 
+Lemma adj_vertexL x x' : adj_vertex x x' -> x \in vertex_set P.
+Admitted.
+
+Lemma adj_vertexR x x' : adj_vertex x x' -> x' \in vertex_set P.
+Admitted.
+
 Lemma adj_vertex_prebasis x x':
-  adj_vertex x x' -> exists J,
-    [/\ 'P^=(base; J) = [segm x & x'], (\dim <<J>>)%N = n.-1 & free J].
+  adj_vertex x x' -> exists J : {fsubset base},
+    [/\ [segm x & x'] = 'P^=(base; J)%:poly_base, (\dim <<J>>)%N = n.-1 & free J].
 Proof.
 rewrite /adj_vertex => /andP [x_neq_x'].
 case/face_setP => Q Q_sub_P Q_eq.
 have Q_prop0: Q `>` [poly0] by rewrite -Q_eq segm_prop0.
-case: (ebasisP0 {eq Q})=> J J_sub J_basis.
-exists J; split.
+case: (ebasisP0 {eq Q}) => J J_sub J_basis.
+have J_sub' : (J `<=` base)%fset
+  by apply/(fsubset_trans J_sub)/fsubset_subP.
+exists J%:fsub; split.
 - by rewrite [Q]repr_active //= (basis_polyEq J_basis).
 - have dimQ2: (dim Q) = 2%N by rewrite -Q_eq dim_segm x_neq_x'.
 move: (span_basis J_basis) => ->.
@@ -170,25 +178,65 @@ by apply ltnW; rewrite -subn_gt0 dimQeq.
 - by move/basis_free: J_basis.
 Qed.
 
+Definition is_pbasis_of (x : 'cV_n) (I : {fsubset base}) :=
+  is_pbasis I /\ [pt x] = affine <<I>>%VS.
+
+Lemma is_pbasis_of_pbasis (x: 'cV_n) (I : {fsubset base}) : is_pbasis_of x I -> is_pbasis I.
+Admitted.
+
+Lemma is_pbasis_of_eq x I : is_pbasis_of x I -> [pt x] = affine <<I>>%VS.
+Admitted.
+
+Lemma foo I x :
+  x \in vertex_set P ->
+        let Qx : {poly base} := insubd [poly0]%:poly_base [pt x] in
+        basis_of <<{eq Qx}>>%VS I -> is_pbasis_of x I.
+Proof.
+move => x_vtx.
+case/vertexP: (x_vtx) => Q [Q_eq dim_Q Q_sub].
+rewrite Q_eq valKd /=.
+Admitted.
+
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
-      [/\ is_pbasis I, is_pbasis I',
-       'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
+      [/\ is_pbasis_of x I, is_pbasis_of x' I' & adj_basis I I'].
 Proof.
 move=> adj_x_x'.
-case : (adj_vertex_prebasis adj_x_x') => J [] segm_J dim_J free_J.
-move: (adj_x_x'); rewrite /adj_vertex; case/andP => x_neq_x' segm_face.
-have: [pt x] \in face_set P /\ [pt x'] \in face_set P.
-- split; move/face_setS: segm_face; rewrite face_set_segm;
-  move/fsubsetP => H.
-  + by apply: (H [pt x]); rewrite !inE eq_refl orbT.
-  + by apply: (H [pt x']); rewrite !inE eq_refl orbT.
-case; case/face_setP => Qx Qxsub Qxpt; case/face_setP => Qx' Qx'sub Qx'pt.
-case/face_setP: segm_face => S Ssub Ssegm.
-have: ({eq S} `<=` {eq Qx})%fset /\ ({eq S} `<=` {eq Qx'})%fset.
-by rewrite !activeS // -Ssegm -?Qxpt -?Qx'pt pt_subset ?in_segml ?in_segmr.
-case => eq_sub_eq_x eq_sub_eq_x'.
-have J_sub_eqS: (J `<=` {eq S})%fset.
+case: (adj_vertex_prebasis adj_x_x') => J [segm_J dim_J free_J].
+have x_vtx := (adj_vertexL adj_x_x').
+have x_vtx' := (adj_vertexR adj_x_x').
+have: [pt x] \in face_set P /\ [pt x'] \in face_set P
+  by rewrite -!in_vertex_setP.
+case => /face_setP [Qx Qxsub Qxpt] /face_setP [Qx' Qx'sub Qx'pt].
+set S := ('P^=(base; J)) %:poly_base.
+have [eq_sub_eq_x eq_sub_eq_x'] : ({eq S} `<=` {eq Qx})%fset /\ ({eq S} `<=` {eq Qx'})%fset.
+- rewrite !activeS // -segm_J -1?Qxpt -1?Qx'pt pt_subset.
+  + by rewrite in_segmr.
+  + by rewrite in_segml.
+have J_sub_eqS: (J `<=` {eq S})%fset by rewrite -activeP poly_subset_refl.
+have {}eq_sub_eq_x : (J `<=` {eq Qx})%fset.
+- admit.
+have {}eq_sub_eq_x' : (J `<=` {eq Qx'})%fset.
+- admit.
+rewrite {J_sub_eqS}.
+case: (ebasisP eq_sub_eq_x free_J) => I [J_sub_I I_sub_eq_x I_basis].
+case: (ebasisP eq_sub_eq_x' free_J) => I' [J_sub_I' I'_sub_eq_x' I'_basis].
+have I_sub_base: (I `<=` base)%fset.
+- admit.
+have I'_sub_base: (I' `<=` base)%fset.
+- admit.
+exists I%:fsub; exists I'%:fsub.
+have is_pbasis_of_x_I : is_pbasis_of x I%:fsub.
+- apply/foo => //; by rewrite Qxpt valKd.
+have is_pbasis_of_x'_I' : is_pbasis_of x' I'%:fsub.
+- apply/foo => //; by rewrite Qx'pt valKd.
+split => //.
+have card_J: (#|` J | = n.-1)%N.
+- admit.
+have J_sub_I_I' : (J `<=` I `&` I')%fset.
+- admit.
+have I_neq_I' := (I != I').
+- admit.
 Admitted.
 
 
