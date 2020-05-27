@@ -135,9 +135,7 @@ have dim_eqQ: (\dim <<{eq Q}>> = n)%N.
 - apply/anti_leq/andP; split; rewrite ?dim_span_active //.
   move: dimQ_eq1; rewrite dimN0_eq // => /succn_inj/eqP.
   by rewrite subn_eq0.
-case: (@ebasisP _ _ {eq Q} fset0 (nil_free _)) => I [].
-  (* TODO: use ebasisP0 instead *)
-rewrite !fsetU0 => I_sub ? I_basis.
+case: (ebasisP0 {eq Q}) => I I_sub I_basis.
 have I_sub_base: (I `<=` base)%fset. (* TODO: missing canonical in fsubset *)
 - by apply/(fsubset_trans I_sub)/fsubset_subP.
 have I_pbasis : is_pbasis (I%:fsub).
@@ -156,21 +154,35 @@ Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
 
 Lemma adj_vertex_prebasis x x':
   adj_vertex x x' -> exists J,
-    'P^=(base; J) = [segm x & x'] /\ #|` J|%fset = (n-1)%N. (* /\ dim J = n-1 & free J *)
+    [/\ 'P^=(base; J) = [segm x & x'], (\dim <<J>>)%N = n.-1 & free J].
 Proof.
 rewrite /adj_vertex => /andP [x_neq_x'].
 case/face_setP => Q Q_sub_P Q_eq.
 have Q_prop0: Q `>` [poly0] by rewrite -Q_eq segm_prop0.
-case: (@ebasisP _ _ {eq Q} fset0 (nil_free _)) => J []; rewrite !fsetU0.
-  (* TODO: use ebasisP0 instead *)
-move => J_sub ? J_basis.
+case: (ebasisP0 {eq Q})=> J J_sub J_basis.
 exists J; split.
 - by rewrite [Q]repr_active //= (basis_polyEq J_basis).
 - have dimQ2: (dim Q) = 2%N by rewrite -Q_eq dim_segm x_neq_x'.
-  move/card_basis: (J_basis) ->.
-  move: dimQ2; rewrite dimN0_eq // => /succn_inj <-.
-  by rewrite subKn ?dim_span_active.
+move: (span_basis J_basis) => ->.
+rewrite (dimN0_eq Q_prop0) in dimQ2. move/eq_add_S: dimQ2 => dimQeq.
+rewrite -subn1 -dimQeq subKn => //.
+by apply ltnW; rewrite -subn_gt0 dimQeq.
+- by move/basis_free: J_basis.
 Qed.
+
+Lemma adj_vertex_basis x x' :
+  adj_vertex x x' -> exists I, exists I',
+      [/\ is_pbasis I, is_pbasis I',
+       'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
+Proof.
+move => adjxx'; case: (adj_vertex_prebasis adjxx')=> J [] seg_eq cardJ.
+have: x \in 'P^=(base; J) /\ x' \in 'P^=(base;J)
+  by rewrite seg_eq in_segml in_segmr.
+case=> x_in_seg x'_in_seg.
+Admitted.
+
+
+
 
 
 (* Proof sketch:
@@ -240,14 +252,6 @@ apply/and3P; split; rewrite -?pt_eq.
 - by rewrite dim_pt.
 - by rewrite pt_subset.
 Qed.
-
-Lemma adj_vertex_basis x x' :
-  adj_vertex x x' -> exists I, exists I',
-      [/\ is_pbasis I, is_pbasis I',
-       'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
-Proof.
-case/andP => x_neq_x' H; case: (face_free (segm_prop0 x x') H) => J segmJ freeJ.
-
 
 (*move => H; case: (adj_vertex_prebasis H) => J; case => PbaseJ cardJ.
 case/andP: H => x_neq_x' /face_setP [] Q Q_sub_P Qeq.
