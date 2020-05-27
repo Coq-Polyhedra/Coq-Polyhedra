@@ -175,12 +175,21 @@ Lemma adj_vertex_basis x x' :
       [/\ is_pbasis I, is_pbasis I',
        'P^=(base; I) = [pt x], 'P^=(base; I') = [pt x'] & adj_basis I I'].
 Proof.
-move => adjxx'; case: (adj_vertex_prebasis adjxx')=> J [] seg_eq cardJ.
-have: x \in 'P^=(base; J) /\ x' \in 'P^=(base;J)
-  by rewrite seg_eq in_segml in_segmr.
-case=> x_in_seg x'_in_seg.
+move=> adj_x_x'.
+case : (adj_vertex_prebasis adj_x_x') => J [] segm_J dim_J free_J.
+move: (adj_x_x'); rewrite /adj_vertex; case/andP => x_neq_x' segm_face.
+have: [pt x] \in face_set P /\ [pt x'] \in face_set P.
+- split; move/face_setS: segm_face; rewrite face_set_segm;
+  move/fsubsetP => H.
+  + by apply: (H [pt x]); rewrite !inE eq_refl orbT.
+  + by apply: (H [pt x']); rewrite !inE eq_refl orbT.
+case; case/face_setP => Qx Qxsub Qxpt; case/face_setP => Qx' Qx'sub Qx'pt.
+case/face_setP: segm_face => S Ssub Ssegm.
+have: ({eq S} `<=` {eq Qx})%fset /\ ({eq S} `<=` {eq Qx'})%fset.
+by rewrite !activeS // -Ssegm -?Qxpt -?Qx'pt pt_subset ?in_segml ?in_segmr.
+case => eq_sub_eq_x eq_sub_eq_x'.
+have J_sub_eqS: (J `<=` {eq S})%fset.
 Admitted.
-
 
 
 
@@ -195,53 +204,6 @@ Admitted.
  * apply the same proof to x', which provided I' such that #|` I `&` I'| = n.-1
  *)
 
-Lemma face_free (Q: 'poly_n):
-  Q `>` [ poly0 ] -> Q \in face_set P ->
-    exists2 K, Q = 'P^=(base; K) & free K.
-Proof.
-move=>Qproper.
-case/face_setP => Q0 Q0sub Q0eq.
-case: (@ebasisP _ _ {eq Q0} fset0 (nil_free _)) => K [].
-rewrite !fsetU0 => Ksub Kproper Kbasis.
-exists K.
-- rewrite [Y in pval Y = _]repr_active /=.
-  + by apply: span_polyEq; rewrite (span_basis Kbasis).
-  + by rewrite -Q0eq.
-- by rewrite (basis_free Kbasis).
-Qed.
-
-Lemma face_free' (Q : {poly base}) :
-  Q `>` [poly0] -> exists2 K, Q = 'P^=(base, K)
-
-
-Lemma foo x:
-  (x \in vertex_set P) ->
-    exists K,
-    [/\ ({eq P} `<=` K)%fset, ('P^=(base; K) = [pt x]) & free K].
-Proof.
-case/vertexP => Q [] ptx dimQ subQ.
-case: (@ebasisP _ _ {eq P} fset0 (nil_free _)) => J [].
-rewrite fsetU0 => subJ ? basisJ; move: (basis_free basisJ) => freeJ.
-case: (ebasisP {eq Q} freeJ) => K [] subK overK basisK.
-have properQ : [ poly0 ] `<` Q by rewrite dimN0 dimQ.
-exists K; split.
--
-(*rewrite in_vertex_setP.
-case/face_setP => Q' Q'_sub_Q Q'_eq.
-case: (@ebasisP _ _ {eq Q'} fset0 (nil_free _)) => K [].
-rewrite !fsetU0 => sub_K proper_K K_basis.
-exists K; split.
-- *)
-Admitted.
-(*- apply/fsubset_
-- by rewrite [Q' in RHS]repr_active // -Q'_eq pt_proper0.
-Qed.*)
-
-(*
-move => Pbasesegm.
-have face_segm: [pt x] \in face_set 'P^=(base; J).
-- rewrite Pbasesegm face_set_segm; do 2! [apply/fsetUP;left]; exact: fset22.
-- move: face_segm. Search _ face_set.*)
 
 Lemma foo' x (I : {fsubset base}) :
   x \in P -> [pt x] = affine <<I>>%VS -> #|` I| = n -> is_pbasis I.
@@ -266,7 +228,6 @@ case/face_setP: x'_vtx => Qx' Qx'_sub_Q ptx'_eq.*)
 
 (*move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
 Search _ Imfset.imfset.*)
-Admitted.
 
 
 (*Lemma dim_pbasisD1 I i :
