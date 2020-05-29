@@ -153,10 +153,19 @@ Definition adj_basis I I' := #|` (I `&` I') |%fset = n.-1.
 Definition adj_vertex x x' := (x != x') && ([segm x & x'] \in face_set P).
 
 Lemma adj_vertexL x x' : adj_vertex x x' -> x \in vertex_set P.
-Admitted.
+Proof.
+case/andP => ? /vertex_setS; rewrite vertex_set_segm.
+move/fsubsetP => H.
+by apply: (H x); rewrite !inE eq_refl /=.
+Qed.
 
 Lemma adj_vertexR x x' : adj_vertex x x' -> x' \in vertex_set P.
-Admitted.
+Proof.
+case/andP => ? /vertex_setS; rewrite vertex_set_segm.
+move/fsubsetP => H.
+by apply: (H x'); rewrite !inE eq_refl orbT.
+Qed.
+
 
 Lemma adj_vertex_prebasis x x':
   adj_vertex x x' -> exists J : {fsubset base},
@@ -181,11 +190,16 @@ Qed.
 Definition is_pbasis_of (x : 'cV_n) (I : {fsubset base}) :=
   is_pbasis I /\ [pt x] = affine <<I>>%VS.
 
-Lemma is_pbasis_of_pbasis (x: 'cV_n) (I : {fsubset base}) : is_pbasis_of x I -> is_pbasis I.
-Admitted.
+Lemma is_pbasis_of_pbasis (x: 'cV_n) (I : {fsubset base}) :
+is_pbasis_of x I -> is_pbasis I.
+Proof.
+by case.
+Qed.
 
 Lemma is_pbasis_of_eq x I : is_pbasis_of x I -> [pt x] = affine <<I>>%VS.
-Admitted.
+Proof.
+by case.
+Qed.
 
 Lemma foo I x :
   x \in vertex_set P ->
@@ -194,8 +208,16 @@ Lemma foo I x :
 Proof.
 move => x_vtx.
 case/vertexP: (x_vtx) => Q [Q_eq dim_Q Q_sub].
-rewrite Q_eq valKd /=.
-Admitted.
+rewrite Q_eq valKd /= => basis_eqQ_I.
+have Q_prop0: [ poly0 ] `<` Q by rewrite -Q_eq pt_proper0.
+split. apply/and3P; split.
+- rewrite (card_basis basis_eqQ_I). rewrite dimN0_eq in dim_Q => //.
+move/succn_inj/eqP: dim_Q; rewrite subn_eq0 => n_leq_dim.
+by apply/eqP/anti_leq/andP; split => //; rewrite dim_span_active.
+- by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt dim_pt.
+- by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt Q_eq.
+- by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt.
+Qed.
 
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
@@ -215,14 +237,14 @@ have [eq_sub_eq_x eq_sub_eq_x'] : ({eq S} `<=` {eq Qx})%fset /\ ({eq S} `<=` {eq
   + by rewrite in_segml.
 have J_sub_eqS: (J `<=` {eq S})%fset by rewrite -activeP poly_subset_refl.
 have {}eq_sub_eq_x : (J `<=` {eq Qx})%fset.
-- admit.
+- by apply: (fsubset_trans J_sub_eqS).
 have {}eq_sub_eq_x' : (J `<=` {eq Qx'})%fset.
-- admit.
+- by apply: (fsubset_trans J_sub_eqS).
 rewrite {J_sub_eqS}.
 case: (ebasisP eq_sub_eq_x free_J) => I [J_sub_I I_sub_eq_x I_basis].
 case: (ebasisP eq_sub_eq_x' free_J) => I' [J_sub_I' I'_sub_eq_x' I'_basis].
 have I_sub_base: (I `<=` base)%fset.
-- admit.
+- Check {eq Qx}.
 have I'_sub_base: (I' `<=` base)%fset.
 - admit.
 exists I%:fsub; exists I'%:fsub.
