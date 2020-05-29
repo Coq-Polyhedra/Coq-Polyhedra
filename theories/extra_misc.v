@@ -549,6 +549,7 @@ Variable (K : choiceType) (S : {fset K}).
 
 Structure tagged_fset := Tag { untag : {fset K} }.
 Local Coercion untag : tagged_fset >-> finset_of.
+Canonical tagged_fset_subType := [subType for untag].
 
 Lemma untag_inj : injective untag.
 Proof.
@@ -692,6 +693,7 @@ End FSubset.
 Module Import Exports.
 Coercion untag : tagged_fset >-> finset_of.
 Coercion tf : fsubset_t >-> tagged_fset.
+Canonical tagged_fset_subType.
 Canonical tagged_fset_eqType.
 Canonical tagged_fset_choiceType.
 Canonical fsubset_subType.

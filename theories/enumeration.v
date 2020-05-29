@@ -201,7 +201,7 @@ Proof.
 by case.
 Qed.
 
-Lemma foo I x :
+Lemma vertex_pbasis_of I x :
   x \in vertex_set P ->
         let Qx : {poly base} := insubd [poly0]%:poly_base [pt x] in
         basis_of <<{eq Qx}>>%VS I -> is_pbasis_of x I.
@@ -210,14 +210,18 @@ move => x_vtx.
 case/vertexP: (x_vtx) => Q [Q_eq dim_Q Q_sub].
 rewrite Q_eq valKd /= => basis_eqQ_I.
 have Q_prop0: [ poly0 ] `<` Q by rewrite -Q_eq pt_proper0.
-split. apply/and3P; split.
-- rewrite (card_basis basis_eqQ_I). rewrite dimN0_eq in dim_Q => //.
+have x_eq : [pt x] = affine <<I>>.
++ by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt.
+split => //; apply/and3P; split; rewrite -?x_eq ?dim_pt ?Q_eq //.
+rewrite (card_basis basis_eqQ_I).
+rewrite dimN0_eq in dim_Q => //.
 move/succn_inj/eqP: dim_Q; rewrite subn_eq0 => n_leq_dim.
 by apply/eqP/anti_leq/andP; split => //; rewrite dim_span_active.
-- by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt dim_pt.
-- by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt Q_eq.
-- by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt.
 Qed.
+
+Lemma free_card (K : fieldType) (vT : vectType K) (X : {fset vT}) :
+  free X -> (\dim <<X>> = #|` X |)%N.
+Admitted.
 
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
@@ -244,25 +248,28 @@ rewrite {J_sub_eqS}.
 case: (ebasisP eq_sub_eq_x free_J) => I [J_sub_I I_sub_eq_x I_basis].
 case: (ebasisP eq_sub_eq_x' free_J) => I' [J_sub_I' I'_sub_eq_x' I'_basis].
 have I_sub_base: (I `<=` base)%fset.
-- Check {eq Qx}.
+- by apply/(fsubset_trans I_sub_eq_x)/fsubset_subP.
+  (* TODO: valP should work instead of
+   * fsubset_subP *)
 have I'_sub_base: (I' `<=` base)%fset.
-- admit.
+- by apply/(fsubset_trans I'_sub_eq_x')/fsubset_subP.
+  (* TODO: valP should work instead of
+   * fsubset_subP *)
 exists I%:fsub; exists I'%:fsub.
 have is_pbasis_of_x_I : is_pbasis_of x I%:fsub.
-- apply/foo => //; by rewrite Qxpt valKd.
+- apply/vertex_pbasis_of => //; by rewrite Qxpt valKd.
 have is_pbasis_of_x'_I' : is_pbasis_of x' I'%:fsub.
-- apply/foo => //; by rewrite Qx'pt valKd.
+- apply/vertex_pbasis_of => //; by rewrite Qx'pt valKd.
 split => //.
-have card_J: (#|` J | = n.-1)%N.
-- admit.
-have J_sub_I_I' : (J `<=` I `&` I')%fset.
-- admit.
-have I_neq_I' := (I != I').
-- admit.
+have card_J: (#|` J | = n.-1)%N by rewrite -free_card.
+rewrite /adj_basis /=.
+suff ->: (I `&` I')%fset = J by [].
+apply/eqP; rewrite eq_sym eqEfcard card_J; apply/andP; split.
+- by apply/fsubsetIP.
+- Search _ (#|` _| < _)%N. (* fproper_ltn_card *)
+  Search _ (_ `&` _ `<` _)%fset. (* fproperIl *)
+  admit.
 Admitted.
-
-
-
 
 (* Proof sketch:
  * start from x x' satisfying adj_vertex x x'
