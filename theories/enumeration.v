@@ -95,8 +95,8 @@ Qed.
 Lemma pbasis_active I :
   is_pbasis I -> 'P^=(base; I) = affine <<I>>.
 Proof.
-move => pbasisI; rewrite polyEq_affine; apply/polyIidPr.
-apply/(poly_subset_trans (pbasis_feasible _)) => //.
+move => pbasisI; rewrite polyEq_affine.
+apply/meet_idPr/(le_trans (pbasis_feasible _)) => //.
 exact: poly_base_subset.
 Qed.
 
@@ -119,7 +119,7 @@ Qed.
 
 Lemma vertexP (x : 'cV_n) :
   x \in vertex_set P ->
-        exists Q : {poly base}, [/\ [pt x] = Q, dim Q = 1%N & (Q `<=` P)].
+        exists Q : {poly base}, [/\ [pt x] = Q, dim Q = 1%N & (Q `<=` P :> 'poly[R]_n)].
 Proof.
 case/imfsetP => Q /=; rewrite inE => /andP [].
 case/face_setP => {}Q ? _ /eqP ? ->.
@@ -239,7 +239,7 @@ have [eq_sub_eq_x eq_sub_eq_x'] : ({eq S} `<=` {eq Qx})%fset /\ ({eq S} `<=` {eq
 - rewrite !activeS // -segm_J -1?Qxpt -1?Qx'pt pt_subset.
   + by rewrite in_segmr.
   + by rewrite in_segml.
-have J_sub_eqS: (J `<=` {eq S})%fset by rewrite -activeP poly_subset_refl.
+have J_sub_eqS: (J `<=` {eq S})%fset by rewrite -activeP le_refl.
 have {}eq_sub_eq_x : (J `<=` {eq Qx})%fset.
 - by apply: (fsubset_trans J_sub_eqS).
 have {}eq_sub_eq_x' : (J `<=` {eq Qx'})%fset.
