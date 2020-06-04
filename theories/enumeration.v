@@ -266,11 +266,27 @@ rewrite /adj_basis /=.
 suff ->: (I `&` I')%fset = J by [].
 apply/eqP; rewrite eq_sym eqEfcard card_J; apply/andP; split.
 - by apply/fsubsetIP.
-- Search _ (#|` _| < _)%N. (* fproper_ltn_card *)
-  Search _ (_ `&` _ `<` _)%fset. (* fproperIl *)
-  admit.
-Admitted.
-
+- have: Qx `>` [ poly0 ] /\ Qx' `>` [ poly0 ]
+  by split; rewrite -?Qxpt -?Qx'pt pt_proper0.
+  case=> proper_Qx proper_Qx'.
+  have: #|` I| = n /\ #|`I'| = n.
+  split.
+  + rewrite (card_basis I_basis); move: (dimN0_eq proper_Qx).
+    rewrite -Qxpt dim_pt; move/eq_add_S => H.
+    by rewrite -[RHS](subnKC (dim_span_active proper_Qx)) -H addn0.
+  + rewrite (card_basis I'_basis); move: (dimN0_eq proper_Qx').
+    rewrite -Qx'pt dim_pt; move/eq_add_S => H.
+    by rewrite -[RHS](subnKC (dim_span_active proper_Qx')) -H addn0.
+  case=> card_I card_I'.
+  have: ~(I =i I').
+  + move/eq_span => eqspans.
+    have: [pt x] = [pt x']
+      by rewrite (is_pbasis_of_eq is_pbasis_of_x_I)
+      (is_pbasis_of_eq is_pbasis_of_x'_I') /= eqspans.
+    case/predD1P: (adj_x_x') => x_neq_x' ? eq_pt.
+    by apply x_neq_x'; rewrite -(ppick_pt x) -(ppick_pt x') eq_pt.
+    move/fsetP.
+    Admitted.
 (* Proof sketch:
  * start from x x' satisfying adj_vertex x x'
  * extract J from adj_vertex_prebasis
