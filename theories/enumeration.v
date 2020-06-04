@@ -42,6 +42,7 @@ Section PBasis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
 Hypothesis Pprop0 : P `>` [poly0].
+Hypothesis n_proper0 : (n > 0)%N. (*Necessity ?*)
 
 Implicit Type (I : {fsubset base}).
 
@@ -285,8 +286,18 @@ apply/eqP; rewrite eq_sym eqEfcard card_J; apply/andP; split.
       (is_pbasis_of_eq is_pbasis_of_x'_I') /= eqspans.
     case/predD1P: (adj_x_x') => x_neq_x' ? eq_pt.
     by apply x_neq_x'; rewrite -(ppick_pt x) -(ppick_pt x') eq_pt.
-    move/fsetP.
-    Admitted.
+  move/fsetP/eqP; apply/contraR; rewrite -ltnNge => least_cardI.
+  have cardII': (#|` (I `&` I')%fset | = n)%N.
+  + apply/anti_leq/andP; split.
+    * rewrite -[Y in (_ <= Y)%N]card_I; apply: fsubset_leq_card;
+      exact: fsubsetIl.
+    * by rewrite -[Y in (Y <= _)%N](prednK n_proper0).
+  rewrite eqEfsubset; apply/andP; split.
+  + by apply/fsetIidPl/eqP; rewrite eqEfcard fsubsetIl card_I cardII' /=.
+  + by apply/fsetIidPr/eqP; rewrite eqEfcard fsubsetIr card_I' cardII' /=.  
+Qed.
+  
+
 (* Proof sketch:
  * start from x x' satisfying adj_vertex x x'
  * extract J from adj_vertex_prebasis
