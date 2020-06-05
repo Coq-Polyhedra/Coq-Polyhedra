@@ -18,3 +18,5 @@ theories/barycenter.v
 theories/hpolyhedron.v
 theories/polyhedron.v
 theories/poly_base.v
+theories/lrel.v
+theories/affine.v

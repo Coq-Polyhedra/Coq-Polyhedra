@@ -12,7 +12,7 @@ From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 
 Import Order.Theory.
 
-Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter hpolyhedron.
+Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter lrel hpolyhedron.
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -278,7 +278,7 @@ Qed.
 
 Fact polyh_display : unit. Proof. exact: tt. Qed.
 
-Definition poly_LtPOrderMixin := 
+Definition poly_LtPOrderMixin :=
   LePOrderMixin  (fun _ _ => erefl _) _poly_subset_refl _poly_subset_anti _poly_subset_trans.
 
 Canonical poly_of_LtPOrderType :=
