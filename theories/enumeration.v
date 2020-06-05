@@ -42,7 +42,6 @@ Section PBasis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
 Hypothesis Pprop0 : P `>` [poly0].
-Hypothesis n_proper0 : (n > 0)%N. (*Necessity ?*)
 
 Implicit Type (I : {fsubset base}).
 
@@ -227,6 +226,27 @@ move => free_X.
 by symmetry; apply/card_basis/andP.
 Qed.
 
+Lemma pt_inj : injective (mk_affine (<[0]>%VS : {vspace 'cV[R]_n})).
+Admitted.
+(* TODO: to be moved in polyhedron.v *)
+
+Lemma fsetI_propl (K : choiceType) (S S' : {fset K}):
+  S != S' -> (S `&` S' `<` S)%fset.
+Proof.
+Admitted.
+(*
+  apply/contra_neqT; rewrite -ltnNge => least_cardI.
+  have cardII': (#|` (I `&` I')%fset | = n)%N.
+  + apply/anti_leq/andP; split.
+    * rewrite -[Y in (_ <= Y)%N]card_I; apply: fsubset_leq_card;
+      exact: fsubsetIl.
+    * by rewrite -[Y in (Y <= _)%N](prednK n_proper0).
+  apply/eqP; rewrite eqEfsubset; apply/andP; split.
+  + by apply/fsetIidPl/eqP; rewrite eqEfcard fsubsetIl card_I cardII' /=.
+  + by apply/fsetIidPr/eqP; rewrite eqEfcard fsubsetIr card_I' cardII' /=.
+Qed.
+*)
+
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
       [/\ is_pbasis_of x I, is_pbasis_of x' I' & adj_basis I I'].
@@ -251,14 +271,10 @@ have {}eq_sub_eq_x' : (J `<=` {eq Qx'})%fset.
 rewrite {J_sub_eqS}.
 case: (ebasisP eq_sub_eq_x free_J) => I [J_sub_I I_sub_eq_x I_basis].
 case: (ebasisP eq_sub_eq_x' free_J) => I' [J_sub_I' I'_sub_eq_x' I'_basis].
-have I_sub_base: (I `<=` base)%fset.
-- by apply/(fsubset_trans I_sub_eq_x)/fsubset_subP.
-  (* TODO: valP should work instead of
-   * fsubset_subP *)
-have I'_sub_base: (I' `<=` base)%fset.
-- by apply/(fsubset_trans I'_sub_eq_x')/fsubset_subP.
-  (* TODO: valP should work instead of
-   * fsubset_subP *)
+have I_sub_base: (I `<=` base)%fset
+  by apply/(fsubset_trans I_sub_eq_x)/fsubset_subP.
+have I'_sub_base: (I' `<=` base)%fset
+  by apply/(fsubset_trans I'_sub_eq_x')/fsubset_subP.
 exists I%:fsub; exists I'%:fsub.
 have is_pbasis_of_x_I : is_pbasis_of x I%:fsub.
 - apply/vertex_pbasis_of => //; by rewrite Qxpt valKd.
@@ -270,47 +286,18 @@ rewrite /adj_basis /=.
 suff ->: (I `&` I')%fset = J by [].
 apply/eqP; rewrite eq_sym eqEfcard card_J; apply/andP; split.
 - by apply/fsubsetIP.
-- have: Qx `>` [ poly0 ] /\ Qx' `>` [ poly0 ]
+- have [Qx_prop0 Qx'_prop0]: Qx `>` [ poly0 ] /\ Qx' `>` [ poly0 ]
   by split; rewrite -?Qxpt -?Qx'pt pt_proper0.
-  case=> proper_Qx proper_Qx'.
-  have: #|` I| = n /\ #|`I'| = n.
-  split.
-  + rewrite (card_basis I_basis); move: (dimN0_eq proper_Qx).
-    rewrite -Qxpt dim_pt; move/eq_add_S => H.
-    by rewrite -[RHS](subnKC (dim_span_active proper_Qx)) -H addn0.
-  + rewrite (card_basis I'_basis); move: (dimN0_eq proper_Qx').
-    rewrite -Qx'pt dim_pt; move/eq_add_S => H.
-    by rewrite -[RHS](subnKC (dim_span_active proper_Qx')) -H addn0.
-  case=> card_I card_I'.
-  have: ~(I =i I').
-  + move/eq_span => eqspans.
-    have: [pt x] = [pt x']
-      by rewrite (is_pbasis_of_eq is_pbasis_of_x_I)
-      (is_pbasis_of_eq is_pbasis_of_x'_I') /= eqspans.
-    case/predD1P: (adj_x_x') => x_neq_x' ? eq_pt.
-    by apply x_neq_x'; rewrite -(ppick_pt x) -(ppick_pt x') eq_pt.
-  move/fsetP/eqP; apply/contraR; rewrite -ltnNge => least_cardI.
-  have cardII': (#|` (I `&` I')%fset | = n)%N.
-  + apply/anti_leq/andP; split.
-    * rewrite -[Y in (_ <= Y)%N]card_I; apply: fsubset_leq_card;
-      exact: fsubsetIl.
-    * by rewrite -[Y in (Y <= _)%N](prednK n_proper0).
-  rewrite eqEfsubset; apply/andP; split.
-  + by apply/fsetIidPl/eqP; rewrite eqEfcard fsubsetIl card_I cardII' /=.
-  + by apply/fsetIidPr/eqP; rewrite eqEfcard fsubsetIr card_I' cardII' /=.  
+  have card_I: #|` I| = n.
+    by move/is_pbasis_of_pbasis/card_pbasis: is_pbasis_of_x_I.
+  have /fsetI_propl/fproper_ltn_card: (I != I').
+  + case/andP: adj_x_x' => x_neq_x' _.
+    rewrite -(inj_eq pt_inj) in x_neq_x'.
+    move: x_neq_x'; apply/contra_neq.
+    by rewrite (is_pbasis_of_eq is_pbasis_of_x_I)
+            (is_pbasis_of_eq is_pbasis_of_x'_I') /= => ->.
+  by rewrite card_I; case: {4 8}n. (* TODO: horrible (it's XA's fault) *)
 Qed.
-  
-
-(* Proof sketch:
- * start from x x' satisfying adj_vertex x x'
- * extract J from adj_vertex_prebasis
- * Then we have x \in 'P^=(base; J), so that
- * J \subset {eq 'P^=(base; J)} \subset {eq [pt x]%:poly_base} (see activeS)
- * apply ebasisP to complete J into a basis I of <<{eq [pt x]%:poly_base}>> containing J
- * since dim <<{eq [pt x]%:poly_base}>> = n, then I is J + one element,
- * apply the same proof to x', which provided I' such that #|` I `&` I'| = n.-1
- *)
-
 
 Lemma foo' x (I : {fsubset base}) :
   x \in P -> [pt x] = affine <<I>>%VS -> #|` I| = n -> is_pbasis I.
@@ -322,43 +309,47 @@ apply/and3P; split; rewrite -?pt_eq.
 - by rewrite pt_subset.
 Qed.
 
-(*move => H; case: (adj_vertex_prebasis H) => J; case => PbaseJ cardJ.
-case/andP: H => x_neq_x' /face_setP [] Q Q_sub_P Qeq.
-have x_vtx: x \in vertex_set Q.
-- by rewrite -Qeq vertex_set_segm in_fset2 eq_refl.
-rewrite in_vertex_setP in x_vtx.
-case/face_setP: x_vtx => Qx Qx_sub_Q ptx_eq.
-have x'_vtx: x' \in vertex_set Q.
-- by rewrite -Qeq vertex_set_segm in_fset2 eq_refl orbT.
-rewrite in_vertex_setP in x'_vtx.
-case/face_setP: x'_vtx => Qx' Qx'_sub_Q ptx'_eq.*)
-
-(*move/vertex_set_face/fsetP; rewrite vertex_set_segm /eq_mem.
-Search _ Imfset.imfset.*)
-
-
-(*Lemma dim_pbasisD1 I i :
-  is_pbasis I -> (i \in (I : {fset _}))
-  -> dim (affine << (I `\ i)%fset >>%VS) = 2%N.
-Proof.
-move => I_pbasis i_in_I /=.
-Admitted.*)
-
-Lemma dim_pbasisD1' I i :
-  is_pbasis I -> i \in (I : {fset _}) ->
-    exists d, (affine << (I `\ i)%fset >> == [line d & (ppick 'P^=(base; I))]) && ('[i.1, d] == 1).
-Proof.
-move => pbasis_I i_in_I.
+Lemma dim_affine2 (U : {vspace lrel[R]_n}) :
+  (dim (affine U) = 2)%N ->
+  exists2 x, x \in affine U & exists2 d, d != 0 & (affine U) = [line d & x].
 Admitted.
 
+Variable (x: 'cV[R]_n) (I : {fsubset base}) (i : lrel[R]_n).
+Hypothesis (Hbasis : is_pbasis_of x I) (i_in: i \in (I : {fset _})).
 
-Definition dir I i (H : is_pbasis I) (H' : i \in (I : {fset _})) :=
-  xchoose (dim_pbasisD1' H H').
+Lemma dim_pbasisD1 :
+  exists d, (affine << (I `\ i)%fset >> == [line d & x]) && ('[i.1, d] == 1).
+Proof.
+(* proof sketch
+ * first show that dim affine << (I `\ i)%fset >> = 2%N
+ * use dim_affine2 to exhibit d
+ * show that '[i.1,d] != 0, and replace d by (| '[i.1,d] |^-1 *: d
+ *)
+Admitted.
 
-Definition c I i (H : is_pbasis I) (H' : i \in (I : {fset _})) (j : lrel[R]_n) :=
-  '[j.1, dir H H'].
+Definition dir := xchoose dim_pbasisD1.
 
-Definition r I (j : lrel[R]_n) :=
+Definition c (j : lrel[R]_n) := '[j.1, dir].
+
+Definition r (j : lrel[R]_n) :=
   '[j.1, ppick (affine << I >>%VS)] - j.2.
+
+(*
+Proposition
+Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une base admissible ssi les conditions suivantes sont satisfaites :
+* c_ij != 0
+* r_j > 0 ==> j \in arg max_(k notin I | c_ik < 0) (r_k / c_ik).
+*)
+
+Variable (j : lrel[R]_n).
+Hypothesis (j_in : j \in base).
+Let I' : {fsubset base} := (I `\  i)%fset%:fsub. (* TODO: type is mandatory here *)
+Let J : {fsubset base} := (j |` I')%fset%:fsub.
+
+Lemma pivot :
+  reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
+                                      c k < 0 -> (r j) / (c j) >= (r k) / (c k)))
+          (is_pbasis J).
+Admitted.
 
 End PBasis.
