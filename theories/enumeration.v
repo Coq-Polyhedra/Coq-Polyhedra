@@ -222,7 +222,10 @@ Qed.
 
 Lemma free_card (K : fieldType) (vT : vectType K) (X : {fset vT}) :
   free X -> (\dim <<X>> = #|` X |)%N.
-Admitted.
+Proof.
+move => free_X.
+by symmetry; apply/card_basis/andP.
+Qed.
 
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
@@ -344,7 +347,10 @@ Admitted.*)
 Lemma dim_pbasisD1' I i :
   is_pbasis I -> i \in (I : {fset _}) ->
     exists d, (affine << (I `\ i)%fset >> == [line d & (ppick 'P^=(base; I))]) && ('[i.1, d] == 1).
+Proof.
+move => pbasis_I i_in_I.
 Admitted.
+
 
 Definition dir I i (H : is_pbasis I) (H' : i \in (I : {fset _})) :=
   xchoose (dim_pbasisD1' H H').
