@@ -42,6 +42,7 @@ Section PBasis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
 Hypothesis Pprop0 : P `>` [poly0].
+Hypothesis n_prop0 : (n > 0)%N.
 
 Implicit Type (I : {fsubset base}).
 
@@ -69,6 +70,7 @@ Proof.
 by case/and3P => /eqP.
 Qed.
 
+
 (*Definition point_of_pbasis I := ppick (affine <<I>>%VS).
 Lemma point_of_pbasisP I :
   is_pbasis I -> affine <<I>>%VS = [pt (point_of_pbasis I)].*)
@@ -91,6 +93,7 @@ Lemma dim_affine_pbasis I :
 Proof.
 by case/and3P => _ /eqP.
 Qed.
+
 
 Lemma pbasis_active I :
   is_pbasis I -> 'P^=(base; I) = affine <<I>>.
@@ -345,10 +348,37 @@ Variable (j : lrel[R]_n).
 Hypothesis (j_in : j \in base).
 Let I' : {fsubset base} := (I `\  i)%fset%:fsub. (* TODO: type is mandatory here *)
 Let J : {fsubset base} := (j |` I')%fset%:fsub.
+Hypothesis (j_notin : j \notin (I :{fset _})).
+
+
+
+Lemma card_pivot:
+  (#|` J| == n)%N.
+Proof.
+rewrite cardfsU1 in_fsetE negb_and j_notin orbT cardfsD /=.
+by rewrite fsetI1 i_in cardfs1 subnKC
+  (card_pbasis (is_pbasis_of_pbasis Hbasis)).
+Qed.
+
+Lemma foo1:
+  forall k: lrel[R]_n, k \in (I': {fset _}) -> '[k.1, dir] == 0.
+Proof.
+move: (xchooseP dim_pbasisD1);
+rewrite /= -/dir => /andP [/eqP affine_eq dir_dot] k k_in_I'.
+rewrite -(@line_subset_hs _ _ _ x dir).
+- by rewrite -affine_eq; apply poly_base_subset_hs.
+- move/pbasis_active: (is_pbasis_of_pbasis Hbasis).
+  rewrite -(is_pbasis_of_eq Hbasis) => polyEq_x.
+  have: x \in 'P^=(base;I) by rewrite polyEq_x in_pt_self.
+  move/polyEq_eq => H.
+  rewrite inE in k_in_I'.
+  case/andP: k_in_I' => _ k_in_I.
+  apply: hs_hp. exact: (H k).
+Qed.
 
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
-                                      c k < 0 -> (r j) / (c j) >= (r k) / (c k)))
+                        c k < 0 -> (r j) / (c j) >= (r k) / (c k)))
           (is_pbasis J).
 Admitted.
 
