@@ -474,9 +474,7 @@ Section BasicObjects.
 
 Context {R : realFieldType} {n : nat}.
 
-Implicit Type (x : 'cV[R]_n) (e : lrel[R]_n)
-         (U : {vspace lrel[R]_n}) (V : 'affine[R]_n)
-         (W : {vspace 'cV[R]_n}).
+Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n).
 
 Definition mk_hp e := [affine <[e]> ].
 Notation "'[' 'hp' e  ']'" := (mk_hp e%PH).
@@ -493,7 +491,7 @@ Proof.
 by rewrite in_hp vdot0l eq_refl.
 Qed.
 
-Definition mk_line d Ω : 'affine[R]_n := [affine <[d]> & Ω].
+Definition mk_line d Ω := [affine <[d]> & Ω].
 Notation "'[' 'line' d & Ω ']'" := (mk_line d Ω).
 
 Lemma in_lineP {d Ω x : 'cV[R]_n} :
@@ -505,7 +503,7 @@ apply/(iffP in_mk_affineP) => [[y /vlineP [μ ->]]| [μ ->] ].
 + by exists (μ *: d); rewrite ?memvZ ?memv_line.
 Qed.
 
-Lemma line_subset_hp (e : lrel[R]_n) (v v' : 'cV[R]_n) :
+Lemma line_subset_hp e v v' :
   (v \in [hp e]) -> (v' \in [hp e]) -> ([line (v' - v) & v] <= [hp e])%O.
 Proof.
 rewrite !in_hp => /eqP v_in /eqP v'_in.
@@ -513,11 +511,11 @@ apply/affine_leP => ? /in_lineP [μ -> ]; rewrite in_hp.
 by rewrite vdotDr vdotZr vdotBr v_in v'_in addrN mulr0 addr0.
 Qed.
 
-Definition mk_pt Ω : 'affine[R]_n := [affine 0%VS & Ω].
+Definition mk_pt Ω := [affine 0%VS & Ω].
 
 Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω].
 
-Lemma in_pt (Ω x : 'cV[R]_n) : (x \in [pt Ω]) = (x == Ω).
+Lemma in_pt Ω x : (x \in [pt Ω]) = (x == Ω).
 Proof.
 by rewrite in_mk_affine memv0 subr_eq0.
 Qed.
@@ -527,3 +525,15 @@ End BasicObjects.
 Notation "'[' 'hp' e  ']'" := (mk_hp e%PH).
 Notation "'[' 'line' d & Ω ']'" := (mk_line d Ω).
 Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω].
+
+Section Dimension.
+
+Context {R : realFieldType} {n : nat}.
+
+Implicit Type (V : 'affine[R]_n).
+
+Definition dim V :=
+  if V == [affine0] then 0%N
+  else (\dim (dir V)).+1%N.
+
+End Dimension.
