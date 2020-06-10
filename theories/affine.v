@@ -187,7 +187,6 @@ Notation "''affine[' R ]"    := 'affine[R]_(_).
 Notation "''affine_' n"      := 'affine[_]_n.
 Notation "[ 'affine' I ]"    := (Core.affine I%VS).
 Notation "'eq_vect'"         := Core.eq_vect (at level 8).
-Notation "[ 'affine0' ]"     := (@Core.Affine0 _ _).
 
 Section Specs.
 
@@ -197,13 +196,15 @@ Implicit Type (x : 'cV[R]_n) (e : lrel[R]_n)
          (U : {vspace lrel[R]_n}) (V : 'affine[R]_n)
          (W : {vspace 'cV[R]_n}).
 
-Lemma in_affine0 x : x \in [affine0] = false.
+Definition affine0 : 'affine[R]_n := (Core.Affine0 _).
+
+Lemma in_affine0 x : x \in affine0 = false.
 Proof.
 by [].
 Qed.
 
 Lemma affineN0 V :
-  reflect (exists x, x \in V) (V != [affine0]).
+  reflect (exists x, x \in V) (V != affine0).
 Proof.
 apply/(iffP idP).
 - by case: V => [/eqP //| U U_sat _]; apply/is_satP.
@@ -224,10 +225,10 @@ rewrite in_affineE; exact: satP.
 Qed.
 
 Variant affine_spec : 'affine[R]_n -> bool -> Type :=
-| Affine0 : affine_spec [affine0] true
+| Affine0 : affine_spec affine0 true
 | Affine U of (exists x, x \in [affine U]) : affine_spec [affine U] false.
 
-Lemma affineP V : affine_spec V (V == [affine0]).
+Lemma affineP V : affine_spec V (V == affine0).
 Proof.
 case: V => [| U U_sat].
 - rewrite eq_refl; constructor.
@@ -235,14 +236,14 @@ case: V => [| U U_sat].
   rewrite /Core.affine; case: {-}_/idP => // ?.
   apply/congr1; exact: bool_irrelevance.
   suff h: exists x, x \in [affine U].
-  + have /negbTE ->: [affine U] != [affine0] by apply/affineN0.
+  + have /negbTE ->: [affine U] != affine0 by apply/affineN0.
     by constructor.
   + case/is_satP : U_sat => x x_in; exists x.
     by rewrite in_affineE.
 Qed.
 
 Lemma affine_is_sat U :
-  [affine U] != [affine0] = is_sat U.
+  [affine U] != affine0 = is_sat U.
 Proof.
 rewrite /Core.affine; case: {-}_/idP.
 - move => is_sat; rewrite is_sat.
@@ -283,7 +284,7 @@ by rewrite in_mk_affine addrN mem0v.
 Qed.
 
 Lemma mk_affine_prop0 W Ω :
-  [affine W & Ω] != [affine0].
+  [affine W & Ω] != affine0.
 Proof.
 by apply/affineN0; exists Ω; apply/orig_affine.
 Qed.
@@ -294,10 +295,10 @@ Definition dir V :=
   | Affine U _ => (befst @: U)^OC%VS
   end.
 
-Lemma dir0 : dir [affine0] = 0%VS.
+Lemma dir0 : dir affine0 = 0%VS.
 Proof.
 rewrite /dir.
-by case/affineP: [affine0] (eq_refl ([affine0] : 'affine[R]_n)).
+by case/affineP: affine0 (eq_refl (affine0 : 'affine[R]_n)).
 Qed.
 
 Lemma in_dirP V x :
@@ -345,7 +346,7 @@ by move => /eq_mk_affine {2}-> /eq_mk_affine {2}-> ->.
 Qed.
 
 Inductive mk_affine_spec : 'affine[R]_n -> {vspace 'cV[R]_n} -> Prop :=
-| MkAffine0 : mk_affine_spec [affine0] 0%VS
+| MkAffine0 : mk_affine_spec affine0 0%VS
 | MKAffineN0 W Ω : mk_affine_spec [affine W & Ω] W.
 
 Lemma mk_affineP V : mk_affine_spec V (dir V).
@@ -453,10 +454,10 @@ by apply: andb_idr; apply: le_xy.
 Qed.
 
 Program Definition affine_bottomMixin :=
-  @BottomMixin affine_display [porderType of 'affine[R]_n] [affine0] _.
+  @BottomMixin affine_display [porderType of 'affine[R]_n] affine0 _.
 Next Obligation. by apply/affine_leP=> v; rewrite in_affine0. Qed.
 
-Canonical poly_B :=
+Canonical affine_BSemilatticeType :=
   Eval hnf in BSemilatticeType 'affine[R]_n affine_bottomMixin.
 
 End Order.
@@ -464,7 +465,7 @@ End Order.
 Module Import Exports.
 Canonical affine_LtPOrderType.
 Canonical affine_MeetSemilattice.
-Canonical affine_bottomMixin.
+Canonical affine_BSemilatticeType.
 End Exports.
 End Order.
 
@@ -474,7 +475,18 @@ Section BasicObjects.
 
 Context {R : realFieldType} {n : nat}.
 
-Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n).
+Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n) (V : 'affine[R]_n).
+
+Lemma mk_affineS Ω : { mono (mk_affine^~ Ω) : W W' / (W <= W')%VS >-> (W <= W')%O }.
+Proof.
+move => W W'; apply/affine_leP/subvP => [sub x x_in | sub x].
+Admitted.
+
+Lemma dirS V V' : V' != affine0 -> (V <= V')%O -> (dir V <= dir V')%VS.
+Admitted.
+
+Lemma mk_affine_neq0 Ω W : [affine W & Ω] != affine0.
+Admitted.
 
 Definition mk_hp e := [affine <[e]> ].
 Notation "'[' 'hp' e  ']'" := (mk_hp e%PH).
@@ -533,7 +545,64 @@ Context {R : realFieldType} {n : nat}.
 Implicit Type (V : 'affine[R]_n).
 
 Definition dim V :=
-  if V == [affine0] then 0%N
+  if V == affine0 then 0%N
   else (\dim (dir V)).+1%N.
+
+Lemma dim0 : dim affine0 = 0%N.
+by rewrite /dim ifT //.
+Qed.
+
+Lemma dimN0 V : (dim V > 0)%N = (V != affine0).
+by rewrite /dim; case: ifP.
+Qed.
+
+Lemma dim_eq0 V : (dim V = 0)%N -> V = affine0.
+Proof.
+by rewrite /dim; case: ifP => [/eqP ->|].
+Qed.
+
+Lemma dimS : {homo dim : V V' / (V <= V')%O >-> (V <= V')%N}.
+Proof.
+move => V V' sub.
+rewrite /dim; case: ifPn => // V_neq0.
+have V'_neq0: V' != affine0.
+- move: V_neq0; apply/contra_neq => V'_eq0.
+  by rewrite V'_eq0 lex0 in sub; move/eqP: sub.
+rewrite ifF ?ltnS; last by apply/negbTE.
+by apply/dimvS/dirS.
+Qed.
+
+Lemma dim_line Ω d : dim [line d & Ω] = (d != 0).+1.
+Proof.
+rewrite /dim ifF; last by apply/negbTE/mk_affine_neq0.
+by rewrite dir_mk_affine dim_vline.
+Qed.
+
+Lemma dim_pt Ω : dim [pt Ω] = 1%N.
+Proof.
+by rewrite dim_line eq_refl.
+Qed.
+
+Lemma dim2P V :
+  dim V = 2%N -> exists Ω, exists2 d, d != 0 & V = [line Ω & d].
+Admitted.
+
+Lemma dim1P V :
+  dim V = 1%N -> exists Ω, V = [pt Ω].
+Admitted.
+
+Lemma dim_leSn V :
+  (dim V <= n.+1)%N.
+Admitted.
+
+Lemma dimT : (dim affineT = n.+1)%N.
+Admitted.
+
+Lemma dimTP V : dim V = n.+1%N -> V = affineT.
+Admitted.
+
+Lemma dim_hp e :
+  [hp e] != affine0 -> dim [hp e] = ((e.1 == 0%R) + n)%N.
+Admitted.
 
 End Dimension.
