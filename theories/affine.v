@@ -29,7 +29,11 @@ Reserved Notation "''affine[' R ]"
 Reserved Notation "''affine_' n"
   (at level 8, format "''affine_' n").
 Reserved Notation "[ 'affine' I ]" (at level 0, format "[ 'affine'  I ]").
+Reserved Notation "'[' 'affine' U & Ω ']'"
+         (at level 0, format "[ 'affine'  U   &   Ω ]").
 Reserved Notation "[ 'hp' e ]" (at level 0, format "[ 'hp'  e ]").
+Reserved Notation "[ 'pt' Ω ]" (at level 0, format "[ 'pt'  Ω ]").
+Reserved Notation "[ 'line' c & Ω ]"  (at level 0, format "[ 'line'  c  &  Ω ]").
 
 Section Solve.
 
@@ -126,7 +130,7 @@ Variant type :=
 | Affine0
 | Affine (I : {vspace lrel[R]_n}) of is_sat I.
 
-Definition type_of of phant R := type.
+Definition type_of of phant R : predArgType := type.
 Notation  "''affine[' R ]" := (type_of (Phant R)).
 
 Definition eq_vect V :=
@@ -181,7 +185,7 @@ Canonical affine_of_choiceType.
 End Exports.
 End Core.
 
-Import Core.Exports.
+Export Core.Exports.
 Notation "''affine[' R ]_ n" := (Core.type_of n (Phant R)).
 Notation "''affine[' R ]"    := 'affine[R]_(_).
 Notation "''affine_' n"      := 'affine[_]_n.
@@ -469,7 +473,7 @@ Canonical affine_BSemilatticeType.
 End Exports.
 End Order.
 
-Import Order.Exports.
+Export Order.Exports.
 
 Section BasicObjects.
 
@@ -488,7 +492,7 @@ Admitted.
 Lemma mk_affine_neq0 Ω W : [affine W & Ω] != affine0.
 Admitted.
 
-Definition mk_hp e := [affine <[e]> ].
+Definition mk_hp e : 'affine[R]_n := [affine <[e]> ].
 Notation "'[' 'hp' e  ']'" := (mk_hp e%PH).
 
 Lemma in_hp :
@@ -496,7 +500,7 @@ Lemma in_hp :
   * (forall c α x, (x \in [hp [<c, α>]]) = ('[c,x] == α)).
 Admitted.
 
-Definition affineT := [hp 0].
+Definition affineT : 'affine[R]_n := [hp 0].
 
 Lemma in_affineT x : x \in affineT = true.
 Proof.
