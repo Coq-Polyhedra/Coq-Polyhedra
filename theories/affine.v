@@ -330,7 +330,7 @@ rewrite (in_dirP (orig_affine W Ω)) in_mk_affine.
 by rewrite addrAC addrN add0r.
 Qed.
 
-Lemma eq_mk_affine V x :
+Lemma mk_affine_dir V x :
   x \in V -> V = [affine (dir V) & x].
 Proof.
 rewrite /dir; case/affineP: V; rewrite ?in_affine0 //.
@@ -342,7 +342,7 @@ Qed.
 Lemma dir_eq V V' x :
   x \in V -> x \in V' -> dir V = dir V' -> V = V'.
 Proof.
-by move => /eq_mk_affine {2}-> /eq_mk_affine {2}-> ->.
+by move => /mk_affine_dir {2}-> /mk_affine_dir {2}-> ->.
 Qed.
 
 Inductive mk_affine_spec : 'affine[R]_n -> {vspace 'cV[R]_n} -> Prop :=
@@ -353,7 +353,7 @@ Lemma mk_affineP V : mk_affine_spec V (dir V).
 Proof.
 case/affineP: V => [| U [x]].
 - rewrite dir0; constructor.
-- by move/eq_mk_affine => {1}->; constructor.
+- by move/mk_affine_dir => {1}->; constructor.
 Qed.
 
 Lemma affine_eqP V V' :
