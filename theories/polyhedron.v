@@ -574,16 +574,12 @@ Section BasicObjects.
 
 Context {R : realFieldType} (n : nat).
 
+Implicit Type (e : lrel[R]_n) (V : 'affine[R]_n).
+
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
 Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
 
-End BasicObjects.
-Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
-
-Section Affine.
-
-Definition aff (R : realFieldType) (n : nat) (phR : phant R)
-             (V : Core.type_of n phR) : poly_of n phR :=
+Definition aff V : 'poly[R]_n :=
   match affineP V with
   | Affine0 => poly0
   | Affine V _ =>
@@ -591,28 +587,29 @@ Definition aff (R : realFieldType) (n : nat) (phR : phant R)
     \polyI_(i < \dim V) ([hs U`_i] `&` [hs (- U`_i)])
   end.
 
-End Affine.
+Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
 
-Section AffineProp.
-
-Context {R : realFieldType} (n : nat).
-
-Lemma affE (V : 'affine[R]_n) : aff V =i V.
+Lemma hpE' e : [hp e]%:PH = [hs e] `&` [hs (-e)] :> 'poly[R]_n.
+Proof.
 Admitted.
 
-Coercion aff : Core.type_of >-> poly_of.
+Lemma affE (V : 'affine[R]_n) : V %:PH =i V.
+Admitted.
 
-Lemma aff_inj : injective (@aff _ n (Phant R)).
+Lemma aff_inj : injective aff.
 Proof.
 move => V V' /poly_eqP eq.
 by apply/affine_eqP => x; move/(_ x): eq; rewrite !affE.
 Qed.
 
-Lemma affS : {mono (@aff _ n (Phant R)) : V V' / (V <= V')%O >-> (V `<=` V')}.
+Lemma affS : {mono aff : V V' / (V <= V')%O >-> (V `<=` V')}.
 Proof.
 Admitted.
 
-Lemma aff0 : aff affine0 = [poly0] :> 'poly[R]_n.
+Lemma aff0 : affine0%:PH = [poly0] :> 'poly[R]_n.
+Admitted.
+
+Lemma affT : affineT%:PH = [polyT] :> 'poly[R]_n.
 Admitted.
 
 Lemma aff_eq0 (V : 'affine[R]_n) : aff V = [poly0] -> V = affine0.
@@ -623,12 +620,6 @@ Admitted.
 
 Lemma aff_gt0E (V : 'affine[R]_n) : (aff V `>` [poly0]) = (V != affine0).
 Admitted.
-
-End AffineProp.
-
-Section BasicObjects.
-
-Context {R : realFieldType} (n : nat).
 
 Definition mk_hp (e : lrel[R]_n) := [hs e] `&` [hs (-e)].
 Notation "'[' 'hp' e  ']'" := (mk_hp e%PH) : poly_scope.
