@@ -43,7 +43,6 @@ Section PBasis.
 Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
 Context (P : {poly base}).
 Hypothesis Pprop0 : P `>` [poly0].
-Hypothesis n_prop0 : (n > 0)%N.
 
 Implicit Type (I : {fsubset base}).
 
@@ -115,7 +114,6 @@ move/eq_add_S/eqP; rewrite subn_eq0 => dimI_sub.
 apply/(@basis_free _ _ <<I>>%VS); rewrite basisEdim; apply/andP; split => //.
 by move: (card_pbasis pbasis_I) => ->.
 Qed.
-
 
 (*Lemma span_pbasis I :
   is_pbasis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
@@ -337,6 +335,9 @@ Admitted.
 Variable (x: 'cV[R]_n) (I : {fsubset base}) (i : lrel[R]_n).
 Hypothesis (Hbasis : is_pbasis_of x I) (i_in: i \in (I : {fset _})).
 
+Lemma n_prop0 : (n > 0)%N.
+Admitted.
+
 Lemma dim_pbasisD1 :
   exists d, (affine << (I `\ i)%fset >> == [line d & x]) && ('[i.1, d] == 1).
 Proof.
@@ -367,14 +368,12 @@ Let I' : {fsubset base} := (I `\  i)%:fsub. (* TODO: type is mandatory here *)
 Let J : {fsubset base} := (j |` I')%:fsub.
 Hypothesis (j_notin : j \notin (I :{fset _})).
 
-
-
 Lemma card_pivot:
   (#|` J| == n)%N.
 Proof.
 rewrite cardfsU1 in_fsetE negb_and j_notin orbT cardfsD /=.
 by rewrite fsetI1 i_in cardfs1 subnKC
-  (card_pbasis (is_pbasis_of_pbasis Hbasis)).
+  (card_pbasis (is_pbasis_of_pbasis Hbasis)) ?n_prop0.
 Qed.
 
 Lemma foo1:
@@ -402,6 +401,16 @@ have free_I': free I'.
 Search _ free.
 Admitted.
 
+(* Remark: we must show that, if #J = n, then free J <-> dim affine <<J>> = 1
+ * In particular, this requires to show that affine <<J>> is nonempty         *)
+
+(* Show that the basic point associated with J is given by
+ * ppick (affine <<J>>) = ppick (affine <<I>>) + (r j) / (c j) *: dir
+ * It suffices to show that this point belongs to affine <<J>> *)
+
+(* When r j > 0, show that
+  affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
+                                c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
 
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
