@@ -20,6 +20,7 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 Local Open Scope poly_scope.
+Local Open Scope fset_scope.
 Import GRing.Theory Num.Theory.
 
 (* Goal :
@@ -59,7 +60,8 @@ by move/span_basis/span_polyEq.
 Qed.
 
 Definition is_pbasis I :=
-   [&& (#|` I | == n)%N, (dim (affine <<I>>%VS) == 1)%N & (affine <<I>>%VS `<=` P)].
+   [&& (#|` I | == n)%N, (dim (affine <<I>>%VS) == 1)%N & (affine <<I>>%VS `<=` P)%PH].
+
 
 (*Definition is_pbasis I :=
   [&& (#|` I | == n)%N, (\dim <<I>> == n)%N & ([poly0] `<` 'P^=(base; I) `<=` P)].*)
@@ -83,7 +85,7 @@ by case/and3P => _ /eqP dimI _; rewrite dimN0 dimI.
 Qed.
 
 Lemma pbasis_feasible I :
-  is_pbasis I -> affine <<I>> `<=` P.
+  is_pbasis I -> (affine <<I>> `<=` P)%PH.
 Proof.
 by case/and3P.
 Qed.
@@ -102,6 +104,18 @@ move => pbasisI; rewrite polyEq_affine.
 apply/meet_idPr/(le_trans (pbasis_feasible _)) => //.
 exact: poly_base_subset.
 Qed.
+
+Lemma pbasis_free I :
+  is_pbasis I -> free I.
+Proof.
+move => pbasis_I.
+move: (dim_affine_pbasis pbasis_I).
+rewrite dimN0_eq; [rewrite active_affine /=| exact: (pbasis_proper0 pbasis_I)].
+move/eq_add_S/eqP; rewrite subn_eq0 => dimI_sub.
+apply/(@basis_free _ _ <<I>>%VS); rewrite basisEdim; apply/andP; split => //.
+by move: (card_pbasis pbasis_I) => ->.
+Qed.
+
 
 (*Lemma span_pbasis I :
   is_pbasis I -> (<< I >> = << {eq 'P^=(base; I)%:poly_base} >>)%VS.
@@ -212,7 +226,7 @@ Proof.
 move => x_vtx.
 case/vertexP: (x_vtx) => Q [Q_eq dim_Q Q_sub].
 rewrite Q_eq valKd /= => basis_eqQ_I.
-have Q_prop0: [ poly0 ] `<` Q by rewrite -Q_eq pt_proper0.
+have Q_prop0: ([ poly0 ] `<` Q)%PH by rewrite -Q_eq pt_proper0.
 have x_eq : [pt x] = affine <<I>>.
 + by rewrite (span_basis basis_eqQ_I) -hullN0_eq // -Q_eq hull_pt.
 split => //; apply/and3P; split; rewrite -?x_eq ?dim_pt ?Q_eq //.
@@ -230,25 +244,24 @@ by symmetry; apply/card_basis/andP.
 Qed.
 
 Lemma pt_inj : injective (mk_affine (<[0]>%VS : {vspace 'cV[R]_n})).
-Admitted.
+Proof.
+move=> x1 x2 pt_eq.
+by rewrite -(ppick_pt x1) -(ppick_pt x2) pt_eq.
+Qed.
 (* TODO: to be moved in polyhedron.v *)
 
 Lemma fsetI_propl (K : choiceType) (S S' : {fset K}):
-  S != S' -> (S `&` S' `<` S)%fset.
+  #|` S| = #|` S'| -> S != S' -> (S `&` S' `<` S)%fset.
 Proof.
-Admitted.
-(*
-  apply/contra_neqT; rewrite -ltnNge => least_cardI.
-  have cardII': (#|` (I `&` I')%fset | = n)%N.
-  + apply/anti_leq/andP; split.
-    * rewrite -[Y in (_ <= Y)%N]card_I; apply: fsubset_leq_card;
-      exact: fsubsetIl.
-    * by rewrite -[Y in (Y <= _)%N](prednK n_proper0).
-  apply/eqP; rewrite eqEfsubset; apply/andP; split.
-  + by apply/fsetIidPl/eqP; rewrite eqEfcard fsubsetIl card_I cardII' /=.
-  + by apply/fsetIidPr/eqP; rewrite eqEfcard fsubsetIr card_I' cardII' /=.
+move=> cardS_eq_cardS'; apply contra_neqT;
+  rewrite fproperEcard fsubsetIl /= ltnNge negbK => cardS_sub_cardI.
+have cardS_eq_cardI: #|` S| = #|` S `&` S'| by
+  apply/anti_leq/andP; split => //; apply/fsubset_leq_card/fsubsetIl.
+apply/eqP; rewrite eqEfsubset; apply/andP; split.
+- by apply/fsetIidPl/eqP; rewrite eqEfcard fsubsetIl cardS_sub_cardI.
+- by apply/fsetIidPr/eqP; rewrite eqEfcard fsubsetIr -cardS_eq_cardS'
+  cardS_sub_cardI.
 Qed.
-*)
 
 Lemma adj_vertex_basis x x' :
   adj_vertex x x' -> exists I, exists I',
@@ -293,13 +306,17 @@ apply/eqP; rewrite eq_sym eqEfcard card_J; apply/andP; split.
   by split; rewrite -?Qxpt -?Qx'pt pt_proper0.
   have card_I: #|` I| = n.
     by move/is_pbasis_of_pbasis/card_pbasis: is_pbasis_of_x_I.
-  have /fsetI_propl/fproper_ltn_card: (I != I').
+  have card_I': #|` I'| = n.
+    by move/is_pbasis_of_pbasis/card_pbasis: is_pbasis_of_x'_I'.
+  have eq_card: #|` I| = #|` I'| by rewrite card_I card_I'.
+  have /(fsetI_propl eq_card)/fproper_ltn_card: (I != I').
   + case/andP: adj_x_x' => x_neq_x' _.
     rewrite -(inj_eq pt_inj) in x_neq_x'.
     move: x_neq_x'; apply/contra_neq.
     by rewrite (is_pbasis_of_eq is_pbasis_of_x_I)
-            (is_pbasis_of_eq is_pbasis_of_x'_I') /= => ->.
-  by rewrite card_I; case: {4 8}n. (* TODO: horrible (it's XA's fault) *)
+      (is_pbasis_of_eq is_pbasis_of_x'_I') /= => ->.
+    rewrite card_I. by case: {4 8}n.
+  (* TODO: horrible (it's XA's fault) *)
 Qed.
 
 Lemma foo' x (I : {fsubset base}) :
@@ -346,8 +363,8 @@ Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une 
 
 Variable (j : lrel[R]_n).
 Hypothesis (j_in : j \in base).
-Let I' : {fsubset base} := (I `\  i)%fset%:fsub. (* TODO: type is mandatory here *)
-Let J : {fsubset base} := (j |` I')%fset%:fsub.
+Let I' : {fsubset base} := (I `\  i)%:fsub. (* TODO: type is mandatory here *)
+Let J : {fsubset base} := (j |` I')%:fsub.
 Hypothesis (j_notin : j \notin (I :{fset _})).
 
 
@@ -361,7 +378,7 @@ by rewrite fsetI1 i_in cardfs1 subnKC
 Qed.
 
 Lemma foo1:
-  forall k: lrel[R]_n, k \in (I': {fset _}) -> '[k.1, dir] == 0.
+  forall k: lrel[R]_n, k \in (I': {fset _}) -> c k == 0.
 Proof.
 move: (xchooseP dim_pbasisD1);
 rewrite /= -/dir => /andP [/eqP affine_eq dir_dot] k k_in_I'.
@@ -371,10 +388,20 @@ rewrite -(@line_subset_hs _ _ _ x dir).
   rewrite -(is_pbasis_of_eq Hbasis) => polyEq_x.
   have: x \in 'P^=(base;I) by rewrite polyEq_x in_pt_self.
   move/polyEq_eq => H.
-  rewrite inE in k_in_I'.
-  case/andP: k_in_I' => _ k_in_I.
-  apply: hs_hp. exact: (H k).
+  move: k_in_I'; rewrite in_fsetD1.
+  case/andP=> _ k_in_I.
+  apply: hs_hp; exact: (H k).
 Qed.
+
+Lemma free_pivot:
+  c j != 0 -> free J.
+Proof.
+apply: contra_neqT.
+move: (pbasis_free (is_pbasis_of_pbasis Hbasis)) => free_I.
+have free_I': free I'.
+Search _ free.
+Admitted.
+
 
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
