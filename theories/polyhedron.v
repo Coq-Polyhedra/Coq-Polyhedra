@@ -387,7 +387,7 @@ Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
 Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
 Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
 
-Notation "'[' 'poly0' ']'" := (@poly0 _ _) : poly_scope.
+Notation "'[' 'poly0' ']'" := (@Order.bottom polyh_display _) : poly_scope.
 Notation "'[' 'polyT' ']'" := (@polyT _ _) : poly_scope.
 
 Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
@@ -579,51 +579,6 @@ Implicit Type (e : lrel[R]_n) (V : 'affine[R]_n).
 Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
 Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
 
-Definition aff V : 'poly[R]_n :=
-  match affineP V with
-  | Affine0 => poly0
-  | Affine V _ =>
-    let U := vbasis V in
-    \polyI_(i < \dim V) ([hs U`_i] `&` [hs (- U`_i)])
-  end.
-
-Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
-
-Lemma hpE' e : [hp e]%:PH = [hs e] `&` [hs (-e)] :> 'poly[R]_n.
-Proof.
-Admitted.
-
-Lemma affE (V : 'affine[R]_n) : V %:PH =i V.
-Admitted.
-
-Lemma aff_inj : injective aff.
-Proof.
-move => V V' /poly_eqP eq.
-by apply/affine_eqP => x; move/(_ x): eq; rewrite !affE.
-Qed.
-
-Lemma affS : {mono aff : V V' / (V <= V')%O >-> (V `<=` V')}.
-Proof.
-Admitted.
-
-Lemma aff0 : affine0%:PH = [poly0] :> 'poly[R]_n.
-Admitted.
-
-Lemma affT : affineT%:PH = [polyT] :> 'poly[R]_n.
-Admitted.
-
-Lemma aff_eq0 (V : 'affine[R]_n) : aff V = [poly0] -> V = affine0.
-Admitted.
-
-Lemma aff_ltE (V V' : 'affine[R]_n) : (aff V `<` aff V') = (V < V')%O.
-Admitted.
-
-Lemma aff_gt0E (V : 'affine[R]_n) : (aff V `>` [poly0]) = (V != affine0).
-Admitted.
-
-Definition mk_hp (e : lrel[R]_n) := [hs e] `&` [hs (-e)].
-Notation "'[' 'hp' e  ']'" := (mk_hp e%PH) : poly_scope.
-
 Lemma in_hs :
     (forall (b : lrel[R]_n) x, x \in [hs b] = ('[b.1,x] >= b.2))
   * (forall (c : 'cV_n) (α : R) x, x \in [hs [<c, α>]] = ('[c,x] >= α)).
@@ -647,6 +602,83 @@ Proof.
 by rewrite in_hs /= vdotNl ler_opp2.
 Qed.
 
+Definition aff V : 'poly[R]_n :=
+  match affineP V with
+  | Affine0 => poly0
+  | Affine V _ =>
+    let U := vbasis V in
+    \polyI_(i < \dim V) ([hs U`_i] `&` [hs (- U`_i)]) (* define on sequence instead *)
+  end.
+
+Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
+
+Lemma affE (V : 'affine[R]_n) : V %:PH =i V.
+Proof.
+rewrite /aff.
+case/affineP: V.
+- by move => x; rewrite in_poly0 in_affine0.
+- move => U _ x.
+  rewrite in_affineE.
+  apply/in_big_polyIP/allP => h.
+  + move => e /tnthP [i ->].
+    apply/eqP/le_anti; move/(_ i isT): h.
+    by rewrite in_polyI in_hsN in_hs andbC (tnth_nth 0).
+  + move => i _.
+    rewrite in_polyI in_hsN in_hs.
+    move/(_ _ (mem_tnth i (vbasis U)))/eqP: h.
+    rewrite (tnth_nth 0) => ->.
+    by rewrite lexx.
+Qed.
+
+Lemma hpE e : [hp e]%:PH = [hs e] `&` [hs (-e)] :> 'poly[R]_n.
+Proof.
+apply/poly_eqP => x.
+by rewrite affE in_hp in_polyI in_hsN in_hs lte_anti eq_sym.
+Qed.
+
+Lemma aff_inj : injective aff.
+Proof.
+move => V V' /poly_eqP eq.
+by apply/affine_eqP => x; move/(_ x): eq; rewrite !affE.
+Qed.
+
+Lemma affS : {mono aff : V V' / (V <= V')%O >-> (V `<=` V')}.
+Proof.
+move => ??.
+by apply/poly_leP/affine_leP => incl x; rewrite ?affE => x_in;
+    move/(_ x): incl; rewrite ?affE  => /(_ x_in).
+Qed.
+
+Lemma aff0 : affine0%:PH = [poly0] :> 'poly[R]_n.
+Proof.
+apply/poly_eqP => x.
+by rewrite affE in_affine0 in_poly0.
+Qed.
+
+Lemma affT : affineT%:PH = [polyT] :> 'poly[R]_n.
+Proof.
+apply/poly_eqP => x.
+by rewrite affE in_affineT in_polyT.
+Qed.
+
+Lemma aff_eq0 (V : 'affine[R]_n) : V%:PH = [poly0] -> V = affine0.
+Proof.
+by rewrite -aff0; apply/aff_inj.
+Qed.
+
+Lemma aff_ltE (V V' : 'affine[R]_n) : (V%:PH `<` V'%:PH) = (V < V')%O.
+Proof.
+by rewrite lt_def affS (inj_eq aff_inj).
+Qed.
+
+Lemma aff_lt0x (V : 'affine[R]_n) : (aff V `>` [poly0]) = (V != affine0).
+Proof.
+by rewrite lt0x -aff0 (inj_eq aff_inj).
+Qed.
+
+(*Definition mk_hp (e : lrel[R]_n) := [hs e] `&` [hs (-e)].
+Notation "'[' 'hp' e  ']'" := (mk_hp e%PH) : poly_scope.
+
 Lemma in_hp :
   (forall b x, (x \in [hp b]) = ('[b.1,x] == b.2))
   * (forall c α x, (x \in [hp [<c, α>]]) = ('[c,x] == α)).
@@ -656,9 +688,9 @@ suff Ht: t by split; [ | move => c α x; rewrite Ht ].
 move => b x; rewrite in_polyI.
 rewrite [X in X && _]in_hs [X in _ && X]in_hs. (* TODO: remove the [X in ...] makes Coq loop *)
 by rewrite vdotNl ler_oppl opprK eq_sym eq_le.
-Qed.
+Qed.*)
 
-Let inE := (in_hp, in_hs, @in_poly0, @in_polyT, @in_polyI, inE).
+Let inE := (affE, @in_hp, in_hs, @in_poly0, @in_polyT, @in_polyI, inE).
 
 Lemma notin_hp b x :
   (x \in [hs b]) -> (x \notin [hp b]) = ('[b.1, x] > b.2).
@@ -673,21 +705,12 @@ Proof. by rewrite !inE => /eqP->. Qed.
 Lemma hsN_hp c (x : lrel[R]_n) : c \in [hp x] -> c \in [hs -x].
 Proof. by rewrite !inE => /eqP /= <-; rewrite vdotNl. Qed.
 
-Lemma hpN (e : lrel[R]_n) : [hp -e] = [hp e].
-Proof.
-by apply/poly_eqP => x; rewrite !in_hp /= vdotNl eqr_opp.
-Qed.
-
 Lemma hsN_subset (e : lrel[R]_n) x : (x \notin [hs -e]) -> x \in [hs e].
 Proof.
 by rewrite in_hsN -ltNge in_hs => /ltW.
 Qed.
 
-Lemma hpE c (x : lrel[R]_ n) :
-  (c \in [hp x]) = (c \in [hs x]) && (c \in [hs -x]).
-Proof. by rewrite /mk_hp inE. Qed.
-
-Lemma hp_subset_hs (e : lrel[R]_n) : [hp e] `<=` [hs e].
+Lemma hp_subset_hs (e : lrel[R]_n) : [hp e]%:PH `<=` [hs e].
 Proof.
 by apply/poly_subsetP => x; rewrite !inE => /eqP ->.
 Qed.
@@ -825,7 +848,7 @@ Qed.
 
 Lemma bounded_poly0 c : @bounded R n [poly0] c = false.
 Proof.
-by apply: (introF idP); move/boundedP => [x]; rewrite inE.
+by apply: (introF idP); move/boundedP => [x]; rewrite inE /= vdot0l ler10.
 Qed.
 
 Definition opt_value P c (bounded_P : bounded P c) :=
@@ -856,12 +879,12 @@ Qed.
 
 Definition argmin P c :=
   if @idP (bounded P c) is ReflectT H then
-    P `&` [hp [<c, opt_value H>]]
+    P `&` [hp [<c, opt_value H>]]%:PH
   else
     [poly0].
 
 Lemma argmin_polyI P c (bounded_P : bounded P c) :
-  argmin P c = P `&` [hp [<c, opt_value bounded_P>]].
+  argmin P c = P `&` [hp [<c, opt_value bounded_P>]]%:PH.
 Proof.
 by rewrite /argmin; case: {-}_/idP => [b' | ?]; rewrite ?[bounded_P]eq_irrelevance.
 Qed.

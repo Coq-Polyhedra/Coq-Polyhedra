@@ -500,6 +500,11 @@ Lemma in_hp :
   * (forall c α x, (x \in [hp [<c, α>]]) = ('[c,x] == α)).
 Admitted.
 
+Lemma hpN (e : lrel[R]_n) : [hp -e] = [hp e].
+Proof.
+by apply/affine_eqP => x; rewrite !in_hp /= vdotNl eqr_opp.
+Qed.
+
 Definition affineT : 'affine[R]_n := [hp 0].
 
 Lemma in_affineT x : x \in affineT = true.
