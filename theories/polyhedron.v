@@ -676,21 +676,7 @@ Proof.
 by rewrite lt0x -aff0 (inj_eq aff_inj).
 Qed.
 
-(*Definition mk_hp (e : lrel[R]_n) := [hs e] `&` [hs (-e)].
-Notation "'[' 'hp' e  ']'" := (mk_hp e%PH) : poly_scope.
-
-Lemma in_hp :
-  (forall b x, (x \in [hp b]) = ('[b.1,x] == b.2))
-  * (forall c α x, (x \in [hp [<c, α>]]) = ('[c,x] == α)).
-Proof.
-set t := (forall b, _).
-suff Ht: t by split; [ | move => c α x; rewrite Ht ].
-move => b x; rewrite in_polyI.
-rewrite [X in X && _]in_hs [X in _ && X]in_hs. (* TODO: remove the [X in ...] makes Coq loop *)
-by rewrite vdotNl ler_oppl opprK eq_sym eq_le.
-Qed.*)
-
-Let inE := (affE, @in_hp, in_hs, @in_poly0, @in_polyT, @in_polyI, inE).
+Let inE := (@in_poly0, @in_polyT, affE, @in_hp, in_hs, @in_polyI, inE).
 
 Lemma notin_hp b x :
   (x \in [hs b]) -> (x \notin [hp b]) = ('[b.1, x] > b.2).
@@ -848,7 +834,7 @@ Qed.
 
 Lemma bounded_poly0 c : @bounded R n [poly0] c = false.
 Proof.
-by apply: (introF idP); move/boundedP => [x]; rewrite inE /= vdot0l ler10.
+by apply: (introF idP) => /boundedP [?]; rewrite inE.
 Qed.
 
 Definition opt_value P c (bounded_P : bounded P c) :=
@@ -924,7 +910,7 @@ rewrite /argmin; case: {-}_/idP => [bounded_P | _].
 Qed.
 
 Lemma argmin_opt_value P c (bounded_P : bounded P c) :
-  argmin P c `<=` [hp [<c, opt_value bounded_P>]].
+  argmin P c `<=` [hp [<c, opt_value bounded_P>]]%:PH.
 Proof. (* RK *)
 rewrite argmin_polyI; exact: leIr.
 Qed.
@@ -992,63 +978,28 @@ Lemma notin_argmin (P : 'poly_n) (c : 'cV[R]_n) (bounded_P : bounded P c) :
 Proof.
 move => x x_in_P; apply/contra.
 rewrite argmin_polyI in_polyI x_in_P /=.
-rewrite in_polyI andbC => -> /=.
+rewrite hpE in_polyI andbC => -> /=.
 by move: x_in_P; apply/poly_subsetP/opt_value_lower_bound.
 Qed.
 
 Lemma argmin_polyIN (P : 'poly[R]_n) (c : 'cV_n) (bounded_P : bounded P c) :
   argmin P c = P `&` [hs -[<c, opt_value bounded_P>]].
 Proof.
-rewrite argmin_polyI /mk_hp meetA [X in X `&` _ = _]meet_l //.
+rewrite argmin_polyI hpE meetA [X in X `&` _ = _]meet_l //.
 by apply: opt_value_lower_bound.
 Qed.
 
-Definition mk_line (c Ω : 'cV[R]_n) :=
-  let S := kermx c in
-  \polyI_(i < n) [hp [<(row i S)^T, '[(row i S)^T, Ω]>]].
-
-Notation "'[' 'line' c & Ω ']'" := (mk_line c Ω) : poly_scope.
-
-Lemma in_lineP {c Ω x : 'cV[R]_n} :
-  reflect (exists μ, x = Ω + μ *: c) (x \in [line c & Ω]).
-Proof.
-apply: (iffP idP); last first.
-- move => [μ ->]; apply/in_big_polyIP => [i _]; rewrite in_hp; apply/eqP.
-  rewrite vdotDr vdotZr.
-  suff /matrixP/(_ 0 0): '[ (row i (kermx c))^T, c]%:M = 0 :> 'M_1
-    by rewrite !mxE mulr1n => ->; rewrite mulr0 addr0.
-  rewrite vdot_def -trmx_mul -trmx0; apply: congr1.
-  apply/sub_kermxP; exact: row_sub.
-- move/in_big_polyIP => H.
-  pose d := x - Ω; suff /sub_rVP [μ ]: (d^T <= c^T)%MS.
-  rewrite -linearZ /= => /trmx_inj d_eq_mu_c.
-  by exists μ; rewrite -d_eq_mu_c /d addrCA addrN addr0.
-  rewrite submx_kermx !trmxK.
-  apply/row_subP => i; apply/sub_kermxP.
-  rewrite -[row _ _]trmxK -vdot_def vdotC [RHS]const_mx11; apply: congr1.
-  move/(_ i isT) : H; rewrite in_hp => /eqP.
-  by rewrite /d vdotBr => ->; rewrite addrN.
-Qed.
-
 Lemma line_subset_hs (e : lrel[R]_n) (Ω c : 'cV[R]_n) :
-  Ω \in [hs e] -> ([line c & Ω ] `<=` [hs e]) = ('[e.1,c] == 0).
+  Ω \in [hs e] -> ([line c & Ω ]%:PH `<=` [hs e]) = ('[e.1,c] == 0).
 Proof.
 move => Ω_in_e.
 apply/idP/eqP.
 - apply/contraTeq => e_c_neq0; apply/poly_subsetPn.
   exists (Ω + (e.2 - 1 - '[e.1, Ω])/'[e.1, c] *: c).
-  + by apply/in_lineP; exists ((e.2 - 1 - '[e.1, Ω])/'[e.1, c]).
+  + by rewrite affE; apply/in_lineP; exists ((e.2 - 1 - '[e.1, Ω])/'[e.1, c]).
   + by rewrite inE vdotDr vdotZr divfK // addrCA addrN addr0 lter_sub_addr cpr_add ler10.
-- move => e_c_eq0; apply/poly_subsetP => x /in_lineP [μ ->].
+- move => e_c_eq0; apply/poly_subsetP => x; rewrite affE => /in_lineP [μ ->].
   by rewrite inE vdotDr vdotZr e_c_eq0 mulr0 addr0 -in_hs.
-Qed.
-
-Lemma line_subset_hp (e : lrel[R]_n) (v v' : 'cV[R]_n) :
-  (v \in [hp e]) -> (v' \in [hp e]) -> [line (v' - v) & v] `<=` [hp e].
-Proof.
-rewrite !in_hp => /eqP v_in /eqP v'_in.
-apply/poly_subsetP => ? /in_lineP [μ -> ]; rewrite in_hp.
-by rewrite vdotDr vdotZr vdotBr v_in v'_in addrN mulr0 addr0.
 Qed.
 
 Lemma pointed0 : @pointed R n [poly0].
@@ -1059,11 +1010,11 @@ by apply/H.poly_subsetP => x; rewrite repr_equiv.
 Qed.
 
 Lemma pointedPn P :
-  reflect (exists Ω, exists2 d, d != 0 & [line d & Ω] `<=` P) (~~ (pointed P)).
+  reflect (exists Ω, exists2 d, d != 0 & [line d & Ω]%:PH `<=` P) (~~ (pointed P)).
 Proof.
 apply/(iffP (H.pointedPn _)) => [[x [d] d_neq0 sub]| [x [d] d_neq0 sub]]; exists x; exists d => //.
-- by apply/poly_subsetP => ? /in_lineP [μ ->]; apply/sub.
-- by move => μ; apply/(poly_subsetP sub)/in_lineP; exists μ.
+- by apply/poly_subsetP => ?; rewrite affE => /in_lineP [μ ->]; apply/sub.
+- by move => μ; apply/(poly_subsetP sub); rewrite affE; apply/in_lineP; exists μ.
 Qed.
 
 Lemma pointedS (P Q : 'poly[R]_n) :
@@ -1076,7 +1027,7 @@ by apply/(le_trans line_sub).
 Qed.
 
 Definition mk_hline (c Ω : 'cV[R]_n) :=
-  [hs [<c, '[c,Ω]>]] `&` [line c & Ω].
+  [hs [<c, '[c,Ω]>]] `&` [line c & Ω]%:PH.
 
 Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : poly_scope.
 
@@ -1165,7 +1116,7 @@ apply: contraT => /pointedPn [Ω [c]] c_neq0 /poly_subsetP hl_sub.
 suff: ~~ (bounded P c) by move/(compactP P_neq0)/(_ c) : P_compact => ->.
 apply/boundedPn => // K.
 pose μ := ((K - 1 - '[c,Ω])/'[| c |]^2)%R.
-exists (Ω + μ *: c); first by apply/hl_sub/in_lineP; exists μ.
+exists (Ω + μ *: c); first by apply/hl_sub; rewrite affE; apply/in_lineP; exists μ.
 rewrite vdotDr vdotZr mulfVK ?lt0r_neq0 ?vnorm_gt0 //.
 by rewrite addrCA addrN addr0 cpr_add ltrN10.
 Qed.
@@ -1181,7 +1132,7 @@ have h: [poly0] `<` Q `<=` P by apply/andP; split.
 by move/(compactP P_prop0)/(_ c)/bounded_mono1/(_ h): P_compact.
 Qed.
 
-Definition slice (b : lrel) P := [hp b] `&` P.
+Definition slice (b : lrel) P := [hp b]%:PH `&` P.
 
 Lemma slice0 (b : lrel) : slice b ([poly0]) = [poly0].
 Proof.
@@ -1193,7 +1144,7 @@ Proof. by move=> ???; apply: leI2. Qed.
 
 Lemma in_slice (e : lrel) (P : 'poly_n) c :
   c \in slice e P = (c \in [hp e]) && (c \in P).
-Proof. by apply: in_polyI. Qed.
+Proof. by rewrite in_polyI affE. Qed.
 
 Lemma le_slice (e : lrel[R]_n) P : slice e P `<=` P.
 Proof. by apply/poly_subsetP=> x; rewrite in_slice => /andP[]. Qed.
@@ -1261,15 +1212,16 @@ by apply/in_poly_of_baseP.
 Qed.
 
 Definition polyEq (base I : base_t) :=
-  (\polyI_(e : I) [hp (val e)]) `&` 'P(base).
+  (\polyI_(e : I) [hp (val e)]%:PH) `&` 'P(base).
 
 Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 
 Fact in_polyEq x base I :
   (x \in 'P^=(base; I)) = [forall e : I, x \in [hp (val e)]] && (x \in 'P(base)).
 Proof.
-by rewrite inE in_big_polyI.
-Qed.
+Admitted.
+(*by rewrite in_big_polyI !inE.
+Qed.*)
 
 Lemma in_polyEqP x base I :
   reflect ((forall e, e \in I -> x \in [hp e]) /\ x \in 'P(base)) (x \in 'P^=(base; I)).
@@ -1331,9 +1283,9 @@ rewrite (rwP eqP) eq_le; apply/andP; split; last first.
 Qed.
 
 Lemma polyEq1 {base: base_t[R,n]} {e} :
-  'P^=(base; [fset e]%fset) = 'P(base) `&` [hp e].
+  'P^=(base; [fset e]%fset) = 'P(base) `&` [hp e]%:PH.
 Proof.
-apply/poly_eqP=> c. rewrite [RHS]in_polyI !in_polyEq andbC; congr (_ && _).
+apply/poly_eqP=> c. rewrite [RHS]in_polyI !in_polyEq andbC affE; congr (_ && _).
 apply/forallP/idP => /= [h| c_in_e]; first by apply: (h [` fset11 e]%fset).
 by case=> /= e'; rewrite in_fset1 => /eqP->.
 Qed.
@@ -1403,7 +1355,7 @@ apply/poly_eqP=> c; rewrite !in_polyEq; apply/andP/idP.
     by apply: (chp [`yI]%fset).
   - by move=> xb; move/in_poly_of_baseP: cPb; apply.
 + move/in_poly_of_baseP => /= h; split.
-  - apply/forallP=> /= -[b bI]; rewrite hpE 2?{1}h {h} //= in_baseEq.
+  - apply/forallP=> /= -[b bI]; rewrite -affE hpE in_polyI 2?{1}h {h} //= in_baseEq.
     * by rewrite in_oppbase bI orbT.
     * by rewrite (fsubset_incl bI).
   - by apply/in_poly_of_baseP=> /= b bb; rewrite h // in_baseEq bb.
@@ -1471,11 +1423,10 @@ End BasicObjects.
 Arguments orthant {R n}.
 
 Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
-Notation "'[' 'hp' b  ']'" := (mk_hp b) : poly_scope.
-Notation "'[' 'line' c & Ω ']'" := (mk_line c Ω) : poly_scope.
 Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : poly_scope.
 Notation "''P' ( base )" := (poly_of_base (base)%fset) : poly_scope.
 Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
+Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
 
 Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, inE).
 
@@ -1707,15 +1658,15 @@ Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 Let A' := row_mx (-A) (1%:M).
 
 Definition map_poly (P : 'poly_n) :=
-  proj ((lift_poly k P) `&` (\polyI_i [hp [<(row i A')^T, 0>]])).
+  proj ((lift_poly k P) `&` (\polyI_i [hp [<(row i A')^T, 0>]]%:PH)).
 
 Lemma in_map_polyP (P : 'poly_n) x :
   reflect (exists2 y, x = A*m y & y \in P) (x \in map_poly P).
 Proof.
-have in_vectA' y z : (col_mx y z \in (\polyI_i [hp [<(row i A')^T, 0>]])) = (z == A *m y).
+have in_vectA' y z : (col_mx y z \in (\polyI_i [hp [<(row i A')^T, 0>]]%:PH)) = (z == A *m y).
 - apply/in_big_polyIP/eqP => [h | /colP h i _];
     do ?[apply/colP => i; move/(_ i isT): h];
-    rewrite in_hp /= row_row_mx tr_row_mx vdot_col_mx !row_vdot mul1mx mulNmx mxE;
+    rewrite affE in_hp /= row_row_mx tr_row_mx vdot_col_mx !row_vdot mul1mx mulNmx mxE;
     rewrite (can2_eq (addKr _) (addNKr _)) opprK addr0; exact/eqP.
 apply: (iffP projP) => [[y] | [y -> y_in_P]].
 - rewrite in_polyI in_lift_poly in_vectA' col_mxKu => /andP [? /eqP ->].
@@ -1747,7 +1698,7 @@ Definition cone V :=
   map_poly (mat_fset V) orthant.
 
 Definition conv V :=
-  map_poly (mat_fset V) (orthant `&` [hp [<const_mx 1, 1>]]).
+  map_poly (mat_fset V) (orthant `&` ([hp [<const_mx 1, 1>]]%:PH)).
 
 Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset).
 
@@ -1783,12 +1734,12 @@ Lemma in_convP V x :
     (x \in conv V).
 Proof.
 apply: (iffP (in_map_polyP _ _ _)) => /= [[c ->]|[w le_wV ->]].
-+ rewrite in_polyI in_orthant in_hp => /andP[/= ge0_c /eqP Σc_eq_1].
++ rewrite in_polyI in_orthant affE in_hp => /andP[/= ge0_c /eqP Σc_eq_1].
   exists (mkConvexfun (convex_vect_to_fsfun ge0_c Σc_eq_1)) => /=.
   - by apply: finsupp_vect_to_fsfun.
   by rewrite (combine_mulmxE (finsupp_vect_to_fsfun c)) vect_fsetK.
 + exists (vect_fset V w); first by rewrite (combine_mulmxE le_wV).
-  rewrite in_polyI in_orthant in_hp /= -(rwP andP); split.
+  rewrite in_polyI in_orthant affE in_hp /= -(rwP andP); split.
   - by apply/gev0P=> i; rewrite mxE ge0_fconvex.
   - rewrite vdotC vdotr_const_mx1 (reindex (@frank _ _)) /=; last first.
     * by apply/onW_bij/bij_frank.
@@ -1869,25 +1820,6 @@ Section Affine.
 
 Variable (R : realFieldType) (n : nat).
 
-Definition affine (U : {vspace lrel[R]_n}) :=
-  let X := vbasis U in
-  \polyI_(i < \dim U) [hp X`_i].
-
-Lemma in_affine (U : {vspace lrel[R]_n}) x :
-  reflect (forall v, v \in U -> x \in [hp v]) (x \in (affine U)).
-Proof.
-apply: (iffP idP) => [ /in_big_polyIP h | h]; last first.
-- apply/in_big_polyIP => [i _].
-  by apply/h/vbasis_mem/memt_nth.
-- move => e /coord_vbasis ->.
-  rewrite in_hp /=.
-  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.1) 0 +%R) // vdot_sumDl.
-  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.2) 0 +%R) //=.
-  (* TODO: ugly applications of big_morph *)
-  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
-  by apply/h => //.
-Qed.
-
 Implicit Type (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n).
 
 Lemma dim_cVn U : (\dim U <= n)%N.
@@ -1895,62 +1827,13 @@ Proof.
 by move/dimvS: (subvf U); rewrite dimvf /Vector.dim /= muln1.
 Qed.
 
-Definition mk_affine_fun0 (x: 'cV[R]_n) := fun v => [<v, '[v,x]>].
-
-Lemma mk_affine_fun0_linear x : lmorphism (mk_affine_fun0 x).
-Proof.
-by split; move => v w; rewrite /mk_affine_fun0 ?beaddE ?bescaleE ?vdotBl ?vdotZl.
-Qed.
-
-Definition mk_affine_fun x := linfun (Linear (mk_affine_fun0_linear x)).
-
-Lemma befstE x : (befst \o (mk_affine_fun x) = \1)%VF.
-Proof.
-apply/lfunP => v.
-by rewrite comp_lfunE !lfunE.
-Qed.
-
-Lemma dim_mk_affine_fun U Ω : (\dim ((mk_affine_fun Ω) @: U) = \dim U)%N.
-Proof.
-apply/limg_dim_eq/subv_anti/andP; split; rewrite ?sub0v //.
-apply/subvP => v; rewrite memv_cap memv_ker => /andP [h /eqP].
-move/(congr1 befst); rewrite -comp_lfunE befstE id_lfunE linear0 => ->.
-by rewrite memv0.
-Qed.
-
-Definition mk_affine U Ω :=
-  affine ((mk_affine_fun Ω) @: U^OC)%VS.
-
-Notation "'[' 'affine' U & Ω ']'" := (mk_affine U Ω) : poly_scope.
-
-Lemma in_mk_affine U Ω x :
-  (x \in [affine U & Ω]) = (x - Ω \in U).
-Proof.
-apply/in_affine/idP => [h|].
-- rewrite -[U]orthK; apply/orthvP => y.
-  move/(memv_img (mk_affine_fun Ω))/h; rewrite inE lfunE /=.
-  by rewrite -subr_eq0 -vdotBr => /eqP.
-- rewrite -{1}[U]orthK => /orthvP h.
-  move => v /memv_imgP [{}v /h/eqP eq0 ->].
-  rewrite vdotBr subr_eq0 in eq0.
-  by rewrite inE lfunE /=.
-Qed.
-
-Lemma in_mk_affineP U Ω x :
-  reflect (exists2 d, d \in U & x = Ω + d) (x \in [affine U & Ω]).
-Proof.
-rewrite in_mk_affine; apply/(iffP idP) => [?|[?? ->]].
-- by exists (x - Ω); last rewrite addrC subrK.
-- by rewrite addrC addKr.
-Qed.
-
-Lemma mk_affine_prop0 (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n) :
+(*Lemma mk_affine_prop0 (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n) :
   [affine U & Ω] `>` [poly0].
 Proof.
 by apply/proper0P; exists Ω; rewrite in_mk_affine addrN mem0v.
-Qed.
+Qed.*)
 
-Lemma affine_orth (U : {vspace lrel[R]_n}) x :
+(*Lemma affine_orth (U : {vspace lrel[R]_n}) x :
   x \in (affine U) -> affine U = [affine (befst @: U)^OC & x].
 Proof.
 move => x_in_aff.
@@ -1965,40 +1848,25 @@ apply/idP/idP => [y_in_aff |].
   apply/in_affine => e e_in_U.
   move/(memv_img befst)/h/eqP: (e_in_U); rewrite vdotBr subr_eq0 lfunE /= inE => /eqP ->.
   by rewrite -in_hp; apply/(in_affine U).
-Qed.
-
-Lemma affine_span (I : base_t[R,n]) :
-  affine <<I>>%VS = \polyI_(i : I) [hp (val i)].
-Proof.
-apply/le_anti; apply/andP; split; apply/poly_subsetP => [x].
-- move/in_affine => x_in.
-  by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
-- move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
-  rewrite in_hp /=.
-  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.1) 0 +%R) // vdot_sumDl.
-  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.2) 0 +%R) //=.
-  (* TODO: ugly applications of big_morph *)
-  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
-  move/(_ [` fnthP i]%fset isT): x_in.
-  by rewrite -tnth_nth.
-Qed.
+Qed.*)
 
 Lemma polyEq_affine (base I : base_t[R,n]) :
-  'P^=(base; I) = 'P(base) `&` (affine <<I>>%VS).
+  'P^=(base; I) = 'P(base) `&` [affine <<I>>]%:PH.
 Proof.
-by rewrite affine_span meetC.
-Qed.
+Admitted.
+(*by rewrite affine_span meetC.
+Qed.*)
 
 Lemma affine_subset_poly_of_base (base : base_t[R,n]) :
-  affine << base >> `<=` 'P(base).
+  [affine << base >>]%:PH `<=` 'P(base).
 Proof.
-apply/poly_subsetP => x /in_affine x_in.
+apply/poly_subsetP => x; rewrite affE => /in_affineP x_in.
 apply/in_poly_of_baseP => e /memv_span/x_in.
-by apply/(poly_subsetP (hp_subset_hs _)).
+by move/eqP; rewrite -in_hp -affE; apply/(poly_subsetP (hp_subset_hs _)). (* UGLY *)
 Qed.
 
 Lemma polyEqT_affine (base : base_t[R,n]) :
-  'P^=(base; base) = affine << base >>.
+  'P^=(base; base) = [affine << base >>]%:PH.
 Proof.
 by rewrite polyEq_affine meet_r // affine_subset_poly_of_base.
 Qed.
@@ -2173,6 +2041,7 @@ Proof.
 apply/poly_eqP => x; rewrite in_pt.
 apply/in_lineP/eqP => [[?]|->]; try exists 0; by rewrite scaler0 addr0.
 Qed.
+ *)
 
 Lemma pointed_affine U Ω :
   pointed [affine U & Ω] = (U == 0)%VS.

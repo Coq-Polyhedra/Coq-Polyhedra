@@ -614,4 +614,22 @@ Lemma dim_hp e :
   [hp e] != affine0 -> dim [hp e] = ((e.1 == 0%R) + n)%N.
 Admitted.
 
+(*
+Lemma affine_span (I : base_t[R,n]) :
+  affine <<I>>%VS = \affineI_(i : I) [hp (val i)].
+Proof.
+apply/le_anti; apply/andP; split; apply/poly_subsetP => [x].
+- move/in_affine => x_in.
+  by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
+- move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
+  rewrite in_hp /=.
+  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.1) 0 +%R) // vdot_sumDl.
+  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.2) 0 +%R) //=.
+  (* TODO: ugly applications of big_morph *)
+  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
+  move/(_ [` fnthP i]%fset isT): x_in.
+  by rewrite -tnth_nth.
+Qed.
+*)
+
 End Dimension.
