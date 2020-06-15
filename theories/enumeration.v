@@ -392,14 +392,38 @@ rewrite -(@line_subset_hs _ _ _ x dir).
   apply: hs_hp; exact: (H k).
 Qed.
 
+Lemma free_I': free I'.
+Proof.
+move: (pbasis_free (is_pbasis_of_pbasis Hbasis)) => free_I.
+apply:(@catl_free _ _ [fset i]).
+have uniq_I: uniq I by apply: free_uniq.
+have: perm_eq I (I'++[fset i]).
+- apply: uniq_perm.
+  + by [].
+  + apply (leq_size_uniq uniq_I).
+    * by move=> y; rewrite mem_cat !in_fsetE => ->; rewrite andbT orNb.
+    * by rewrite size_cat (cardfsD1 i I) i_in cardfs1 addnC.
+  + move=> y; rewrite mem_cat !in_fsetE orb_andl orNb /=.
+    have: (y == i) -> (y \in (I:{fset _})) by move/eqP => ->.
+    by case: (y == i) => H /=; [rewrite orbT; apply H|rewrite orbF].
+  by move=> perm_eq_I_I''; rewrite -(perm_free perm_eq_I_I'').
+Qed.
+
 Lemma free_pivot:
   c j != 0 -> free J.
 Proof.
 apply: contra_neqT.
-move: (pbasis_free (is_pbasis_of_pbasis Hbasis)) => free_I.
-have free_I': free I'.
-Search _ free.
-Admitted.
+have j_notin_I': j \notin (I' :{fset _})
+  by rewrite /= !in_fsetE negb_and j_notin orbT.
+have uniq_seq: uniq (j::I')
+  by rewrite cons_uniq j_notin_I' (free_uniq free_I').
+have in_mem_J_seq: ((J:{fset _}) =i (j :: I')).
+  by move=> y; rewrite in_cons !in_fsetE.
+have perm_eq_J_seq: perm_eq J (j::I').
+  by apply uniq_perm.
+rewrite (perm_free perm_eq_J_seq) free_cons negb_and free_I' /= orbF.
+move/negbNE; rewrite span_def.
+Search _ "big".
 
 (* Remark: we must show that, if #J = n, then free J <-> dim affine <<J>> = 1
  * In particular, this requires to show that affine <<J>> is nonempty         *)
