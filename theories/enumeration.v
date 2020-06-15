@@ -333,7 +333,8 @@ Lemma dim_affine2 (U : {vspace lrel[R]_n}) :
 Admitted.
 
 Variable (x: 'cV[R]_n) (I : {fsubset base}) (i : lrel[R]_n).
-Hypothesis (Hbasis : is_pbasis_of x I) (i_in: i \in (I : {fset _})).
+
+Hypothesis (Hbasis : is_pbasis_of x I) (i_in_I : i \in (I : base_t)).
 
 Lemma n_prop0 : (n > 0)%N.
 Admitted.
@@ -350,7 +351,7 @@ Admitted.
 
 Definition dir := xchoose dim_pbasisD1.
 
-Definition c (j : lrel[R]_n) := '[j.1, dir].
+Definition c (j : lrel[R]_n) := '[befst j, dir].
 
 Definition r (j : lrel[R]_n) :=
   '[j.1, ppick (affine << I >>%VS)] - j.2.
@@ -363,25 +364,26 @@ Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une 
 *)
 
 Variable (j : lrel[R]_n).
-Hypothesis (j_in : j \in base).
+Hypothesis (j_in_base : j \in base).
 Let I' : {fsubset base} := (I `\  i)%:fsub. (* TODO: type is mandatory here *)
 Let J : {fsubset base} := (j |` I')%:fsub.
-Hypothesis (j_notin : j \notin (I :{fset _})).
+
+Hypothesis (j_notin_I : j \notin (I : base_t)).
 
 Lemma card_pivot:
   (#|` J| == n)%N.
 Proof.
-rewrite cardfsU1 in_fsetE negb_and j_notin orbT cardfsD /=.
-by rewrite fsetI1 i_in cardfs1 subnKC
+rewrite cardfsU1 in_fsetE negb_and j_notin_I orbT cardfsD /=.
+by rewrite fsetI1 i_in_I cardfs1 subnKC
   (card_pbasis (is_pbasis_of_pbasis Hbasis)) ?n_prop0.
 Qed.
 
 Lemma foo1:
-  forall k: lrel[R]_n, k \in (I': {fset _}) -> c k == 0.
+  forall k: lrel[R]_n, k \in (I': {fset _}) -> c k = 0.
 Proof.
 move: (xchooseP dim_pbasisD1);
 rewrite /= -/dir => /andP [/eqP affine_eq dir_dot] k k_in_I'.
-rewrite -(@line_subset_hs _ _ _ x dir).
+apply/eqP; rewrite /c lfunE /= -(@line_subset_hs _ _ _ x dir).
 - by rewrite -affine_eq; apply poly_base_subset_hs.
 - move/pbasis_active: (is_pbasis_of_pbasis Hbasis).
   rewrite -(is_pbasis_of_eq Hbasis) => polyEq_x.
@@ -402,28 +404,34 @@ have: perm_eq I (I'++[fset i]).
   + by [].
   + apply (leq_size_uniq uniq_I).
     * by move=> y; rewrite mem_cat !in_fsetE => ->; rewrite andbT orNb.
-    * by rewrite size_cat (cardfsD1 i I) i_in cardfs1 addnC.
+    * by rewrite size_cat (cardfsD1 i I) i_in_I cardfs1 addnC.
   + move=> y; rewrite mem_cat !in_fsetE orb_andl orNb /=.
     have: (y == i) -> (y \in (I:{fset _})) by move/eqP => ->.
     by case: (y == i) => H /=; [rewrite orbT; apply H|rewrite orbF].
   by move=> perm_eq_I_I''; rewrite -(perm_free perm_eq_I_I'').
 Qed.
 
-Lemma free_pivot:
-  c j != 0 -> free J.
+Lemma free_pivot : c j != 0 -> free J.
 Proof.
-apply: contra_neqT.
-have j_notin_I': j \notin (I' :{fset _})
-  by rewrite /= !in_fsetE negb_and j_notin orbT.
-have uniq_seq: uniq (j::I')
-  by rewrite cons_uniq j_notin_I' (free_uniq free_I').
-have in_mem_J_seq: ((J:{fset _}) =i (j :: I')).
-  by move=> y; rewrite in_cons !in_fsetE.
-have perm_eq_J_seq: perm_eq J (j::I').
-  by apply uniq_perm.
-rewrite (perm_free perm_eq_J_seq) free_cons negb_and free_I' /= orbF.
-move/negbNE; rewrite span_def.
-Search _ "big".
+apply/contra_neqT; have: perm_eq J (j :: I').
++ apply: uniq_perm => /=; first by apply: fset_uniq.
+  * by rewrite fset_uniq !in_fsetE negb_and j_notin_I orbT.
+  * by move=> v; rewrite !(in_cons, in_fsetE).
+move/perm_free=> ->; rewrite free_cons free_I' andbT negbK.
+move/coord_span => ->; rewrite /c linear_sum vdot_sumDl /=.
+rewrite big1 // => k _; rewrite linearZ /= vdotZl.
+set v := (X in _ * X); rewrite [v](_ : _ = 0); first by rewrite mulr0.
+by apply/foo1/mem_nth.
+Qed.
+
+(*
+c = fun j : lrel => '[ befst j, dir]
+     : lrel -> R
+*)
+
+Goal c j = 0 -> j.1 \in <<befst @: I'>>%VS.
+Proof.
+
 
 (* Remark: we must show that, if #J = n, then free J <-> dim affine <<J>> = 1
  * In particular, this requires to show that affine <<J>> is nonempty         *)

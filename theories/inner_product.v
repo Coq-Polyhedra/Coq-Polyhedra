@@ -67,6 +67,7 @@ Proof.
     by rewrite !mxE mulrDl -mulrA.
 Qed.
 
+(* TODO: additive/linear for both positions *)
 Canonical vdotr_additive u := Additive (vdotr_is_linear u).
 Canonical vdotr_linear   u := Linear   (vdotr_is_linear u).
 
