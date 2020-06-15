@@ -35,6 +35,43 @@ Reserved Notation "[ 'hp' e ]" (at level 0, format "[ 'hp'  e ]").
 Reserved Notation "[ 'pt' Ω ]" (at level 0, format "[ 'pt'  Ω ]").
 Reserved Notation "[ 'line' c & Ω ]"  (at level 0, format "[ 'line'  c  &  Ω ]").
 
+Reserved Notation "\affineI_ i F"
+  (at level 41, F at level 41, i at level 0,
+           format "'[' \affineI_ i '/  '  F ']'").
+Reserved Notation "\affineI_ ( i <- r | P ) F"
+  (at level 41, F at level 41, i, r at level 50,
+           format "'[' \affineI_ ( i  <-  r  |  P ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( i <- r ) F"
+  (at level 41, F at level 41, i, r at level 50,
+           format "'[' \affineI_ ( i  <-  r ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( m <= i < n | P ) F"
+  (at level 41, F at level 41, i, m, n at level 50,
+           format "'[' \affineI_ ( m  <=  i  <  n  |  P ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( m <= i < n ) F"
+  (at level 41, F at level 41, i, m, n at level 50,
+           format "'[' \affineI_ ( m  <=  i  <  n ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( i | P ) F"
+  (at level 41, F at level 41, i at level 50,
+           format "'[' \affineI_ ( i  |  P ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( i : t | P ) F"
+  (at level 41, F at level 41, i at level 50,
+           only parsing).
+Reserved Notation "\affineI_ ( i : t ) F"
+  (at level 41, F at level 41, i at level 50,
+           only parsing).
+Reserved Notation "\affineI_ ( i < n | P ) F"
+  (at level 41, F at level 41, i, n at level 50,
+           format "'[' \affineI_ ( i  <  n  |  P ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( i < n ) F"
+  (at level 41, F at level 41, i, n at level 50,
+           format "'[' \affineI_ ( i  <  n )  F ']'").
+Reserved Notation "\affineI_ ( i 'in' A | P ) F"
+  (at level 41, F at level 41, i, A at level 50,
+           format "'[' \affineI_ ( i  'in'  A  |  P ) '/  '  F ']'").
+Reserved Notation "\affineI_ ( i 'in' A ) F"
+  (at level 41, F at level 41, i, A at level 50,
+           format "'[' \affineI_ ( i  'in'  A ) '/  '  F ']'").
+
 Section Solve.
 
 Variable (R : realFieldType) (n : nat) (V : {vspace lrel[R]_n}).
@@ -481,6 +518,12 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n) (V : 'affine[R]_n).
 
+
+Lemma affineS :
+  {homo (@Core.affine _ _: {vspace lrel[R]_n} -> 'affine[R]_n) : U V / (U <= V)%VS >-> (U >= V)%O}.
+Proof.
+Admitted.
+
 Lemma mk_affineS Ω : { mono (mk_affine^~ Ω) : W W' / (W <= W')%VS >-> (W <= W')%O }.
 Proof.
 move => W W'; apply/affine_leP/subvP => [sub x x_in | sub x].
@@ -510,6 +553,80 @@ Definition affineT : 'affine[R]_n := [hp 0].
 Lemma in_affineT x : x \in affineT = true.
 Proof.
 by rewrite in_hp vdot0l eq_refl.
+Qed.
+
+Lemma affineIC : commutative (@affineI R n).
+Proof. by apply: meetC. Qed.
+
+Lemma affineIA : associative (@affineI R n).
+Proof. by apply: meetA. Qed.
+
+Lemma affineTI : left_id affineT (@affineI R n).
+Proof.
+by move => P; apply/affine_eqP => x; rewrite in_affineI in_affineT.
+Qed.
+
+Lemma affineIT : right_id affineT (@affineI R n).
+Proof.
+by move => P; apply/affine_eqP => x; rewrite  in_affineI in_affineT andbT.
+Qed.
+
+Canonical affineI_monoid := Monoid.Law affineIA affineTI affineIT.
+Canonical affineI_comonoid := Monoid.ComLaw affineIC.
+
+Notation "\affineI_ ( i <- r | P ) F" :=
+  (\big[affineI/affineT]_(i <- r | P%B) F).
+Notation "\affineI_ ( i <- r ) F" :=
+  (\big[affineI/affineT]_(i <- r) F).
+Notation "\affineI_ ( i | P ) F" :=
+  (\big[affineI/affineT]_(i | P%B) F).
+Notation "\affineI_ i F" :=
+  (\big[affineI/affineT]_i F).
+Notation "\affineI_ ( i : I | P ) F" :=
+  (\big[affineI/affineT]_(i : I | P%B) F) (only parsing).
+Notation "\affineI_ ( i : I ) F" :=
+  (\big[affineI/affineT]_(i : I) F) (only parsing).
+Notation "\affineI_ ( m <= i < n | P ) F" :=
+ (\big[affineI/affineT]_(m <= i < n | P%B) F).
+Notation "\affineI_ ( m <= i < n ) F" :=
+ (\big[affineI/affineT]_(m <= i < n) F).
+Notation "\affineI_ ( i < n | P ) F" :=
+ (\big[affineI/affineT]_(i < n | P%B) F).
+Notation "\affineI_ ( i < n ) F" :=
+ (\big[affineI/affineT]_(i < n) F).
+Notation "\affineI_ ( i 'in' A | P ) F" :=
+ (\big[affineI/affineT]_(i in A | P%B) F).
+Notation "\affineI_ ( i 'in' A ) F" :=
+ (\big[affineI/affineT]_(i in A) F).
+
+Lemma in_big_affineIP (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
+  reflect (forall i : I, P i -> x \in (F i)) (x \in \affineI_(i | P i) (F i)).
+Admitted.
+
+Lemma in_big_affineI (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
+  (x \in \affineI_(i | P i) (F i)) = [forall i, P i ==> (x \in F i)].
+Admitted.
+
+Lemma big_affine_inf (I : finType) (j : I) (P : pred I) (F : I -> 'affine[R]_n) :
+  P j -> (\affineI_(i | P i) F i <= F j)%O.
+Admitted.
+
+Lemma big_affineIsP (I : finType) Q (P : pred I) (F : I -> 'affine[R]_n) :
+  reflect (forall i : I, P i -> Q <= F i)%O (Q <= \affineI_(i | P i) F i)%O.
+Admitted.
+
+Lemma affine_span (I : base_t[R,n]) :
+  [affine <<I>>] = \affineI_(e : I) [hp (val e)].
+Admitted.
+
+Lemma affine_vbasis (U : {vspace lrel[R]_n}) :
+  let base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n} in
+  [affine U] = [affine << base >>].
+Proof.
+set base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n}.
+suff ->: U = << base >>%VS by [].
+move: (vbasisP U) => /andP [/eqP <- _].
+apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
 Qed.
 
 Definition mk_line d Ω := [affine <[d]> & Ω].
@@ -543,9 +660,34 @@ Qed.
 
 End BasicObjects.
 
-Notation "'[' 'hp' e  ']'" := (mk_hp e%PH).
+Notation "'[' 'hp' e  ']'" := (mk_hp e).
 Notation "'[' 'line' d & Ω ']'" := (mk_line d Ω).
 Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω].
+
+Notation "\affineI_ ( i <- r | P ) F" :=
+  (\big[affineI/affineT]_(i <- r | P%B) F).
+Notation "\affineI_ ( i <- r ) F" :=
+  (\big[affineI/affineT]_(i <- r) F).
+Notation "\affineI_ ( i | P ) F" :=
+  (\big[affineI/affineT]_(i | P%B) F).
+Notation "\affineI_ i F" :=
+  (\big[affineI/affineT]_i F).
+Notation "\affineI_ ( i : I | P ) F" :=
+  (\big[affineI/affineT]_(i : I | P%B) F) (only parsing).
+Notation "\affineI_ ( i : I ) F" :=
+  (\big[affineI/affineT]_(i : I) F) (only parsing).
+Notation "\affineI_ ( m <= i < n | P ) F" :=
+ (\big[affineI/affineT]_(m <= i < n | P%B) F).
+Notation "\affineI_ ( m <= i < n ) F" :=
+ (\big[affineI/affineT]_(m <= i < n) F).
+Notation "\affineI_ ( i < n | P ) F" :=
+ (\big[affineI/affineT]_(i < n | P%B) F).
+Notation "\affineI_ ( i < n ) F" :=
+ (\big[affineI/affineT]_(i < n) F).
+Notation "\affineI_ ( i 'in' A | P ) F" :=
+ (\big[affineI/affineT]_(i in A | P%B) F).
+Notation "\affineI_ ( i 'in' A ) F" :=
+ (\big[affineI/affineT]_(i in A) F).
 
 Section Dimension.
 
@@ -633,3 +775,71 @@ Qed.
 *)
 
 End Dimension.
+
+
+(*
+Lemma affine_dim_fst (U : {vspace lrel[R]_n}) :
+  affine U `>` ([poly0]) -> (\dim U = \dim (befst @: U))%N.
+Proof.
+(* TODO: same trick as before, to be factored out *)
+set base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n}.
+have ->: U = << base >>%VS.
+- move: (vbasisP U) => /andP [/eqP <- _].
+  apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
+move => /proper0P [x x_in_P].
+have ->: base = base%:fsub by done.
+suff /limg_dim_eq <-: (<< base >> :&: lker befst)%VS = 0%VS by [].
+apply/eqP; rewrite -subv0.
+apply/subvP => e; rewrite memv_cap memv_ker memv0 => /andP [e_in /eqP f_e_eq0].
+have e1_eq0 : e.1 = 0 by rewrite lfunE in f_e_eq0.
+apply/be_eqP => /=; split; first done.
+suff: x \in [hp e].
+- by rewrite inE e1_eq0 vdot0l => /eqP <-.
+- by apply/(poly_subsetP (affineS1 e_in)).
+Qed.
+ *)
+
+Lemma befst_inj (x : 'cV[R]_n) (e e' : lrel[R]_n) :
+  (x \in [hp e]) -> (x \in [hp e']) -> e.1 = e'.1 -> e = e'.
+Proof.
+move => x_in_e x_in_e' fst_eq.
+apply/val_inj/injective_projections => //=.
+by move: x_in_e x_in_e'; do 2![rewrite inE => /eqP <-]; rewrite fst_eq.
+Qed.
+
+(*Lemma affine_dim_le (U : {vspace lrel[R]_n}) :
+  affine U `>` ([poly0]) -> (\dim U <= n)%N.
+Proof.
+move/affine_dim_fst => ->.
+suff {5}<-: \dim (fullv : {vspace 'cV[R]_n}) = n.
+- apply/dimvS; exact: subvf.
+- by rewrite dimvf /Vector.dim /= muln1.
+Qed.*)
+
+(*
+Lemma affine_subset (U V : {vspace lrel[R]_n}) :
+  (affine V `>` [poly0]) -> affine V `<=` affine U -> (U <= V)%VS.
+Proof.
+move/proper0P => [x x_in_affV] /poly_subsetP aff_sub.
+have x_in_affU : x \in affine U by exact: aff_sub.
+have: ((befst @: V)^OC <= (befst @: U)^OC)%VS.
+- apply/subvP => d d_in.
+  pose y := x + d.
+  have /aff_sub: y \in affine V by apply/(in_affine_orth _ x_in_affV); exists d.
+  by move/(in_affine_orth _ x_in_affU) => [d' d'_in /addrI ->].
+rewrite orthS => /subvP fst_sub; apply/subvP => e e_in_U.
+move/(memv_img befst)/fst_sub/memv_imgP: (e_in_U) => [e' e'_in_V fst_eq].
+suff ->: e = e' by [].
+rewrite !lfunE /= in fst_eq.
+apply/(befst_inj (x := x) _ _ fst_eq).
+- by apply: (poly_subsetP (affineS1 e_in_U)).
+- by apply: (poly_subsetP (affineS1 e'_in_V)).
+Qed.
+
+Lemma affine_inj (U V : {vspace lrel[R]_n}) :
+  (affine U `>` [poly0]) -> affine U = affine V -> U = V.
+Proof.
+move => affU_prop0 aff_eq.
+have affV_prop0 : (affine V `>` [poly0]) by rewrite -aff_eq.
+by apply/subv_anti/andP; split; apply/affine_subset => //; rewrite aff_eq poly_subset_refl.
+Qed.*)

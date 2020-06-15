@@ -612,7 +612,19 @@ Definition aff V : 'poly[R]_n :=
 
 Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
 
-Lemma affE (V : 'affine[R]_n) : V %:PH =i V.
+Lemma eq_subl (T : Type) (m m' m'': mem_pred T) :
+  m =i m' -> {subset m <= m''} -> {subset m' <= m''}.
+Proof.
+by move => eq sub x x_in; apply/sub; rewrite eq.
+Qed.
+
+Lemma eq_subr (T : Type) (m m' m'': mem_pred T) :
+  m' =i m'' -> {subset m <= m'} -> {subset m <= m''}.
+Proof.
+by move => eq sub x x_in; rewrite -eq; apply/sub.
+Qed.
+
+Lemma affE {V : 'affine[R]_n} : V %:PH =i V.
 Proof.
 rewrite /aff.
 case/affineP: V.
@@ -642,11 +654,16 @@ move => V V' /poly_eqP eq.
 by apply/affine_eqP => x; move/(_ x): eq; rewrite !affE.
 Qed.
 
+Lemma affI : {morph aff : V V' / Order.meet V V' >-> Order.meet V V'}.
+Proof.
+by move => V V'; apply/poly_eqP => x; rewrite in_polyI !affE in_affineI.
+Qed.
+
 Lemma affS : {mono aff : V V' / (V <= V')%O >-> (V `<=` V')}.
 Proof.
 move => ??.
 by apply/poly_leP/affine_leP => incl x; rewrite ?affE => x_in;
-    move/(_ x): incl; rewrite ?affE  => /(_ x_in).
+   move/(_ x): incl; rewrite ?affE  => /(_ x_in).
 Qed.
 
 Lemma aff0 : affine0%:PH = [poly0] :> 'poly[R]_n.
@@ -659,6 +676,12 @@ Lemma affT : affineT%:PH = [polyT] :> 'poly[R]_n.
 Proof.
 apply/poly_eqP => x.
 by rewrite affE in_affineT in_polyT.
+Qed.
+
+Lemma aff_bigI (I : finType) (P : pred I) (F : I -> 'affine[R]_n) :
+  (\affineI_(i | P i) (F i))%:PH = (\polyI_(i | P i) (F i)%:PH).
+Proof.
+by rewrite (big_morph aff affI affT).
 Qed.
 
 Lemma aff_eq0 (V : 'affine[R]_n) : V%:PH = [poly0] -> V = affine0.
@@ -676,13 +699,12 @@ Proof.
 by rewrite lt0x -aff0 (inj_eq aff_inj).
 Qed.
 
-Let inE := (@in_poly0, @in_polyT, affE, @in_hp, in_hs, @in_polyI, inE).
+Let inE := (@in_poly0, @in_polyT, @affE, @in_hp, in_hs, @in_polyI, inE).
 
 Lemma notin_hp b x :
   (x \in [hs b]) -> (x \notin [hp b]) = ('[b.1, x] > b.2).
 Proof.
-rewrite lt_def in_hs => ->.
-by rewrite in_hp andbT.
+by rewrite lt_def in_hs => ->; rewrite in_hp andbT.
 Qed.
 
 Lemma hs_hp c (x : lrel[R]_n) : c \in [hp x] -> c \in [hs x].
@@ -989,14 +1011,26 @@ rewrite argmin_polyI hpE meetA [X in X `&` _ = _]meet_l //.
 by apply: opt_value_lower_bound.
 Qed.
 
+Lemma ex_iff T (P1 P2 : T -> Prop) :
+  (forall x : T, P1 x <-> P2 x) -> ((exists x, P1 x) <-> (exists x, P2 x)).
+Proof.
+by move=> H; split; move=> [x Hx]; exists x; apply H.
+Qed.
+
+Lemma ex2_iff T (P1 P2 Q : T -> Prop) :
+  (forall x : T, P1 x <-> P2 x) -> ((exists2 x, P1 x & Q x) <-> (exists2 x, P2 x & Q x)).
+Proof.
+Admitted.
+
 Lemma line_subset_hs (e : lrel[R]_n) (Ω c : 'cV[R]_n) :
   Ω \in [hs e] -> ([line c & Ω ]%:PH `<=` [hs e]) = ('[e.1,c] == 0).
 Proof.
 move => Ω_in_e.
 apply/idP/eqP.
 - apply/contraTeq => e_c_neq0; apply/poly_subsetPn.
+  under ex2_iff do rewrite affE.
   exists (Ω + (e.2 - 1 - '[e.1, Ω])/'[e.1, c] *: c).
-  + by rewrite affE; apply/in_lineP; exists ((e.2 - 1 - '[e.1, Ω])/'[e.1, c]).
+  + by apply/in_lineP; exists ((e.2 - 1 - '[e.1, Ω])/'[e.1, c]).
   + by rewrite inE vdotDr vdotZr divfK // addrCA addrN addr0 lter_sub_addr cpr_add ler10.
 - move => e_c_eq0; apply/poly_subsetP => x; rewrite affE => /in_lineP [μ ->].
   by rewrite inE vdotDr vdotZr e_c_eq0 mulr0 addr0 -in_hs.
@@ -1212,16 +1246,15 @@ by apply/in_poly_of_baseP.
 Qed.
 
 Definition polyEq (base I : base_t) :=
-  (\polyI_(e : I) [hp (val e)]%:PH) `&` 'P(base).
+  [affine <<I>>]%:PH `&` 'P(base).
 
 Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 
 Fact in_polyEq x base I :
   (x \in 'P^=(base; I)) = [forall e : I, x \in [hp (val e)]] && (x \in 'P(base)).
 Proof.
-Admitted.
-(*by rewrite in_big_polyI !inE.
-Qed.*)
+by rewrite in_polyI affE affine_span in_big_affineI.
+Qed.
 
 Lemma in_polyEqP x base I :
   reflect ((forall e, e \in I -> x \in [hp e]) /\ x \in 'P(base)) (x \in 'P^=(base; I)).
@@ -1850,13 +1883,6 @@ apply/idP/idP => [y_in_aff |].
   by rewrite -in_hp; apply/(in_affine U).
 Qed.*)
 
-Lemma polyEq_affine (base I : base_t[R,n]) :
-  'P^=(base; I) = 'P(base) `&` [affine <<I>>]%:PH.
-Proof.
-Admitted.
-(*by rewrite affine_span meetC.
-Qed.*)
-
 Lemma affine_subset_poly_of_base (base : base_t[R,n]) :
   [affine << base >>]%:PH `<=` 'P(base).
 Proof.
@@ -1868,118 +1894,8 @@ Qed.
 Lemma polyEqT_affine (base : base_t[R,n]) :
   'P^=(base; base) = [affine << base >>]%:PH.
 Proof.
-by rewrite polyEq_affine meet_r // affine_subset_poly_of_base.
+by rewrite /polyEq meet_l // affine_subset_poly_of_base.
 Qed.
-
-Lemma affineS :
-  {homo affine : U V / (U <= V)%VS >-> (U `>=` V)%VS}.
-Proof.
-move => U V /subvP U_sub_P.
-apply/poly_subsetP => x /in_affine x_in_V.
-apply/in_affine => e /U_sub_P; exact: x_in_V.
-Qed.
-
-Lemma affineS1 (U : {vspace lrel[R]_n}) (e : lrel[R]_n) :
-  e \in U -> affine U `<=` [hp e].
-Proof.
-by move => e_in_U; apply/poly_subsetP => ? /in_affine /(_ _ e_in_U).
-Qed.
-
-Lemma affine1 (e : lrel[R]_n) :
-  affine <[ e ]>%VS = [hp e].
-Proof.
-rewrite (rwP eqP) eq_le; apply/andP; split.
-- by rewrite affineS1 ?memv_line.
-- apply/poly_subsetP => x; rewrite in_hp => /eqP x_in_hp.
-  apply/in_affine => ? /vlineP [μ ->].
-  by rewrite in_hp /= -x_in_hp vdotZl.
-Qed.
-
-Lemma affine_vbasis (U : {vspace lrel[R]_n}) :
-  let base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n} in
-  affine U = affine << base >>.
-Proof.
-set base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n}.
-suff ->: U = << base >>%VS by [].
-move: (vbasisP U) => /andP [/eqP <- _].
-apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
-Qed.
-
-(*
-Lemma affine_dim_fst (U : {vspace lrel[R]_n}) :
-  affine U `>` ([poly0]) -> (\dim U = \dim (befst @: U))%N.
-Proof.
-(* TODO: same trick as before, to be factored out *)
-set base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n}.
-have ->: U = << base >>%VS.
-- move: (vbasisP U) => /andP [/eqP <- _].
-  apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
-move => /proper0P [x x_in_P].
-have ->: base = base%:fsub by done.
-suff /limg_dim_eq <-: (<< base >> :&: lker befst)%VS = 0%VS by [].
-apply/eqP; rewrite -subv0.
-apply/subvP => e; rewrite memv_cap memv_ker memv0 => /andP [e_in /eqP f_e_eq0].
-have e1_eq0 : e.1 = 0 by rewrite lfunE in f_e_eq0.
-apply/be_eqP => /=; split; first done.
-suff: x \in [hp e].
-- by rewrite inE e1_eq0 vdot0l => /eqP <-.
-- by apply/(poly_subsetP (affineS1 e_in)).
-Qed.
- *)
-
-Lemma befst_inj (x : 'cV[R]_n) (e e' : lrel[R]_n) :
-  (x \in [hp e]) -> (x \in [hp e']) -> e.1 = e'.1 -> e = e'.
-Proof.
-move => x_in_e x_in_e' fst_eq.
-apply/val_inj/injective_projections => //=.
-by move: x_in_e x_in_e'; do 2![rewrite inE => /eqP <-]; rewrite fst_eq.
-Qed.
-
-Lemma mk_affineS Ω :
-  {mono (mk_affine^~ Ω) : U V / (U <= V)%VS >-> (U `<=` V)%VS}.
-Proof.
-move => U V; apply/poly_subsetP/subvP => [sub v v_in| sub x].
-- have /sub: (Ω + v \in [affine U  &  Ω]) by apply/in_mk_affineP; exists v.
-  by rewrite in_mk_affine addrAC addrN add0r.
-- by rewrite !in_mk_affine; apply/sub.
-Qed.
-
-(*Lemma affine_dim_le (U : {vspace lrel[R]_n}) :
-  affine U `>` ([poly0]) -> (\dim U <= n)%N.
-Proof.
-move/affine_dim_fst => ->.
-suff {5}<-: \dim (fullv : {vspace 'cV[R]_n}) = n.
-- apply/dimvS; exact: subvf.
-- by rewrite dimvf /Vector.dim /= muln1.
-Qed.*)
-
-(*
-Lemma affine_subset (U V : {vspace lrel[R]_n}) :
-  (affine V `>` [poly0]) -> affine V `<=` affine U -> (U <= V)%VS.
-Proof.
-move/proper0P => [x x_in_affV] /poly_subsetP aff_sub.
-have x_in_affU : x \in affine U by exact: aff_sub.
-have: ((befst @: V)^OC <= (befst @: U)^OC)%VS.
-- apply/subvP => d d_in.
-  pose y := x + d.
-  have /aff_sub: y \in affine V by apply/(in_affine_orth _ x_in_affV); exists d.
-  by move/(in_affine_orth _ x_in_affU) => [d' d'_in /addrI ->].
-rewrite orthS => /subvP fst_sub; apply/subvP => e e_in_U.
-move/(memv_img befst)/fst_sub/memv_imgP: (e_in_U) => [e' e'_in_V fst_eq].
-suff ->: e = e' by [].
-rewrite !lfunE /= in fst_eq.
-apply/(befst_inj (x := x) _ _ fst_eq).
-- by apply: (poly_subsetP (affineS1 e_in_U)).
-- by apply: (poly_subsetP (affineS1 e'_in_V)).
-Qed.
-
-Lemma affine_inj (U V : {vspace lrel[R]_n}) :
-  (affine U `>` [poly0]) -> affine U = affine V -> U = V.
-Proof.
-move => affU_prop0 aff_eq.
-have affV_prop0 : (affine V `>` [poly0]) by rewrite -aff_eq.
-by apply/subv_anti/andP; split; apply/affine_subset => //; rewrite aff_eq poly_subset_refl.
-Qed.*)
 
 Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω] : poly_scope.
 
