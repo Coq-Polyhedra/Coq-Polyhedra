@@ -756,65 +756,7 @@ Lemma dim_hp e :
   [hp e] != affine0 -> dim [hp e] = ((e.1 == 0%R) + n)%N.
 Admitted.
 
-(*
-Lemma affine_span (I : base_t[R,n]) :
-  affine <<I>>%VS = \affineI_(i : I) [hp (val i)].
-Proof.
-apply/le_anti; apply/andP; split; apply/poly_subsetP => [x].
-- move/in_affine => x_in.
-  by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
-- move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
-  rewrite in_hp /=.
-  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.1) 0 +%R) // vdot_sumDl.
-  rewrite (@big_morph _ _ (fun e : lrel[R]_n => e.2) 0 +%R) //=.
-  (* TODO: ugly applications of big_morph *)
-  apply/eqP/eq_bigr => i _; rewrite vdotZl; apply/congr1/eqP; rewrite -in_hp.
-  move/(_ [` fnthP i]%fset isT): x_in.
-  by rewrite -tnth_nth.
-Qed.
-*)
-
 End Dimension.
-
-
-(*
-Lemma affine_dim_fst (U : {vspace lrel[R]_n}) :
-  affine U `>` ([poly0]) -> (\dim U = \dim (befst @: U))%N.
-Proof.
-(* TODO: same trick as before, to be factored out *)
-set base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n}.
-have ->: U = << base >>%VS.
-- move: (vbasisP U) => /andP [/eqP <- _].
-  apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
-move => /proper0P [x x_in_P].
-have ->: base = base%:fsub by done.
-suff /limg_dim_eq <-: (<< base >> :&: lker befst)%VS = 0%VS by [].
-apply/eqP; rewrite -subv0.
-apply/subvP => e; rewrite memv_cap memv_ker memv0 => /andP [e_in /eqP f_e_eq0].
-have e1_eq0 : e.1 = 0 by rewrite lfunE in f_e_eq0.
-apply/be_eqP => /=; split; first done.
-suff: x \in [hp e].
-- by rewrite inE e1_eq0 vdot0l => /eqP <-.
-- by apply/(poly_subsetP (affineS1 e_in)).
-Qed.
- *)
-
-Lemma befst_inj (x : 'cV[R]_n) (e e' : lrel[R]_n) :
-  (x \in [hp e]) -> (x \in [hp e']) -> e.1 = e'.1 -> e = e'.
-Proof.
-move => x_in_e x_in_e' fst_eq.
-apply/val_inj/injective_projections => //=.
-by move: x_in_e x_in_e'; do 2![rewrite inE => /eqP <-]; rewrite fst_eq.
-Qed.
-
-(*Lemma affine_dim_le (U : {vspace lrel[R]_n}) :
-  affine U `>` ([poly0]) -> (\dim U <= n)%N.
-Proof.
-move/affine_dim_fst => ->.
-suff {5}<-: \dim (fullv : {vspace 'cV[R]_n}) = n.
-- apply/dimvS; exact: subvf.
-- by rewrite dimvf /Vector.dim /= muln1.
-Qed.*)
 
 (*
 Lemma affine_subset (U V : {vspace lrel[R]_n}) :
