@@ -429,19 +429,30 @@ c = fun j : lrel => '[ befst j, dir]
      : lrel -> R
 *)
 
-Goal c j = 0 -> j.1 \in <<befst @: I'>>%VS.
-Proof.
+Lemma be_lift y :
+  y \in affine <<J>>%VS -> j.1 \in (befst @: <<I'>>)%VS -> j \in <<I'>>%VS.
+Admitted.
 
+Lemma dir_orth : (<[dir]> = (befst @: <<I'>>)^OC)%VS.
+Admitted.
+
+Goal c j = 0 -> j.1 \in (befst @: <<I'>>)%VS.
+Proof.
+rewrite /c.
+Admitted.
 
 (* Remark: we must show that, if #J = n, then free J <-> dim affine <<J>> = 1
- * In particular, this requires to show that affine <<J>> is nonempty         *)
+ * In particular, this requires to assume that affine <<J>> is nonempty         *)
+(* J is a basis iff #J = n and dim affine <<J>> = 1 *)
+(* Moreover, J is feasible if affine <<J>> `<=` P
+ * 1st step: show that J is a basis iff c j != 0 *)
 
-(* Show that the basic point associated with J is given by
+(* 2nd step: show that the basic point associated with J is given by
  * ppick (affine <<J>>) = ppick (affine <<I>>) + (r j) / (c j) *: dir
  * It suffices to show that this point belongs to affine <<J>> *)
 
-(* When r j > 0, show that
-  affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
+(* 3rd step: When r j > 0, show that
+   affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
                                 c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
 
 Lemma pivot :
