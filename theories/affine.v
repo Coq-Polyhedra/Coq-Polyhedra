@@ -81,15 +81,59 @@ Let base := vbasis V.
 Definition sat x :=
    all (fun e : lrel => '[e.1, x] == e.2) base.
 
+Lemma sum_lrel_fst m (v : 'I_m -> lrel[R]_n) : (* RK : I have added this auxiliary lemma. Should it be somewhere else? *)
+  (\sum_(i < m) v i).1 = (\sum_(i < m) (v i).1).
+Proof.
+by apply: (@big_morph _ lrel[R]_n (fun y => y.1)).
+Qed.
+
+Lemma sum_lrel_snd m (v : 'I_m -> lrel[R]_n) : (* RK : I have added this auxiliary lemma. Should it be somewhere else? *)
+  (\sum_(i < m) v i).2 = (\sum_(i < m) (v i).2).
+Proof.
+by apply: (@big_morph _ lrel[R]_n (fun y => y.2)).
+Qed.
+
+Lemma size_vbasis_dim : (* RK : I have added this auxiliary lemma, since I could not find it even if it is quite natural. Should it be somewhere else? *)
+  size (vbasis V) = \dim V.
+Proof.
+apply/eqP; rewrite eqn_leq.
+move: (vbasisP V) => basis_of_vbasis.
+apply/andP; split.
+- rewrite basisEdim in basis_of_vbasis.
+  exact: (proj2 (andP basis_of_vbasis)).
+- rewrite basisEfree in basis_of_vbasis.
+  exact: (proj2 (andP (proj2 (andP basis_of_vbasis)))).
+Qed.
+
 Lemma satP x :
   reflect (forall e, e \in V -> '[e.1, x] = e.2) (sat x).
-Admitted.
+Proof. (* RK *)
+apply/(iffP idP) => [/allP sat_x e e_in_V | sat_in_V ].
+- rewrite (coord_vbasis e_in_V) sum_lrel_fst sum_lrel_snd vdot_sumDl.
+  apply: eq_bigr => i _; rewrite vdotZl.
+  apply/(congr1 (fun y => coord (vbasis V) i e * y))/eqP/sat_x/mem_nth.
+  by rewrite size_vbasis_dim.
+- apply/allP => e ?.
+  by apply/eqP/(sat_in_V e)/vbasis_mem.
+Qed.
 
 Let A := (\matrix_i (tnth base i).1^T)^T.
 Let b := (\row_i (tnth base i).2).
 
 Lemma satE x : sat x = (b == x^T *m A).
-Admitted.
+Proof. (* RK *)
+apply/idP/idP => [/allP sat_x |/eqP/rowP b_eq].
+- apply/eqP/trmx_inj/colP => j.
+  rewrite trmx_mul -row_vdot trmxK rowK 2!trmxK !mxE.
+  symmetry; apply/eqP/sat_x/mem_nth.
+  by rewrite size_vbasis_dim.
+- apply/satP => e e_in_V.
+  rewrite (coord_vbasis e_in_V) sum_lrel_fst sum_lrel_snd vdot_sumDl.
+  apply: eq_bigr => i _; rewrite vdotZl.
+  apply/(congr1 (fun y => coord (vbasis V) i e * y)).
+  move: (b_eq i) => b_eq_i; rewrite mxE (tnth_nth 0%R) in b_eq_i.
+  by rewrite b_eq_i -trmx_mul mxE -row_vdot rowK (tnth_nth 0%R) trmxK.
+Qed.
 
 Definition is_sat := (b <= A)%MS.
 
