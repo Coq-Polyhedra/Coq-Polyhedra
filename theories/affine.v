@@ -185,13 +185,26 @@ Qed.
 
 Lemma sat_be_lift W x :
   sat ((be_lift x) @: W)%VS x.
-Admitted.
+Proof. (* RK *)
+apply/satP => e /memv_imgP [? ?] ->.
+by rewrite !lfunE.
+Qed.
 
 Lemma be_liftE W x :
   sat W x -> ((be_lift x) @: (befst @: W))%VS = W.
-Proof.
-move => sat_x.
-Admitted.
+Proof. (* RK *)
+move/satP => sat_x.
+have be_liftE_on_W u: u \in W -> be_lift x (befst u) = u.
+  move => u_in_W.
+  rewrite !lfunE; apply/eqP/be_eqP; split; first by done.
+  exact: (sat_x _ u_in_W).
+apply/vspaceP => w.
+apply/idP/idP => [/memv_imgP [? /memv_imgP [v v_in_W] ->] ->| w_in_W].
+- by rewrite (be_liftE_on_W _ v_in_W).
+- apply/memv_imgP; exists (fst (be_lift0 x (fst w))).
+  + by apply/memv_imgP; exists w; [done | rewrite lfunE].
+  + by rewrite -(be_liftE_on_W _ w_in_W) !lfunE.
+Qed.
 
 (*Lemma dim_be_lift W Ω : (\dim ((be_lift Ω) @: W) = \dim W)%N.
 Proof.
