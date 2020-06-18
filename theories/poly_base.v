@@ -935,6 +935,9 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Type base : base_t[R,n].
 
+Definition norm_eq base (P : {poly base}) :=
+  [fset e.1 | e in {eq P}]%fset.
+
 Definition pb_hull base (P : {poly base}) : 'affine_n :=
   if P `>` [poly0] then
     [affine << {eq P} >>]
@@ -1048,12 +1051,11 @@ Proof.
 elim/polybW : P => base P.
 case/face_setP => {}Q Q_sub_P.
 case: (emptyP Q) => [->| Q_prop0]; first by rewrite hull0 aff0 meetx0.
-rewrite hullN0_eq //.
-rewrite [Q in LHS]repr_active //= meetC.
+rewrite hullN0_eq // [Q in LHS]repr_active //= meetC.
 rewrite [P]repr_active /= ?polyEq_affine -?polyIA.
-move: (Q_sub_P) => /activeS/fsubsetP/sub_span/affineS/meet_r.
-by rewrite meetA meetC -affI => ->.
-by apply/lt_le_trans: Q_sub_P.
+- move: (Q_sub_P) => /activeS/fsubsetP/sub_span/affineS/meet_r.
+  by rewrite meetA meetC -affI => ->.
+- by apply/lt_le_trans: Q_sub_P.
 Qed.
 
 End AffineHull.
@@ -1080,11 +1082,20 @@ Proof.
 by rewrite hullN0 affine.dimN0.
 Qed.
 
-(*
+Lemma foo (base : base_t[R,n]) (P : {poly base}) :
+  P `>` [poly0] -> hull P = [affine (<<(befst @` {eq P})%fset>>)^OC & ppick P].
+Admitted.
+
 Lemma dimN0_eq (base : base_t[R,n]) (P : {poly base}) :
   (P `>` [poly0]) -> dim P = (n - \dim << {eq P} >>).+1%N.
 Proof.
-by rewrite dimE /pb_dim => ->.
+move/foo; rewrite /dim => ->.
+
+  move => ?; rewrite /dim hullN0_eq //.
+rewrite /affine.dim /dir.
+
+rewrite affine.dimN0_eq. dim_affine.
+    by rewrite dimE /pb_dim => ->.
 Qed.
 
 Lemma dim_eq0 (P : 'poly[R]_n) :
