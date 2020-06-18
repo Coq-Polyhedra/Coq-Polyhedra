@@ -181,6 +181,8 @@ Definition affine V :=
     Affine H
   else Affine0.
 
+Definition affine_of (phR : phant R) := affine : _ -> type_of phR.
+
 Lemma eq_vectK : cancel eq_vect affine.
 Proof.
 move => V; rewrite /eq_vect.
@@ -226,7 +228,7 @@ Export Core.Exports.
 Notation "''affine[' R ]_ n" := (Core.type_of n (Phant R)).
 Notation "''affine[' R ]"    := 'affine[R]_(_).
 Notation "''affine_' n"      := 'affine[_]_n.
-Notation "[ 'affine' I ]"    := (Core.affine I%VS).
+Notation "[ 'affine' I ]"    := (@Core.affine_of _ _ (Phant _) I%VS).
 Notation "'eq_vect'"         := Core.eq_vect (at level 8).
 
 Section Specs.
@@ -255,7 +257,7 @@ Qed.
 Lemma in_affineE U x :
   (x \in [affine U]) = sat U x.
 Proof.
-rewrite /Core.affine; case: {-}_/idP => [// | /negP/is_satPn ->].
+rewrite /Core.affine_of /Core.affine; case: {-}_/idP => [// | /negP/is_satPn ->].
 by rewrite in_affine0.
 Qed.
 
@@ -274,7 +276,7 @@ Proof.
 case: V => [| U U_sat].
 - rewrite eq_refl; constructor.
 - have ->: (Core.Affine U_sat) = [affine U].
-  rewrite /Core.affine; case: {-}_/idP => // ?.
+  rewrite /Core.affine_of /Core.affine; case: {-}_/idP => // ?.
   apply/congr1; exact: bool_irrelevance.
   suff h: exists x, x \in [affine U].
   + have /negbTE ->: [affine U] != affine0 by apply/affineN0.
@@ -286,7 +288,7 @@ Qed.
 Lemma affine_is_sat U :
   [affine U] != affine0 = is_sat U.
 Proof.
-rewrite /Core.affine; case: {-}_/idP.
+rewrite /Core.affine_of /Core.affine; case: {-}_/idP.
 - move => is_sat; rewrite is_sat.
   by apply/eqP.
 - move/negP/negbTE ->.
@@ -516,8 +518,8 @@ Section BasicObjects.
 
 Context {R : realFieldType} {n : nat}.
 
-Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n) (V : 'affine[R]_n).
-
+Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n)
+         (U : {vspace lrel[R]_n}) (V : 'affine[R]_n).
 
 Lemma affineS :
   {homo (@Core.affine _ _: {vspace lrel[R]_n} -> 'affine[R]_n) : U V / (U <= V)%VS >-> (U >= V)%O}.
@@ -547,6 +549,18 @@ Lemma hpN (e : lrel[R]_n) : [hp -e] = [hp e].
 Proof.
 by apply/affine_eqP => x; rewrite !in_hp /= vdotNl eqr_opp.
 Qed.
+
+Lemma befst_inj (x : 'cV[R]_n) (e e' : lrel[R]_n) : (* TODO: to be removed *)
+  (x \in [hp e]) -> (x \in [hp e']) -> e.1 = e'.1 -> e = e'.
+Proof.
+move => x_in_e x_in_e' fst_eq.
+apply/val_inj/injective_projections => //=.
+by move: x_in_e x_in_e'; do 2![rewrite in_hp => /eqP <-]; rewrite fst_eq.
+Qed.
+
+Lemma affineS1 (U : {vspace lrel[R]_n}) e :
+  e \in U -> ([affine U] <= [hp e])%O.
+Admitted.
 
 Definition affineT : 'affine[R]_n := [hp 0].
 

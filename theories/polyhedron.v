@@ -387,7 +387,7 @@ Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
 Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
 Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
 
-Notation "'[' 'poly0' ']'" := (@Order.bottom polyh_display _) : poly_scope.
+Notation "'[' 'poly0' ']'" := (@Order.bottom polyh_display poly_B) : poly_scope.
 Notation "'[' 'polyT' ']'" := (@polyT _ _) : poly_scope.
 
 Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
@@ -1264,11 +1264,10 @@ rewrite in_polyEq; apply: (equivP andP); split.
 + by case=> h ->; split=> //; apply/forallP=> -[/= e eI_]; apply/h.
 Qed.
 
-Lemma polyEq_eq x base I e :
-  x \in 'P^=(base; I) -> e \in I -> x \in [hp e].
+Lemma polyEq_hp base I e :
+  e \in I -> 'P^=(base; I) `<=` [hp e]%:PH.
 Proof.
-by move/in_polyEqP => [x_act _ ?]; apply: x_act.
-Qed.
+Admitted.
 
 Lemma polyEq0 {base : base_t} :
   'P^=(base; fset0) = 'P(base).
@@ -1308,11 +1307,10 @@ move/pred0Pn => [i0 Pi0].
 rewrite (rwP eqP) eq_le; apply/andP; split; last first.
 - apply/big_polyIsP => [i Pi]; apply/polyEq_antimono; exact: bigfcup_sup.
 - apply/poly_subsetP => x /in_big_polyIP x_in.
-  apply/in_polyEqP; split; last first.
-  rewrite /=.
-  move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0)).
-  move => e /= /bigfcupP [i /andP [_ Pi] ?].
-  exact: (polyEq_eq (x_in _ Pi)).
+  apply/in_polyEqP; split => /=.
+  + move => e /= /bigfcupP [i /andP [_ {}/x_in x_in]].
+    by move/(polyEq_hp base)/poly_subsetP/(_ _ x_in); rewrite affE.
+  + move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0)).
 Qed.
 
 Lemma polyEq1 {base: base_t[R,n]} {e} :
