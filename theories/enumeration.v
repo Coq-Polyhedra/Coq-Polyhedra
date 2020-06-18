@@ -435,29 +435,14 @@ Admitted.
 
 Lemma dir_orth : (<[dir]> = (befst @: <<I'>>)^OC)%VS.
 Proof.
-apply/eqP; rewrite eqEdim; apply/andP; split.
-- rewrite -memvE; apply/orthvP.
-  move=> y. case/memv_imgP => u /coord_span -> ->.
-  rewrite linear_sum vdot_sumDl /=.
-  rewrite big1 // => k _. rewrite linearZ /= vdotZl.
-  set v := (X in _ * X); rewrite [v](_ : _ = 0); first by rewrite mulr0.
-  by apply/foo1/mem_nth.
-- rewrite dim_orthv limg_dim_eq.
-  + have dim_span_I'_1 : (n - 1 = \dim <<I'>>)%N.
-    * rewrite -{1}(card_pbasis (is_pbasis_of_pbasis Hbasis)) -(cardfs1 i) /=.
-      have {1}->: [fset i] = I `&` [fset i] by rewrite fsetI1 i_in_I.
-      rewrite -cardfsD; apply: card_basis.
-      by rewrite /basis_of free_I' andbT.
-    rewrite -dim_span_I'_1 subKn ?n_prop0 // dim_vline.
-    move: (xchooseP dim_pbasisD1); rewrite -/dir => /andP [] _ /eqP.
-    rewrite lt0b; apply: contra_eq_neq => ->; rewrite vdot0r eq_sym.
-    exact: (GRing.oner_neq0 R).
-  + apply/eqP; rewrite -subv0; apply/subvP => y.
-    rewrite memv_cap memv_ker memv0; case/andP.
-    move/coord_span => ->. rewrite linear_sum /=.
-    Admitted.
-  
-
+rewrite /dir.
+case/andP: (xchooseP dim_pbasisD1) => /eqP eq _.
+set dir := xchoose _.
+have x_in: x \in affine <<I `\ i>>.
+admit.
+rewrite {1}(affine_orth x_in) line_affine in eq.
+by move/(mono_inj le_refl (@subv_anti _ _) (mk_affineS x)): eq => ->.
+Admitted.
 
 Goal c j = 0 -> j.1 \in (befst @: <<I'>>)%VS.
 Proof.
