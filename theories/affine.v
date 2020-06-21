@@ -422,6 +422,11 @@ apply/idP/in_affineP.
   by rewrite /e lfunE.
 Qed.
 
+Lemma dir_affine U :
+  [affine U] != affine0 -> dir [affine U] = (befst @: U)^OC%VS.
+Proof.
+Admitted.
+
 Lemma dir_mk_affine W Ω :
   dir [affine W & Ω] = W.
 Proof.
@@ -484,7 +489,7 @@ Lemma in_affineI x V V' :
 Admitted.
 
 Definition affine_le V V' := (V == affineI V V').
-Lemma affine_leP V V' : reflect {subset V <= V'} (affine_le V V').
+Lemma affine_leP {V V'} : reflect {subset V <= V'} (affine_le V V').
 Proof.
 apply/(iffP eqP).
 - move/affine_eqP => eq x.
@@ -594,12 +599,11 @@ Admitted.
 Lemma mk_affine_neq0 Ω W : [affine W & Ω] != affine0.
 Admitted.
 
-Definition mk_hp e : 'affine[R]_n := [affine <[e]> ].
-Notation "'[' 'hp' e  ']'" := (mk_hp e%PH).
+Notation "'[' 'hp' e  ']'" := [affine <[e]> ].
 
 Lemma in_hp :
   (forall e x, (x \in [hp e]) = ('[e.1,x] == e.2))
-  * (forall c α x, (x \in [hp [<c, α>]]) = ('[c,x] == α)).
+  * (forall c α (x : 'cV[R]_n), (x \in [hp [<c, α>]]) = ('[c,x] == α)).
 Admitted.
 
 Lemma hpN (e : lrel[R]_n) : [hp -e] = [hp e].
@@ -700,13 +704,11 @@ move: (vbasisP U) => /andP [/eqP <- _].
 apply/subv_anti/andP; split; apply/sub_span; by move => ?; rewrite inE.
 Qed.
 
-Definition mk_line d Ω := [affine <[d]> & Ω].
-Notation "'[' 'line' d & Ω ']'" := (mk_line d Ω).
+Notation "'[' 'line' d & Ω ']'" := [affine <[d]> & Ω].
 
 Lemma in_lineP {d Ω x : 'cV[R]_n} :
   reflect (exists μ, x = Ω + μ *: d) (x \in [line d & Ω]).
 Proof.
-rewrite /mk_line.
 apply/(iffP in_mk_affineP) => [[y /vlineP [μ ->]]| [μ ->] ].
 + by exists μ.
 + by exists (μ *: d); rewrite ?memvZ ?memv_line.
@@ -720,8 +722,6 @@ apply/affine_leP => ? /in_lineP [μ -> ]; rewrite in_hp.
 by rewrite vdotDr vdotZr vdotBr v_in v'_in addrN mulr0 addr0.
 Qed.
 
-Definition mk_pt Ω := [affine 0%VS & Ω].
-
 Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω].
 
 Lemma in_pt Ω x : (x \in [pt Ω]) = (x == Ω).
@@ -731,8 +731,8 @@ Qed.
 
 End BasicObjects.
 
-Notation "'[' 'hp' e  ']'" := (mk_hp e).
-Notation "'[' 'line' d & Ω ']'" := (mk_line d Ω).
+Notation "'[' 'hp' e  ']'" := [affine <[e]> ].
+Notation "'[' 'line' d & Ω ']'" := [affine <[d]> & Ω].
 Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω].
 
 Notation "\affineI_ ( i <- r | P ) F" :=
@@ -794,6 +794,39 @@ rewrite ifF ?ltnS; last by apply/negbTE.
 by apply/dimvS/dirS.
 Qed.
 
+Lemma dim_leqif_eq V V' :
+  (V <= V')%O -> (dim V <= dim V' ?= iff (V == V'))%N.
+Proof.
+move => V_sub_V'; split; rewrite ?dimS //.
+apply/eqP/eqP; last by move => ->.
+rewrite {1}/dim; case: ifP.
+- by move/eqP ->; symmetry; apply/dim_eq0.
+- move/negbT => V_neq0.
+  have V'_neq0: V' != affine0.
+  + rewrite -!lt0x in V_neq0 *.
+    by apply/lt_le_trans: V_sub_V'.
+  rewrite /dim ifF; last by apply/negbTE.
+  move/succn_inj => dim_dir_eq.
+  suff: dir V = dir V'.
+  - case/affineN0: V_neq0 => x x_in.
+    by apply/(dir_eq x_in)/(affine_leP V_sub_V').
+  - by apply/eqP; rewrite -(eq_leqif (dimv_leqif_eq (dirS _ _))) ?dim_dir_eq.
+Qed.
+
+Lemma sub_geq_dim V V' :
+  (V <= V')%O -> (dim V >= dim V')%N -> V = V'.
+Proof.
+Admitted.
+
+Lemma sub_eq_dim V V' :
+  (V <= V')%O -> dim V = dim V' -> V = V'.
+Proof.
+Admitted.
+
+Lemma dim_affine_lt V V' :
+  (V < V')%O -> (dim V < dim V')%N.
+Admitted.
+
 Lemma dim_line Ω d : dim [line d & Ω] = (d != 0).+1.
 Proof.
 rewrite /dim ifF; last by apply/negbTE/mk_affine_neq0.
@@ -806,7 +839,7 @@ by rewrite dim_line eq_refl.
 Qed.
 
 Lemma dim2P V :
-  dim V = 2%N -> exists Ω, exists2 d, d != 0 & V = [line Ω & d].
+  dim V = 2%N -> exists Ω, exists2 d, d != 0 & V = [line d & Ω].
 Admitted.
 
 Lemma dim1P V :
@@ -815,6 +848,10 @@ Admitted.
 
 Lemma dim_leSn V :
   (dim V <= n.+1)%N.
+Admitted.
+
+Lemma dim_affine_le (U : {vspace lrel[R]_n}) :
+  [affine U] != affine0 -> (\dim U <= n)%N.
 Admitted.
 
 Lemma dimT : (dim affineT = n.+1)%N.

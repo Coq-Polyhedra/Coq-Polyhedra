@@ -718,9 +718,10 @@ Proof.
 by rewrite in_hsN -ltNge in_hs => /ltW.
 Qed.
 
-Lemma hp_subset_hs (e : lrel[R]_n) : [hp e]%:PH `<=` [hs e].
+Lemma hp_subset_hs (e : lrel[R]_n) :
+  {subset [hp e] <= [hs e]}.
 Proof.
-by apply/poly_subsetP => x; rewrite !inE => /eqP ->.
+by move => x; rewrite !inE => /eqP ->.
 Qed.
 
 Lemma hsC_convex (e : lrel[R]_n) : convex_pred [predC [hs e]].
@@ -1689,12 +1690,12 @@ Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 Let A' := row_mx (-A) (1%:M).
 
 Definition map_poly (P : 'poly_n) :=
-  proj ((lift_poly k P) `&` (\polyI_i [hp [<(row i A')^T, 0>]]%:PH)).
+  proj ((lift_poly k P) `&` (\polyI_i [hp [<(row i A')^T, 0%R>]]%:PH)).
 
 Lemma in_map_polyP (P : 'poly_n) x :
   reflect (exists2 y, x = A*m y & y \in P) (x \in map_poly P).
 Proof.
-have in_vectA' y z : (col_mx y z \in (\polyI_i [hp [<(row i A')^T, 0>]]%:PH)) = (z == A *m y).
+have in_vectA' y z : (col_mx y z \in (\polyI_i [hp [<(row i A')^T, 0%R>]]%:PH)) = (z == A *m y).
 - apply/in_big_polyIP/eqP => [h | /colP h i _];
     do ?[apply/colP => i; move/(_ i isT): h];
     rewrite affE in_hp /= row_row_mx tr_row_mx vdot_col_mx !row_vdot mul1mx mulNmx mxE;
@@ -1865,7 +1866,7 @@ Lemma affine_subset_poly_of_base (base : base_t[R,n]) :
 Proof.
 apply/poly_subsetP => x; rewrite affE => /in_affineP x_in.
 apply/in_poly_of_baseP => e /memv_span/x_in.
-by move/eqP; rewrite -in_hp -affE; apply/(poly_subsetP (hp_subset_hs _)). (* UGLY *)
+by move/eqP; rewrite -in_hp; apply/hp_subset_hs.
 Qed.
 
 Lemma polyEqT_affine (base : base_t[R,n]) :
