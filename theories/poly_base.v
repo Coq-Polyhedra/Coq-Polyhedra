@@ -1108,7 +1108,7 @@ Qed.
 
 (* TODO: replace this by two statements
  * Lemma dir_hull :
-     (P `>` [poly0]) -> dir (hull P) = << eq P >>^OC
+     (P `>` [poly0]) -> dir (hull P) = (befst @: << eq P >>)^OC
  * Lemma dimN0 :
      (P `>` [poly0]) -> dim P = \dim (dir (hull P)).+1%N
  *)
@@ -1145,7 +1145,9 @@ Qed.
 
 Lemma dim_affine (V : 'affine[R]_n) :
   dim V%:PH = affine.dim V.
-Admitted.
+Proof.
+by rewrite /dim hull_affine.
+Qed.
 
 Lemma dimS : {homo dim : P Q / (P `<=` Q) >-> (P <= Q)%N}.
 Proof.
