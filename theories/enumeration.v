@@ -20,7 +20,7 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 Local Open Scope poly_scope.
-Local Open Scope fset_scope.
+(*Local Open Scope fset_scope.*)
 Import GRing.Theory Num.Theory.
 
 (* Goal :
@@ -253,7 +253,7 @@ Lemma fsetI_propl (K : choiceType) (S S' : {fset K}):
 Proof.
 move=> cardS_eq_cardS'; apply contra_neqT;
   rewrite fproperEcard fsubsetIl /= ltnNge negbK => cardS_sub_cardI.
-have cardS_eq_cardI: #|` S| = #|` S `&` S'| by
+have cardS_eq_cardI: (#|` S| = #|` S `&` S'|)%fset by
   apply/anti_leq/andP; split => //; apply/fsubset_leq_card/fsubsetIl.
 apply/eqP; rewrite eqEfsubset; apply/andP; split.
 - by apply/fsetIidPl/eqP; rewrite eqEfcard fsubsetIl cardS_sub_cardI.
@@ -372,8 +372,8 @@ Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une 
 
 Variable (j : lrel[R]_n).
 Hypothesis (j_in_base : j \in base).
-Let I' : {fsubset base} := (I `\  i)%:fsub. (* TODO: type is mandatory here *)
-Let J : {fsubset base} := (j |` I')%:fsub.
+Let I' : {fsubset base} := (I `\  i)%:fsub%fset. (* TODO: type is mandatory here *)
+Let J : {fsubset base} := (j |` I')%:fsub%fset.
 
 Hypothesis (j_notin_I : j \notin (I : base_t)).
 
@@ -411,9 +411,9 @@ Qed.
 Lemma free_I': free I'.
 Proof.
 move: (pbasis_free (is_pbasis_of_pbasis Hbasis)) => free_I.
-apply:(@catl_free _ _ [fset i]).
+apply:(@catl_free _ _ [fset i]%fset).
 have uniq_I: uniq I by apply: free_uniq.
-have: perm_eq I (I'++[fset i]).
+have: perm_eq I (I'++[fset i])%fset.
 - apply: uniq_perm.
   + by [].
   + apply (leq_size_uniq uniq_I).
@@ -450,7 +450,7 @@ Admitted.
 Lemma dir_orth : (<[dir]> = (befst @: <<I'>>)^OC)%VS.
 Proof.
 case/andP: dir_prop => /eqP eq _.
-have x_in: x \in affine <<I `\ i>>.
+have x_in: x \in affine <<(I `\ i)%fset>>.
 by rewrite eq; apply/in_lineP; exists 0; rewrite scale0r GRing.addr0.
 rewrite {1}(affine_orth x_in) line_affine in eq.
 by move/(mono_inj le_refl (@subv_anti _ _) (mk_affineS x)): eq => ->.
@@ -459,9 +459,9 @@ Qed.
 Lemma ker_c: c j = 0 -> befst j \in (befst @: <<I'>>)%VS.
 Proof.
 rewrite /c => vdot_befstj_dir.
-have: forall y, y \in [tuple dir] -> '[y, befst j] = 0
+have: forall y, y \in [:: dir] -> '[y, befst j] = 0
   by move => y; rewrite inE; move/eqP => ->; rewrite vdotC.
-move/(orthv_spanP [tuple dir] (befst j))=> /=.
+move/(orthv_spanP [:: dir] (befst j))=> /=.
 by rewrite span_seq1 dir_orth orthK.
 Qed.
 
@@ -504,19 +504,24 @@ Qed.
 Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
 
 Definition point_pivot :=
-  (ppick (affine <<I>>%VS) + (r j) / (c j) *: dir)%R.
+  (ppick (affine <<I>>%VS) + (r j) / (c j) *: dir).
 
 Lemma point_pivot_in_I':
   point_pivot \in affine <<I'>>.
 Proof.
 apply/in_affine.
+(*rewrite affine_span; apply/in_big_polyIP => e _.
+Check (val e : lrel[R]_n).
+Check (valP e).*)
+Admitted.
+
+Lemma point_pivot_in_j :
+  point_pivot \in [hp j].
 Admitted.
 
 Lemma point_pivot_eq_affine_J: (affine (<<J>>%VS) = [pt point_pivot])%PH.
 Proof.
 Admitted.
-
-
 
 (* 3rd step: When r j > 0, show that
    affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->

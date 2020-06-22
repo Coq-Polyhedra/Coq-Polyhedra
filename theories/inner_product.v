@@ -281,13 +281,17 @@ rewrite capfv dimvf /Vector.dim /= muln1 limg_orthv_fun => {2}<-.
 by rewrite addnK.
 Qed.
 
-Lemma orthv_spanP (p : nat) (Y : p.-tuple 'cV[R]_n) x :
-  reflect (forall y, y \in Y -> '[y,x] = 0) (x \in (span Y)^OC)%VS.
+Lemma orthv_spanP (Y : seq 'cV[R]_n) x :
+  reflect (forall y, y \in Y -> '[y,x] = 0) (x \in <<Y>>^OC)%VS.
 Proof.
-apply/(iffP orthvP) => [h y | h y].
+apply/(iffP orthvP) => [h y |].
 - move/memv_span; exact: h.
-- move/coord_span ->; rewrite vdot_sumDl; apply/big1 => i _; rewrite vdotZl.
-  by move/(_ Y`_i): h ->; rewrite ?mulr0 // mem_nth ?size_tuple.
+- elim: Y => [?? | y0 Y hind h y].
+  + by rewrite span_nil memv0 => /eqP ->; rewrite vdot0l.
+  + rewrite span_cons => /memv_addP [u u_in] [v v_in] ->.
+    rewrite vdotDl [X in _ + X]hind ?addr0 //; last first.
+    * by move => ? h'; apply/h; rewrite in_cons h' orbT.
+    * by case/vlineP: u_in => μ ->; rewrite vdotZl h ?mulr0 ?in_cons ?eq_refl.
 Qed.
 
 Lemma orthK : involutive orthv.
