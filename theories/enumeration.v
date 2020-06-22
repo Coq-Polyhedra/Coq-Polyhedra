@@ -356,6 +356,13 @@ Definition c (j : lrel[R]_n) := '[befst j, dir].
 Definition r (j : lrel[R]_n) :=
   '[j.1, ppick (affine << I >>%VS)] - j.2.
 
+Lemma dir_prop:
+  (affine << (I `\ i)%fset >> == [line dir & x]) && ('[i.1, dir] == 1).
+Proof.
+  move:(xchooseP dim_pbasisD1).
+  by rewrite -/dir.
+Qed.
+
 (*
 Proposition
 Soit I une base admissible, i \in I, et j \notin I. Alors J = I - i + j est une base admissible ssi les conditions suivantes sont satisfaites :
@@ -370,19 +377,26 @@ Let J : {fsubset base} := (j |` I')%:fsub.
 
 Hypothesis (j_notin_I : j \notin (I : base_t)).
 
+(* Remark: we must show that, if #J = n, then free J <-> dim affine <<J>> = 1
+ * In particular, this requires to assume that affine <<J>> is nonempty         *)
+(* J is a basis iff #J = n and dim affine <<J>> = 1 *)
+(* Moreover, J is feasible if affine <<J>> `<=` P
+ * 1st step: show that J is a basis iff c j != 0 *)
+
+ Hypothesis prop_affine_J : ([poly0] `<` (affine <<J>>%VS))%PH.
+
 Lemma card_pivot:
-  (#|` J| == n)%N.
+  (#|` J| = n)%N.
 Proof.
 rewrite cardfsU1 in_fsetE negb_and j_notin_I orbT cardfsD /=.
 by rewrite fsetI1 i_in_I cardfs1 subnKC
   (card_pbasis (is_pbasis_of_pbasis Hbasis)) ?n_prop0.
 Qed.
 
-Lemma foo1:
+Lemma cancel_c_I':
   forall k: lrel[R]_n, k \in (I': {fset _}) -> c k = 0.
 Proof.
-move: (xchooseP dim_pbasisD1);
-rewrite /= -/dir => /andP [/eqP affine_eq dir_dot] k k_in_I'.
+move: dir_prop => /andP [/eqP affine_eq dir_dot] k k_in_I'.
 apply/eqP; rewrite /c lfunE /= -(@line_subset_hs _ _ _ x dir).
 - by rewrite -affine_eq; apply poly_base_subset_hs.
 - move/pbasis_active: (is_pbasis_of_pbasis Hbasis).
@@ -421,7 +435,7 @@ move/perm_free=> ->; rewrite free_cons free_I' andbT negbK.
 move/coord_span => ->; rewrite /c linear_sum vdot_sumDl /=.
 rewrite big1 // => k _; rewrite linearZ /= vdotZl.
 set v := (X in _ * X); rewrite [v](_ : _ = 0); first by rewrite mulr0.
-by apply/foo1/mem_nth.
+by apply/cancel_c_I'/mem_nth.
 Qed.
 
 (*
@@ -429,35 +443,80 @@ c = fun j : lrel => '[ befst j, dir]
      : lrel -> R
 *)
 
-Lemma be_lift y :
-  y \in affine <<J>>%VS -> j.1 \in (befst @: <<I'>>)%VS -> j \in <<I'>>%VS.
+Lemma be_lift:
+  befst j \in (befst @: <<I'>>)%VS -> j \in <<I'>>%VS.
 Admitted.
 
 Lemma dir_orth : (<[dir]> = (befst @: <<I'>>)^OC)%VS.
 Proof.
-rewrite /dir.
-case/andP: (xchooseP dim_pbasisD1) => /eqP eq _.
-set dir := xchoose _.
+case/andP: dir_prop => /eqP eq _.
 have x_in: x \in affine <<I `\ i>>.
-admit.
+by rewrite eq; apply/in_lineP; exists 0; rewrite scale0r GRing.addr0.
 rewrite {1}(affine_orth x_in) line_affine in eq.
 by move/(mono_inj le_refl (@subv_anti _ _) (mk_affineS x)): eq => ->.
-Admitted.
+Qed.
 
-Goal c j = 0 -> j.1 \in (befst @: <<I'>>)%VS.
+Lemma ker_c: c j = 0 -> befst j \in (befst @: <<I'>>)%VS.
 Proof.
-rewrite /c.
-Admitted.
+rewrite /c => vdot_befstj_dir.
+have: forall y, y \in [tuple dir] -> '[y, befst j] = 0
+  by move => y; rewrite inE; move/eqP => ->; rewrite vdotC.
+move/(orthv_spanP [tuple dir] (befst j))=> /=.
+by rewrite span_seq1 dir_orth orthK.
+Qed.
 
-(* Remark: we must show that, if #J = n, then free J <-> dim affine <<J>> = 1
- * In particular, this requires to assume that affine <<J>> is nonempty         *)
-(* J is a basis iff #J = n and dim affine <<J>> = 1 *)
-(* Moreover, J is feasible if affine <<J>> `<=` P
- * 1st step: show that J is a basis iff c j != 0 *)
+Lemma pivot_free: free J -> c j != 0.
+Proof.
+apply: contraTneq; move/ker_c/be_lift => j_in_span_I'.
+have: perm_eq J (j :: I').
++ apply: uniq_perm => /=; first by apply: fset_uniq.
+  * by rewrite fset_uniq !in_fsetE negb_and j_notin_I orbT.
+  * by move=> v; rewrite !(in_cons, in_fsetE).
+by move/perm_free => ->; rewrite free_cons free_I' andbT negbK.
+Qed.
+
+
+Lemma free_J_equiv_basis:
+(free J <-> (dim (affine <<J>>%VS) = 1)%N).
+Proof.
+split.
+- move => free_J.
+  by rewrite dimN0_eq // active_affine free_card // card_pivot subnn.
+- rewrite dimN0_eq // active_affine.
+  move/eqP; rewrite eqSS subn_eq0 -{1}card_pivot => size_dim_J.
+  by apply (@basis_free _ _ <<J>>%VS); rewrite basisEdim size_dim_J andbT.
+Qed.
+
+Lemma pivot_basis:
+  c j != 0 <-> (dim (affine <<J>>%VS) = 1)%N.
+Proof.
+rewrite -free_J_equiv_basis; split.
+- exact: free_pivot.
+- exact: pivot_free.
+Qed.
+
+
 
 (* 2nd step: show that the basic point associated with J is given by
  * ppick (affine <<J>>) = ppick (affine <<I>>) + (r j) / (c j) *: dir
  * It suffices to show that this point belongs to affine <<J>> *)
+
+Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
+
+Definition point_pivot :=
+  (ppick (affine <<I>>%VS) + (r j) / (c j) *: dir)%R.
+
+Lemma point_pivot_in_I':
+  point_pivot \in affine <<I'>>.
+Proof.
+apply/in_affine.
+Admitted.
+
+Lemma point_pivot_eq_affine_J: (affine (<<J>>%VS) = [pt point_pivot])%PH.
+Proof.
+Admitted.
+
+
 
 (* 3rd step: When r j > 0, show that
    affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
