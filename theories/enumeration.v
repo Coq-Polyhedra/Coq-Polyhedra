@@ -356,11 +356,16 @@ Definition c (j : lrel[R]_n) := '[befst j, dir].
 Definition r (j : lrel[R]_n) :=
   '[j.1, ppick (affine << I >>%VS)] - j.2.
 
-Lemma dir_prop:
-  (affine << (I `\ i)%fset >> == [line dir & x]) && ('[i.1, dir] == 1).
+Lemma dir_prop_line:
+  (affine << (I `\ i)%fset >> = [line dir & x]).
 Proof.
-  move:(xchooseP dim_pbasisD1).
-  by rewrite -/dir.
+  by move:(xchooseP dim_pbasisD1); rewrite -/dir => /andP [/eqP].
+Qed.
+
+Lemma dir_prop_vdot:
+  ('[i.1, dir] = 1).
+Proof.
+  by move: (xchooseP dim_pbasisD1); rewrite -/dir => /andP [/eqP] _ /eqP.
 Qed.
 
 (*
@@ -396,9 +401,9 @@ Qed.
 Lemma cancel_c_I':
   forall k: lrel[R]_n, k \in (I': {fset _}) -> c k = 0.
 Proof.
-move: dir_prop => /andP [/eqP affine_eq dir_dot] k k_in_I'.
+move => k k_in_I'.
 apply/eqP; rewrite /c lfunE /= -(@line_subset_hs _ _ _ x dir).
-- by rewrite -affine_eq; apply poly_base_subset_hs.
+- by rewrite -dir_prop_line; apply poly_base_subset_hs.
 - move/pbasis_active: (is_pbasis_of_pbasis Hbasis).
   rewrite -(is_pbasis_of_eq Hbasis) => polyEq_x.
   have: x \in 'P^=(base;I) by rewrite polyEq_x in_pt_self.
@@ -449,11 +454,11 @@ Admitted.
 
 Lemma dir_orth : (<[dir]> = (befst @: <<I'>>)^OC)%VS.
 Proof.
-case/andP: dir_prop => /eqP eq _.
+move: dir_prop_line => h.
 have x_in: x \in affine <<(I `\ i)%fset>>.
-by rewrite eq; apply/in_lineP; exists 0; rewrite scale0r GRing.addr0.
-rewrite {1}(affine_orth x_in) line_affine in eq.
-by move/(mono_inj le_refl (@subv_anti _ _) (mk_affineS x)): eq => ->.
+by rewrite h; apply/in_lineP; exists 0; rewrite scale0r GRing.addr0.
+rewrite {1}(affine_orth x_in) line_affine in h.
+by move/(mono_inj le_refl (@subv_anti _ _) (mk_affineS x)): h => ->.
 Qed.
 
 Lemma ker_c: c j = 0 -> befst j \in (befst @: <<I'>>)%VS.
@@ -504,28 +509,67 @@ Qed.
 Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
 
 Definition point_pivot :=
-  (ppick (affine <<I>>%VS) + (r j) / (c j) *: dir).
+  (ppick (affine <<I>>%VS) - ((r j) / (c j)) *: dir).
 
 Lemma point_pivot_in_I':
   point_pivot \in affine <<I'>>.
 Proof.
 apply/in_affine.
+move => v v_in_span_I'; rewrite in_hp /point_pivot vdotDr vdotNr vdotZr.
+have: v.1 \in (befst @: <<I'>>)%VS.
+- apply/memv_imgP; exists v => //.
+admit.
+move: (memv_line dir); rewrite dir_orth.
+move/orthvP => dir_ort fst_v_fst_I'.
+rewrite (dir_ort v.1 fst_v_fst_I') mulr0 subr0.
+rewrite -in_hp; move: v_in_span_I'; apply/in_affine.
+rewrite dir_prop_line -(is_pbasis_of_eq Hbasis) ppick_pt.
+by apply/in_lineP; exists 0; rewrite scale0r addr0.
+Admitted.
 (*rewrite affine_span; apply/in_big_polyIP => e _.
 Check (val e : lrel[R]_n).
 Check (valP e).*)
-Admitted.
 
 Lemma point_pivot_in_j :
   point_pivot \in [hp j].
+rewrite in_hp /point_pivot vdotDr vdotNr vdotZr /r.
+have -> : j.1 = befst j.
+admit.
+rewrite -/(c j) -{2}(divr1 (c j)) mulf_div mulr1 -mulrA mulfV.
+- by rewrite mulr1 /r opprB addrC -addrA [X in _ + (X)]addrC subrr addr0.
+- by apply/pivot_basis.
 Admitted.
 
-Lemma point_pivot_eq_affine_J: (affine (<<J>>%VS) = [pt point_pivot])%PH.
+Check affine (<<J>>%VS).
+
+Lemma point_pivot_in_affine_J:
+  (point_pivot \in (affine (<<J>>%VS)))%PH.
 Proof.
-Admitted.
+rewrite span_fsetU span_fset1.
+apply/in_affine => v /memv_addP [v_j v_j_prop [v_I' v_I'_prop]] ->.
+rewrite inE beadd_p1E beadd_p2E vdotDl.
+have ->: '[v_j.1, point_pivot] = v_j.2.
+- apply/eqP; rewrite -in_hp beE; apply/in_affine: v_j_prop; rewrite affine1.
+  exact: point_pivot_in_j.
+have -> //: '[v_I'.1, point_pivot] = v_I'.2.
+apply/eqP; rewrite -in_hp beE; apply/in_affine: v_I'_prop.
+exact: point_pivot_in_I'.
+Qed.
+
+Lemma point_pivot_eq_affine_J:
+  [pt point_pivot] = affine <<J>>%VS.
+Proof.
+move: point_pivot_in_affine_J; rewrite -pt_subset.
+case/eqP/dim1P: J_is_basis => y ->.
+move/poly_subsetP => pts_subset.
+have -> //: point_pivot = y.
+by apply/eqP; rewrite -in_pt; apply: pts_subset; exact: in_pt_self.
+Qed.
 
 (* 3rd step: When r j > 0, show that
    affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
-                                c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
+    c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
+
 
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
