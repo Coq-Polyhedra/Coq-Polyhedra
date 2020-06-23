@@ -452,6 +452,10 @@ Lemma be_lift:
   befst j \in (befst @: <<I'>>)%VS -> j \in <<I'>>%VS.
 Admitted.
 
+Lemma dir_orth' :
+  <[dir]>%VS = (<<[fset (val e).1 | e in (I' : {fset _})]%fset>>)^OC%VS.
+Admitted.
+
 Lemma dir_orth : (<[dir]> = (befst @: <<I'>>)^OC)%VS.
 Proof.
 move: dir_prop_line => h.
@@ -514,46 +518,43 @@ Definition point_pivot :=
 Lemma point_pivot_in_I':
   point_pivot \in affine <<I'>>.
 Proof.
-apply/in_affine.
-move => v v_in_span_I'; rewrite in_hp /point_pivot vdotDr vdotNr vdotZr.
-have: v.1 \in (befst @: <<I'>>)%VS.
-- apply/memv_imgP; exists v => //.
-admit.
-move: (memv_line dir); rewrite dir_orth.
-move/orthvP => dir_ort fst_v_fst_I'.
-rewrite (dir_ort v.1 fst_v_fst_I') mulr0 subr0.
-rewrite -in_hp; move: v_in_span_I'; apply/in_affine.
-rewrite dir_prop_line -(is_pbasis_of_eq Hbasis) ppick_pt.
-by apply/in_lineP; exists 0; rewrite scale0r addr0.
-Admitted.
-(*rewrite affine_span; apply/in_big_polyIP => e _.
-Check (val e : lrel[R]_n).
-Check (valP e).*)
+apply/in_affine => v v_in_span_I'.
+rewrite in_hp vdotDr vdotNr vdotZr.
+move: (memv_line dir); rewrite dir_orth => /orthvP ->.
+- rewrite mulr0 subr0 -in_hp.
+  move/is_pbasis_of_pbasis/pbasis_proper0/ppickP/in_affine: Hbasis => -> //.
+  by move: v_in_span_I'; apply/subvP/base_vect_subset/fsubD1set.
+- have ->: v.1 = befst v by rewrite lfunE.
+  by apply/memv_img.
+Qed.
 
 Lemma point_pivot_in_j :
   point_pivot \in [hp j].
 rewrite in_hp /point_pivot vdotDr vdotNr vdotZr /r.
-have -> : j.1 = befst j.
-admit.
+have -> : j.1 = befst j by rewrite lfunE.
 rewrite -/(c j) -{2}(divr1 (c j)) mulf_div mulr1 -mulrA mulfV.
 - by rewrite mulr1 /r opprB addrC -addrA [X in _ + (X)]addrC subrr addr0.
 - by apply/pivot_basis.
-Admitted.
+Qed.
 
-Check affine (<<J>>%VS).
+Lemma affine_addv (U V : {vspace lrel[R]_n}) :
+  affine (U + V)%VS = affine U `&` affine V.
+Proof.
+apply/le_anti/andP; split.
+- by rewrite lexI; apply/andP; split; apply/affineS; rewrite ?addvSl ?addvSr.
+- apply/poly_subsetP => z; rewrite in_polyI => /andP [z_in_U z_in_V].
+  apply/in_affine => y /memv_addP [y1 y1_in] [y2 y2_in] ->.
+  rewrite in_hp; rewrite /= vdotDl; apply/eqP/congr2; apply/eqP;
+    rewrite -in_hp; by [apply/(in_affine U) | apply/(in_affine V)].
+Qed.
 
 Lemma point_pivot_in_affine_J:
   (point_pivot \in (affine (<<J>>%VS)))%PH.
 Proof.
-rewrite span_fsetU span_fset1.
-apply/in_affine => v /memv_addP [v_j v_j_prop [v_I' v_I'_prop]] ->.
-rewrite inE beadd_p1E beadd_p2E vdotDl.
-have ->: '[v_j.1, point_pivot] = v_j.2.
-- apply/eqP; rewrite -in_hp beE; apply/in_affine: v_j_prop; rewrite affine1.
-  exact: point_pivot_in_j.
-have -> //: '[v_I'.1, point_pivot] = v_I'.2.
-apply/eqP; rewrite -in_hp beE; apply/in_affine: v_I'_prop.
-exact: point_pivot_in_I'.
+rewrite span_fsetU span_fset1 affine_addv affine1.
+rewrite in_polyI; apply/andP; split.
+- by apply/point_pivot_in_j.
+- by apply/point_pivot_in_I'.
 Qed.
 
 Lemma point_pivot_eq_affine_J:
