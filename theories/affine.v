@@ -333,13 +333,13 @@ Proof.
 case: V => [| U U_sat].
 - rewrite eq_refl; constructor.
 - have ->: (Core.Affine U_sat) = [affine U].
-  rewrite /Core.affine_of /Core.affine; case: {-}_/idP => // ?.
-  apply/congr1; exact: bool_irrelevance.
+    rewrite /Core.affine_of /Core.affine; case: {-}_/idP => // ?.
+    apply/congr1; exact: bool_irrelevance.
   suff h: exists x, x \in [affine U].
-  + have /negbTE ->: [affine U] != affine0 by apply/affineN0.
+    have /negbTE ->: [affine U] != affine0 by apply/affineN0.
     by constructor.
-  + case/is_satP : U_sat => x x_in; exists x.
-    by rewrite in_affineE.
+  case/is_satP : U_sat => x x_in; exists x.
+  by rewrite in_affineE.
 Qed.
 
 Lemma affine_is_sat U :
@@ -484,11 +484,51 @@ Definition affineI V V' :=
   let U' := eq_vect V' in
   [affine (U + U')].
 
+Lemma cond_affine0 U :  (* RK: I have added this auxiliary lemma *)
+  let: e := [<0, 1>]: lrel[R]_n in
+    e \in U -> [affine U] = affine0.
+Proof.
+move => e_in_U; rewrite /Core.affine_of /Core.affine.
+case: {-}_/idP => [is_sat_U |_ //].
+suff : ~~ (is_sat U) by rewrite is_sat_U.
+apply/contraT.
+move/negbNE/is_satP => [x] /satP sat_U_x.
+move/eqP: (sat_U_x _ e_in_U).
+by rewrite vdot0l eq_sym oner_eq0.
+Qed.
+
 Lemma in_affineI x V V' :
   x \in affineI V V' = (x \in V) && (x \in V').
-Admitted.
+Proof. (* RK *)
+pose e := ([< 0, 1 >]: lrel[R]_n).
+case: V => [ | I is_sat_I].
+- suff ->: affineI (Core.Affine0 n) V' = affine0 by rewrite in_affine0.
+  apply/cond_affine0/memv_addP.
+  exists e; first exact: memv_line.
+  exists 0; first exact: mem0v.
+  by rewrite addr0.
+- case: V' => [ | I' is_sat_I'].
+  + suff ->: affineI (Core.Affine is_sat_I) (Core.Affine0 n) = affine0
+      by rewrite andbC in_affine0.
+    apply/cond_affine0/memv_addP.
+    exists 0; first exact: mem0v.
+    exists e; first exact: memv_line.
+    by rewrite add0r.
+  + rewrite -{2}(Core.eq_vectK (Core.Affine is_sat_I)) -{2}(Core.eq_vectK (Core.Affine is_sat_I')).
+    apply/idP/idP => [/in_affineP x_in_affine | /andP [/in_affineP x_in_affine /in_affineP x_in_affine']].
+    * apply/andP; split; apply/in_affineP => e' ?; apply/x_in_affine/memv_addP.
+      - exists e'; first by done.
+        exists 0; first exact: mem0v.
+        by rewrite addr0.
+      - exists 0; first exact: mem0v.
+        exists e'; first by done.
+        by rewrite add0r.
+    * apply/in_affineP => e' /memv_addP [e1] e1_in [e2] e2_in ->.
+      by rewrite vdotDl (x_in_affine _ e1_in) (x_in_affine' _ e2_in).
+Qed.
 
 Definition affine_le V V' := (V == affineI V V').
+
 Lemma affine_leP {V V'} : reflect {subset V <= V'} (affine_le V V').
 Proof.
 apply/(iffP eqP).
