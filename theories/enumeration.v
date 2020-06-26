@@ -571,6 +571,81 @@ Qed.
    affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
     c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
 
+Lemma pivot_feasible_condition:
+  (affine <<J>> `<=` P) ->
+  (forall k, k \in base -> k \notin (J : {fset _})
+    -> (r k) >= ((r j) / (c j)) * (c k)).
+Proof.
+rewrite -point_pivot_eq_affine_J pt_subset.
+move/poly_leP: (poly_base_subset P) => P_base
+  /P_base /in_poly_of_baseP point_pivot_base k /point_pivot_base.
+  rewrite inE /point_pivot vdotDr vdotNr vdotZr.
+  have to_rewrite: k.1 = befst k by rewrite lfunE.
+  by rewrite {2}to_rewrite -/(c k) -ler_subl_addl -opprB -/(r k) ler_opp2.
+Qed.
+
+Lemma pivot_feasible:
+  (affine <<J>> `<=` P) ->
+    (forall k, k \in base -> k \notin (J : {fset _}) -> c k < 0 -> (r j) / (c j) >= (r k) / (c k)).
+Proof.
+move/pivot_feasible_condition.
+move=> condition k ? ? c_k_leq_0.
+rewrite -(ler_nmul2r c_k_leq_0) -!mulrA mulVf ?mulrA ?mulr1.
+- exact: condition.
+- exact: ltr_neq.
+Qed.
+
+Lemma feasible_pivot_condition:
+  (forall k, k \in base -> k \notin (J : {fset _})
+  -> (r k) >= ((r j) / (c j)) * (c k)) -> (affine <<J>> `<=` P).
+Proof.
+rewrite -point_pivot_eq_affine_J pt_subset.
+case: (poly_baseP P).
+by move: Pprop0; rewrite lt_def; move/andP => [] /negP H _ /eqP/H.
+move => K [] P_base_K _ condition; rewrite P_base_K.
+rewrite [X in _ \in X]polyEq_flatten; apply/in_poly_of_baseP => /= k.
+rewrite -(fsetID J (baseEq base K)) [in X in X -> _]inE; case/orP.
+  - rewrite inE; case/andP => _ ?; apply hs_hp.
+    rewrite -pt_subset point_pivot_eq_affine_J.
+    by apply/affineS1/memv_span.
+  - rewrite inE; case/andP => ? ?.
+    rewrite in_hs /point_pivot vdotDr vdotNr vdotZr.
+    have to_rewrite: k.1 = befst k by rewrite lfunE.
+    rewrite {2}to_rewrite -/(c k) -ler_subl_addl -opprB -/(r k) ler_opp2.
+    apply: condition => //.
+Admitted.
+
+
+  + rewrite [in X in X -> _]inE; case/andP => _ k_in_J.
+    rewrite -pt_subset point_pivot_eq_affine_J.
+    by apply/affineS1/memv_span.
+  + rewrite inE; case/andP => k_notin_J k_in_K.
+    rewrite in_hp /point_pivot vdotDr vdotNr vdotZr.
+    have to_rewrite: k.1 = befst k by rewrite lfunE.
+    rewrite {2}to_rewrite -/(c k) subr_eq addrC -subr_eq -/(r k).
+    Search _ ('P^=(_ ; _)).
+-
+Lemma feasible_pivot:
+  (forall k, k \in base -> k \notin (J : {fset _})
+  -> c k < 0 -> (r j) / (c j) >= (r k) / (c k)) ->
+  (affine <<J>> `<=` P).
+Proof.
+rewrite -point_pivot_eq_affine_J pt_subset.
+case: (poly_baseP P).
+- by move: Pprop0; rewrite lt_def; move/andP => [] /negP H _ /eqP/H.
+- move => K [] P_base_K _ argmax_j.
+  rewrite P_base_K [X in _ \in X]polyEq_affine in_polyI.
+  apply/andP; split.
+  + apply/in_poly_of_baseP => k.
+    rewrite -(fsetID J base) inE; case/orP.
+    * rewrite inE; case/andP => _ k_in_J; apply hs_hp.
+      rewrite -pt_subset point_pivot_eq_affine_J.
+      by apply/affineS1/memv_span.
+    * rewrite inE; case/andP => k_notin_J k_in_base.
+      rewrite inE /point_pivot vdotDr vdotNr vdotZr.
+      have to_rewrite: k.1 = befst k by rewrite lfunE.
+      rewrite {2}to_rewrite -/(c k).
+
 
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
