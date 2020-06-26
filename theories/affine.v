@@ -839,21 +839,38 @@ Notation "\affineI_ ( i 'in' A | P ) F" :=
 Notation "\affineI_ ( i 'in' A ) F" :=
  (\big[affineI/affineT]_(i in A) F).
 
+Lemma big_affine_inf (I : finType) (j : I) (P : pred I) (F : I -> 'affine[R]_n) :
+  P j -> (\affineI_(i | P i) F i <= F j)%O.
+Proof. (* RK *)
+move => ?; rewrite (bigD1 j) //=.
+apply/affine_leP => v; rewrite in_affineI.
+by move/andP => [? _].
+Qed.
+
 Lemma in_big_affineIP (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
   reflect (forall i : I, P i -> x \in (F i)) (x \in \affineI_(i | P i) (F i)).
-Admitted.
+Proof. (* RK *)
+apply: (iffP idP) => [? i Pi | x_in_F].
+- by apply: (affine_leP (big_affine_inf F Pi)).
+- elim/big_rec: _ => [|i V Pi ?]; first by rewrite in_affineT.
+  by rewrite in_affineI; apply/andP; split; [apply: (x_in_F i) | done].
+Qed.
 
 Lemma in_big_affineI (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
   (x \in \affineI_(i | P i) (F i)) = [forall i, P i ==> (x \in F i)].
-Admitted.
-
-Lemma big_affine_inf (I : finType) (j : I) (P : pred I) (F : I -> 'affine[R]_n) :
-  P j -> (\affineI_(i | P i) F i `<=` F j).
-Admitted.
+Proof. (* RK *)
+apply/in_big_affineIP/idP.
+- by move => Hforall; apply/forallP => i; apply/implyP/Hforall.
+- by move/forallP => Hforall i; apply/implyP/Hforall.
+Qed.
 
 Lemma big_affineIsP (I : finType) Q (P : pred I) (F : I -> 'affine[R]_n) :
   reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \affineI_(i | P i) F i).
-Admitted.
+apply: (iffP idP) => [/affine_leP Hsubset ? ?| Hsubset_forall];
+  apply/affine_leP => ? in_Q.
+- by apply: (in_big_affineIP _ _ _ (Hsubset _ in_Q)).
+- by apply/in_big_affineIP => i Pi; apply/(affine_leP (Hsubset_forall i Pi)).
+Qed.
 
 Lemma affine_span (I : base_t[R,n]) :
   [affine <<I>>] = \affineI_(e : I) [hp (val e)].
