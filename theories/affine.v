@@ -55,11 +55,9 @@ Reserved Notation "\affineI_ ( i | P ) F"
   (at level 41, F at level 41, i at level 50,
            format "'[' \affineI_ ( i  |  P ) '/  '  F ']'").
 Reserved Notation "\affineI_ ( i : t | P ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\affineI_ ( i : t ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\affineI_ ( i < n | P ) F"
   (at level 41, F at level 41, i, n at level 50,
            format "'[' \affineI_ ( i  <  n  |  P ) '/  '  F ']'").

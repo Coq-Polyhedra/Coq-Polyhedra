@@ -26,43 +26,6 @@ Local Open Scope poly_scope.
 
 Import GRing.Theory Num.Theory.
 
-(*Reserved Notation "x `<=` y `<=` z" (at level 70, y, z at next level).
-Reserved Notation "x `<=` y `<` z" (at level 70, y, z at next level).
-Reserved Notation "x `<` y `<=` z" (at level 70, y, z at next level).
-Reserved Notation "x `<` y `<` z" (at level 70, y, z at next level).
-
-Reserved Notation "x `>=` y" (at level 70, y at next level).
-Reserved Notation "x `>` y" (at level 70, y at next level).
-
-Reserved Notation "x `<=` y :> T" (at level 70, y at next level).
-Reserved Notation "x `<` y :> T" (at level 70, y at next level).
-Reserved Notation "x `>=` y :> T" (at level 70, y at next level).
-Reserved Notation "x `>` y :> T" (at level 70, y at next level).
-
-Reserved Notation "x `>=<` y" (at level 70, y at next level).
-Reserved Notation "x `><` y" (at level 70, y at next level).
-
-Reserved Notation "`<=` y" (at level 35).
-Reserved Notation "`>=` y" (at level 35).
-Reserved Notation "`<` y" (at level 35).
-Reserved Notation "`>` y" (at level 35).
-Reserved Notation "`>=<` y" (at level 35).
-Reserved Notation "`><` y" (at level 35).
-Reserved Notation "`<=` y :> T" (at level 35, y at next level).
-Reserved Notation "`>=` y :> T" (at level 35, y at next level).
-Reserved Notation "`<` y :> T" (at level 35, y at next level).
-Reserved Notation "`>` y :> T" (at level 35, y at next level).
-Reserved Notation "`>=<` y :> T" (at level 35, y at next level).
-Reserved Notation "`><` y :> T" (at level 35, y at next level).
-
-Reserved Notation "x `<=` y ?= 'iff' c"
-  (at level 70, y, c at next level,
-       format "x '[hv'  `<=`  y '/'  ?=  'iff'  c ']'").
-
-Reserved Notation "x `<=` y ?= 'iff' c :> T"
-  (at level 70, y, c at next level,
-       format "x '[hv'  `<=`  y '/'  ?=  'iff'  c  :> T ']'").*)
-
 Reserved Notation "\polyI_ i F"
   (at level 41, F at level 41, i at level 0,
            format "'[' \polyI_ i '/  '  F ']'").
@@ -82,11 +45,9 @@ Reserved Notation "\polyI_ ( i | P ) F"
   (at level 41, F at level 41, i at level 50,
            format "'[' \polyI_ ( i  |  P ) '/  '  F ']'").
 Reserved Notation "\polyI_ ( i : t | P ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\polyI_ ( i : t ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\polyI_ ( i < n | P ) F"
   (at level 41, F at level 41, i, n at level 50,
            format "'[' \polyI_ ( i  <  n  |  P ) '/  '  F ']'").
@@ -264,8 +225,6 @@ move=> P2 P1 P3 /poly_subsetP le_12 /poly_subsetP le_23.
 by apply/poly_subsetP=> x /le_12 /le_23.
 Qed.
 
-(*Fact polyh_display : unit. Proof. exact: tt. Qed.*)
-
 Definition poly_LtPOrderMixin :=
   LePOrderMixin  (fun _ _ => erefl _) _poly_subset_refl _poly_subset_anti _poly_subset_trans.
 
@@ -320,61 +279,6 @@ Proof. by move => ?; rewrite repr_equiv H.in_poly0. Qed.
 Lemma in_polyT : polyT =i predT.
 Proof. by move => ?; rewrite repr_equiv H.in_polyT. Qed.
 End PolyPred.
-
-(*
-Notation poly_le   := (@Order.le poly_display _) (only parsing).
-Notation poly_lt   := (@Order.lt poly_display _) (only parsing).
-Notation poly_ge   := (@Order.ge poly_display _) (only parsing).
-Notation poly_gt   := (@Order.gt poly_display _) (only parsing).
-Notation poly_leif := (@Order.leif poly_display _) (only parsing).
-Notation poly_cmp  := (@Order.comparable poly_display _) (only parsing).
-Notation poly_meet := (@Order.meet poly_display _).
-
-Notation "<=%P"  := poly_le   : fun_scope.
-Notation ">=%P"  := poly_ge   : fun_scope.
-Notation "<%P"   := poly_lt   : fun_scope.
-Notation ">%P"   := poly_gt   : fun_scope.
-Notation "<?=%P" := poly_leif : fun_scope.
-Notation ">=<%P" := poly_cmp  : fun_scope.
-Notation "><%P"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.
-
-Notation "`<=` y" := (poly_ge y) : poly_scope.
-Notation "`<=` y :> T" := (`<=` (y : T)) (only parsing) : poly_scope.
-Notation "`>=` y"  := (poly_le y) : poly_scope.
-Notation "`>=` y :> T" := (`>=` (y : T)) (only parsing) : poly_scope.
-
-Notation "`<` y" := (poly_gt y) : poly_scope.
-Notation "`<` y :> T" := (`<` (y : T)) (only parsing) : poly_scope.
-Notation "`>` y" := (poly_lt y) : poly_scope.
-Notation "`>` y :> T" := (`>` (y : T)) (only parsing) : poly_scope.
-
-Notation "`>=<` y" := (poly_cmp y) : poly_scope.
-Notation "`>=<` y :> T" := (`>=<` (y : T)) (only parsing) : poly_scope.
-
-Notation "`><` y" := (fun x => ~~ (poly_cmp y x)) : poly_scope.
-Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : poly_scope.
-
-Notation "x `<=` y" := (poly_le x y) : poly_scope.
-Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
-Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
-Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
-
-Notation "x `<` y"  := (poly_lt x y) : poly_scope.
-Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
-Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
-Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
-
-Notation "x `<=` y `<=` z" := ((x `<=` y) && (y `<=` z)) : poly_scope.
-Notation "x `<` y `<=` z" := ((x `<` y) && (y `<=` z)) : poly_scope.
-Notation "x `<=` y `<` z" := ((x `<=` y) && (y `<` z)) : poly_scope.
-Notation "x `<` y `<` z" := ((x `<` y) && (y `<` z)) : poly_scope.
-
-Notation "x `<=` y ?= 'iff' C" := (poly_leif x y C) : poly_scope.
-Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
-  (only parsing) : poly_scope.
-
-Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
-Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.*)
 
 Notation "'[' 'poly0' ']'" := (@Order.bottom poly_display poly_B) : poly_scope.
 Notation "'[' 'polyT' ']'" := (@polyT _ _) : poly_scope.
