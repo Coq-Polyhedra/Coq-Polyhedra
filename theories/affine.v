@@ -19,8 +19,7 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Declare Scope affine_scope.
-Delimit Scope affine_scope with A.
+Local Open Scope poly_scope.
 
 Reserved Notation "''affine[' R ]_ n"
   (at level 8, n at level 2, format "''affine[' R ]_ n").
@@ -29,11 +28,13 @@ Reserved Notation "''affine[' R ]"
 Reserved Notation "''affine_' n"
   (at level 8, format "''affine_' n").
 Reserved Notation "[ 'affine' I ]" (at level 0, format "[ 'affine'  I ]").
-Reserved Notation "'[' 'affine' U & Ω ']'"
-         (at level 0, format "[ 'affine'  U   &   Ω ]").
+Reserved Notation "[ 'affine' U & Ω ]"
+         (at level 0, format "[ 'affine'  U  &  Ω ]").
 Reserved Notation "[ 'hp' e ]" (at level 0, format "[ 'hp'  e ]").
 Reserved Notation "[ 'pt' Ω ]" (at level 0, format "[ 'pt'  Ω ]").
 Reserved Notation "[ 'line' c & Ω ]"  (at level 0, format "[ 'line'  c  &  Ω ]").
+Reserved Notation "'[' 'affine0' ']'" (at level 0).
+Reserved Notation "'[' 'affineT' ']'" (at level 0).
 
 Reserved Notation "\affineI_ i F"
   (at level 41, F at level 41, i at level 0,
@@ -71,6 +72,43 @@ Reserved Notation "\affineI_ ( i 'in' A | P ) F"
 Reserved Notation "\affineI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
            format "'[' \affineI_ ( i  'in'  A ) '/  '  F ']'").
+
+Reserved Notation "x `<=` y `<=` z" (at level 70, y, z at next level).
+Reserved Notation "x `<=` y `<` z" (at level 70, y, z at next level).
+Reserved Notation "x `<` y `<=` z" (at level 70, y, z at next level).
+Reserved Notation "x `<` y `<` z" (at level 70, y, z at next level).
+
+Reserved Notation "x `>=` y" (at level 70, y at next level).
+Reserved Notation "x `>` y" (at level 70, y at next level).
+
+Reserved Notation "x `<=` y :> T" (at level 70, y at next level).
+Reserved Notation "x `<` y :> T" (at level 70, y at next level).
+Reserved Notation "x `>=` y :> T" (at level 70, y at next level).
+Reserved Notation "x `>` y :> T" (at level 70, y at next level).
+
+Reserved Notation "x `>=<` y" (at level 70, y at next level).
+Reserved Notation "x `><` y" (at level 70, y at next level).
+
+Reserved Notation "`<=` y" (at level 35).
+Reserved Notation "`>=` y" (at level 35).
+Reserved Notation "`<` y" (at level 35).
+Reserved Notation "`>` y" (at level 35).
+Reserved Notation "`>=<` y" (at level 35).
+Reserved Notation "`><` y" (at level 35).
+Reserved Notation "`<=` y :> T" (at level 35, y at next level).
+Reserved Notation "`>=` y :> T" (at level 35, y at next level).
+Reserved Notation "`<` y :> T" (at level 35, y at next level).
+Reserved Notation "`>` y :> T" (at level 35, y at next level).
+Reserved Notation "`>=<` y :> T" (at level 35, y at next level).
+Reserved Notation "`><` y :> T" (at level 35, y at next level).
+
+Reserved Notation "x `<=` y ?= 'iff' c"
+  (at level 70, y, c at next level,
+       format "x '[hv'  `<=`  y '/'  ?=  'iff'  c ']'").
+
+Reserved Notation "x `<=` y ?= 'iff' c :> T"
+  (at level 70, y, c at next level,
+       format "x '[hv'  `<=`  y '/'  ?=  'iff'  c  :> T ']'").
 
 Section Solve.
 
@@ -224,7 +262,7 @@ Variant type :=
 | Affine0
 | Affine (I : {vspace lrel[R]_n}) of is_sat I.
 
-Definition type_of of phant R : predArgType := type.
+Definition type_of of phant R := type.
 Notation  "''affine[' R ]" := (type_of (Phant R)).
 
 Definition eq_vect V :=
@@ -355,7 +393,7 @@ Qed.
 Definition mk_affine W Ω : 'affine[R]_n :=
   [affine ((be_lift Ω) @: W^OC)%VS].
 
-Notation "'[' 'affine' W & Ω ']'" := (mk_affine W Ω).
+Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : poly_scope.
 
 Lemma in_mk_affine W Ω x :
   (x \in [affine W & Ω]) = (x - Ω \in W).
@@ -383,7 +421,7 @@ Proof.
 by rewrite in_mk_affine addrN mem0v.
 Qed.
 
-Lemma mk_affine_prop0 W Ω :
+Lemma mk_affineN0 W Ω :
   [affine W & Ω] != affine0.
 Proof.
 by apply/affineN0; exists Ω; apply/orig_affine.
@@ -421,11 +459,6 @@ apply/idP/in_affineP.
   move/(canRL (addKr _)); rewrite addNr.
   by rewrite /e lfunE.
 Qed.
-
-Lemma dir_affine U :
-  [affine U] != affine0 -> dir [affine U] = (befst @: U)^OC%VS.
-Proof.
-Admitted.
 
 Lemma dir_mk_affine W Ω :
   dir [affine W & Ω] = W.
@@ -541,7 +574,9 @@ Qed.
 
 End Specs.
 
-Notation "'[' 'affine' W & Ω ']'" := (mk_affine W Ω).
+Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : poly_scope.
+
+Fact poly_display : unit. Proof. exact: tt. Qed.
 
 Module Order.
 Section Order.
@@ -567,16 +602,11 @@ move => ? ? ? /affine_leP subset1 /affine_leP subset2.
 by apply/affine_leP => ? ?; apply/subset2/subset1.
 Qed.
 
-Fact affine_display : unit. Proof. exact: tt. Qed.
-
 Definition affine_LtPOrderMixin :=
   LePOrderMixin  (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
 
 Canonical affine_LtPOrderType :=
-  Eval hnf in POrderType affine_display 'affine[R]_n affine_LtPOrderMixin.
-
-Lemma affine_leE V V' : (V <= V')%O = affine_le V V'.
-Proof. by []. Qed.
+  Eval hnf in POrderType poly_display 'affine[R]_n affine_LtPOrderMixin.
 
 Program Canonical affine_MeetSemilattice :=
   Eval hnf in MeetSemilatticeType 'affine[R]_n
@@ -602,7 +632,7 @@ apply/affine_leP/eqP => [|<-].
 Qed.
 
 Program Definition affine_bottomMixin :=
-  @BottomMixin affine_display [porderType of 'affine[R]_n] affine0 _.
+  @BottomMixin poly_display [porderType of 'affine[R]_n] affine0 _.
 
 Next Obligation.
 by apply/affine_leP => v; rewrite in_affine0.
@@ -622,6 +652,63 @@ End Order.
 
 Export Order.Exports.
 
+Notation poly_le   := (@Order.le poly_display _) (only parsing).
+Notation poly_lt   := (@Order.lt poly_display _) (only parsing).
+Notation poly_ge   := (@Order.ge poly_display _) (only parsing).
+Notation poly_gt   := (@Order.gt poly_display _) (only parsing).
+Notation poly_leif := (@Order.leif poly_display _) (only parsing).
+Notation poly_cmp  := (@Order.comparable poly_display _) (only parsing).
+Notation poly_meet := (@Order.meet poly_display _).
+
+Notation "<=%PH"  := poly_le   : fun_scope.
+Notation ">=%PH"  := poly_ge   : fun_scope.
+Notation "<%PH"   := poly_lt   : fun_scope.
+Notation ">%PH"   := poly_gt   : fun_scope.
+Notation "<?=%PH" := poly_leif : fun_scope.
+Notation ">=<%PH" := poly_cmp  : fun_scope.
+Notation "><%PH"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.
+
+Notation "`<=` y" := (poly_ge y) : poly_scope.
+Notation "`<=` y :> T" := (`<=` (y : T)) (only parsing) : poly_scope.
+Notation "`>=` y"  := (poly_le y) : poly_scope.
+Notation "`>=` y :> T" := (`>=` (y : T)) (only parsing) : poly_scope.
+
+Notation "`<` y" := (poly_gt y) : poly_scope.
+Notation "`<` y :> T" := (`<` (y : T)) (only parsing) : poly_scope.
+Notation "`>` y" := (poly_lt y) : poly_scope.
+Notation "`>` y :> T" := (`>` (y : T)) (only parsing) : poly_scope.
+
+Notation "`>=<` y" := (poly_cmp y) : poly_scope.
+Notation "`>=<` y :> T" := (`>=<` (y : T)) (only parsing) : poly_scope.
+
+Notation "`><` y" := (fun x => ~~ (poly_cmp y x)) : poly_scope.
+Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : poly_scope.
+
+Notation "x `<=` y" := (poly_le x y) : poly_scope.
+Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
+Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
+Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
+
+Notation "x `<` y"  := (poly_lt x y) : poly_scope.
+Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
+Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
+Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
+
+Notation "x `<=` y `<=` z" := ((x `<=` y) && (y `<=` z)) : poly_scope.
+Notation "x `<` y `<=` z" := ((x `<` y) && (y `<=` z)) : poly_scope.
+Notation "x `<=` y `<` z" := ((x `<=` y) && (y `<` z)) : poly_scope.
+Notation "x `<` y `<` z" := ((x `<` y) && (y `<` z)) : poly_scope.
+
+Notation "x `<=` y ?= 'iff' C" := (poly_leif x y C) : poly_scope.
+Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
+  (only parsing) : poly_scope.
+
+Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
+Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
+
+Notation "'[' 'affine0' ']'" :=
+  (@Order.bottom poly_display Order.affine_BSemilatticeType ) : poly_scope.
+
 Section BasicObjects.
 
 Context {R : realFieldType} {n : nat}.
@@ -630,7 +717,7 @@ Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n)
          (U : {vspace lrel[R]_n}) (V : 'affine[R]_n).
 
 Lemma affineS :
-  {homo (@Core.affine _ _: {vspace lrel[R]_n} -> 'affine[R]_n) : U V / (U <= V)%VS >-> (U >= V)%O}.
+  {homo (@Core.affine _ _: {vspace lrel[R]_n} -> 'affine[R]_n) : U V / (U <= V)%VS >-> (U `>=` V)}.
 Proof. (* RK *)
 move => ? ? /subvP Hsubset; apply/affine_leP => ?.
 move/in_affineP => Hin_affime.
@@ -638,7 +725,23 @@ apply/in_affineP =>  ? ?.
 by apply/Hin_affime/Hsubset.
 Qed.
 
-Lemma mk_affineS Ω : { mono (mk_affine^~ Ω) : W W' / (W <= W')%VS >-> (W <= W')%O }.
+Lemma dir_affine U :
+  [affine U] `>` [affine0] -> dir [affine U] = (befst @: U)^OC%VS.
+Proof.
+Admitted.
+
+Lemma affine_proper0P V :
+  reflect (exists x, x \in V) (V `>` [affine0]).
+rewrite lt0x; exact: affineN0.
+Qed.
+
+Lemma mk_affine_proper0 Ω W :
+  [affine W & Ω] `>` [affine0].
+Proof.
+apply/affine_proper0P; exists Ω; exact: orig_affine.
+Qed.
+
+Lemma mk_affineS Ω : { mono (mk_affine^~ Ω) : W W' / (W <= W')%VS >-> (W `<=` W') }.
 Proof. (* RK *)
 move => ? ?; apply/affine_leP/subvP => [Hsubset w ? | Hsubset ?].
 - rewrite -[w]addr0 -(subrr Ω) addrA -in_mk_affine addrC.
@@ -646,18 +749,11 @@ move => ? ?; apply/affine_leP/subvP => [Hsubset w ? | Hsubset ?].
 - by rewrite !in_mk_affine; apply: Hsubset.
 Qed.
 
-(*Lemma dirS V V' : V' != affine0 -> (V <= V')%O -> (dir V <= dir V')%VS.
-RK: the assumption V' != affine0 is not necessary *)
-Lemma dirS V V' : (V <= V')%O -> (dir V <= dir V')%VS.
+Lemma dirS V V' : (V `<=` V') -> (dir V <= dir V')%VS.
 Proof. (* RK *)
-case/affineP: V => [_  |U [? Hin_affine] /affine_leP Hsubset]; first by rewrite dir0; exact: sub0v.
+case/affineP: V => [_  |U [? Hin_affine] /affine_leP Hsubset];
+  rewrite ?dir0 ?sub0v //.
 by apply/subvP => ?; rewrite (in_dirP Hin_affine) (in_dirP (Hsubset _ Hin_affine)); apply/Hsubset.
-Qed.
-
-Lemma mk_affine_neq0 Ω W : [affine W & Ω] != affine0.
-(* RK: this result already exists (Lemma mk_affine_prop0) *)
-Proof.
-by apply/affineN0; exists Ω; apply/orig_affine.
 Qed.
 
 Notation "'[' 'hp' e  ']'" := [affine <[e]> ].
@@ -666,11 +762,9 @@ Lemma in_hp :
   (forall e x, (x \in [hp e]) = ('[e.1,x] == e.2))
   * (forall c α (x : 'cV[R]_n), (x \in [hp [<c, α>]]) = ('[c,x] == α)).
 Proof. (* RK *)
-split => [ e x | c α x]; apply/in_affineP/idP => [in_hp | /eqP in_hp ? /vlineP [?] ->].
-- by apply/eqP/in_hp/memv_line.
-- by rewrite vdotZl in_hp.
-- by apply/eqP/(in_hp [<c, α>])/memv_line.
-- by rewrite vdotZl in_hp.
+split => [ e x | c α x]; apply/in_affineP/idP => [in_hp | /eqP in_hp ? /vlineP [?] ->];
+  rewrite ?vdotZl ?in_hp ?memv_line //.
+by apply/eqP/(in_hp [<c, α>])/memv_line.
 Qed.
 
 Lemma hpN (e : lrel[R]_n) : [hp -e] = [hp e].
@@ -687,12 +781,14 @@ by move: x_in_e x_in_e'; do 2![rewrite in_hp => /eqP <-]; rewrite fst_eq.
 Qed.
 
 Lemma affineS1 (U : {vspace lrel[R]_n}) e :
-  e \in U -> ([affine U] <= [hp e])%O.
+  e \in U -> ([affine U] `<=` [hp e]).
 Proof. (* RK *)
 by apply/affineS.
 Qed.
 
 Definition affineT : 'affine[R]_n := [hp 0].
+
+Notation "'[' 'affineT' ']'" := affineT : poly_scope.
 
 Lemma in_affineT x : x \in affineT = true.
 Proof.
@@ -752,11 +848,11 @@ Lemma in_big_affineI (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
 Admitted.
 
 Lemma big_affine_inf (I : finType) (j : I) (P : pred I) (F : I -> 'affine[R]_n) :
-  P j -> (\affineI_(i | P i) F i <= F j)%O.
+  P j -> (\affineI_(i | P i) F i `<=` F j).
 Admitted.
 
 Lemma big_affineIsP (I : finType) Q (P : pred I) (F : I -> 'affine[R]_n) :
-  reflect (forall i : I, P i -> Q <= F i)%O (Q <= \affineI_(i | P i) F i)%O.
+  reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \affineI_(i | P i) F i).
 Admitted.
 
 Lemma affine_span (I : base_t[R,n]) :
@@ -784,7 +880,7 @@ apply/(iffP in_mk_affineP) => [[y /vlineP [μ ->]]| [μ ->] ].
 Qed.
 
 Lemma line_subset_hp e v v' :
-  (v \in [hp e]) -> (v' \in [hp e]) -> ([line (v' - v) & v] <= [hp e])%O.
+  (v \in [hp e]) -> (v' \in [hp e]) -> ([line (v' - v) & v] `<=` [hp e]).
 Proof.
 rewrite !in_hp => /eqP v_in /eqP v'_in.
 apply/affine_leP => ? /in_lineP [μ -> ]; rewrite in_hp.
@@ -800,9 +896,10 @@ Qed.
 
 End BasicObjects.
 
-Notation "'[' 'hp' e  ']'" := [affine <[e]> ].
-Notation "'[' 'line' d & Ω ']'" := [affine <[d]> & Ω].
-Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω].
+Notation "'[' 'hp' e  ']'" := [affine <[e]> ] : poly_scope.
+Notation "'[' 'line' d & Ω ']'" := [affine <[d]> & Ω] : poly_scope.
+Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω] : poly_scope.
+Notation "'[' 'affineT' ']'" := (@affineT _ _) : poly_scope.
 
 Notation "\affineI_ ( i <- r | P ) F" :=
   (\big[affineI/affineT]_(i <- r | P%B) F).
@@ -836,27 +933,28 @@ Context {R : realFieldType} {n : nat}.
 Implicit Type (V : 'affine[R]_n).
 
 Definition dim V :=
-  if V == affine0 then 0%N
+  if V == [affine0] then 0%N
   else (\dim (dir V)).+1%N.
 
-Lemma dim0 : dim affine0 = 0%N.
+Lemma dim0 : dim [affine0] = 0%N.
 by rewrite /dim ifT //.
 Qed.
 
-Lemma dimN0 V : (dim V > 0)%N = (V != affine0).
-by rewrite /dim; case: ifP.
+Lemma dimN0 V : (dim V > 0)%N = (V `>` affine0).
+Proof.
+by rewrite /dim; case: ifP => [/eqP -> // |]; rewrite lt0x => ->.
 Qed.
 
-Lemma dim_eq0 V : (dim V = 0)%N -> V = affine0.
+Lemma dim_eq0 V : (dim V = 0)%N -> V = [affine0].
 Proof.
 by rewrite /dim; case: ifP => [/eqP ->|].
 Qed.
 
-Lemma dimS : {homo dim : V V' / (V <= V')%O >-> (V <= V')%N}.
+Lemma dimS : {homo dim : V V' / (V `<=` V') >-> (V <= V')%N}.
 Proof.
 move => V V' sub.
 rewrite /dim; case: ifPn => // V_neq0.
-have V'_neq0: V' != affine0.
+have V'_neq0: V' != [affine0].
 - move: V_neq0; apply/contra_neq => V'_eq0.
   by rewrite V'_eq0 lex0 in sub; move/eqP: sub.
 rewrite ifF ?ltnS; last by apply/negbTE.
@@ -864,14 +962,14 @@ by apply/dimvS/dirS.
 Qed.
 
 Lemma dim_leqif_eq V V' :
-  (V <= V')%O -> (dim V <= dim V' ?= iff (V == V'))%N.
+  (V `<=` V') -> (dim V <= dim V' ?= iff (V == V'))%N.
 Proof.
 move => V_sub_V'; split; rewrite ?dimS //.
 apply/eqP/eqP; last by move => ->.
 rewrite {1}/dim; case: ifP.
 - by move/eqP ->; symmetry; apply/dim_eq0.
 - move/negbT => V_neq0.
-  have V'_neq0: V' != affine0.
+  have V'_neq0: V' != [affine0].
   + rewrite -!lt0x in V_neq0 *.
     by apply/lt_le_trans: V_sub_V'.
   rewrite /dim ifF; last by apply/negbTE.
@@ -883,22 +981,22 @@ rewrite {1}/dim; case: ifP.
 Qed.
 
 Lemma sub_geq_dim V V' :
-  (V <= V')%O -> (dim V >= dim V')%N -> V = V'.
+  (V `<=` V') -> (dim V >= dim V')%N -> V = V'.
 Proof.
 Admitted.
 
 Lemma sub_eq_dim V V' :
-  (V <= V')%O -> dim V = dim V' -> V = V'.
+  (V `<=` V') -> dim V = dim V' -> V = V'.
 Proof.
 Admitted.
 
 Lemma dim_affine_lt V V' :
-  (V < V')%O -> (dim V < dim V')%N.
+  (V `<` V') -> (dim V < dim V')%N.
 Admitted.
 
 Lemma dim_line Ω d : dim [line d & Ω] = (d != 0).+1.
 Proof.
-rewrite /dim ifF; last by apply/negbTE/mk_affine_neq0.
+rewrite /dim ifF; last by apply/negbTE/mk_affineN0.
 by rewrite dir_mk_affine dim_vline.
 Qed.
 
@@ -920,7 +1018,7 @@ Lemma dim_leSn V :
 Admitted.
 
 Lemma dim_affine_le (U : {vspace lrel[R]_n}) :
-  [affine U] != affine0 -> (\dim U <= n)%N.
+  [affine U] `>` [affine0] -> (\dim U <= n)%N.
 Admitted.
 
 Lemma dimT : (dim affineT = n.+1)%N.
@@ -930,7 +1028,7 @@ Lemma dimTP V : dim V = n.+1%N -> V = affineT.
 Admitted.
 
 Lemma dim_hp e :
-  [hp e] != affine0 -> dim [hp e] = ((e.1 == 0%R) + n)%N.
+  [hp e] `>` [affine0] -> dim [hp e] = ((e.1 == 0%R) + n)%N.
 Admitted.
 
 End Dimension.
