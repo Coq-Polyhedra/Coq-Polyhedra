@@ -332,6 +332,9 @@ Lemma dim_affine2 (U : {vspace lrel[R]_n}) :
   exists2 x, x \in affine U & exists2 d, d != 0 & (affine U) = [line d & x].
 Admitted.
 
+
+Section Pivot.
+
 Variable (x: 'cV[R]_n) (I : {fsubset base}) (i : lrel[R]_n).
 
 Hypothesis (Hbasis : is_pbasis_of x I) (i_in_I : i \in (I : base_t)).
@@ -484,7 +487,6 @@ have: perm_eq J (j :: I').
 by move/perm_free => ->; rewrite free_cons free_I' andbT negbK.
 Qed.
 
-
 Lemma free_J_equiv_basis:
 (free J <-> (dim (affine <<J>>%VS) = 1)%N).
 Proof.
@@ -503,8 +505,6 @@ rewrite -free_J_equiv_basis; split.
 - exact: free_pivot.
 - exact: pivot_free.
 Qed.
-
-
 
 (* 2nd step: show that the basic point associated with J is given by
  * ppick (affine <<J>>) = ppick (affine <<I>>) + (r j) / (c j) *: dir
@@ -647,11 +647,46 @@ case: (poly_baseP P).
       rewrite {2}to_rewrite -/(c k).
 Admitted.
 
-
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
                         c k < 0 -> (r j) / (c j) >= (r k) / (c k)))
           (is_pbasis J).
 Admitted.
 
+End Pivot.
+
+Section Algo.
+
+Lemma basic_point (I : {fsubset base}) :
+  is_pbasis I -> is_pbasis_of (ppick (affine << I >>%VS)) I.
+Admitted.
+
+Definition check_basis_aux (Q : pred base_t) x I (H : is_pbasis_of x I)
+           (i : I) (j : (base `\`I)%fset) :=
+  let c := c H (valP i) in
+  let r := r I in
+  ((c (val j) != 0) && ((r (val j) > 0) ==>
+                     [forall k : (base `\` I)%fset, (c (val k) < 0) ==> ((r (val j)) / (c (val j)) >= (r (val k)) / (c (val k)))])) ==> Q ((val j) |` ((I : {fset _}) `\ (val i)))%fset.
+
+Definition check_basis (Q : pred base_t) (I : base_t) :=
+  match @idP (I `<=` base)%fset with
+  | ReflectT I_sub =>
+    match @idP (is_pbasis I%:fsub) with
+    | ReflectT H =>
+      let H' := basic_point H in
+      [forall i : I, [forall j : (base `\`I)%fset, check_basis_aux Q H' i j]]
+    | ReflectF _ => false
+    end
+  | _ => false
+  end.
+
+Definition check_basis_all (L : {fset base_t}) :=
+  [forall I : L, check_basis (mem L) (val I)].
+
+Theorem check_basis_allP (L : {fset base_t}) :
+  check_basis_all L ->
+  L =i [fset (FSubset.untag (FSubset.tf x)) | x : {fsubset base} & is_pbasis x]%fset.
+Admitted.
+
+End Algo.
 End PBasis.
