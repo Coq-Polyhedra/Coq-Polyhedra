@@ -562,7 +562,10 @@ by apply/affine_eqP => x; apply/idP/idP; [apply/sub | apply/sub'].
 Qed.
 
 Lemma affine_le_trans : transitive (@affine_le R n).
-Admitted.
+Proof. (* RK *)
+move => ? ? ? /affine_leP subset1 /affine_leP subset2.
+by apply/affine_leP => ? ?; apply/subset2/subset1.
+Qed.
 
 Fact affine_display : unit. Proof. exact: tt. Qed.
 
@@ -580,27 +583,30 @@ Program Canonical affine_MeetSemilattice :=
     (@MeetSemilatticeMixin _ _ affineI _ _ _ _).
 
 Next Obligation.
-by move=> V V'; apply/affine_eqP=> x; rewrite !in_affineI andbC.
+by move => V V'; apply/affine_eqP => x; rewrite !in_affineI andbC.
 Qed.
 
 Next Obligation.
-by move=> V1 V2 V3; apply/affine_eqP=> x; rewrite !in_affineI andbA.
+by move => V1 V2 V3; apply/affine_eqP => x; rewrite !in_affineI andbA.
 Qed.
 
 Next Obligation.
-by move=> V; apply/affine_eqP=> x; rewrite !in_affineI andbb.
+by move => V; apply/affine_eqP => x; rewrite !in_affineI andbb.
 Qed.
 
 Next Obligation.
-apply/affine_leP/eqP => [|<-]; last first.
-+ by move=> c; rewrite in_affineI => /andP[].
-move=> le_xy; apply/affine_eqP=> c; rewrite in_affineI.
-by apply: andb_idr; apply: le_xy.
+apply/affine_leP/eqP => [|<-].
++ move=> le_xy; apply/affine_eqP=> c; rewrite in_affineI.
+  by apply: andb_idr; apply: le_xy.
++ by move => c; rewrite in_affineI => /andP[].
 Qed.
 
 Program Definition affine_bottomMixin :=
   @BottomMixin affine_display [porderType of 'affine[R]_n] affine0 _.
-Next Obligation. by apply/affine_leP=> v; rewrite in_affine0. Qed.
+
+Next Obligation.
+by apply/affine_leP => v; rewrite in_affine0.
+Qed.
 
 Canonical affine_BSemilatticeType :=
   Eval hnf in BSemilatticeType 'affine[R]_n affine_bottomMixin.
@@ -625,26 +631,47 @@ Implicit Type (Ω d : 'cV[R]_n) (e : lrel[R]_n)
 
 Lemma affineS :
   {homo (@Core.affine _ _: {vspace lrel[R]_n} -> 'affine[R]_n) : U V / (U <= V)%VS >-> (U >= V)%O}.
-Proof.
-Admitted.
+Proof. (* RK *)
+move => ? ? /subvP Hsubset; apply/affine_leP => ?.
+move/in_affineP => Hin_affime.
+apply/in_affineP =>  ? ?.
+by apply/Hin_affime/Hsubset.
+Qed.
 
 Lemma mk_affineS Ω : { mono (mk_affine^~ Ω) : W W' / (W <= W')%VS >-> (W <= W')%O }.
-Proof.
-move => W W'; apply/affine_leP/subvP => [sub x x_in | sub x].
-Admitted.
+Proof. (* RK *)
+move => ? ?; apply/affine_leP/subvP => [Hsubset w ? | Hsubset ?].
+- rewrite -[w]addr0 -(subrr Ω) addrA -in_mk_affine addrC.
+  by apply/Hsubset/in_mk_affineP; exists w.
+- by rewrite !in_mk_affine; apply: Hsubset.
+Qed.
 
-Lemma dirS V V' : V' != affine0 -> (V <= V')%O -> (dir V <= dir V')%VS.
-Admitted.
+(*Lemma dirS V V' : V' != affine0 -> (V <= V')%O -> (dir V <= dir V')%VS.
+RK: the assumption V' != affine0 is not necessary *)
+Lemma dirS V V' : (V <= V')%O -> (dir V <= dir V')%VS.
+Proof. (* RK *)
+case/affineP: V => [_  |U [? Hin_affine] /affine_leP Hsubset]; first by rewrite dir0; exact: sub0v.
+by apply/subvP => ?; rewrite (in_dirP Hin_affine) (in_dirP (Hsubset _ Hin_affine)); apply/Hsubset.
+Qed.
 
 Lemma mk_affine_neq0 Ω W : [affine W & Ω] != affine0.
-Admitted.
+(* RK: this result already exists (Lemma mk_affine_prop0) *)
+Proof.
+by apply/affineN0; exists Ω; apply/orig_affine.
+Qed.
 
 Notation "'[' 'hp' e  ']'" := [affine <[e]> ].
 
 Lemma in_hp :
   (forall e x, (x \in [hp e]) = ('[e.1,x] == e.2))
   * (forall c α (x : 'cV[R]_n), (x \in [hp [<c, α>]]) = ('[c,x] == α)).
-Admitted.
+Proof. (* RK *)
+split => [ e x | c α x]; apply/in_affineP/idP => [in_hp | /eqP in_hp ? /vlineP [?] ->].
+- by apply/eqP/in_hp/memv_line.
+- by rewrite vdotZl in_hp.
+- by apply/eqP/(in_hp [<c, α>])/memv_line.
+- by rewrite vdotZl in_hp.
+Qed.
 
 Lemma hpN (e : lrel[R]_n) : [hp -e] = [hp e].
 Proof.
@@ -661,7 +688,9 @@ Qed.
 
 Lemma affineS1 (U : {vspace lrel[R]_n}) e :
   e \in U -> ([affine U] <= [hp e])%O.
-Admitted.
+Proof. (* RK *)
+by apply/affineS.
+Qed.
 
 Definition affineT : 'affine[R]_n := [hp 0].
 
@@ -850,7 +879,7 @@ rewrite {1}/dim; case: ifP.
   suff: dir V = dir V'.
   - case/affineN0: V_neq0 => x x_in.
     by apply/(dir_eq x_in)/(affine_leP V_sub_V').
-  - by apply/eqP; rewrite -(eq_leqif (dimv_leqif_eq (dirS _ _))) ?dim_dir_eq.
+  - by apply/eqP; rewrite -(eq_leqif (dimv_leqif_eq (dirS _))) ?dim_dir_eq.
 Qed.
 
 Lemma sub_geq_dim V V' :
