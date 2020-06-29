@@ -997,17 +997,28 @@ Qed.
 
 Lemma sub_geq_dim V V' :
   (V `<=` V') -> (dim V >= dim V')%N -> V = V'.
-Proof.
-Admitted.
+Proof. (* RK *)
+move => V_sub_V' dimV_gte_dimV'; apply/eqP/contraT => V_neq_V'.
+move/leqifP: (dim_leqif_eq V_sub_V'); rewrite ifF.
+- by rewrite ltnNge dimV_gte_dimV'.
+- by rewrite -eqbF_neg in V_neq_V'; move/eqP: V_neq_V'.
+Qed.
 
 Lemma sub_eq_dim V V' :
   (V `<=` V') -> dim V = dim V' -> V = V'.
-Proof.
-Admitted.
+Proof. (* RK *)
+move => ? dimV_eq_dimV'.
+by apply/sub_geq_dim; [done | rewrite dimV_eq_dimV'].
+Qed.
 
 Lemma dim_affine_lt V V' :
   (V `<` V') -> (dim V < dim V')%N.
-Admitted.
+Proof. (* RK *)
+move/andP => [V'_neq_V ?].
+rewrite ltn_neqAle; apply/andP; split; last by apply/dimS.
+move: V'_neq_V; apply/contra_neqN => /eqP ?; symmetry.
+by apply/sub_eq_dim.
+Qed.
 
 Lemma dim_line Ω d : dim [line d & Ω] = (d != 0).+1.
 Proof.
