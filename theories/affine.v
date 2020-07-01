@@ -793,6 +793,13 @@ Proof.
 by rewrite in_hp vdot0l eq_refl.
 Qed.
 
+Lemma dir_affineT : dir affineT = fullv.
+(* RK: I have added this result *)
+Proof.
+have nullv_in_affineT : 0 \in affineT by rewrite in_affineT.
+by apply/vspaceP => ?; rewrite memvf (in_dirP nullv_in_affineT) in_affineT.
+Qed.
+
 Lemma affineIC : commutative (@affineI R n).
 Proof. by apply: meetC. Qed.
 
@@ -985,7 +992,7 @@ rewrite {1}/dim; case: ifP.
 - by move/eqP ->; symmetry; apply/dim_eq0.
 - move/negbT => V_neq0.
   have V'_neq0: V' != [affine0].
-  + rewrite -!lt0x in V_neq0 *.
+    rewrite -!lt0x in V_neq0 *.
     by apply/lt_le_trans: V_sub_V'.
   rewrite /dim ifF; last by apply/negbTE.
   move/succn_inj => dim_dir_eq.
@@ -999,9 +1006,8 @@ Lemma sub_geq_dim V V' :
   (V `<=` V') -> (dim V >= dim V')%N -> V = V'.
 Proof. (* RK *)
 move => V_sub_V' dimV_gte_dimV'; apply/eqP/contraT => V_neq_V'.
-move/leqifP: (dim_leqif_eq V_sub_V'); rewrite ifF.
-- by rewrite ltnNge dimV_gte_dimV'.
-- by rewrite -eqbF_neg in V_neq_V'; move/eqP: V_neq_V'.
+by move/leqifP: (dim_leqif_eq V_sub_V'); rewrite ifF;
+  [rewrite ltnNge dimV_gte_dimV' | apply/negbTE].
 Qed.
 
 Lemma sub_eq_dim V V' :
@@ -1031,27 +1037,84 @@ Proof.
 by rewrite dim_line eq_refl.
 Qed.
 
+Lemma dimv_eq1P (K : fieldType) (vT : vectType K) (V : {vspace vT}) :
+  reflect (exists2 v, v != 0 & V = <[v]>%VS) (\dim V == 1%N).
+(* RK: I added this result which I could not find but it is quite natural.
+       If we keep it, I suppose it should be somewhere else. *)
+Proof.
+apply/(iffP idP) => [/eqP dim_V_eq1 |[? neq0 ->]];
+  last by rewrite dim_vline neq0.
+have : ~~ (V <= 0)%VS.
+  move: dim_V_eq1; apply/contra_eqN.
+  by rewrite subv0; move/eqP => ->; rewrite dimv0.
+move/subvPn => [v ? v_not_in_V].
+exists v; first by move: v_not_in_V; apply/contra; rewrite memv0.
+apply/eqP; rewrite eqEsubv; apply/andP; split;
+  last by rewrite -memvE.
+suff ->: (V = <[v]>)%VS by done.
+apply/eqP; rewrite eq_sym eqEdim; apply/andP; split; 
+  first by rewrite -memvE.
+suff ->: \dim <[v]> = 1%N by rewrite dim_V_eq1.
+rewrite memv0 in v_not_in_V.
+by rewrite dim_vline v_not_in_V.
+Qed.
+
 Lemma dim2P V :
   dim V = 2%N -> exists Ω, exists2 d, d != 0 & V = [line d & Ω].
-Admitted.
+Proof. (* RK *)
+move => dim_V_eq2.
+have V_neq0 : V != affine0.
+  apply/contraT => V_eq0; rewrite negbK in V_eq0.
+  by rewrite (eqP V_eq0) dim0 in dim_V_eq2.
+have dim_dir_V_eq1: (\dim (dir V)) = 1%N
+  by apply/eq_add_S; rewrite /dim ifF // in dim_V_eq2; apply/negbTE.
+move/eqP/dimv_eq1P: (dim_dir_V_eq1) => [d ? dir_V_eq].
+move/affineN0: V_neq0 => [Ω Ω_in_V].
+exists Ω; exists d; first by done.
+by rewrite -dir_V_eq; apply/mk_affine_dir.
+Qed.
 
 Lemma dim1P V :
   dim V = 1%N -> exists Ω, V = [pt Ω].
-Admitted.
+Proof. (* RK *)
+move => dim_V_eq1.
+have V_neq0 : V != affine0.
+  apply/contraT => V_eq0; rewrite negbK in V_eq0.
+  by rewrite (eqP V_eq0) dim0 in dim_V_eq1.
+move: (affineN0 _ V_neq0) => [Ω Ω_in_V].
+exists Ω.
+suff <-: (dir V) = 0%VS by apply/mk_affine_dir.
+apply/eqP; rewrite -dimv_eq0.
+by apply/eqP/eq_add_S; rewrite /dim ifF // in dim_V_eq1; apply/negbTE.
+Qed.
 
 Lemma dim_leSn V :
   (dim V <= n.+1)%N.
-Admitted.
+Proof. (* RK *)
+rewrite /dim; case: (boolP (V == affine0)) => [_|_]; first by done.
+rewrite ltnS.
+by apply/(@leq_trans (n * 1)); [apply/rank_leq_col | rewrite muln1].
+Qed.
 
 Lemma dim_affine_le (U : {vspace lrel[R]_n}) :
   [affine U] `>` [affine0] -> (\dim U <= n)%N.
 Admitted.
 
 Lemma dimT : (dim affineT = n.+1)%N.
-Admitted.
+Proof. (* RK *)
+rewrite /dim ifF.
+- by rewrite dir_affineT dimvf /Vector.dim /= muln1.
+- apply/(contraFF _ (erefl false)).
+  move/eqP/affine_eqP => aff_eq.
+  by move: (aff_eq 0); rewrite in_affine0 in_affineT.
+Qed.
 
 Lemma dimTP V : dim V = n.+1%N -> V = affineT.
-Admitted.
+Proof. (* RK *)
+rewrite -dimT => ?.
+apply/sub_eq_dim; last by done.
+by apply/affine_leP => ?; rewrite in_affineT.
+Qed.
 
 Lemma dim_hp e :
   [hp e] `>` [affine0] -> dim [hp e] = ((e.1 == 0%R) + n)%N.
