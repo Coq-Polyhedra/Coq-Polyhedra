@@ -1098,7 +1098,17 @@ Qed.
 
 Lemma dim_affine_le (U : {vspace lrel[R]_n}) :
   [affine U] `>` [affine0] -> (\dim U <= n)%N.
-Admitted.
+Proof. (* RK *)
+move => affine_U_neq0; apply/contraT; rewrite -ltnNge => ?.
+have U_eq_fullv: U = fullv
+  by apply/eqP; rewrite eqEdim; apply/andP; split;
+    [exact: subvf | rewrite dimvf /Vector.dim /= addn1].
+pose e := [<0, 1>]: lrel[R]_n.
+have e_in_U: e \in U by rewrite U_eq_fullv memvf.
+rewrite (cond_affine0 e_in_U) in affine_U_neq0.
+move/affine_proper0P: affine_U_neq0 => [?].
+by rewrite in_affine0.
+Qed.
 
 Lemma dimT : (dim affineT = n.+1)%N.
 Proof. (* RK *)
