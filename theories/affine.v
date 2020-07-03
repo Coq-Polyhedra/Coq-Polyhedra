@@ -1128,7 +1128,26 @@ Qed.
 
 Lemma dim_hp e :
   [hp e] `>` [affine0] -> dim [hp e] = ((e.1 == 0%R) + n)%N.
-Admitted.
+Proof. (* RK *)
+move => hp_neq0.
+rewrite /dim ifF; last by apply/negbTE; move/andP: hp_neq0 => [? _].
+case: (boolP (e.1 == 0)) => [/eqP e1_eq0 | e1_neq0].
+- suff ->: [hp e] = affineT
+    by rewrite dir_affineT dimvf /Vector.dim /= muln1 add1n.
+  apply/affine_eqP => ?; rewrite in_affineT in_hp e1_eq0 vdot0l.
+  move/affineN0: (proj1 (andP hp_neq0)) => [?].
+  by rewrite in_hp e1_eq0 vdot0l => ?.
+- case: (boolP (0 < n)%N) => [? | n_eq0].
+  + rewrite /dim (dir_affine hp_neq0) dim_orthv.
+    have ->: ((befst @: <[e]>) = <[e.1]>)%VS
+      by rewrite limg_line lfunE.
+    rewrite dim_vline e1_neq0 add0n subn1.
+    by apply/prednK.
+  + rewrite -eqn0Ngt in n_eq0.
+    rewrite extra_matrix.col_neq_0 in e1_neq0.
+    move/existsP: e1_neq0 => [i _].
+    by rewrite (eqP n_eq0) in i; move: (ord0_false i).
+Qed.
 
 End Dimension.
 
