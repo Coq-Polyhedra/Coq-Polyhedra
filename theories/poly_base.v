@@ -866,8 +866,8 @@ rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : lrel[R]_n => x.1)) //.
 rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : lrel[R]_n => x.2)) //=.
 rewrite vdot_sumDl; under eq_big do [| rewrite /= vdotZl].
 apply/eq_bigr => i _; apply: congr1.
-apply/eqP; rewrite -in_hp -affE.
-move: x_in_P; apply/poly_subsetP/poly_base_subset_hp.
+apply/eqP; rewrite -in_hp.
+move: x_in_P; apply/pa_subsetP/poly_base_subset_hp.
 by rewrite mem_nth ?size_tuple.
 Qed.
 
@@ -984,7 +984,8 @@ Qed.
 Lemma hullN0 P : (P `>` [poly0]) = (hull P `>` affine0).
 Proof.
 case/emptyP : (P) => [-> | P_prop0]; first by rewrite hull0 ltxx.
-by symmetry; rewrite -aff_lt0x; apply/(lt_le_trans P_prop0)/subset_hull.
+apply/esym; rewrite -aff_lt0x.
+by apply/(lt_le_trans P_prop0)/subset_hull.
 Qed.
 
 Lemma hullN0_eq base (P : {poly base}) :
@@ -1001,7 +1002,7 @@ Lemma hull_mk_affine base (P : {poly base}) x :
 Proof.
 move => x_in.
 have P_prop0: (P `>` [poly0]) by apply/proper0P; exists x.
-move/poly_subsetP/(_ _ x_in): (subset_hull P); rewrite affE => x_in_hull.
+move/pa_subsetP/(_ _ x_in): (subset_hull P) => x_in_hull.
 apply/(dir_eq x_in_hull); rewrite ?orig_affine //.
 move: (P_prop0); rewrite hullN0 hullN0_eq // => ?.
 by rewrite dir_affine // dir_mk_affine.
@@ -1048,7 +1049,7 @@ Proof.
 elim/polybW: P => base P v_in_P v'_in_P.
 have P_prop0: P `>` [poly0] by apply/proper0P; exists v.
 rewrite hullN0_eq //; rewrite affine_span; apply/big_affineIsP => e _.
-by apply/line_subset_hp; rewrite -affE; apply/(poly_subsetP (poly_base_subset_hp (valP _))).
+by apply/line_subset_hp; apply/(pa_subsetP (poly_base_subset_hp (valP _))).
 Qed.
 
 Lemma hull_line (v v' : 'cV[R]_n) :
@@ -1278,7 +1279,7 @@ have [w_in_P d_w] : (w \in P /\ '[d,w] = -(opt_value d_bounded')).
   by apply/ppickP; rewrite -bounded_argminN0.
 have hull_P : hull P = [line d & v].
 - rewrite -dir_eq; apply/mk_affine_dir.
-  by rewrite -affE; apply/(poly_subsetP (subset_hull _)).
+  by apply/(pa_subsetP (subset_hull _)).
 pose μ x := ('[d,x] - '[d,v]) / '[|d |]^2.
 have μ_ge0: forall x, x \in P -> μ x >= 0.
 - move => x x_in_P; apply/divr_ge0; rewrite ?vnorm_ge0 ?subr_ge0 //.
@@ -1289,8 +1290,8 @@ have μ_le_μ_w : forall x, x \in P -> μ x <= μ w.
   rewrite in_hs /= vdotNl ler_oppr -d_w => ?.
   by apply/ler_wpmul2r; rewrite ?invr_ge0 ?vnorm_ge0 ?ler_add2r.
 have x_eq : forall x, x \in P -> x = v + μ x *: d.
-- move => x /(poly_subsetP (subset_hull _)).
-  rewrite affE hull_P => /in_lineP [μ_x x_eq].
+- move => x /(pa_subsetP (subset_hull _)).
+  rewrite hull_P => /in_lineP [μ_x x_eq].
   suff <-: μ_x = μ x by []; move/(congr1 (vdot d)): (x_eq).
   rewrite vdotDr vdotZr addrC mulrC => /(canLR (addrK _)).
   rewrite -vnorm_eq0 in d_neq0.
@@ -1798,7 +1799,7 @@ have: (0 < #|` (vertex_set P `\  v)%fset |)%N
   by rewrite (@cardfsD1 _ v) v_in ltnS in card_gt1.
 rewrite cardfs_gt0 => /fset0Pn [w w_in].
 apply/eqP; rewrite -lex0.
-have <-: [pt v]%:PH `&` [pt w]%:PH = 0%O.
+have <-: [pt v]%:PH `&` [pt w]%:PH = [poly0].
 - apply/poly_eqP => x; rewrite in_polyI 2!affE 2!in_pt !inE.
   apply/negbTE/negP; move/andP => [/eqP -> /eqP v_eq_w].
   by move: w_in; rewrite v_eq_w !inE eq_refl.

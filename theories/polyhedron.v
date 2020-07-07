@@ -592,6 +592,14 @@ Proof.
 by rewrite -aff0 aff_ltE.
 Qed.
 
+Lemma pa_subsetP {P : 'poly[R]_n} {Q : 'affine[R]_n} :
+  reflect {subset P <= Q} (P `<=` Q%:PH).
+Admitted.
+
+Lemma ap_subsetP {P : 'affine[R]_n} {Q : 'poly[R]_n} :
+  reflect {subset P <= Q} (P%:PH `<=` Q).
+Admitted.
+
 Let inE := (@in_poly0, @in_polyT, @affE, @in_polyI, inE).
 
 Lemma notin_hp b x :
@@ -679,7 +687,7 @@ case: (α =P 0) => [->| /eqP α_neq0].
   have bary_in_hs : (1-α) *: x + α *: y \in [hs b].
   + apply: mem_poly_convex; try by rewrite in_hs.
     * by apply/andP; split; apply: ltW.
-  rewrite (* inE *) in_hs vdotDr 2!vdotZr in bary_in_hs. (* TODO: here, rewrite inE loops, why? *)
+  rewrite in_hs vdotDr 2!vdotZr in bary_in_hs.
   suff: b.2 < (1 - α) * '[ b.1, x] + α * '[b.1, y].
   + by rewrite lt_def bary_in_hs andbT.
   have ->: b.2 = (1 - α) * b.2 + α * b.2.
