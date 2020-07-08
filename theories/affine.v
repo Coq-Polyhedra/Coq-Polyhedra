@@ -725,11 +725,23 @@ Qed.
 
 Lemma dir_affine U :
   [affine U] `>` [affine0] -> dir [affine U] = (befst @: U)^OC%VS.
-Proof.
-Admitted.
+Proof. (* RK *)
+move/andP => [? _].
+have aff_U_neq0: exists x : 'cV_n, x \in [affine U] by apply/affineN0.
+move: aff_U_neq0 => [? in_aff_U].
+apply/vspaceP => d; rewrite (in_dirP in_aff_U).
+apply/idP/orthvP => [/in_affineP in_aff ? /memv_imgP [u u_in_U] ->| H].
+- rewrite lfunE /=; move/eqP: (in_aff _ u_in_U).
+  by rewrite vdotDr ((in_affineP in_aff_U) _ u_in_U) -subr_eq0 [X in X-_]addrC -addrA subrr addr0 => /eqP <-.
+- apply/in_affineP => u u_in_U.
+  rewrite vdotDr ((in_affineP in_aff_U) _ u_in_U).
+  suff ->: '[ u.1, d] = 0 by rewrite addr0.
+  by apply/H/memv_imgP; exists u; [exact: u_in_U | rewrite lfunE].
+Qed.
 
 Lemma affine_proper0P V :
   reflect (exists x, x \in V) (V `>` [affine0]).
+Proof.
 rewrite lt0x; exact: affineN0.
 Qed.
 
@@ -871,6 +883,7 @@ Qed.
 
 Lemma big_affineIsP (I : finType) Q (P : pred I) (F : I -> 'affine[R]_n) :
   reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \affineI_(i | P i) F i).
+Proof.
 apply: (iffP idP) => [/affine_leP Hsubset ? ?| Hsubset_forall];
   apply/affine_leP => ? in_Q.
 - by apply: (in_big_affineIP _ _ _ (Hsubset _ in_Q)).
@@ -879,7 +892,19 @@ Qed.
 
 Lemma affine_span (I : base_t[R,n]) :
   [affine <<I>>] = \affineI_(e : I) [hp (val e)].
-Admitted.
+Proof. (* RK *)
+apply/affine_eqP => x.
+rewrite in_affineE.
+apply/idP/idP => [/satP sat_I | /in_big_affineIP in_all_hps].
+- apply/in_big_affineIP => i _; rewrite (fst (in_hp)).
+  by apply/eqP/(sat_I (val i))/memv_span/valP.
+- apply/satP => e e_in.
+  rewrite (coord_span e_in) sum_lrel_fst sum_lrel_snd vdot_sumDl /=.
+  apply: eq_bigr => i _.
+  have in_enum_fset_I: (I`_i) \in (enum_fset I) by apply/memt_nth.
+  rewrite vdotZl; apply/congr1/eqP; rewrite -(fst (in_hp)).
+  by apply: (in_all_hps (FSetSub in_enum_fset_I)).
+Qed.
 
 Lemma affine_vbasis (U : {vspace lrel[R]_n}) :
   let base := [fset e in ((vbasis U) : seq _)]%fset : {fset lrel[R]_n} in
@@ -959,6 +984,7 @@ Definition dim V :=
   else (\dim (dir V)).+1%N.
 
 Lemma dim0 : dim [affine0] = 0%N.
+Proof.
 by rewrite /dim ifT //.
 Qed.
 
