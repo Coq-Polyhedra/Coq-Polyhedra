@@ -234,7 +234,7 @@ Canonical poly_of_LtPOrderType :=
 Lemma poly_leE P Q : (P <= Q)%O = poly_subset P Q.
 Proof. by []. Qed.
 
-Lemma poly_leP P Q : reflect {subset P <= Q} (P <= Q)%O.
+Lemma poly_leP {P Q} : reflect {subset P <= Q} (P <= Q)%O.
 Proof. by rewrite poly_leE; apply: (iffP poly_subsetP). Qed.
 
 Program Canonical poly_MeetSemilattice :=
@@ -315,13 +315,13 @@ Context {R : realFieldType} (n : nat).
 
 Lemma poly_subset_mono (P Q : 'hpoly[R]_n) : '[P] `<=` '[Q] = H.poly_subset P Q.
 Proof.
-apply/poly_subsetP/H.poly_subsetP => [H | H] x x_in_P.
+apply/poly_leP/H.poly_subsetP => [H | H] x x_in_P.
 - have /H: x \in '[P] by rewrite repr_equiv.
   by rewrite repr_equiv.
 - rewrite !repr_equiv in x_in_P *; exact: H.
 Qed.
 
-Lemma poly_subsetPn {P Q : 'poly[R]_n} :
+Lemma poly_lePn {P Q : 'poly[R]_n} :
   reflect (exists2 x, (x \in P) & (x \notin Q)) (~~ (P `<=` Q)).
 Proof.
 by apply: (iffP H.poly_subsetPn) => [[x] H | [x] H]; exists x.
@@ -329,7 +329,7 @@ Qed.
 
 Lemma poly_eq0Pn {P : 'poly[R]_n} : reflect (exists x, x \in P) (P != [poly0]).
 Proof.
-have := @poly_subsetPn P [poly0]; rewrite lex0; case=> h; constructor.
+have := @poly_lePn P [poly0]; rewrite lex0; case=> h; constructor.
 + by case: h=> x xP _; exists x.
 + by case=> x xP; apply: h; exists x => //; rewrite in_poly0.
 Qed.
@@ -394,7 +394,7 @@ Lemma big_poly_inf (I : finType) (j : I) (P : pred I) (F : I -> 'poly[R]_n) :
   P j -> (\polyI_(i | P i) F i) `<=` F j.
 Proof. (* RK *)
 move => ?.
-apply/poly_subsetP => ? /in_big_polyIP in_polyI_cond.
+apply/poly_leP => ? /in_big_polyIP in_polyI_cond.
 by apply: (in_polyI_cond j).
 Qed.
 
@@ -409,9 +409,9 @@ Lemma big_polyIsP (I : finType) Q (P : pred I) (F : I -> 'poly[R]_n) :
 Proof. (* RK *)
 apply: (iffP idP) => [Q_subset_polyI ? ? | forall_Q_subset].
 - by apply/(le_trans Q_subset_polyI)/big_poly_inf.
-- apply/poly_subsetP => x x_in_Q.
+- apply/poly_leP => x x_in_Q.
   apply/in_big_polyIP => j P_j.
-  by move: x x_in_Q; apply/poly_subsetP; exact: forall_Q_subset.
+  by move: x x_in_Q; apply/poly_leP; exact: forall_Q_subset.
 Qed.
 
 Lemma in_lift_poly (k : nat) (P : 'poly[R]_n) x :
@@ -453,11 +453,11 @@ Lemma poly_properP {P Q : 'poly[R]_n} :
   (* TODO: should {subset P <= Q} to (P `<=` Q) ? *)
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
-apply: (iffP andP).
-+ case=> ne_QP le_PQ; split; first by apply/poly_subsetP.
-  move: ne_QP; rewrite poly_eqE /poly_equiv le_PQ andbT.
-  by move/poly_subsetPn.
-case=> /poly_subsetP => -> [x xQ xPN]; split=> //.
+rewrite lt_def; apply: (iffP andP).
++ case=> ne_QP le_PQ; split; first by apply/poly_leP.
+  apply/poly_lePn; move: ne_QP; apply/contra_neqN=> ?.
+  by apply/le_anti/andP.
+case=> /poly_leP => -> [x xQ xPN]; split=> //.
 by apply/negP=> /eqP/poly_eqP /(_ x); rewrite xQ (negbTE xPN).
 Qed.
 
@@ -643,7 +643,7 @@ Qed.
 Lemma poly_subset_hsP {P : 'poly[R]_n} {b : lrel} :
   reflect (forall x, x \in P -> '[fst b, x] >= snd b) (P `<=` [hs b]).
 Proof.
-apply: (iffP poly_subsetP) => [sub x x_in_P | sub x x_in_P ];
+apply: (iffP poly_leP) => [sub x x_in_P | sub x x_in_P ];
   move/(_ _ x_in_P): sub; by rewrite in_hs.
 Qed.
 
@@ -738,7 +738,7 @@ move => P_neq0.
 have hreprP_neq0: ~~ H.poly_subset (hrepr P) H.poly0.
 - move: P_neq0; rewrite lt0x.
   apply: contraNN => /H.poly_subsetP incl; rewrite -lex0.
-  by apply/poly_subsetP=> x /incl; rewrite H.in_poly0.
+  by apply/poly_leP=> x /incl; rewrite H.in_poly0.
 apply: (iffP (H.boundedPn _ hreprP_neq0)) => [H K | H K]; move/(_ K): H.
 - move/H.poly_subsetPn => [x x_in_P x_not_in_hs].
   by exists x; rewrite H.in_hs -ltNge in x_not_in_hs.
@@ -749,7 +749,7 @@ Qed.
 Lemma bounded_mono1 (P Q : 'poly[R]_n) c :
   bounded P c -> [poly0] `<` Q `<=` P -> bounded Q c.
 Proof. (* RK *)
-move => /boundedPP [x /andP [_ /poly_subsetP sPhs]] /andP [Q_non_empty /poly_subsetP sQP].
+move => /boundedPP [x /andP [_ /poly_leP sPhs]] /andP [Q_non_empty /poly_leP sQP].
 apply/contraT => /(boundedPn Q_non_empty) Q_unbounded.
 move: (Q_unbounded '[ c, x]) => [y y_in_Q x_y_vdot_sineq].
 suff : ('[ c, x] <= '[ c, y]) by rewrite leNgt x_y_vdot_sineq.
@@ -781,9 +781,9 @@ Qed.
 Lemma opt_value_antimono1 P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
   Q `<=` P -> opt_value bounded_P <= opt_value bounded_Q.
 Proof. (* RK *)
-move => /poly_subsetP sQP.
+move => /poly_leP sQP.
 move: (opt_point bounded_Q) => [x x_in_Q <-].
-move/sQP/(poly_subsetP (opt_value_lower_bound bounded_P)) : x_in_Q.
+move/sQP/(poly_leP (opt_value_lower_bound bounded_P)) : x_in_Q.
 by rewrite in_hs.
 Qed.
 
@@ -807,14 +807,14 @@ rewrite /argmin; case: {-}_/idP => [| /negP c_unbounded]; last first.
   case: (emptyP P) => [-> | P_non_empty]; first by rewrite inE.
   move/(boundedPn P_non_empty)/(_ '[c,x]): c_unbounded => [y y_in_P c_y_lt_c_x].
   rewrite negb_and; apply/orP; right.
-  apply/poly_subsetPn; exists y; by rewrite ?notin_hs.
+  apply/poly_lePn; exists y; by rewrite ?notin_hs.
 - move => c_bounded; rewrite !inE in_hp; apply/andP/andP.
   + move => [x_in_P /eqP ->]; split; by [done | exact: opt_value_lower_bound].
   + move => [x_in_P subset]; split; first by done.
     rewrite -lte_anti; apply/andP; split.
     * move/opt_point : (c_bounded) => [z z_in_P <-].
-      by move/poly_subsetP/(_ _ z_in_P): subset; rewrite in_hs.
-    * rewrite -in_hs; by apply/(poly_subsetP (opt_value_lower_bound _)).
+      by move/poly_leP/(_ _ z_in_P): subset; rewrite in_hs.
+    * rewrite -in_hs; by apply/(poly_leP (opt_value_lower_bound _)).
 Qed.
 
 Lemma bounded_argminN0 P c :
@@ -848,11 +848,11 @@ Qed.
 Lemma subset_opt_value P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
   argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q. (* RK *)
 Proof.
-move => /andP [/poly_subsetP s_argminQ_P ?].
+move => /andP [/poly_leP s_argminQ_P ?].
 apply/eqP; rewrite eq_le; apply/andP; split; last by apply: opt_value_antimono1.
 move: (opt_point bounded_Q) => [x ? x_is_opt_on_Q].
 rewrite -x_is_opt_on_Q -in_hs.
-apply/(poly_subsetP (opt_value_lower_bound bounded_P))/s_argminQ_P.
+apply/(poly_leP (opt_value_lower_bound bounded_P))/s_argminQ_P.
 rewrite in_argmin; apply/andP; split; first by done.
 rewrite x_is_opt_on_Q.
 exact: opt_value_lower_bound.
@@ -879,10 +879,10 @@ Lemma argmin_eq {P} {c v x} :
   v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
 Proof. (* RK *)
 move => v_in_argmin; rewrite in_argmin.
-apply: (iffP idP) => [/andP [? /poly_subsetP sPhs] | [? ->]].
+apply: (iffP idP) => [/andP [? /poly_leP sPhs] | [? ->]].
 - split; first by done.
   apply/eqP; rewrite eq_le; apply/andP; split; last by apply: (argmin_lower_bound v_in_argmin _).
-  by rewrite -in_hs; apply/sPhs/(poly_subsetP (argmin_subset _ c)).
+  by rewrite -in_hs; apply/sPhs/(poly_leP (argmin_subset _ c)).
 - apply/andP; split; first by done.
   rewrite in_argmin in v_in_argmin.
   exact: (proj2 (andP v_in_argmin)).
@@ -894,7 +894,7 @@ Proof.
 move => P_non_empty; apply: introP => [ c_bounded | /(boundedPn P_non_empty) c_unbouded ].
 - exists (opt_value c_bounded); exact: opt_value_lower_bound.
 - move => [d c_bounded]; move/(_ d): c_unbouded => [x x_in_P c_x_lt_K].
-  by move/poly_subsetP/(_ _ x_in_P): c_bounded; rewrite in_hs leNgt => /negP.
+  by move/poly_leP/(_ _ x_in_P): c_bounded; rewrite in_hs leNgt => /negP.
 Qed.
 
 Lemma notin_argmin (P : 'poly_n) (c : 'cV[R]_n) (bounded_P : bounded P c) :
@@ -903,7 +903,7 @@ Proof.
 move => x x_in_P; apply/contra.
 rewrite argmin_polyI in_polyI x_in_P /=.
 rewrite hpE in_polyI andbC => -> /=.
-by move: x_in_P; apply/poly_subsetP/opt_value_lower_bound.
+by move: x_in_P; apply/poly_leP/opt_value_lower_bound.
 Qed.
 
 Lemma argmin_polyIN (P : 'poly[R]_n) (c : 'cV_n) (bounded_P : bounded P c) :
@@ -929,12 +929,12 @@ Lemma line_subset_hs (e : lrel[R]_n) (Ω c : 'cV[R]_n) :
 Proof.
 move => Ω_in_e.
 apply/idP/eqP.
-- apply/contraTeq => e_c_neq0; apply/poly_subsetPn.
+- apply/contraTeq => e_c_neq0; apply/poly_lePn.
   under ex2_iff do rewrite affE.
   exists (Ω + (e.2 - 1 - '[e.1, Ω])/'[e.1, c] *: c).
   + by apply/in_lineP; exists ((e.2 - 1 - '[e.1, Ω])/'[e.1, c]).
   + by rewrite in_hs vdotDr vdotZr divfK // addrCA addrN addr0 lter_sub_addr cpr_add ler10.
-- move => e_c_eq0; apply/poly_subsetP => x; rewrite affE => /in_lineP [μ ->].
+- move => e_c_eq0; apply/poly_leP => x; rewrite affE => /in_lineP [μ ->].
   by rewrite in_hs vdotDr vdotZr e_c_eq0 mulr0 addr0 -in_hs.
 Qed.
 
@@ -949,8 +949,8 @@ Lemma pointedPn P :
   reflect (exists Ω, exists2 d, d != 0 & [line d & Ω]%:PH `<=` P) (~~ (pointed P)).
 Proof.
 apply/(iffP (H.pointedPn _)) => [[x [d] d_neq0 sub]| [x [d] d_neq0 sub]]; exists x; exists d => //.
-- by apply/poly_subsetP => ?; rewrite affE => /in_lineP [μ ->]; apply/sub.
-- by move => μ; apply/(poly_subsetP sub); rewrite affE; apply/in_lineP; exists μ.
+- by apply/poly_leP => ?; rewrite affE => /in_lineP [μ ->]; apply/sub.
+- by move => μ; apply/(poly_leP sub); rewrite affE; apply/in_lineP; exists μ.
 Qed.
 
 Lemma pointedS (P Q : 'poly[R]_n) :
@@ -1008,7 +1008,7 @@ case: (emptyP P) => [| P_neq0 ]; last first.
     * rewrite vdotNl vdotl_delta_mx ler_opp2 => /andP.
       by rewrite ler_norml.
     * split; rewrite opprK; [ pose f := (ei i) | pose f := (mei i) ];
-      move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound f); rewrite in_hs /=;
+      move/poly_leP/(_ _ x_in_P): (opt_value_lower_bound f); rewrite in_hs /=;
       apply: le_trans; set v := (X in _ <= X);
       suff: Num.min (opt_value (ei i)) (opt_value (mei i)) <= v
         by apply: le_trans; apply: min_seq_ler; apply: map_f; rewrite mem_enum.
@@ -1017,7 +1017,7 @@ case: (emptyP P) => [| P_neq0 ]; last first.
   + apply/forallP => i; apply/andP; split;
       [pose v := (delta_mx i 0):'cV[R]_n | pose v := (-(delta_mx i 0):'cV[R]_n)%R];
     apply/bounded_lower_bound => //; exists (-K)%R;
-    apply/poly_subsetP => x x_in_P; move/(_ _ x_in_P i): H;
+    apply/poly_leP => x x_in_P; move/(_ _ x_in_P i): H;
     rewrite in_hs /=  ?vdotNl vdotl_delta_mx ?ler_opp2;
     by rewrite ler_norml; move/andP => [? ?].
 - move => -> /=; constructor.
@@ -1033,7 +1033,7 @@ apply: (iffP idP) => [/compactP_Linfty [K H] c | ?].
   suff foo: P `<=` [hs [<c, v>]].
   + apply/bounded_lower_bound => //.
     by exists v.
-  + apply/poly_subsetP => x x_in_P.
+  + apply/poly_leP => x x_in_P.
     have: `|'[c,x]| <= \sum_i `|c i 0| * K.
     suff: \sum_i `|c i 0 * x i 0| <= \sum_i `|c i 0| * K.
     * apply: le_trans; rewrite /vdot; exact: ler_norm_sum.
@@ -1048,7 +1048,7 @@ Lemma compact_pointed P :
   compact P -> pointed P.
 Proof.
 case: (emptyP P) => [->| P_neq0 P_compact]; rewrite ?pointed0 //.
-apply: contraT => /pointedPn [Ω [c]] c_neq0 /poly_subsetP hl_sub.
+apply: contraT => /pointedPn [Ω [c]] c_neq0 /poly_leP hl_sub.
 suff: ~~ (bounded P c) by move/(compactP P_neq0)/(_ c) : P_compact => ->.
 apply/boundedPn => // K.
 pose μ := ((K - 1 - '[c,Ω])/'[| c |]^2)%R.
@@ -1083,7 +1083,7 @@ Lemma in_slice (e : lrel) (P : 'poly_n) c :
 Proof. by rewrite in_polyI affE. Qed.
 
 Lemma le_slice (e : lrel[R]_n) P : slice e P `<=` P.
-Proof. by apply/poly_subsetP=> x; rewrite in_slice => /andP[]. Qed.
+Proof. by apply/poly_leP=> x; rewrite in_slice => /andP[]. Qed.
 
 Definition poly_of_base (base : base_t[R,n]) :=
   \polyI_(b : base) [hs (val b)].
@@ -1142,7 +1142,7 @@ Lemma poly_of_base_antimono (base base' : base_t[R,n]) :
   (base `<=` base')%fset -> 'P(base') `<=` 'P(base).
 Proof.
 move/fsubsetP => sub.
-apply/poly_subsetP => ??.
+apply/poly_leP => ??.
 apply/in_poly_of_baseP => ? /sub.
 by apply/in_poly_of_baseP.
 Qed.
@@ -1181,7 +1181,7 @@ Qed.
 Lemma polyEq_antimono (base I I' : base_t[R,n]) :
   (I `<=` I')%fset -> 'P^=(base; I') `<=` 'P^=(base; I).
 Proof.
-move=> leI; apply/poly_subsetP=> c; rewrite !in_polyEq.
+move=> leI; apply/poly_leP=> c; rewrite !in_polyEq.
 case/andP=> [/forallP /= h ->]; rewrite andbT; apply/forallP=> /=.
 by move=> e; apply: (h (fincl leI e)).
 Qed.
@@ -1208,11 +1208,11 @@ Proof.
 move/pred0Pn => [i0 Pi0].
 rewrite (rwP eqP) eq_le; apply/andP; split; last first.
 - apply/big_polyIsP => [i Pi]; apply/polyEq_antimono; exact: bigfcup_sup.
-- apply/poly_subsetP => x /in_big_polyIP x_in.
+- apply/poly_leP => x /in_big_polyIP x_in.
   apply/in_polyEqP; split => /=.
   + move => e /= /bigfcupP [i /andP [_ {}/x_in x_in]].
-    by move/(polyEq_hp base)/poly_subsetP/(_ _ x_in); rewrite affE.
-  + move/(_ _ Pi0): x_in; by apply/(poly_subsetP (polyEq_antimono0)).
+    by move/(polyEq_hp base)/poly_leP/(_ _ x_in); rewrite affE.
+  + move/(_ _ Pi0): x_in; by apply/(poly_leP (polyEq_antimono0)).
 Qed.
 
 Lemma polyEq1 {base: base_t[R,n]} {e} :
@@ -1230,7 +1230,7 @@ Proof. by apply: in_fset1U. Qed.
 Lemma nmono_in_poly_of_base (P Q : base_t[R,n]) :
   (Q `<=` P)%fset -> 'P(P) `<=` 'P(Q).
 Proof.
-move=> /fsubsetP leQP; apply/poly_subsetP=> x; rewrite !in_poly_of_base.
+move=> /fsubsetP leQP; apply/poly_leP=> x; rewrite !in_poly_of_base.
 move/forallP=> /= hP; apply/forallP=> -[/= q].
 by move/leQP => qP; apply: (hP [`qP]%fset).
 Qed.
@@ -1249,7 +1249,7 @@ apply/poly_eqP=> c; rewrite in_slice; apply/andP/idP.
 + case/in_polyEqP => ceI cPeb; split.
   - by apply: ceI; rewrite in_fslice eqxx.
   apply/in_polyEqP; split; last first.
-  - move: {ceI} c cPeb; apply/poly_subsetP.
+  - move: {ceI} c cPeb; apply/poly_leP.
     by apply/nmono_in_poly_of_base/fsubsetU1.
   by move=> b bI; apply: ceI; rewrite in_fslice bI orbT.
 Qed.
@@ -1494,7 +1494,7 @@ apply/(iffP idP) => [ x_in | [y ->] ].
     rewrite -subr_le0 opprK addrACA -opprD -vdotDl -linearD /=.
     rewrite subr_le0 -in_hs.
     have ->: [<row' 0 (e.1 + e'.1), e.2 + e'.2>] = beproj0 (e+e') by [].
-    apply/poly_subsetP/poly_of_base_subset_hs: x_in.
+    apply/poly_leP/poly_of_base_subset_hs: x_in.
     by apply/fsetUP; right; rewrite in_imfset ?in_imfset2.
   pose α_pos := (max_seq s_pos (min_seq s_neg 0)).
   pose α_neg := (min_seq s_neg (max_seq s_pos 0)).
@@ -1507,7 +1507,7 @@ apply/(iffP idP) => [ x_in | [y ->] ].
   rewrite -poly_of_sbase; apply/in_poly_of_baseP => e.
   rewrite sbaseU => /fsetUP; case. move/fsetUP; case.
   + move => e_in_base0; rewrite lift_in_base0 //.
-    apply/poly_subsetP/poly_of_base_subset_hs: x_in.
+    apply/poly_leP/poly_of_base_subset_hs: x_in.
     by apply/fsetUP; left; rewrite in_imfset.
   + move => e_in_base_pos; apply/lift_in_base_pos => //.
     have: gap e x \in s_pos by apply/map_f.
@@ -1519,13 +1519,13 @@ apply/(iffP idP) => [ x_in | [y ->] ].
 - rewrite -poly_of_sbase => y_in; apply/in_poly_of_baseP => e.
   move/fsetUP; case; move/imfsetP => [{}e e_in ->].
   + apply/row'0_in_hs; move: e_in; rewrite !inE => /andP[e_in /eqP] //.
-    by move => _; apply/poly_subsetP/poly_of_base_subset_hs: y_in.
+    by move => _; apply/poly_leP/poly_of_base_subset_hs: y_in.
   + move: e_in => /imfset2P [{}e e_in] [e' e'_in] ->.
     move: e_in e'_in; rewrite !inE => /andP [e_in /eqP get0e] /andP [e'_in /eqP get0e'].
     apply/row'0_in_hs => /=.
     * by rewrite mxE get0e get0e' addrN.
     * by rewrite in_hs /= vdotDl; apply/ler_add; rewrite -in_hs;
-      apply/poly_subsetP/poly_of_base_subset_hs: y_in.
+      apply/poly_leP/poly_of_base_subset_hs: y_in.
 Qed.
 
 End Proj0.
@@ -1683,14 +1683,14 @@ Qed.
 Lemma conv0 : conv fset0 = [poly0].
 Proof.
 apply/eqP; rewrite -lex0.
-apply/poly_subsetP => x /in_convP[w].
+apply/poly_leP => x /in_convP[w].
 by rewrite fsubset0 fconvex_insupp_neq0.
 Qed.
 
 Lemma conv_subset (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) :
   {subset V <= P} -> (conv V) `<=` P.
 Proof.
-move=> le_VP; apply/poly_subsetP=> x /in_convP.
+move=> le_VP; apply/poly_leP=> x /in_convP.
 case=> [w /fsubsetP le_wV ->]; apply: convexW=> /=.
 + by move=> /= e1 e2 e1P e2Pa rg01_a; apply: mem_poly_convex.
 + by move=> c /le_wV /le_VP.
@@ -1765,7 +1765,7 @@ Qed.
 Lemma affine_subset_poly_of_base (base : base_t[R,n]) :
   [affine << base >>]%:PH `<=` 'P(base).
 Proof.
-apply/poly_subsetP => x; rewrite affE => /in_affineP x_in.
+apply/poly_leP => x; rewrite affE => /in_affineP x_in.
 apply/in_poly_of_baseP => e /memv_span/x_in.
 by move/eqP; rewrite -in_hp; apply/hp_subset_hs.
 Qed.
@@ -1805,8 +1805,8 @@ Qed.
 
 Lemma pt_subset (Ω : 'cV[R]_n) P : [pt Ω]%:PH `<=` P = (Ω \in P).
 Proof. (* RK *)
-by apply/idP/idP => [/poly_subsetP s_ptΩ_P | ?];
-  [apply/s_ptΩ_P; rewrite affE in_pt_self | apply/poly_subsetP => v; rewrite affE in_pt => /eqP ->].
+by apply/idP/idP => [/poly_leP s_ptΩ_P | ?];
+  [apply/s_ptΩ_P; rewrite affE in_pt_self | apply/poly_leP => v; rewrite affE in_pt => /eqP ->].
 Qed.
 
 Lemma pt_proper (Ω : 'cV[R]_n) P : [pt Ω]%:PH `<` P -> (Ω \in P).
@@ -1853,7 +1853,7 @@ Qed.
 Lemma dual_sol_lower_bound (w : {conic lrel ~> R}) :
   (finsupp w `<=` base)%fset -> 'P(base) `<=` [hs (combine w)].
 Proof.
-move=> le_wB; apply/poly_subsetP => x; rewrite in_hs in_poly_of_base /=.
+move=> le_wB; apply/poly_leP => x; rewrite in_hs in_poly_of_base /=.
 rewrite (combineb1E le_wB) (combineb2E le_wB) vdot_sumDl => /forallP h.
 apply: ler_sum => i _; rewrite vdotZl; apply: ler_wpmul2l.
 + by apply: ge0_fconic.
@@ -1868,7 +1868,7 @@ move/(farkas (boundedN0 H)): (opt_value_lower_bound H).
 case=> [w w_weight [w_comb1 w_comb2]]; exists w => //.
 apply/eqP/be_eqP; split=> //; apply/le_anti/andP; split=> //.
 case: (opt_point H) => [x x_in_P <-].
-move/poly_subsetP/(_ _ x_in_P): (dual_sol_lower_bound w_weight).
+move/poly_leP/(_ _ x_in_P): (dual_sol_lower_bound w_weight).
 by rewrite in_hs w_comb1.
 Qed.
 
@@ -1897,12 +1897,12 @@ move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
   apply/in_polyEqP; split; last done.
   move => e e_in_supp; move: in_comb_hp; apply: contraTT.
   rewrite notin_hp; last first.
-  + move: x x_in_P; apply/poly_subsetP/poly_of_base_subset_hs.
+  + move: x x_in_P; apply/poly_leP/poly_of_base_subset_hs.
     exact: (fsubsetP le_wb).
   + move => notin_hp; rewrite eq_sym; apply/ltr_neq.
     apply: sumr_ltrP => [i| ].
     * rewrite vdotZl; apply/ler_wpmul2l; first exact : ge0_fconic.
-      move/(poly_subsetP (poly_of_base_subset_hs (fsvalP i))): x_in_P.
+      move/(poly_leP (poly_of_base_subset_hs (fsvalP i))): x_in_P.
       by rewrite in_hs /=.
     * have e_in_base : e \in base by apply/(fsubsetP le_wb).
       exists [` e_in_base]%fset.
@@ -1922,15 +1922,15 @@ rewrite argmin_polyI.
 suff ->: opt_value c_bounded = (combine w).2.
 - apply/poly_eqP => y; rewrite inE affE beE.
   apply/andP/idP => [[? ?]| y_in_PI]; first exact/compl_slack_cond.
-  have y_in_P: y \in ('P(base)) by apply/(poly_subsetP PI_sub_P).
+  have y_in_P: y \in ('P(base)) by apply/(poly_leP PI_sub_P).
   by split; try exact: compl_slack_cond.
-- have x_in_P : x \in ('P(base)) by apply/(poly_subsetP PI_sub_P).
+- have x_in_P : x \in ('P(base)) by apply/(poly_leP PI_sub_P).
   apply/eqP; rewrite eq_le; apply/andP; split.
   + move/(_ x_in_PI) : (compl_slack_cond x_in_P); rewrite in_hp => /eqP <-.
-    move/poly_subsetP/(_ _ x_in_P): (opt_value_lower_bound c_bounded).
+    move/poly_leP/(_ _ x_in_P): (opt_value_lower_bound c_bounded).
     by rewrite in_hs.
   + move: (opt_point c_bounded) => [y y_in_P <-].
-    move/poly_subsetP/(_ _ y_in_P): (dual_sol_lower_bound le_wb).
+    move/poly_leP/(_ _ y_in_P): (dual_sol_lower_bound le_wb).
     by rewrite in_hs.
 Qed.
 
@@ -1986,7 +1986,7 @@ Lemma separation :
 Proof.
 move => x_notin.
 suff: ~~ ('P(base) `<=` [hs (homog x)]).
-- move/poly_subsetPn => [z z_in z_notin].
+- move/poly_lePn => [z z_in z_notin].
   pose e := [<usubmx z, - (dsubmx z 0 0)>].
   have in_hs_e: forall y, (y \in [hs e]) = (z \in [hs (homog y)]).
   + move => y; rewrite 2!in_hs -{1}[z]vsubmxK vdot_col_mx vdot1 vdotC.
@@ -1995,7 +1995,7 @@ suff: ~~ ('P(base) `<=` [hs (homog x)]).
   + by move: z_notin; apply/contraNN; rewrite in_hs_e.
   + apply/conv_subset => v v_in_V; rewrite in_hs_e.
     have: homog v \in base by exact: in_imfset.
-    by move/poly_of_base_subset_hs/poly_subsetP/(_ _ z_in).
+    by move/poly_of_base_subset_hs/poly_leP/(_ _ z_in).
 - move: x_notin; apply: contraNN.
   have non_empty: 'P(base) `>` [poly0].
   + apply/proper0P; exists 0.
