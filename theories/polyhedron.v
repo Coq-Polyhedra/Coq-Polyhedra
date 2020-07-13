@@ -204,13 +204,6 @@ Definition poly_proper P Q := (Q != P) && poly_subset P Q.
 Lemma poly_subsetP {P Q : 'poly[R]_n} : reflect {subset P <= Q} (poly_subset P Q).
 Proof. by apply: (iffP H.poly_subsetP). Qed.
 
-Lemma poly_eqE P Q : (P == Q) = poly_equiv P Q.
-Proof.
-apply/eqP/idP=> [->|]; first by apply/andP; split; apply/poly_subsetP.
-case/andP=> /poly_subsetP le_PQ /poly_subsetP le_QP.
-by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
-Qed.
-
 Local Lemma _poly_subset_refl : reflexive poly_subset.
 by move=> P; apply/poly_subsetP.
 Qed.
