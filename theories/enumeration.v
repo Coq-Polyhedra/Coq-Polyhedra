@@ -332,13 +332,21 @@ Lemma dim_affine2 (U : {vspace lrel[R]_n}) :
   exists2 x, x \in affine U & exists2 d, d != 0 & (affine U) = [line d & x].
 Admitted.
 
+End PBasis.
+
 
 Section Pivot.
 
+Context {R : realFieldType} {n : nat} {base : base_t[R,n]}.
+Context (P : {poly base}).
+Hypothesis Pprop0 : P `>` [poly0].
+
+Implicit Type (I : {fsubset base}).
+
 Variable (x: 'cV[R]_n) (I : {fsubset base}) (i : lrel[R]_n).
 
-Hypothesis (Hbasis : is_pbasis_of x I) (i_in_I : i \in (I : base_t)).
-Hypothesis (i_not_in_eqP : i \notin ({eq P} : base_t)).
+Hypothesis (Hbasis : is_pbasis_of P x I) (i_in_I : i \in (I : base_t)).
+Hypothesis (i_not_in_eqP : i \notin <<{eq P}>>%VS).
 
 Lemma n_prop0 : (n > 0)%N.
 Admitted.
@@ -507,10 +515,11 @@ rewrite -free_J_equiv_basis; split.
 - exact: pivot_free.
 Qed.
 
+
 (* 2nd step: show that the basic point associated with J is given by
  * ppick (affine <<J>>) = ppick (affine <<I>>) + (r j) / (c j) *: dir
  * It suffices to show that this point belongs to affine <<J>> *)
-
+Section PointPivot.
 Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
 
 Definition point_pivot :=
@@ -568,12 +577,21 @@ have -> //: point_pivot = y.
 by apply/eqP; rewrite -in_pt; apply: pts_subset; exact: in_pt_self.
 Qed.
 
+End PointPivot.
+
 (* 3rd step: When r j > 0, show that
    affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
     c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
 
-Definition condition_feasible := (forall k, k \in base -> k \notin (J : {fset _})
--> (r k) >= ((r j) / (c j)) * (c k)).
+Section Feasible.
+
+Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
+Hypothesis P_is_Pbase : P = 'P(base)%:poly_base.
+ 
+ 
+Definition condition_feasible := (forall k, k \in base ->
+  k \notin (J : {fset _}) ->
+  (r k) >= ((r j) / (c j)) * (c k)).
 Definition condition_argmax :=
   (forall k, k \in base -> k \notin (J : {fset _}) ->
   c k < 0 -> (r j) / (c j) >= (r k) / (c k)).
@@ -581,10 +599,10 @@ Definition condition_argmax :=
 Lemma ker_r k: k \in (I : base_t) -> r k = 0.
 Proof.
 move => k_in_I.
-rewrite /r.
 move: (ppickP (pbasis_proper0 (is_pbasis_of_pbasis Hbasis))).
 move/in_affine => hp_forall_v.
 move/hp_forall_v: (memv_span k_in_I).
+rewrite /r.
 rewrite in_hp; move/eqP => ->.
 by rewrite subrr.
 Qed.
@@ -592,27 +610,23 @@ Qed.
 Lemma r_ge0 k: k \in base -> r k >= 0.
 Proof.
 move => k_in_base.
-rewrite /r.
 move: (pbasis_feasible (is_pbasis_of_pbasis Hbasis)).
-rewrite -(is_pbasis_of_eq Hbasis) ppick_pt pt_subset.
-rewrite (repr_active Pprop0) /=.
-move/poly_subsetP: (@polyEq_antimono0 _ _ base {eq P}) => subset_base.
-move/subset_base/in_poly_of_baseP => in_hs_base.
+rewrite /r.
+rewrite -(is_pbasis_of_eq Hbasis) pt_subset ppick_pt P_is_Pbase /=.
+move/in_poly_of_baseP => in_hs_base.
 by move: (in_hs_base k k_in_base); rewrite in_hs subr_ge0.
 Qed.
-
-
 
 Lemma pivot_feasible_condition:
   (affine <<J>> `<=` P) ->
   condition_feasible.
 Proof.
-rewrite -point_pivot_eq_affine_J pt_subset.
-move/poly_leP: (poly_base_subset P) => P_base
-  /P_base /in_poly_of_baseP point_pivot_base k /point_pivot_base.
-  rewrite inE /point_pivot vdotDr vdotNr vdotZr.
-  have to_rewrite: k.1 = befst k by rewrite lfunE.
-  by rewrite {2}to_rewrite -/(c k) -ler_subl_addl -opprB -/(r k) ler_opp2.
+rewrite -point_pivot_eq_affine_J // pt_subset P_is_Pbase /=.
+move/in_poly_of_baseP => hs_base_point_pivot.
+rewrite /condition_feasible => b /hs_base_point_pivot.
+rewrite in_hs /point_pivot vdotDr vdotNr vdotZr.
+have to_rewrite: b.1 = befst b by rewrite lfunE.
+by rewrite {2}to_rewrite -/(c b) -ler_subl_addl -opprB -/(r b) ler_opp2.
 Qed.
 
 Lemma pivot_feasible:
@@ -625,10 +639,28 @@ rewrite -(ler_nmul2r c_k_leq_0) -!mulrA mulVf ?mulrA ?mulr1.
 - exact: ltr_neq.
 Qed.
 
-Lemma base_pivot_condition:
-  condition_feasible -> point_pivot \in 'P(base).
+Lemma r_j_c_j_le0 :
+  condition_feasible -> r j / c j <= 0.
 Proof.
 move => condition.
+have i_in_base: i \in base by apply:(fsubset_incl i_in_I).
+have i_notin_J: i \notin (J: {fset _}).
+- rewrite !inE eq_refl /= negb_or.
+  apply/predD1P; split => //.
+  move => h; move: i_in_I j_notin_I; rewrite h => h1 h2.
+  by move: (in_fsetD I I j); rewrite {2}h1 h2 /= fsetDv in_fset0.
+move: (condition i i_in_base i_notin_J).
+rewrite (ker_r i_in_I) {2}/c.
+have <-: i.1 = befst i by rewrite lfunE.
+rewrite dir_prop_vdot mulr1; apply.
+Qed.
+
+
+Lemma base_pivot_condition:
+  condition_feasible -> affine <<J>> `<=` P.
+Proof.
+move => condition; rewrite P_is_Pbase /=.
+rewrite -point_pivot_eq_affine_J // pt_subset.
 apply/in_poly_of_baseP => k.
 rewrite -(fsetID J base) inE; case/orP.
 - rewrite inE; case/andP => _ k_in_J; apply: hs_hp.
@@ -642,57 +674,22 @@ rewrite -(fsetID J base) inE; case/orP.
 Qed.
 
 
-
-Lemma eqP_sub_I':
-  ({eq P} `<=` I')%fset.
-Proof.
-Admitted.
-
-Lemma feasible_pivot_condition:
-condition_feasible -> (point_pivot \in affine <<{eq P}>>).
-Proof.
-move => condition.
-have ppivot_in_PbaseI': point_pivot \in 'P^=(base; I').
-- rewrite [X in _ \in X]polyEq_affine in_polyI.
-  rewrite (base_pivot_condition condition) /=.
-  rewrite dir_prop_line.
-  apply/in_lineP; rewrite /point_pivot -(is_pbasis_of_eq Hbasis) ppick_pt.
-  exists (- (r j / c j)).
-  by rewrite scaleNr.
-have: 'P^=(base; I') `<=` P.
-- rewrite polyEq_affine dir_prop_line; apply/poly_subsetP => y.
-  rewrite inE; case/andP => y_in_base /in_lineP [mu] H.
-  rewrite (repr_active Pprop0) /= polyEq_affine inE y_in_base /= H.
-  apply/in_affine => v v_in_eqP; rewrite in_hp.
-  rewrite vdotDr vdotZr.
-  move: (pbasis_feasible (is_pbasis_of_pbasis Hbasis)).
-  rewrite -(is_pbasis_of_eq Hbasis) pt_subset.
-  rewrite (repr_active Pprop0) /= polyEq_affine inE.
-  case/andP => x_in_base; move/in_affine => H_x_hp.
-  move: (H_x_hp v v_in_eqP); rewrite in_hp; move/eqP => ->.
-  move/base_vect_subset/subvP: eqP_sub_I' => Hsub.
-  move/Hsub: v_in_eqP => v_in_span_I'.
-  rewrite -[X in _ == X]addr0.
-  apply/eqP/congr2 => //.
-  have ->: v.1 = befst v by rewrite lfunE.
-  move/coord_span: v_in_span_I' => ->; rewrite linear_sum vdot_sumDl /=.
-  rewrite big1 ?mulr0 // => k _; rewrite linearZ /= vdotZl.
-  set w := (X in _ * X); rewrite [w](_ : _ = 0); first by rewrite mulr0.
-  by apply/cancel_c_I'/mem_nth.
-move/poly_subsetP => H.
-move: (H point_pivot ppivot_in_PbaseI').
-rewrite {1}(repr_active Pprop0) [X in _ \in X]polyEq_affine inE.
-by case/andP.
-Qed.
-
-
 Lemma feasible_pivot:
-  condition_argmax ->
+  condition_argmax -> r j / c j <= 0 ->
   (affine <<J>> `<=` P).
 Proof.
 rewrite /condition_argmax.
-move => condition.
-Admitted.
+move => condition r_j_c_j; apply: base_pivot_condition.
+rewrite /condition_feasible.
+move => b b_in_base b_notin_J.
+case: (ltrgt0P (c b)).
+- move=> c_b_gt0.
+  have h1: r j / c j * c b <= 0
+    by apply: mulr_le0_ge0 => //; rewrite le0r c_b_gt0 orbT.
+  apply: (le_trans h1); exact (r_ge0 b_in_base).
+- by move => c_b_lt0; rewrite -ler_ndivr_mulr //; apply: condition.
+- by move => ->; rewrite mulr0; apply: (r_ge0 b_in_base).
+Qed.
 
 
 
