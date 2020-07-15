@@ -587,8 +587,8 @@ Section Feasible.
 
 Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
 Hypothesis P_is_Pbase : P = 'P(base)%:poly_base.
- 
- 
+
+
 Definition condition_feasible := (forall k, k \in base ->
   k \notin (J : {fset _}) ->
   (r k) >= ((r j) / (c j)) * (c k)).
@@ -694,9 +694,9 @@ Qed.
 
 
 Lemma pivot :
-  reflect (c j != 0 /\ (r j > 0 -> forall k, k \notin (I : {fset _}) ->
-                        c k < 0 -> (r j) / (c j) >= (r k) / (c k)))
-          (is_pbasis J).
+  reflect (c j != 0 /\ (r j > 0 -> (c j < 0) /\ (forall k, k \notin (I : {fset _}) ->
+                        c k < 0 -> (r j) / (c j) >= (r k) / (c k))))
+          (is_pbasis P J).
 Admitted.
 
 End Pivot.
