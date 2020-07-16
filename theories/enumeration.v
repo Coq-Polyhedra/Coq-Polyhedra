@@ -347,6 +347,7 @@ Variable (x: 'cV[R]_n) (I : {fsubset base}) (i : lrel[R]_n).
 
 Hypothesis (Hbasis : is_pbasis_of P x I) (i_in_I : i \in (I : base_t)).
 Hypothesis (i_not_in_eqP : i \notin <<{eq P}>>%VS).
+Hypothesis P_is_Pbase: P = 'P(base)%:poly_base.
 
 Lemma n_prop0 : (n > 0)%N.
 Admitted.
@@ -577,16 +578,11 @@ have -> //: point_pivot = y.
 by apply/eqP; rewrite -in_pt; apply: pts_subset; exact: in_pt_self.
 Qed.
 
-End PointPivot.
-
 (* 3rd step: When r j > 0, show that
    affine <<J>> is feasible <-> (forall k, k \notin (I : {fset _}) ->
     c k < 0 -> (r j) / (c j) >= (r k) / (c k)) *)
 
 Section Feasible.
-
-Hypothesis J_is_basis : (dim (affine <<J>>%VS) = 1)%N.
-Hypothesis P_is_Pbase : P = 'P(base)%:poly_base.
 
 
 Definition condition_feasible := (forall k, k \in base ->
@@ -675,29 +671,63 @@ Qed.
 
 
 Lemma feasible_pivot:
-  condition_argmax -> r j / c j <= 0 ->
+  condition_argmax -> c j < 0 ->
   (affine <<J>> `<=` P).
 Proof.
 rewrite /condition_argmax.
-move => condition r_j_c_j; apply: base_pivot_condition.
+move => condition c_j_lt0; apply: base_pivot_condition.
 rewrite /condition_feasible.
 move => b b_in_base b_notin_J.
 case: (ltrgt0P (c b)).
 - move=> c_b_gt0.
-  have h1: r j / c j * c b <= 0
-    by apply: mulr_le0_ge0 => //; rewrite le0r c_b_gt0 orbT.
-  apply: (le_trans h1); exact (r_ge0 b_in_base).
+  have h1: r j / c j * c b <= 0.
+  + apply: mulr_le0_ge0 ; [apply: mulr_ge0_le0 | ].
+    * exact: r_ge0.
+    * by rewrite invr_le0 mc_1_10.Num.Theory.ltrW.
+    * by rewrite mc_1_10.Num.Theory.ltrW.
+  by apply: (le_trans h1); rewrite (r_ge0 b_in_base).
 - by move => c_b_lt0; rewrite -ler_ndivr_mulr //; apply: condition.
 - by move => ->; rewrite mulr0; apply: (r_ge0 b_in_base).
 Qed.
-
+End Feasible.
+End PointPivot. 
 
 
 Lemma pivot :
-  reflect (c j != 0 /\ (r j > 0 -> (c j < 0) /\ (forall k, k \notin (I : {fset _}) ->
-                        c k < 0 -> (r j) / (c j) >= (r k) / (c k))))
+  reflect (c j != 0 /\ (r j > 0 -> (c j < 0) /\ condition_argmax))
           (is_pbasis P J).
-Admitted.
+Proof.
+apply: (iffP idP).
+- case/and3P => cardJ /eqP dim_J feasible_J.
+  have c_j_neq_0: c j != 0 by case: pivot_basis => _ H; apply: H.
+  split => //.
+  move => r_j_gt0; split.
+  + move: (r_j_c_j_le0 (pivot_feasible_condition dim_J feasible_J)).
+    rewrite (pmulr_rle0 _ r_j_gt0) invr_le0.
+    by rewrite mc_1_10.Num.Theory.ltr_def => ->; rewrite andbT eq_sym.
+  + exact: pivot_feasible.
+- case => c_j_neq_0 feasible_j.
+  have dim_J_1: (dim (affine <<J>>) = 1)%N
+    by case: pivot_basis => H _; apply H.
+  have J_eq_I: r j = 0 -> affine <<I>> = affine <<J>>.
+  + rewrite -point_pivot_eq_affine_J /point_pivot //.
+    move => ->; rewrite mul0r scale0r subr0 -dim1_pt_ppick //.
+    by rewrite (dim_affine_pbasis (is_pbasis_of_pbasis Hbasis)).
+  move: (r_ge0 j_in_base).
+  rewrite le0r; case/orP.
+  + move/eqP/J_eq_I => affines_eq.
+    have x_in_P: x \in P.
+      by rewrite -pt_subset (is_pbasis_of_eq Hbasis)
+      (pbasis_feasible (is_pbasis_of_pbasis Hbasis)).
+    apply: (foo' x_in_P).
+    * rewrite -affines_eq; exact: (is_pbasis_of_eq Hbasis).
+    * by rewrite card_pivot.
+    case/feasible_j => ? ?; apply/and3P.
+    split.
+    * by rewrite card_pivot.
+    + by rewrite dim_J_1.
+    + apply: feasible_pivot => //.
+Qed.
 
 End Pivot.
 
