@@ -979,29 +979,34 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Type (V : 'affine[R]_n).
 
-Definition dim V :=
+Definition adim V :=
   if V == [affine0] then 0%N
   else (\dim (dir V)).+1%N.
 
-Lemma dim0 : dim [affine0] = 0%N.
+Lemma adim0 : adim [affine0] = 0%N.
 Proof.
-by rewrite /dim ifT //.
+by rewrite /adim ifT //.
 Qed.
 
-Lemma dimN0 V : (dim V > 0)%N = (V `>` affine0).
+Lemma adimN0 V : (adim V > 0)%N = (V `>` affine0).
 Proof.
-by rewrite /dim; case: ifP => [/eqP -> // |]; rewrite lt0x => ->.
+by rewrite /adim; case: ifP => [/eqP -> // |]; rewrite lt0x => ->.
 Qed.
 
-Lemma dim_eq0 V : (dim V = 0)%N -> V = [affine0].
+Lemma adim_eq0 V : adim V = 0%N -> V = [affine0].
 Proof.
-by rewrite /dim; case: ifP => [/eqP ->|].
+by rewrite /adim; case: ifP => [/eqP ->|].
 Qed.
 
-Lemma dimS : {homo dim : V V' / (V `<=` V') >-> (V <= V')%N}.
+Lemma adimN0_eq V : V `>` [affine0] -> adim V = (\dim (dir V)).+1%N.
+Proof.
+by rewrite lt0x /adim => /negbTE ->.
+Qed.
+
+Lemma adimS : {homo adim : V V' / (V `<=` V') >-> (V <= V')%N}.
 Proof.
 move => V V' sub.
-rewrite /dim; case: ifPn => // V_neq0.
+rewrite /adim; case: ifPn => // V_neq0.
 have V'_neq0: V' != [affine0].
 - move: V_neq0; apply/contra_neq => V'_eq0.
   by rewrite V'_eq0 lex0 in sub; move/eqP: sub.
@@ -1009,58 +1014,58 @@ rewrite ifF ?ltnS; last by apply/negbTE.
 by apply/dimvS/dirS.
 Qed.
 
-Lemma dim_leqif_eq V V' :
-  (V `<=` V') -> (dim V <= dim V' ?= iff (V == V'))%N.
+Lemma adim_leqif_eq V V' :
+  (V `<=` V') -> (adim V <= adim V' ?= iff (V == V'))%N.
 Proof.
-move => V_sub_V'; split; rewrite ?dimS //.
+move => V_sub_V'; split; rewrite ?adimS //.
 apply/eqP/eqP; last by move => ->.
-rewrite {1}/dim; case: ifP.
-- by move/eqP ->; symmetry; apply/dim_eq0.
+rewrite {1}/adim; case: ifP.
+- by move/eqP ->; symmetry; apply/adim_eq0.
 - move/negbT => V_neq0.
   have V'_neq0: V' != [affine0].
     rewrite -!lt0x in V_neq0 *.
     by apply/lt_le_trans: V_sub_V'.
-  rewrite /dim ifF; last by apply/negbTE.
-  move/succn_inj => dim_dir_eq.
+  rewrite /adim ifF; last by apply/negbTE.
+  move/succn_inj => adim_dir_eq.
   suff: dir V = dir V'.
   - case/affineN0: V_neq0 => x x_in.
     by apply/(dir_eq x_in)/(affine_leP V_sub_V').
-  - by apply/eqP; rewrite -(eq_leqif (dimv_leqif_eq (dirS _))) ?dim_dir_eq.
+  - by apply/eqP; rewrite -(eq_leqif (dimv_leqif_eq (dirS _))) ?adim_dir_eq.
 Qed.
 
-Lemma sub_geq_dim V V' :
-  (V `<=` V') -> (dim V >= dim V')%N -> V = V'.
+Lemma sub_geq_adim V V' :
+  (V `<=` V') -> (adim V >= adim V')%N -> V = V'.
 Proof. (* RK *)
-move => V_sub_V' dimV_gte_dimV'; apply/eqP/contraT => V_neq_V'.
-by move/leqifP: (dim_leqif_eq V_sub_V'); rewrite ifF;
-  [rewrite ltnNge dimV_gte_dimV' | apply/negbTE].
+move => V_sub_V' adimV_gte_adimV'; apply/eqP/contraT => V_neq_V'.
+by move/leqifP: (adim_leqif_eq V_sub_V'); rewrite ifF;
+  [rewrite ltnNge adimV_gte_adimV' | apply/negbTE].
 Qed.
 
-Lemma sub_eq_dim V V' :
-  (V `<=` V') -> dim V = dim V' -> V = V'.
+Lemma sub_eq_adim V V' :
+  (V `<=` V') -> adim V = adim V' -> V = V'.
 Proof. (* RK *)
-move => ? dimV_eq_dimV'.
-by apply/sub_geq_dim; [done | rewrite dimV_eq_dimV'].
+move => ? adimV_eq_adimV'.
+by apply/sub_geq_adim; [done | rewrite adimV_eq_adimV'].
 Qed.
 
-Lemma dim_affine_lt V V' :
-  (V `<` V') -> (dim V < dim V')%N.
+Lemma adim_affine_lt V V' :
+  (V `<` V') -> (adim V < adim V')%N.
 Proof. (* RK *)
 move/andP => [V'_neq_V ?].
-rewrite ltn_neqAle; apply/andP; split; last by apply/dimS.
+rewrite ltn_neqAle; apply/andP; split; last by apply/adimS.
 move: V'_neq_V; apply/contra_neqN => /eqP ?; symmetry.
-by apply/sub_eq_dim.
+by apply/sub_eq_adim.
 Qed.
 
-Lemma dim_line Ω d : dim [line d & Ω] = (d != 0).+1.
+Lemma adim_line Ω d : adim [line d & Ω] = (d != 0).+1.
 Proof.
-rewrite /dim ifF; last by apply/negbTE/mk_affineN0.
+rewrite /adim ifF; last by apply/negbTE/mk_affineN0.
 by rewrite dir_mk_affine dim_vline.
 Qed.
 
-Lemma dim_pt Ω : dim [pt Ω] = 1%N.
+Lemma adim_pt Ω : adim [pt Ω] = 1%N.
 Proof.
-by rewrite dim_line eq_refl.
+by rewrite adim_line eq_refl.
 Qed.
 
 Lemma dimv_eq1P (K : fieldType) (vT : vectType K) (V : {vspace vT}) :
@@ -1078,46 +1083,46 @@ exists v; first by move: v_not_in_V; apply/contra; rewrite memv0.
 apply/eqP; rewrite eqEsubv; apply/andP; split;
   last by rewrite -memvE.
 suff ->: (V = <[v]>)%VS by done.
-apply/eqP; rewrite eq_sym eqEdim; apply/andP; split; 
+apply/eqP; rewrite eq_sym eqEdim; apply/andP; split;
   first by rewrite -memvE.
 suff ->: \dim <[v]> = 1%N by rewrite dim_V_eq1.
 rewrite memv0 in v_not_in_V.
 by rewrite dim_vline v_not_in_V.
 Qed.
 
-Lemma dim2P V :
-  dim V = 2%N -> exists Ω, exists2 d, d != 0 & V = [line d & Ω].
+Lemma adim2P V :
+  adim V = 2%N -> exists Ω, exists2 d, d != 0 & V = [line d & Ω].
 Proof. (* RK *)
-move => dim_V_eq2.
+move => adim_V_eq2.
 have V_neq0 : V != affine0.
   apply/contraT => V_eq0; rewrite negbK in V_eq0.
-  by rewrite (eqP V_eq0) dim0 in dim_V_eq2.
+  by rewrite (eqP V_eq0) adim0 in adim_V_eq2.
 have dim_dir_V_eq1: (\dim (dir V)) = 1%N
-  by apply/eq_add_S; rewrite /dim ifF // in dim_V_eq2; apply/negbTE.
+  by apply/eq_add_S; rewrite /adim ifF // in adim_V_eq2; apply/negbTE.
 move/eqP/dimv_eq1P: (dim_dir_V_eq1) => [d ? dir_V_eq].
 move/affineN0: V_neq0 => [Ω Ω_in_V].
 exists Ω; exists d; first by done.
 by rewrite -dir_V_eq; apply/mk_affine_dir.
 Qed.
 
-Lemma dim1P V :
-  dim V = 1%N -> exists Ω, V = [pt Ω].
+Lemma adim1P V :
+  adim V = 1%N -> exists Ω, V = [pt Ω].
 Proof. (* RK *)
-move => dim_V_eq1.
+move => adim_V_eq1.
 have V_neq0 : V != affine0.
   apply/contraT => V_eq0; rewrite negbK in V_eq0.
-  by rewrite (eqP V_eq0) dim0 in dim_V_eq1.
+  by rewrite (eqP V_eq0) adim0 in adim_V_eq1.
 move: (affineN0 _ V_neq0) => [Ω Ω_in_V].
 exists Ω.
 suff <-: (dir V) = 0%VS by apply/mk_affine_dir.
 apply/eqP; rewrite -dimv_eq0.
-by apply/eqP/eq_add_S; rewrite /dim ifF // in dim_V_eq1; apply/negbTE.
+by apply/eqP/eq_add_S; rewrite /adim ifF // in adim_V_eq1; apply/negbTE.
 Qed.
 
-Lemma dim_leSn V :
-  (dim V <= n.+1)%N.
+Lemma adim_leSn V :
+  (adim V <= n.+1)%N.
 Proof. (* RK *)
-rewrite /dim; case: (boolP (V == affine0)) => [_|_]; first by done.
+rewrite /adim; case: (boolP (V == affine0)) => [_|_]; first by done.
 rewrite ltnS.
 by apply/(@leq_trans (n * 1)); [apply/rank_leq_col | rewrite muln1].
 Qed.
@@ -1136,27 +1141,27 @@ move/affine_proper0P: affine_U_neq0 => [?].
 by rewrite in_affine0.
 Qed.
 
-Lemma dimT : (dim affineT = n.+1)%N.
+Lemma adimT : (adim affineT = n.+1)%N.
 Proof. (* RK *)
-rewrite /dim ifF.
+rewrite /adim ifF.
 - by rewrite dir_affineT dimvf /Vector.dim /= muln1.
 - apply/(contraFF _ (erefl false)).
   move/eqP/affine_eqP => aff_eq.
   by move: (aff_eq 0); rewrite in_affine0 in_affineT.
 Qed.
 
-Lemma dimTP V : dim V = n.+1%N -> V = affineT.
+Lemma adimTP V : adim V = n.+1%N -> V = affineT.
 Proof. (* RK *)
-rewrite -dimT => ?.
-apply/sub_eq_dim; last by done.
+rewrite -adimT => ?.
+apply/sub_eq_adim; last by done.
 by apply/affine_leP => ?; rewrite in_affineT.
 Qed.
 
-Lemma dim_hp e :
-  [hp e] `>` [affine0] -> dim [hp e] = ((e.1 == 0%R) + n)%N.
+Lemma adim_hp e :
+  [hp e] `>` [affine0] -> adim [hp e] = ((e.1 == 0%R) + n)%N.
 Proof. (* RK *)
 move => hp_neq0.
-rewrite /dim ifF; last by apply/negbTE; move/andP: hp_neq0 => [? _].
+rewrite /adim ifF; last by apply/negbTE; move/andP: hp_neq0 => [? _].
 case: (boolP (e.1 == 0)) => [/eqP e1_eq0 | e1_neq0].
 - suff ->: [hp e] = affineT
     by rewrite dir_affineT dimvf /Vector.dim /= muln1 add1n.
@@ -1164,7 +1169,7 @@ case: (boolP (e.1 == 0)) => [/eqP e1_eq0 | e1_neq0].
   move/affineN0: (proj1 (andP hp_neq0)) => [?].
   by rewrite in_hp e1_eq0 vdot0l => ?.
 - case: (boolP (0 < n)%N) => [? | n_eq0].
-  + rewrite /dim (dir_affine hp_neq0) dim_orthv.
+  + rewrite /adim (dir_affine hp_neq0) dim_orthv.
     have ->: ((befst @: <[e]>) = <[e.1]>)%VS
       by rewrite limg_line lfunE.
     rewrite dim_vline e1_neq0 add0n subn1.
@@ -1173,6 +1178,29 @@ case: (boolP (e.1 == 0)) => [/eqP e1_eq0 | e1_neq0].
     rewrite extra_matrix.col_neq_0 in e1_neq0.
     move/existsP: e1_neq0 => [i _].
     by rewrite (eqP n_eq0) in i; move: (ord0_false i).
+Qed.
+
+Lemma subset_hp (V : {fset 'cV[R]_n}) :
+  (0 < #|` V | <= n)%N ->
+  exists2 e : lrel[R]_n, (e.1 != 0) & {subset V <= [hp e]}.
+Proof.
+rewrite cardfs_gt0 => /andP [/fset0Pn [v v_in] cardV_le].
+pose U := <<[seq w - v | w <- (V `\ v)%fset]>>%VS.
+have: ((\dim U).+1 <= n)%N.
+- apply/leq_trans: cardV_le.
+  have ->: #|` V| = #|` (V `\  v)|%fset.+1%N by rewrite (@cardfsD1 _ v) v_in.
+  rewrite ltnS; apply/(leq_trans (dim_span _)).
+  by rewrite size_map.
+rewrite -subn_gt0 -dim_orthv lt0n dimv_eq0 => h.
+pose c := vpick (U^OC)%VS.
+pose e := [< c, '[c,v] >]; exists e; first by rewrite vpick0.
+move => w; case/altP : (w =P v) => [-> _| w_neq_v w_in_V].
+- by rewrite in_hp.
+- rewrite in_hp /=.
+  have ->: w = v + (w - v) by rewrite addrCA addrN addr0.
+  rewrite vdotDr; suff ->: '[c, w-v] = 0 by rewrite addr0.
+  rewrite vdotC; apply/(orthvP (V := U)); first exact: memv_pick.
+  by rewrite memv_span //; apply/map_f; rewrite !inE w_neq_v.
 Qed.
 
 End Dimension.
