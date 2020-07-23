@@ -681,17 +681,14 @@ move => b b_in_base b_notin_J.
 case: (ltrgt0P (c b)).
 - move=> c_b_gt0.
   have h1: r j / c j * c b <= 0.
-  + apply: mulr_le0_ge0 ; [apply: mulr_ge0_le0 | ].
-    * exact: r_ge0.
-    * by rewrite invr_le0 mc_1_10.Num.Theory.ltrW.
-    * by rewrite mc_1_10.Num.Theory.ltrW.
+  + apply: mulr_le0_ge0 ; [apply: mulr_ge0_le0 | ];
+      by rewrite ?r_ge0 ?invr_le0 ?ltW.
   by apply: (le_trans h1); rewrite (r_ge0 b_in_base).
 - by move => c_b_lt0; rewrite -ler_ndivr_mulr //; apply: condition.
 - by move => ->; rewrite mulr0; apply: (r_ge0 b_in_base).
 Qed.
 End Feasible.
-End PointPivot. 
-
+End PointPivot.
 
 Lemma pivot :
   reflect (c j != 0 /\ (r j > 0 -> (c j < 0) /\ condition_argmax))
