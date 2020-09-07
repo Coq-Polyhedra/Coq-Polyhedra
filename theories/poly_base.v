@@ -1412,46 +1412,21 @@ move/(facet_proper i_in): (i_notin_eqP) => S_prop_P.
 have i_notin_span: i \notin << {eq P} >>%VS.
 - move: S_prop_P; apply/contraTN; move/in_span_active.
   by rewrite /= polyEq1 => /meet_l ->; rewrite ltxx.
-rewrite /dim !hullN0_eq ?facet_proper0 //.
-rewrite activeU1 span_fsetU span_fset1. limg_add limg_line.
+have hull_S: hull S = [affine (<<{eq P}>> + <[i]>)%VS].
+- rewrite hullN0_eq ?facet_proper0 //.
+  by rewrite activeU1 span_fsetU span_fset1.
+rewrite dim_hull hullN0_eq // [in RHS]dim_hull hull_S !dim_affine.
+apply/dim_affineI => //.
+by rewrite -hull_S -hullN0 facet_proper0.
+Qed.
 
-
-  rewrite !dimN0_eq ?dir_hull ?facet_proper0 //; apply: congr1.
-rewrite activeU1 span_fsetU span_fset1 limg_add limg_line.
-Search _ dimv.
-rewrite !dim_orthv ?dim_add_line ?subnSK //.
-Search _ orthv.
-
-suff: (dim P > 1)%N by rewrite dimN0_eq ?dir_hull // dim_orthv ltnS subn_gt0.
-move/ltW: (S_prop_P).
-rewrite -face_setE => /face_dim_lt/(_ (face_set_self _))/(_ S_prop_P).
-by apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
-
-
-rewrite -dir_hull.
-
-Search dimv.
-
-rewrite !dim_orthv ?dim_add_line ?subnSK //=.
-- Search _ befst.
-
-Search _ befst.
-
-have ->:
-  ((befst @: <<{eq P}>> + <[befst i]>)^OC)%VS
-  = ((befst @: <<{eq P}>>)^OC :&: [hp i])%VS.
-- admit.
-Search _ dimv.
-  rewrite !dir_hull ?facet_proper0 //.
-
-
-
+(*
 rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.
 suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
 move/ltW: (S_prop_P).
 rewrite -face_setE => /face_dim_lt/(_ (face_set_self _))/(_ S_prop_P).
 by apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
-Qed.
+Qed.*)
 
 Lemma facetP (F : {poly base}) :
   (F `>` [poly0]) -> dim P = (dim F).+1%N ->

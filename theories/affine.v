@@ -977,7 +977,7 @@ Section Dimension.
 
 Context {R : realFieldType} {n : nat}.
 
-Implicit Type (V : 'affine[R]_n).
+Implicit Type (V : 'affine[R]_n) (U : {vspace lrel[R]_n}).
 
 Definition adim V :=
   if V == [affine0] then 0%N
@@ -1062,6 +1062,12 @@ Proof.
 rewrite /adim ifF; last by apply/negbTE/mk_affineN0.
 by rewrite dir_mk_affine dim_vline.
 Qed.
+
+Lemma dim_affineI U e :
+  let U' := (U + <[e]>)%VS in
+  e \notin U -> [affine U'] `>` [affine0] ->
+  adim [affine U] = (adim [affine U']).+1%N.
+Admitted.
 
 Lemma adim_pt Ω : adim [pt Ω] = 1%N.
 Proof.
