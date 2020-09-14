@@ -1046,20 +1046,24 @@ rewrite /adim ifF; last by apply/negbTE/mk_affineN0.
 by rewrite dir_mk_affine dim_vline.
 Qed.
 
+Lemma affine_addv U U' :
+  [affine (U + U')] = [affine U] `&` [affine U'].
+Proof.
+apply/affine_eqP => x; rewrite in_affineI.
+apply/in_affineP/andP.
+Admitted.
+
 Lemma dim_affineI U e :
   let V := [affine U] `&` [hp e] in
   ~~ ([affine U] `<=` [hp e]) -> V `>` [affine0] ->
   adim [affine U] = (adim V).+1%N.
 Proof.
-move => V affine_U_nsub_hp_e proper0_V.
-have [U_prop0 e_prop0]: ([affine0] `<` [affine U]) /\ ([affine0] `<` [hp e]).
-  - by split; apply: (lt_le_trans proper0_V); rewrite ?leIl ?leIr.
-rewrite /V /Order.meet /= /affineI /=.
-move : U_prop0 e_prop0 affine_U_nsub_hp_e proper0_V.
-case/affineP : [affine U]; case/affineP : [hp e]; rewrite ?ltxx => //.
-
-
-(* assigned to QC *)
+move => /= affine_U_nsub_hp_e proper0_V.
+have [U_prop0 e_prop0]:
+  ([affine0] `<` [affine U]) /\ ([affine0] `<` [hp e]).
+- by split; apply: (lt_le_trans proper0_V); rewrite ?leIl ?leIr.
+rewrite -affine_addv in proper0_V *.
+rewrite ?adimN0_eq ?dir_affine //.
 Admitted.
 
 Lemma adim_pt Ω : adim [pt Ω] = 1%N.
