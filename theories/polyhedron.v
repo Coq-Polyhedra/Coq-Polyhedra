@@ -276,8 +276,6 @@ End PolyPred.
 Notation "'[' 'poly0' ']'" := (@Order.bottom poly_display poly_B) : poly_scope.
 Notation "'[' 'polyT' ']'" := (@polyT _ _) : poly_scope.
 
-Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
-
 Notation "\polyI_ ( i <- r | P ) F" :=
   (\big[polyI/[polyT]%PH]_(i <- r | P%B) F%PH) : poly_scope.
 Notation "\polyI_ ( i <- r ) F" :=

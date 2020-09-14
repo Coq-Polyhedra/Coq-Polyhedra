@@ -883,6 +883,12 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Types (base : base_t[R,n]).
 
+(* TODO: the next two statements could be deduced from the hullP statement :
+ * (P <= V%:PH) = (hull P <= V)
+ * and the statements [affine U] > affine0 -> ([affine U] <= [hp e]) = (e \in U)
+ * Of course, the proof of hullP relies on in_span_activeP, but alternatively
+ * it can be proved by constructing a point in the relative interior *)
+
 Lemma in_span_active base (P : {poly base}) e :
   (e \in << {eq P} >>%VS) -> (P `<=` [hp e]%:PH :> 'poly_n).
 Proof.
@@ -1027,7 +1033,10 @@ Qed.
  *)
 Lemma dir_hull base (P : {poly base}) :
   P `>` [poly0] -> dir (hull P) = (befst @: << {eq P} >>)^OC%VS.
-Admitted.
+Proof.
+move => P_prop0.
+by rewrite hullN0_eq // ?dir_affine -?hullN0_eq -?hullN0.
+Qed.
 
 (*Lemma hull_mk_affine base (P : {poly base}) x :
   x \in P -> hull P = [affine (befst @: << {eq P} >>)^OC%VS & x].
@@ -1416,9 +1425,11 @@ have hull_S: hull S = [affine (<<{eq P}>> + <[i]>)%VS].
 - rewrite hullN0_eq ?facet_proper0 //.
   by rewrite activeU1 span_fsetU span_fset1.
 rewrite dim_hull hullN0_eq // [in RHS]dim_hull hull_S !dim_affine.
+Admitted.
+(*
 apply/dim_affineI => //.
 by rewrite -hull_S -hullN0 facet_proper0.
-Qed.
+Qed.*)
 
 (*
 rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.

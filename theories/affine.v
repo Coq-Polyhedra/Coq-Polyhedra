@@ -219,13 +219,6 @@ apply/lfunP => v.
 by rewrite comp_lfunE !lfunE.
 Qed.
 
-Lemma sat_be_lift W x :
-  sat ((be_lift x) @: W)%VS x.
-Proof. (* RK *)
-apply/satP => e /memv_imgP [? ?] ->.
-by rewrite !lfunE.
-Qed.
-
 Lemma be_liftE W x :
   sat W x -> ((be_lift x) @: (befst @: W))%VS = W.
 Proof. (* RK *)
@@ -350,7 +343,8 @@ Qed.
 Lemma in_affineE U x :
   (x \in [affine U]) = sat U x.
 Proof.
-rewrite /Core.affine_of /Core.affine; case: {-}_/idP => [// | /negP/is_satPn ->].
+rewrite /Core.affine_of /Core.affine.
+case: {-}_/idP => [// | /negP/is_satPn ->].
 by rewrite in_affine0.
 Qed.
 
@@ -511,51 +505,24 @@ case/mk_affineP: V.
 Qed.
 
 Definition affineI V V' :=
-  let U := eq_vect V in
-  let U' := eq_vect V' in
-  [affine (U + U')].
-
-Lemma cond_affine0 U :  (* RK: I have added this auxiliary lemma *)
-  let: e := [<0, 1>]: lrel[R]_n in
-    e \in U -> [affine U] = affine0.
-Proof.
-move => e_in_U; rewrite /Core.affine_of /Core.affine.
-case: {-}_/idP => [is_sat_U |_ //].
-suff : ~~ (is_sat U) by rewrite is_sat_U.
-apply/contraT.
-move/negbNE/is_satP => [x] /satP sat_U_x.
-move/eqP: (sat_U_x _ e_in_U).
-by rewrite vdot0l eq_sym oner_eq0.
-Qed.
+  match affineP V, affineP V' with
+  | Affine0, _ => affine0
+  | _, Affine0 => affine0
+  | Affine U _, Affine U' _ => [affine (U + U')]
+  end.
 
 Lemma in_affineI x V V' :
   x \in affineI V V' = (x \in V) && (x \in V').
-Proof. (* RK *)
-pose e := ([< 0, 1 >]: lrel[R]_n).
-case: V => [ | I is_sat_I].
-- suff ->: affineI (Core.Affine0 n) V' = affine0 by rewrite in_affine0.
-  apply/cond_affine0/memv_addP.
-  exists e; first exact: memv_line.
-  exists 0; first exact: mem0v.
-  by rewrite addr0.
-- case: V' => [ | I' is_sat_I'].
-  + suff ->: affineI (Core.Affine is_sat_I) (Core.Affine0 n) = affine0
-      by rewrite andbC in_affine0.
-    apply/cond_affine0/memv_addP.
-    exists 0; first exact: mem0v.
-    exists e; first exact: memv_line.
-    by rewrite add0r.
-  + rewrite -{2}(Core.eq_vectK (Core.Affine is_sat_I)) -{2}(Core.eq_vectK (Core.Affine is_sat_I')).
-    apply/idP/idP => [/in_affineP x_in_affine | /andP [/in_affineP x_in_affine /in_affineP x_in_affine']].
-    * apply/andP; split; apply/in_affineP => e' ?; apply/x_in_affine/memv_addP.
-      - exists e'; first by done.
-        exists 0; first exact: mem0v.
-        by rewrite addr0.
-      - exists 0; first exact: mem0v.
-        exists e'; first by done.
-        by rewrite add0r.
-    * apply/in_affineP => e' /memv_addP [e1] e1_in [e2] e2_in ->.
-      by rewrite vdotDl (x_in_affine _ e1_in) (x_in_affine' _ e2_in).
+Proof.
+rewrite /affineI.
+case: (affineP V) => [| U _]; case: (affineP V') => [| U' _];
+  rewrite ?in_affine0 ?andbF //.
+apply/in_affineP/andP => [x_in| [x_in x_in']].
+- by split; apply/in_affineP => e e_in; apply/x_in;
+    move: e_in; apply/subvP; rewrite ?addvSl ?addvSr.
+  (* TODO: add mem_addvl and mem_addvr statements  to vector.v *)
+- move => ? /memv_addP [e1 e1_in] [e2 e2_in] -> /=.
+  by rewrite vdotDl; apply: congr2; [apply/(in_affineP x_in) | apply/(in_affineP x_in')].
 Qed.
 
 Definition affine_le V V' := (V == affineI V V').
@@ -601,7 +568,7 @@ by apply/affine_leP => ? ?; apply/subset2/subset1.
 Qed.
 
 Definition affine_LtPOrderMixin :=
-  LePOrderMixin  (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
+  LePOrderMixin (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
 
 Canonical affine_LtPOrderType :=
   Eval hnf in POrderType poly_display 'affine[R]_n affine_LtPOrderMixin.
@@ -704,6 +671,8 @@ Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
 Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
 Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
 
+Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
+
 Notation "'[' 'affine0' ']'" :=
   (@Order.bottom poly_display Order.affine_BSemilatticeType ) : poly_scope.
 
@@ -739,6 +708,7 @@ apply/idP/orthvP => [/in_affineP in_aff ? /memv_imgP [u u_in_U] ->| H].
   by apply/H/memv_imgP; exists u; [exact: u_in_U | rewrite lfunE].
 Qed.
 
+
 Lemma affine_proper0P V :
   reflect (exists x, x \in V) (V `>` [affine0]).
 Proof.
@@ -764,6 +734,19 @@ Proof. (* RK *)
 case/affineP: V => [_  |U [? Hin_affine] /affine_leP Hsubset];
   rewrite ?dir0 ?sub0v //.
 by apply/subvP => ?; rewrite (in_dirP Hin_affine) (in_dirP (Hsubset _ Hin_affine)); apply/Hsubset.
+Qed.
+
+Lemma affineS' U U' :
+  [affine U] `>` [affine0] -> [affine U] `<=` [affine U'] = (U' <= U)%VS.
+Proof.
+move => U_neq0.
+apply/idP/idP; last by apply/affineS.
+move => U_sub_U'.
+have U'_neq0: [affine U'] `>` [affine0] by apply/lt_le_trans: U_sub_U'.
+move/dirS: (U_sub_U'); rewrite ?dir_affine // orthS.
+case/affine_proper0P : U_neq0 => x x_in_U.
+have x_in_U' : x \in [affine U'] by apply/(affine_leP U_sub_U').
+by move/(limgS (be_lift x)); rewrite ?be_liftE -?in_affineE.
 Qed.
 
 Notation "'[' 'hp' e  ']'" := [affine <[e]> ].
@@ -1064,9 +1047,11 @@ by rewrite dir_mk_affine dim_vline.
 Qed.
 
 Lemma dim_affineI U e :
-  let U' := (U + <[e]>)%VS in
-  e \notin U -> [affine U'] `>` [affine0] ->
-  adim [affine U] = (adim [affine U']).+1%N.
+  let V := [affine U] `&` [hp e] in
+  ~~ ([affine U] `<=` [hp e]) -> V `>` [affine0] ->
+  adim [affine U] = (adim V).+1%N.
+Proof.
+(* assigned to QC *)
 Admitted.
 
 Lemma adim_pt Ω : adim [pt Ω] = 1%N.
@@ -1078,6 +1063,7 @@ Lemma dimv_eq1P (K : fieldType) (vT : vectType K) (V : {vspace vT}) :
   reflect (exists2 v, v != 0 & V = <[v]>%VS) (\dim V == 1%N).
 (* RK: I added this result which I could not find but it is quite natural.
        If we keep it, I suppose it should be somewhere else. *)
+(* TODO: move to extra_vector.v *)
 Proof.
 apply/(iffP idP) => [/eqP dim_V_eq1 |[? neq0 ->]];
   last by rewrite dim_vline neq0.
@@ -1136,15 +1122,15 @@ Qed.
 Lemma dim_affine_le (U : {vspace lrel[R]_n}) :
   [affine U] `>` [affine0] -> (\dim U <= n)%N.
 Proof. (* RK *)
-move => affine_U_neq0; apply/contraT; rewrite -ltnNge => ?.
-have U_eq_fullv: U = fullv
+apply/contraTT; rewrite -ltnNge lt0x negbK => dimU.
+have {dimU} -> : U = fullv
   by apply/eqP; rewrite eqEdim; apply/andP; split;
     [exact: subvf | rewrite dimvf /Vector.dim /= addn1].
+apply/eqP/affine_eqP => x; rewrite in_affine0; apply/negbTE/negP.
 pose e := [<0, 1>]: lrel[R]_n.
-have e_in_U: e \in U by rewrite U_eq_fullv memvf.
-rewrite (cond_affine0 e_in_U) in affine_U_neq0.
-move/affine_proper0P: affine_U_neq0 => [?].
-by rewrite in_affine0.
+have e_in_U: e \in fullv by rewrite memvf.
+move/in_affineP/(_ _ e_in_U); rewrite vdot0l /= => /esym/eqP.
+by rewrite oner_eq0.
 Qed.
 
 Lemma adimT : (adim affineT = n.+1)%N.
@@ -1238,3 +1224,10 @@ move => affU_prop0 aff_eq.
 have affV_prop0 : (affine V `>` [poly0]) by rewrite -aff_eq.
 by apply/subv_anti/andP; split; apply/affine_subset => //; rewrite aff_eq poly_subset_refl.
 Qed.*)
+
+(* TODO:
+ * 1/ improve the naming scheme (too many occurences of "affine",
+      mk_affine is bad name,
+      use the letter 'a' in the name of lemmas (compare with 'v' in vector.v)
+ * 2/ more notation for be_*, e.g. \fst, \lift_x, etc
+ * 3/ adim -> dim, and dim in poly_base.v -> \dim *)
