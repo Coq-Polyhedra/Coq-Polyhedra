@@ -1051,7 +1051,17 @@ Lemma affine_addv U U' :
 Proof.
 apply/affine_eqP => x; rewrite in_affineI.
 apply/in_affineP/andP.
-Admitted.
+- move => H; split; apply/in_affineP => e e_in; apply : H.
+    + rewrite -[X in X \in _]addr0.
+      apply: memv_add => //; by rewrite mem0v.
+    + rewrite -[X in X \in _]add0r.
+      apply: memv_add => //; by rewrite mem0v.
+- case => /in_affineP x_in_U /in_affineP x_in_U' e /memv_addP.
+  case => e0 e0_in_U [e1 e1_in_U'] ->.
+  rewrite beadd_p1E vdotDl beadd_p2E; apply congr2.
+  + exact: x_in_U.
+  + exact : x_in_U'.
+Qed.
 
 Lemma dim_affineI U e :
   let V := [affine U] `&` [hp e] in
@@ -1063,7 +1073,11 @@ have [U_prop0 e_prop0]:
   ([affine0] `<` [affine U]) /\ ([affine0] `<` [hp e]).
 - by split; apply: (lt_le_trans proper0_V); rewrite ?leIl ?leIr.
 rewrite -affine_addv in proper0_V *.
-rewrite ?adimN0_eq ?dir_affine //.
+rewrite ?adimN0_eq ?dir_affine //; apply congr1.
+rewrite !dim_orthv.
+have: ~~ (befst @: (U + <[e]>) <= befst @: U)%VS.
+- rewrite limg_add subv_add subvv andTb.
+Search _ subsetv.
 Admitted.
 
 Lemma adim_pt Ω : adim [pt Ω] = 1%N.
