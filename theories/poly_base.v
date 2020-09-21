@@ -923,9 +923,10 @@ suff finsupp_sub_eq: (finsupp w `<=` (S `|` -%R @` S))%fset.
       by move/imfsetP => [? /= ? ->]; rewrite memvN memv_span.
   suff <-: (combine w) = e by [].
   move/proper0P: P_prop0 => [x x_in_P].
-  apply/(befst_inj (x := x)) => //; rewrite -inE.
+  suff: (befst (combine w)) = (befst e).
+  move/(congr1 (be_lift x)); rewrite ?be_lift_hp -?affE //.
+  * by apply/poly_leP/P_sub_hp: x_in_P.
   * by apply/poly_leP/in_span_active: x_in_P.
-  * by move/poly_leP/(_ _ x_in_P): P_sub_hp.
 - move: P_sub_hp; apply: contraTT.
   move/fsubsetPn => [e'];
     rewrite inE negb_or => e'_in /andP [e'_notin_S /negbTE e'_notin_mS].

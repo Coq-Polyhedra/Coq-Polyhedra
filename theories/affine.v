@@ -765,12 +765,11 @@ Proof.
 by apply/affine_eqP => x; rewrite !in_hp /= vdotNl eqr_opp.
 Qed.
 
-Lemma befst_inj (x : 'cV[R]_n) (e e' : lrel[R]_n) : (* TODO: to be removed *)
-  (x \in [hp e]) -> (x \in [hp e']) -> e.1 = e'.1 -> e = e'.
+Lemma be_lift_hp (x : 'cV[R]_n) (e : lrel[R]_n) :
+  x \in [hp e] -> (be_lift x (befst e)) = e.
 Proof.
-move => x_in_e x_in_e' fst_eq.
-apply/val_inj/injective_projections => //=.
-by move: x_in_e x_in_e'; do 2![rewrite in_hp => /eqP <-]; rewrite fst_eq.
+rewrite lfunE /= /be_lift0 lfunE /=.
+by rewrite in_hp => /eqP ->; rewrite beE.
 Qed.
 
 Lemma affineS1 (U : {vspace lrel[R]_n}) e :
@@ -1049,18 +1048,13 @@ Qed.
 Lemma affine_addv U U' :
   [affine (U + U')] = [affine U] `&` [affine U'].
 Proof.
-apply/affine_eqP => x; rewrite in_affineI.
+apply/affine_eqP=> x; rewrite in_affineI.
 apply/in_affineP/andP.
-- move => H; split; apply/in_affineP => e e_in; apply : H.
-    + rewrite -[X in X \in _]addr0.
-      apply: memv_add => //; by rewrite mem0v.
-    + rewrite -[X in X \in _]add0r.
-      apply: memv_add => //; by rewrite mem0v.
-- case => /in_affineP x_in_U /in_affineP x_in_U' e /memv_addP.
-  case => e0 e0_in_U [e1 e1_in_U'] ->.
-  rewrite beadd_p1E vdotDl beadd_p2E; apply congr2.
-  + exact: x_in_U.
-  + exact : x_in_U'.
+- by move=> x_in_UU'; split; apply/in_affineP => e e_in;
+     apply: x_in_UU'; apply/subvP: e_in; rewrite ?addvSl ?addvSr.
+- case=> /in_affineP x_in_U /in_affineP x_in_U' e /memv_addP.
+  case=> [e0 e0_in_U] [e1 e1_in_U'] -> /=.
+  by rewrite vdotDl; apply: congr2; by [exact: x_in_U | exact: x_in_U'].
 Qed.
 
 Lemma dim_affineI U e :
@@ -1068,17 +1062,25 @@ Lemma dim_affineI U e :
   ~~ ([affine U] `<=` [hp e]) -> V `>` [affine0] ->
   adim [affine U] = (adim V).+1%N.
 Proof.
-move => /= affine_U_nsub_hp_e proper0_V.
+move => /= U_subN_e V_prop0.
 have [U_prop0 e_prop0]:
   ([affine0] `<` [affine U]) /\ ([affine0] `<` [hp e]).
-- by split; apply: (lt_le_trans proper0_V); rewrite ?leIl ?leIr.
-rewrite -affine_addv in proper0_V *.
-rewrite ?adimN0_eq ?dir_affine //; apply congr1.
-rewrite !dim_orthv.
-have: ~~ (befst @: (U + <[e]>) <= befst @: U)%VS.
-- rewrite limg_add subv_add subvv andTb.
-Search _ subsetv.
-Admitted.
+- by split; apply: (lt_le_trans V_prop0); rewrite ?leIl ?leIr.
+have e_notin: (befst e \notin befst @: U)%VS.
+- move: U_subN_e; apply: contraNN.
+  case/affine_proper0P: V_prop0 => x.
+  rewrite in_affineI => /andP [x_in_U x_in_e].
+  move/(memv_img (be_lift x)).
+  rewrite be_liftE -?in_affineE ?be_lift_hp //.
+  exact: affineS.
+rewrite -affine_addv in V_prop0 *.
+rewrite ?adimN0_eq ?dir_affine //; apply congr1; rewrite !dim_orthv.
+move/dir_affine: V_prop0.
+rewrite limg_add limg_line.
+move/(canLR orthK)/(congr1 (@dimv _ _)).
+rewrite dim_add_line // => dim_eq.
+by rewrite subnSK -?dim_eq ?dim_leqn.
+Qed.
 
 Lemma adim_pt Ω : adim [pt Ω] = 1%N.
 Proof.

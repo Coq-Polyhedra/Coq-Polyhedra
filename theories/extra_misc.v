@@ -840,4 +840,9 @@ move => v_notin; rewrite dimv_disjoint_sum ?dim_vline -1?addn1.
   by move/(memvZ μ^-1) : x_in; rewrite scalerA mulVf // scale1r.
 Qed.
 
+Lemma dim_leqn (R : realFieldType) (n : nat) (U : {vspace 'cV[R]_n}) : (\dim U <= n)%N.
+Proof.
+by move/dimvS: (subvf U); rewrite dimvf /Vector.dim /= muln1.
+Qed.
+
 End Vector.
