@@ -924,9 +924,11 @@ suff finsupp_sub_eq: (finsupp w `<=` (S `|` -%R @` S))%fset.
   suff <-: (combine w) = e by [].
   move/proper0P: P_prop0 => [x x_in_P].
   suff: (befst (combine w)) = (befst e).
-  move/(congr1 (be_lift x)); rewrite ?be_lift_hp -?affE //.
-  * by apply/poly_leP/P_sub_hp: x_in_P.
-  * by apply/poly_leP/in_span_active: x_in_P.
+  + move/(congr1 (be_lift x)); rewrite ?be_lift_hp -?affE //.
+    * by apply/poly_leP/P_sub_hp: x_in_P.
+    * by apply/poly_leP/in_span_active: x_in_P.
+  by rewrite !lfunE. (* TODO: this should be a specific rewriting rule
+                      * rather than lfunE                              *)
 - move: P_sub_hp; apply: contraTT.
   move/fsubsetPn => [e'];
     rewrite inE negb_or => e'_in /andP [e'_notin_S /negbTE e'_notin_mS].
@@ -965,6 +967,35 @@ by apply/subv_anti; apply/andP; split; apply/span_activeS; rewrite -?P_eq_Q ?pol
 Qed.
 
 End SpanActive.
+
+Section Relint.
+
+Context {R : realFieldType} {n : nat}.
+
+Implicit Type base : base_t[R,n].
+
+Context {base : base_t[R,n]} {P : {poly base}}.
+
+Hypothesis (Pneq0 : P `>` [poly0]).
+
+Lemma inactive_pt e  :
+  e \notin ({eq P} : {fset _}) -> exists x, ((x \in P) && (x \notin [hp e])).
+Admitted.
+
+(*Definition mk_inactive_pt (e : (base `\` ({eq P} : {fset _}))%fset) :=
+  xchoose (inactive_pt (fsvalP e)).
+
+  match @idPn (e \in ({eq P} : {fset _})) with
+  | ReflectT H => xchoose (inactive_pt H)
+  | _ => xchoose (proper0P Pneq0)
+  end.
+
+Lemma mk_inactive_ptP e :
+  e \notin ({eq P} : {fset _}) -> '[e.1, mk_inactive_pt e] > e.2.
+Admitted.
+
+Definition relint_pt := \sum_(e : base) (1/#|base| mk_inactive_pt (val e).
+ *)
 
 Section AffineHull.
 
