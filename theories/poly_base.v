@@ -978,24 +978,102 @@ Context {base : base_t[R,n]} {P : {poly base}}.
 
 Hypothesis (Pneq0 : P `>` [poly0]).
 
-Lemma inactive_pt e  :
-  e \notin ({eq P} : {fset _}) -> exists x, ((x \in P) && (x \notin [hp e])).
+
+Lemma inactive_pt (e : base):
+  (fsval e) \notin ({eq P} : {fset _}) -> exists x, ((x \in P) && (x \notin [hp (fsval e)])).
 Admitted.
 
-(*Definition mk_inactive_pt (e : (base `\` ({eq P} : {fset _}))%fset) :=
-  xchoose (inactive_pt (fsvalP e)).
-
-  match @idPn (e \in ({eq P} : {fset _})) with
+Definition mk_inactive_pt (e : base):=
+  match @idP ((fsval e) \notin ({eq P} : {fset _})) with
   | ReflectT H => xchoose (inactive_pt H)
   | _ => xchoose (proper0P Pneq0)
   end.
 
-Lemma mk_inactive_ptP e :
-  e \notin ({eq P} : {fset _}) -> '[e.1, mk_inactive_pt e] > e.2.
+Lemma mk_inactive_ptP (e : base) :
+  (fsval e) \notin ({eq P} : {fset _}) -> '[(fsval e).1, mk_inactive_pt e] > (fsval e).2.
+Proof.
+move=> e_inactive; rewrite /mk_inactive_pt.
+case: {-}_/idP; [|rewrite e_inactive //].
+move=> e_inactive2; move: (xchooseP (inactive_pt e_inactive2)).
+set x:=(xchoose (inactive_pt e_inactive2)).
+case/andP.
+move/poly_subsetP:(poly_base_subset_hs P (fsvalP e)) => P_hse.
+by move/P_hse => ?; rewrite notin_hp.
+Qed.
+
+Lemma combine_hs_hp  (w : {convex 'cV[R]_n ~> R}) (e : base) :
+  {subset (finsupp w) <= [hs (fsval e)]} -> combine w \in [hp (fsval e)] ->
+  {subset (finsupp w) <= [hp (fsval e)]}.
+Proof.
+move => dom_hs_e combine_hp x x_finsupp.
+apply: contraT.
+move: (dom_hs_e _ x_finsupp) => x_hs; rewrite (notin_hp x_hs).
+rewrite combineE in_hp in combine_hp.
+move/ltr_pmul2l: (gt0_fconvex x_finsupp) => <-; rewrite -vdotZr.
+have:
+  forall (y:finsupp w), (w (fsval y)) * (fsval e).2 <=
+  '[(w (fsval y)) *: (fsval y), (fsval e).1].
+- move=> y; move: (fsvalP y)=> y_finsupp.
+  move: (dom_hs_e _ y_finsupp); rewrite in_hs vdotZl vdotC.
+  by rewrite (ler_pmul2l (gt0_fconvex y_finsupp)).
+move=> finsupp_ger x_gtr.
+have: exists z:finsupp w,
+  w (fsval z) * (fsval e).2 <
+  '[w (fsval z) *: fsval z, (fsval e).1].
+- admit.
+move/sumr_ltrP: finsupp_ger => /= app; move/app.
+rewrite vdotC vdot_sumDl in combine_hp.
+move/eqP: combine_hp => ->.
+by rewrite -mulr_suml -weightE wgt1_fconvex mul1r lt_irreflexive.
 Admitted.
 
-Definition relint_pt := \sum_(e : base) (1/#|base| mk_inactive_pt (val e).
- *)
+
+Definition finsupp_relint := [fset (mk_inactive_pt e) | e : base ]%fset.
+Variable w : {convex 'cV[R]_n ~> R}.
+Definition relint_pt (_ : finsupp w = finsupp_relint):=
+  combine w.
+
+(*Definition relint_pt := \sum_(e : base) (1/#|base| mk_inactive_pt (val e).*)
+Lemma finsupp_relint_subset : {subset finsupp_relint <= P}.
+Proof.
+move=> x; rewrite /finsupp_relint.
+case/imfsetP => e /= e_base ->; rewrite /mk_inactive_pt.
+case: {-}_/idP.
+- by move => h; case/andP: (xchooseP (inactive_pt h)).
+- by move: (xchooseP (proper0P Pneq0)).
+Qed.
+
+
+Lemma relint_pt_poly (dom_w: finsupp w = finsupp_relint) :
+  (relint_pt dom_w) \in P.
+Proof.
+apply: convexW; first by exact: mem_poly_convex.
+by rewrite dom_w; exact : finsupp_relint_subset.
+Qed.
+
+Lemma relint_ptP (dom_w: finsupp w = finsupp_relint) :
+  forall e : base, (fsval e) \notin ({eq P} : {fset _}) ->
+  '[(fsval e).1 , (relint_pt dom_w)] > (fsval e).2.
+Proof.
+move => e e_not_eq; rewrite -notin_hp /relint_pt. 
+- have finsupp_hs:  {subset (finsupp w) <= [hs (fsval e)]}.
+  + move/(poly_base_subset_hs P)/poly_leP: (fsvalP e).
+    by move=> P_base x; rewrite dom_w; move/finsupp_relint_subset/P_base.
+  apply: contraT; move/negPn/(combine_hs_hp finsupp_hs)=> finsupp_hp.
+  move: (mk_inactive_ptP e_not_eq).
+  have pt_e_finsupp: (mk_inactive_pt e) \in finsupp w.
+  + by rewrite dom_w; apply/imfsetP => /=; exists e.
+  set xe:= mk_inactive_pt e.
+  move: (finsupp_hs xe pt_e_finsupp) (finsupp_hp xe pt_e_finsupp) => xe_hs xe_hp.
+  by rewrite -notin_hp ?xe_hs ?xe_hp.
+- apply: convexW; first by exact: mem_poly_convex.
+  rewrite dom_w => x /finsupp_relint_subset.
+  by move/(poly_base_subset_hs P): (fsvalP e) => /poly_leP P_sub_hs /P_sub_hs.
+Qed.
+
+
+
+End Relint.
 
 Section AffineHull.
 

@@ -94,6 +94,7 @@ Let add0f := let: And4 _ _ h _ := fsfun_zmod in h.
 Let addNf := let: And4 _ _ _ h := fsfun_zmod in h.
 
 Definition fsfun_zmodMixin := ZmodMixin addfA addfC add0f addNf.
+Print GRing.Zmodule.pack.
 Canonical fsfun_zmodType := Eval hnf in ZmodType {fsfun T ~> R} fsfun_zmodMixin.
 
 Lemma supp_fs0 : finsupp 0%R = fset0.
