@@ -989,13 +989,12 @@ Definition mk_inactive_pt e :=
   end.
 
 Lemma mk_inactive_ptP e :
-  e \in (base `\` {eq P})%fset -> (mk_inactive_pt e) \notin [hp e].
+  e \in (base `\` {eq P})%fset ->
+  ((mk_inactive_pt e) \in P) && ((mk_inactive_pt e) \notin [hp e]).
 Proof.
 move=> e_inactive; rewrite /mk_inactive_pt.
 case: {-}_/idP; [|rewrite e_inactive //].
-move=> e_inactive2; move: (xchooseP (inactive_pt e_inactive2)).
-set x:=(xchoose (inactive_pt e_inactive2)).
-by case/andP.
+by move=> e_inactive2; move: (xchooseP (inactive_pt e_inactive2)).
 Qed.
 
 Lemma vdot_sumDr (I: eqType) r (Q: pred I) (F : I -> 'cV[R]_n) x : '[x, \sum_(i <- r | Q i) F i] = \sum_(i <- r | Q i) '[x, F i ].
@@ -1023,52 +1022,86 @@ apply/sumr_ltrP => [y|].
 - move/(_ _ (fsvalP y)): supp_sub_hs; rewrite in_hs.
   rewrite vdotZr ler_pmul2l //.
   by apply/gt0_fconvex.
-- exists [` x_in]%fset.
+- exists [` x_in]%fset => /=.
   rewrite vdotZr /=; rewrite ltr_pmul2l //.
   by apply/gt0_fconvex.
 Qed.
 
 (* change base to base `\` {eq P} *)
-Definition finsupp_relint := (mk_inactive_pt @` base)%fset.
+(*Definition finsupp_relint := (mk_inactive_pt @` base)%fset.
 Variable w : {convex 'cV[R]_n ~> R}.
-Hypothesis w_supp : finsupp w = finsupp_relint.
+Hypothesis w_supp : finsupp w = finsupp_relint.*)
 
-(*Definition relint_pt :=
-  match @idP (base `\` {eq P} != fset0)%fset with
-  | ReflectT H => combine w (* replace with (uniform H) *)
-  | ReflectF _ => ppick P
-  end.
- *)
+Definition relint_pt :=
+  if (base `\` {eq P} != fset0)%fset
+  then fsavg (mk_inactive_pt @` (base `\` {eq P}))%fset
+  else ppick P.
+ 
 
 (*Definition relint_pt := \sum_(e : base) (1/#|base| mk_inactive_pt (val e).*)
-Lemma finsupp_relint_subset : {subset finsupp_relint <= P}.
+(*Lemma finsupp_relint_subset : {subset finsupp_relint <= P}.
 Proof.
 move=> x; rewrite /finsupp_relint.
 case/imfsetP => e /= e_base ->; rewrite /mk_inactive_pt.
 case: {-}_/idP.
 - by move => h; case/andP: (xchooseP (inactive_pt h)).
 - by move: (xchooseP (proper0P Pneq0)).
-Qed.
+Qed.*)
 
 Lemma relint_pt_poly :
-  (combine w) \in P. (* relint_pt \in P *)
+  relint_pt \in P.
 Proof.
-apply: convexW; first by exact: mem_poly_convex.
-by rewrite w_supp; exact : finsupp_relint_subset.
+rewrite /relint_pt fun_if if_arg.
+case: ifP; last by move => _; rewrite ppickP.
+move=> beqPprop0; rewrite -cvxavg_fsavg //.
+- case/fset0Pn: beqPprop0 => x x_in_beqP.
+    apply/fset0Pn; exists (mk_inactive_pt x).
+    by apply: in_imfset.
+- move => mk_beqP_prop0; apply: convexW; first by exact: mem_poly_convex.
+  move => x; rewrite fsuni_finsupp.
+  case/imfsetP => /= x0 x0_in_beqP ->.
+  by case/andP: (mk_inactive_ptP x0_in_beqP).
 Qed.
 
+
+(*apply: convexW; first by exact: mem_poly_convex.
+by rewrite w_supp; exact : finsupp_relint_subset.*)
+
 Lemma relint_ptP e :
-  e \in (base `\` {eq P})%fset -> combine w \notin [hp e].
+  e \in (base `\` {eq P})%fset -> relint_pt \notin [hp e].
 Proof.
-move => e_in.
+move => e_in_beqP; rewrite /relint_pt.
+have beqP_prop0: (base `\` {eq P})%fset != fset0 by apply/fset0Pn; exists e.
+set mk_beqP:= [fset mk_inactive_pt x | x in base `\` {eq P}]%fset.
+rewrite beqP_prop0 -cvxavg_fsavg.
+- case/fset0Pn: beqP_prop0 => x x_in_beqP.
+    apply/fset0Pn; exists (mk_inactive_pt x).
+    by apply: in_imfset.
+- move => mk_beqP_prop0.
+  rewrite /cvxavg.
+  set uni:= (cvxuni mk_beqP_prop0).
+  have supp_sub_hse: {subset (finsupp uni) <= [hs e]}.
+  + rewrite fsuni_finsupp => x /imfsetP [x0 /= x0_in_beqP ->].
+    case/andP : (mk_inactive_ptP x0_in_beqP).
+    move: (e_in_beqP); rewrite in_fsetE.
+    case/andP => _ /(poly_base_subset_hs P) /poly_subsetP P_leq_hse.
+    by move/P_leq_hse.
+  apply: contraT; move/negbNE/(combine_hs_hp supp_sub_hse).
+  rewrite fsuni_finsupp => mk_beqP_sub_hpe.
+  case/andP: (mk_inactive_ptP e_in_beqP) => _.
+  have: mk_inactive_pt e \in mk_beqP by apply/imfsetP; exists e. 
+  by move/mk_beqP_sub_hpe => ->.
+Qed.
+
+(*move => e_in.
 have e_in_base: e \in base by move: e_in; apply/fsubsetP/fsubsetDl.
 move/(_ _ e_in): mk_inactive_ptP.
 apply/contraNN => relint_pt_in.
 apply/(combine_hs_hp _ relint_pt_in).
 - move => ?; rewrite w_supp => /finsupp_relint_subset.
   by apply/poly_leP/poly_base_subset_hs.
-- by rewrite w_supp in_imfset.
-Qed.
+- by rewrite w_supp in_imfset.*)
+
 
 End Relint.
 
