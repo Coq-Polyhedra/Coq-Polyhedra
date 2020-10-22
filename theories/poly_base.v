@@ -980,6 +980,19 @@ Hypothesis (Pneq0 : P `>` [poly0]).
 
 Lemma inactive_pt e :
   e \in (base `\` {eq P})%fset -> exists x, ((x \in P) && (x \notin [hp e])).
+Proof.
+rewrite in_fsetE; case/andP => e_nin_eqP e_in_base.
+case bound: (bounded P (- e.1)).
+- move: (bound); rewrite bounded_argminN0; case/proper0P => x x_in_argmin.
+  have x_in_P: x \in P
+    by move/poly_subsetP: (argmin_subset P (-e.1)); apply.
+
+
+(*rewrite in_fsetE; case/andP => e_nin_eqP e_in_base.
+rewrite (in_active e_in_base) in e_nin_eqP.
+case/poly_lePn: e_nin_eqP => x H1 H2.
+exists x; rewrite H1 /=.
+by move: (@affE _ _ [hp e]) => <-.*)
 Admitted.
 
 Definition mk_inactive_pt e :=
@@ -1092,16 +1105,6 @@ rewrite beqP_prop0 -cvxavg_fsavg.
   have: mk_inactive_pt e \in mk_beqP by apply/imfsetP; exists e. 
   by move/mk_beqP_sub_hpe => ->.
 Qed.
-
-(*move => e_in.
-have e_in_base: e \in base by move: e_in; apply/fsubsetP/fsubsetDl.
-move/(_ _ e_in): mk_inactive_ptP.
-apply/contraNN => relint_pt_in.
-apply/(combine_hs_hp _ relint_pt_in).
-- move => ?; rewrite w_supp => /finsupp_relint_subset.
-  by apply/poly_leP/poly_base_subset_hs.
-- by rewrite w_supp in_imfset.*)
-
 
 End Relint.
 
