@@ -981,24 +981,16 @@ Hypothesis (Pneq0 : P `>` [poly0]).
 Lemma inactive_pt e :
   e \in (base `\` {eq P})%fset -> exists x, ((x \in P) && (x \notin [hp e])).
 Proof.
-rewrite in_fsetE; case/andP => e_nin_eqP e_in_base.
-case bound: (bounded P (- e.1)).
-- move: (bound); rewrite bounded_argminN0; case/proper0P => x x_in_argmin.
-  have x_in_P: x \in P
-    by move/poly_subsetP: (argmin_subset P (-e.1)); apply.
-
-
-(*rewrite in_fsetE; case/andP => e_nin_eqP e_in_base.
-rewrite (in_active e_in_base) in e_nin_eqP.
-case/poly_lePn: e_nin_eqP => x H1 H2.
-exists x; rewrite H1 /=.
-by move: (@affE _ _ [hp e]) => <-.*)
-Admitted.
+rewrite in_fsetE; case/andP => e_notin_eqP e_in_base.
+rewrite (in_active e_in_base) in e_notin_eqP.
+case/poly_lePn: e_notin_eqP => x x_in_P x_notin_hp.
+by exists x; rewrite ?x_in_P ?affE in x_notin_hp *.
+Qed.
 
 Definition mk_inactive_pt e :=
   match @idP (e \in (base `\` {eq P})%fset) with
   | ReflectT H => xchoose (inactive_pt H)
-  | _ => xchoose (proper0P Pneq0) (* replace by 0 *)
+  | _ => 0
   end.
 
 Lemma mk_inactive_ptP e :
@@ -1040,26 +1032,10 @@ apply/sumr_ltrP => [y|].
   by apply/gt0_fconvex.
 Qed.
 
-(* change base to base `\` {eq P} *)
-(*Definition finsupp_relint := (mk_inactive_pt @` base)%fset.
-Variable w : {convex 'cV[R]_n ~> R}.
-Hypothesis w_supp : finsupp w = finsupp_relint.*)
-
 Definition relint_pt :=
   if (base `\` {eq P} != fset0)%fset
   then fsavg (mk_inactive_pt @` (base `\` {eq P}))%fset
   else ppick P.
- 
-
-(*Definition relint_pt := \sum_(e : base) (1/#|base| mk_inactive_pt (val e).*)
-(*Lemma finsupp_relint_subset : {subset finsupp_relint <= P}.
-Proof.
-move=> x; rewrite /finsupp_relint.
-case/imfsetP => e /= e_base ->; rewrite /mk_inactive_pt.
-case: {-}_/idP.
-- by move => h; case/andP: (xchooseP (inactive_pt h)).
-- by move: (xchooseP (proper0P Pneq0)).
-Qed.*)
 
 Lemma relint_pt_poly :
   relint_pt \in P.
@@ -1075,10 +1051,6 @@ move=> beqPprop0; rewrite -cvxavg_fsavg //.
   case/imfsetP => /= x0 x0_in_beqP ->.
   by case/andP: (mk_inactive_ptP x0_in_beqP).
 Qed.
-
-
-(*apply: convexW; first by exact: mem_poly_convex.
-by rewrite w_supp; exact : finsupp_relint_subset.*)
 
 Lemma relint_ptP e :
   e \in (base `\` {eq P})%fset -> relint_pt \notin [hp e].
@@ -1102,7 +1074,7 @@ rewrite beqP_prop0 -cvxavg_fsavg.
   apply: contraT; move/negbNE/(combine_hs_hp supp_sub_hse).
   rewrite fsuni_finsupp => mk_beqP_sub_hpe.
   case/andP: (mk_inactive_ptP e_in_beqP) => _.
-  have: mk_inactive_pt e \in mk_beqP by apply/imfsetP; exists e. 
+  have: mk_inactive_pt e \in mk_beqP by apply/imfsetP; exists e.
   by move/mk_beqP_sub_hpe => ->.
 Qed.
 
@@ -1114,45 +1086,51 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Type base : base_t[R,n].
 
-(*Definition norm_eq base (P : {poly base}) :=
-  [fset (befst e) | e in ({eq P} : seq _)]%fset.
-
-Lemma norm_eqP base (P : {poly base}) v :
-  reflect (exists2 e : lrel, e \in ({eq P} : {fset _}) & v = e.1) (v \in norm_eq P).
-Admitted.
-
-Lemma span_norm_eq base (P : {poly base}) :
-  (<< norm_eq P >> = befst @: << {eq P} >>)%VS.
-Admitted.*)
-
 Definition pb_hull base (P : {poly base}) : 'affine_n :=
   if P `>` [poly0] then
     [affine << {eq P} >>]
   else
     affine0.
 
-Notation "\hull P" := (pb_hull P) (at level 40).
+Lemma pb_hull_subset base (P : {poly base}) :
+  (P `<=` (pb_hull P)%:PH :> 'poly[R]_n).
+Admitted.
 
-Definition hull (P : 'poly[R]_n) := \hull \repr P.
+Lemma bar (e : lrel[R]_n) x d :
+  x \notin [hp e] -> exists ϵ, forall μ, (0 < μ <= ϵ) -> (x + μ *: d \notin [hp e]).
+Admitted.
+
+Lemma foo base (P : {poly base}) d :
+  P `>` [poly0] ->
+  reflect (exists x, exists y, [/\ x \in P, y \in P & (<[d]> = <[x-y]>)%VS])
+          (d \in dir (pb_hull P)).
+Admitted.
+(* => x, y \in pb_hull P, so y-x \in dir (pb_hull P) thanks to in_dirP
+ * <=
+ * x := relint P
+ * take y = x + ϵ *: d with ϵ != small enough so that y \in P
+ *)
+
+Lemma toto base (P : {poly base}) x :
+  x \in P -> pb_hull P = [affine (dir (pb_hull P)) & x].
+Admitted.
+
+Definition hull (P : 'poly[R]_n) := pb_hull (\repr P).
+
+Lemma pb_hullP base (P : {poly base}) V :
+  (P `<=` V%:PH :> 'poly[R]_n) = (pb_hull P `<=` V).
+Admitted.
 
 Lemma hullE base (P : {poly base}) :
-  hull P = \hull P.
+  hull P = pb_hull P.
 Proof.
-case: (emptyP P)  => [| P_prop0].
-- rewrite /hull /pb_hull => ->.
-  by rewrite reprK ltxx.
-- rewrite /hull /pb_hull reprK P_prop0.
-  suff ->: (<<{eq P}>> = <<{eq \repr P}>>)%VS by [].
-  by apply/span_activeE; rewrite ?reprK.
-Qed.
+(* use pb_hullP *)
+Admitted.
 
 (* TODO: change to {subset P <= (hull P)} *)
 Lemma subset_hull P : P `<=` (hull P)%:PH.
 Proof.
-case: (emptyP P) => [->| ]; rewrite ?le0x //.
-elim/polybW : P => base P; rewrite hullE /pb_hull => P_prop0.
-by rewrite P_prop0; rewrite {1}[P]repr_active // leIl.
-Qed.
+Admitted.
 
 Lemma hull0 : hull ([poly0] : 'poly[R]_n) = affine0.
 by rewrite /hull /pb_hull reprK ifF ?poly_properxx.
@@ -1195,14 +1173,8 @@ Qed.*)
 Lemma hullP P V :
   (P `<=` V%:PH) = (hull P `<=` V).
 Proof.
-case: (emptyP P) => [->|]; rewrite ?hull0 ?le0x //.
-move => P_prop0; apply/idP/idP; last by rewrite -affS; apply/le_trans/subset_hull.
-elim/polybW : P P_prop0 => base P P_prop0.
-case/affineP: V; first by rewrite aff0 lex0 => /eqP ->; rewrite hull0.
-move => U _; rewrite hullN0_eq // => P_sub_affU; apply/affineS.
-apply/subvP => e; rewrite -in_span_activeP // => e_in_U.
-by apply/(le_trans P_sub_affU); rewrite affS; apply/affineS1.
-Qed.
+(* use pb_hullP P *)
+Admitted.
 
 Lemma hull_affine V :
   hull V%:PH = V.
