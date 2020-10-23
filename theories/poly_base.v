@@ -13,7 +13,8 @@ From mathcomp Require Import matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product extra_matrix.
 Require Import xorder vector_order row_submx.
 Require Import hpolyhedron affine barycenter lrel polyhedron.
-
+From mathcomp.bigenough Require Import bigenough.
+Import BigEnough.
 Import Order.Theory.
 
 Set Implicit Arguments.
@@ -1078,6 +1079,50 @@ rewrite beqP_prop0 -cvxavg_fsavg.
   by move/mk_beqP_sub_hpe => ->.
 Qed.
 
+(*Lemma bar (e : lrel[R]_n) x d :
+  x \notin [hp e] -> exists ϵ, forall μ, (0 < μ <= ϵ) -> (x + μ *: d \notin [hp e]).
+Proof.
+rewrite in_hp.
+Search _ (_ != _) (_ < _).
+move => x_notin_hpe.
+pose_big_enough N.
+exists (N%:R)^-1 => mu /andP [mu_prop0 mu_leq_Ninv]. 
+*)
+
+
+Lemma bar_relint d:
+  d \in (dir [affine <<{eq P}>>]) ->
+  exists2 epsilon, relint_pt + epsilon *: d \in P &
+  forall e : lrel, e \in (base `\` {eq P})%fset -> relint_pt + epsilon *: d \notin [hp e].
+Proof.
+move=> d_in_dirEqP.
+pose_big_enough N.
+exists (N%:R)^-1.
+- move: relint_pt_poly; rewrite (repr_active Pneq0).
+  case/in_polyEqP =>
+    relintpt_eqP /in_poly_of_baseP relintpt_Pbase.
+  apply/in_polyEqP; split.
+  + move=> e e_in_eqP; rewrite in_hp vdotDr vdotZr.
+    rewrite dir_affine in d_in_dirEqP.
+    move/orthvP: d_in_dirEqP => d_in_dirEqP.
+    have ->: '[e.1, d] = 0 by apply: d_in_dirEqP; apply/memv_imgP;
+      exists e; rewrite ?memv_span // lfunE /=.
+    rewrite mulr0 addr0 -in_hp; exact: relintpt_eqP.
+    admit.
+  + apply/in_poly_of_baseP=> e e_in_base.
+    case e_eqP: (e \in (base `\` {eq P})%fset).
+    * move: (relint_ptP e_eqP).
+      move: (relintpt_Pbase e e_in_base) => relintpt_hse.
+      rewrite notin_hp // in_hs vdotDr vdotZr.
+      rewrite -subr_gte0 => relintpt_gt0; rewrite -lter_sub_addl -opprB.
+      set E := '[ e.1, relint_pt] - e.2 in relintpt_gt0 *.
+      set D := '[e.1, d].
+      rewrite mulrC ler_pdivl_mulr.
+      rewrite -ler_ndivr_mull. 
+- Admitted.
+
+
+
 End Relint.
 
 Section AffineHull.
@@ -1094,17 +1139,30 @@ Definition pb_hull base (P : {poly base}) : 'affine_n :=
 
 Lemma pb_hull_subset base (P : {poly base}) :
   (P `<=` (pb_hull P)%:PH :> 'poly[R]_n).
-Admitted.
-
-Lemma bar (e : lrel[R]_n) x d :
-  x \notin [hp e] -> exists ϵ, forall μ, (0 < μ <= ϵ) -> (x + μ *: d \notin [hp e]).
-Admitted.
+Proof.
+rewrite /pb_hull; case/emptyP : (P) => [->|Pprop0].
+- by rewrite aff0.
+- apply/poly_subsetP => x x_in_P /=; rewrite affE.
+  apply/in_affineP => e /in_span_active /poly_subsetP P_sub_hpe.
+  apply/eqP; rewrite -in_hp.
+  by move: (P_sub_hpe x x_in_P); rewrite affE.
+Qed.
+  
 
 Lemma foo base (P : {poly base}) d :
   P `>` [poly0] ->
   reflect (exists x, exists y, [/\ x \in P, y \in P & (<[d]> = <[x-y]>)%VS])
           (d \in dir (pb_hull P)).
+Proof.
+move => Pprop0; apply/(iffP idP).
+- move=> d_in_dir_hullP.
+  set x := (@relint_pt _ _ _ P). 
+  exists x.
+  have: exists mu, (x + mu *: d) \in P
+    /\ (forall e, e \in (base `\` {eq P})%fset -> (x + mu *: d) \notin [hp e]).
+  +
 Admitted.
+
 (* => x, y \in pb_hull P, so y-x \in dir (pb_hull P) thanks to in_dirP
  * <=
  * x := relint P
