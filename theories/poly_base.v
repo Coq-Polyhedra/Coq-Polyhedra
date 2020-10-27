@@ -971,7 +971,7 @@ End SpanActive.
 
 Section Relint.
 
-Context {R : realFieldType} {n : nat}.
+Context {R : archiFieldType} {n : nat}. (*Maybe archiFieldType ?*)
 
 Implicit Type base : base_t[R,n].
 
@@ -1092,16 +1092,21 @@ exists (N%:R)^-1 => mu /andP [mu_prop0 mu_leq_Ninv].
 
 Lemma bar_relint d:
   d \in (dir [affine <<{eq P}>>]) ->
-  exists2 epsilon, relint_pt + epsilon *: d \in P &
-  forall e : lrel, e \in (base `\` {eq P})%fset -> relint_pt + epsilon *: d \notin [hp e].
+  exists epsilon, [/\ epsilon > 0, relint_pt + epsilon *: d \in P &
+  forall e : lrel, e \in (base `\` {eq P})%fset ->
+  relint_pt + epsilon *: d \notin [hp e]].
 Proof.
 move=> d_in_dirEqP.
 pose_big_enough N.
-exists (N%:R)^-1.
-- move: relint_pt_poly; rewrite (repr_active Pneq0).
-  case/in_polyEqP =>
-    relintpt_eqP /in_poly_of_baseP relintpt_Pbase.
-  apply/in_polyEqP; split.
+move: relint_pt_poly; rewrite {1}(repr_active Pneq0).
+case/in_polyEqP =>
+  relintpt_eqP /in_poly_of_baseP relintpt_Pbase.
+have bar_relint_in_P: (relint_pt + (N%:R)^-1 *: d \in P).
+- rewrite (repr_active Pneq0).
+  apply/in_polyEqP.
+  have relint_bar_in_eqP:
+    forall e : lrel, e \in ({eq P} : {fset _}) ->
+    relint_pt + N%:R^-1 *: d \in [hp e].
   + move=> e e_in_eqP; rewrite in_hp vdotDr vdotZr.
     rewrite dir_affine in d_in_dirEqP.
     move/orthvP: d_in_dirEqP => d_in_dirEqP.
@@ -1109,19 +1114,52 @@ exists (N%:R)^-1.
       exists e; rewrite ?memv_span // lfunE /=.
     rewrite mulr0 addr0 -in_hp; exact: relintpt_eqP.
     admit.
-  + apply/in_poly_of_baseP=> e e_in_base.
-    case e_eqP: (e \in (base `\` {eq P})%fset).
-    * move: (relint_ptP e_eqP).
-      move: (relintpt_Pbase e e_in_base) => relintpt_hse.
-      rewrite notin_hp // in_hs vdotDr vdotZr.
-      rewrite -subr_gte0 => relintpt_gt0; rewrite -lter_sub_addl -opprB.
-      set E := '[ e.1, relint_pt] - e.2 in relintpt_gt0 *.
-      set D := '[e.1, d].
-      rewrite mulrC ler_pdivl_mulr.
-      rewrite -ler_ndivr_mull. 
-- Admitted.
-
-
+  split; [by []|].
+  apply/in_poly_of_baseP=> e e_in_base.
+  case e_eqP: (e \in ({eq P} : {fset _}));
+    first by apply hs_hp; apply relint_bar_in_eqP.
+  have/relint_ptP: (e \in base `\` {eq P})%fset
+    by rewrite in_fsetE e_in_base e_eqP.
+  move: (relintpt_Pbase e e_in_base) => relintpt_hse.
+  rewrite notin_hp // in_hs vdotDr vdotZr.
+  rewrite -subr_gte0 => relintpt_gt0; rewrite -lter_sub_addl -opprB.
+  set E := '[ e.1, relint_pt] - e.2 in relintpt_gt0 *.
+  set D := '[e.1, d].
+  rewrite mulrC ler_pdivl_mulr; last by rewrite ltr0n; big_enough.
+  rewrite -ler_ndivr_mull; last by rewrite oppr_lt0.
+  set K := (-E)^-1 * D.
+  Search _ (`| _ |) (_ <= _) in ssrnum.
+  apply/(le_trans (ler_norm _))/ltW.
+  apply: (lt_le_trans (archi_boundP (normr_ge0 _))).
+  rewrite ler_nat.
+  big_enough.
+  (*admit.*)
+  case: (ltrgt0P K).
+  + move/ltW/archi_boundP/ltW => boundK. (*where R is a archiFieldType*)
+    apply: (le_trans boundK); rewrite ler_nat /=.
+    admit. (*big_enough doesn't work*)
+  + move/ltW => K_neg; apply: (le_trans K_neg).
+    exact: ler0n.
+  + move=> ->; exact: ler0n.
+exists (N%:R)^-1; split.
+- by rewrite invr_gt0 ltr0n; big_enough.
+- by [].
+- move=> e e_in_compl.
+  move: bar_relint_in_P; rewrite (repr_active Pneq0).
+  case/in_polyEqP => bar_relint_eqP /in_poly_of_baseP bar_relint_base.
+  move: (e_in_compl); rewrite in_fsetE; case/andP => e_notin_eqP e_in_base.
+  move: (relint_ptP e_in_compl); rewrite !notin_hp;
+    [| by apply: bar_relint_base | by apply: relintpt_Pbase].
+  rewrite vdotDr vdotZr -subr_gte0 => relintpt_gt0.
+  rewrite -lter_sub_addl -opprB.
+  set E := '[ e.1, relint_pt] - e.2 in relintpt_gt0 *.
+  set D := '[e.1, d].
+  rewrite mulrC ltr_pdivl_mulr; last by rewrite ltr0n; big_enough.
+  rewrite -ltr_ndivr_mull; last by rewrite oppr_lt0.
+  set K := (-E)^-1 * D.
+  admit.
+by close.
+Admitted.
 
 End Relint.
 
@@ -1155,12 +1193,19 @@ Lemma foo base (P : {poly base}) d :
           (d \in dir (pb_hull P)).
 Proof.
 move => Pprop0; apply/(iffP idP).
-- move=> d_in_dir_hullP.
-  set x := (@relint_pt _ _ _ P). 
-  exists x.
-  have: exists mu, (x + mu *: d) \in P
-    /\ (forall e, e \in (base `\` {eq P})%fset -> (x + mu *: d) \notin [hp e]).
-  +
+- rewrite /pb_hull Pprop0.
+  case/bar_relint => // epsilon.
+  set x := relint_pt.
+  set y := x + epsilon *: d.
+  move=> y_in_P y_relint.
+  exists x; exists y; split; [exact: relint_pt_poly | by [] |].
+  have ->: (x - y) = - (epsilon *: d) by
+    rewrite /y /x -[X in X = _]add0r addrA addrKA add0r.
+  apply: subv_anti; rewrite -!memvE; apply/andP; split.
+  + apply/vlineP; exists (-epsilon^-1).
+    rewrite scalerN scalerA mulNr mulVr.
+    by rewrite scaleN1r opprK.
+    rewrite unitfE.
 Admitted.
 
 (* => x, y \in pb_hull P, so y-x \in dir (pb_hull P) thanks to in_dirP
