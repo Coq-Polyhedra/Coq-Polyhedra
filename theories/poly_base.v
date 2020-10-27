@@ -971,7 +971,7 @@ End SpanActive.
 
 Section Relint.
 
-Context {R : archiFieldType} {n : nat}. (*Maybe archiFieldType ?*)
+Context {R : realFieldType} {n : nat}.
 
 Implicit Type base : base_t[R,n].
 
@@ -1097,25 +1097,24 @@ Lemma bar_relint d:
   relint_pt + epsilon *: d \notin [hp e]].
 Proof.
 move=> d_in_dirEqP.
-pose_big_enough N.
+pose E e := '[ e.1, d] / ('[ e.1, relint_pt] - e.2).
+pose M   := \sum_(e : base) `|E (val e)|.
+have ge0_M: 0 <= M by rewrite sumr_ge0.
 move: relint_pt_poly; rewrite {1}(repr_active Pneq0).
 case/in_polyEqP =>
   relintpt_eqP /in_poly_of_baseP relintpt_Pbase.
-have bar_relint_in_P: (relint_pt + (N%:R)^-1 *: d \in P).
+have bar_relint_in_P: (relint_pt + (1 + M)^-1 *: d \in P).
 - rewrite (repr_active Pneq0).
-  apply/in_polyEqP.
-  have relint_bar_in_eqP:
-    forall e : lrel, e \in ({eq P} : {fset _}) ->
-    relint_pt + N%:R^-1 *: d \in [hp e].
-  + move=> e e_in_eqP; rewrite in_hp vdotDr vdotZr.
+  apply/in_polyEqP; have relint_bar_in_eqP e:
+    e \in ({eq P} : {fset _}) -> relint_pt + (1 + M)^-1 *: d \in [hp e].
+  + move=> e_in_eqP; rewrite in_hp vdotDr vdotZr.
     rewrite dir_affine in d_in_dirEqP.
     move/orthvP: d_in_dirEqP => d_in_dirEqP.
     have ->: '[e.1, d] = 0 by apply: d_in_dirEqP; apply/memv_imgP;
       exists e; rewrite ?memv_span // lfunE /=.
     rewrite mulr0 addr0 -in_hp; exact: relintpt_eqP.
     admit.
-  split; [by []|].
-  apply/in_poly_of_baseP=> e e_in_base.
+  split=> //; apply/in_poly_of_baseP=> e e_in_base.
   case e_eqP: (e \in ({eq P} : {fset _}));
     first by apply hs_hp; apply relint_bar_in_eqP.
   have/relint_ptP: (e \in base `\` {eq P})%fset
@@ -1123,42 +1122,27 @@ have bar_relint_in_P: (relint_pt + (N%:R)^-1 *: d \in P).
   move: (relintpt_Pbase e e_in_base) => relintpt_hse.
   rewrite notin_hp // in_hs vdotDr vdotZr.
   rewrite -subr_gte0 => relintpt_gt0; rewrite -lter_sub_addl -opprB.
-  set E := '[ e.1, relint_pt] - e.2 in relintpt_gt0 *.
-  set D := '[e.1, d].
-  rewrite mulrC ler_pdivl_mulr; last by rewrite ltr0n; big_enough.
+  rewrite mulrC ler_pdivl_mulr; last first.
+    by rewrite (lt_le_trans (y := 1)) // ler_addl.
   rewrite -ler_ndivr_mull; last by rewrite oppr_lt0.
-  set K := (-E)^-1 * D.
-  Search _ (`| _ |) (_ <= _) in ssrnum.
-  apply/(le_trans (ler_norm _))/ltW.
-  apply: (lt_le_trans (archi_boundP (normr_ge0 _))).
-  rewrite ler_nat.
-  big_enough.
-  (*admit.*)
-  case: (ltrgt0P K).
-  + move/ltW/archi_boundP/ltW => boundK. (*where R is a archiFieldType*)
-    apply: (le_trans boundK); rewrite ler_nat /=.
-    admit. (*big_enough doesn't work*)
-  + move/ltW => K_neg; apply: (le_trans K_neg).
-    exact: ler0n.
-  + move=> ->; exact: ler0n.
-exists (N%:R)^-1; split.
-- by rewrite invr_gt0 ltr0n; big_enough.
-- by [].
-- move=> e e_in_compl.
-  move: bar_relint_in_P; rewrite (repr_active Pneq0).
-  case/in_polyEqP => bar_relint_eqP /in_poly_of_baseP bar_relint_base.
-  move: (e_in_compl); rewrite in_fsetE; case/andP => e_notin_eqP e_in_base.
-  move: (relint_ptP e_in_compl); rewrite !notin_hp;
-    [| by apply: bar_relint_base | by apply: relintpt_Pbase].
-  rewrite vdotDr vdotZr -subr_gte0 => relintpt_gt0.
-  rewrite -lter_sub_addl -opprB.
-  set E := '[ e.1, relint_pt] - e.2 in relintpt_gt0 *.
-  set D := '[e.1, d].
-  rewrite mulrC ltr_pdivl_mulr; last by rewrite ltr0n; big_enough.
-  rewrite -ltr_ndivr_mull; last by rewrite oppr_lt0.
-  set K := (-E)^-1 * D.
-  admit.
-by close.
+  rewrite mulrC invrN mulrN (le_trans (ler_norm _)) // normrN.
+  rewrite (le_trans (y := M)) 1?ler_addr //.
+  by rewrite /M (bigD1 [`e_in_base]%fset) //= ler_addl sumr_ge0.
+exists (1 + M)^-1; split=> //.
+- by rewrite invr_gt0 (lt_le_trans (y := 1)) // ler_addl.
+move=> e e_in_compl; move: bar_relint_in_P; rewrite (repr_active Pneq0).
+case/in_polyEqP => bar_relint_eqP /in_poly_of_baseP bar_relint_base.
+move: (e_in_compl); rewrite in_fsetE; case/andP => e_notin_eqP e_in_base.
+move: (relint_ptP e_in_compl); rewrite !notin_hp;
+  [| by apply: bar_relint_base | by apply: relintpt_Pbase].
+rewrite vdotDr vdotZr -subr_gte0 => relintpt_gt0.
+rewrite -lter_sub_addl -opprB mulrC; rewrite ltr_pdivl_mulr; last first.
+  by rewrite (lt_le_trans (y := 1)) // ler_addl.
+rewrite -ltr_ndivr_mull; last by rewrite oppr_lt0.
+apply: (le_lt_trans (y := M)); last by rewrite ltr_addr.
+rewrite mulrC invrN mulrN (le_trans (ler_norm _)) // normrN.
+rewrite (le_trans (y := M)) 1?ler_addr //.
+by rewrite /M (bigD1 [`e_in_base]%fset) //= ler_addl sumr_ge0.
 Admitted.
 
 End Relint.
