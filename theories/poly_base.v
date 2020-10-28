@@ -1089,8 +1089,24 @@ pose_big_enough N.
 exists (N%:R)^-1 => mu /andP [mu_prop0 mu_leq_Ninv]. 
 *)
 
+Lemma affine_eqP_prop0:
+  [ affine0 ] `<` [affine <<{eq P}>>].
+Proof.
+apply/affine_proper0P; exists relint_pt.
+apply/in_affineP => e e_in_span.
+move: relint_pt_poly; rewrite (repr_active Pneq0).
+case/in_polyEqP => relintpt_in_eqP _.
+move/coord_span: e_in_span => -> /=.
+rewrite sum_lrel_fst sum_lrel_snd vdot_sumDl.
+rewrite (eq_bigr (fun i =>
+  (coord (fsubsize {eq P}) i e *: {eq P}`_i).2 )) => //.
+move=> i _; rewrite vdotZl.
+have/relintpt_in_eqP: (({eq P}`_i) \in ({eq P} : {fset _})) by
+  apply: mem_nth; rewrite ltn_ord.
+by rewrite in_hp; move/eqP=> ->.
+Qed.
 
-Lemma bar_relint d:
+Lemma relint_interior d:
   d \in (dir [affine <<{eq P}>>]) ->
   exists epsilon, [/\ epsilon > 0, relint_pt + epsilon *: d \in P &
   forall e : lrel, e \in (base `\` {eq P})%fset ->
@@ -1104,26 +1120,26 @@ move: relint_pt_poly; rewrite {1}(repr_active Pneq0).
 case/in_polyEqP =>
   relintpt_eqP /in_poly_of_baseP relintpt_Pbase.
 have bar_relint_in_P: (relint_pt + (1 + M)^-1 *: d \in P).
-- rewrite (repr_active Pneq0).
-  apply/in_polyEqP; have relint_bar_in_eqP e:
+- rewrite (repr_active Pneq0); apply/in_polyEqP.
+  have relint_bar_in_eqP e:
     e \in ({eq P} : {fset _}) -> relint_pt + (1 + M)^-1 *: d \in [hp e].
   + move=> e_in_eqP; rewrite in_hp vdotDr vdotZr.
-    rewrite dir_affine in d_in_dirEqP.
+    rewrite (dir_affine affine_eqP_prop0) in d_in_dirEqP.
     move/orthvP: d_in_dirEqP => d_in_dirEqP.
     have ->: '[e.1, d] = 0 by apply: d_in_dirEqP; apply/memv_imgP;
       exists e; rewrite ?memv_span // lfunE /=.
-    rewrite mulr0 addr0 -in_hp; exact: relintpt_eqP.
-    admit.
+
+  rewrite mulr0 addr0 -in_hp; exact: relintpt_eqP.
   split=> //; apply/in_poly_of_baseP=> e e_in_base.
   case e_eqP: (e \in ({eq P} : {fset _}));
-    first by apply hs_hp; apply relint_bar_in_eqP.
+  first by apply hs_hp; apply relint_bar_in_eqP.
   have/relint_ptP: (e \in base `\` {eq P})%fset
     by rewrite in_fsetE e_in_base e_eqP.
   move: (relintpt_Pbase e e_in_base) => relintpt_hse.
   rewrite notin_hp // in_hs vdotDr vdotZr.
   rewrite -subr_gte0 => relintpt_gt0; rewrite -lter_sub_addl -opprB.
   rewrite mulrC ler_pdivl_mulr; last first.
-    by rewrite (lt_le_trans (y := 1)) // ler_addl.
+  by rewrite (lt_le_trans (y := 1)) // ler_addl.
   rewrite -ler_ndivr_mull; last by rewrite oppr_lt0.
   rewrite mulrC invrN mulrN (le_trans (ler_norm _)) // normrN.
   rewrite (le_trans (y := M)) 1?ler_addr //.
@@ -1143,7 +1159,7 @@ apply: (le_lt_trans (y := M)); last by rewrite ltr_addr.
 rewrite mulrC invrN mulrN (le_trans (ler_norm _)) // normrN.
 rewrite (le_trans (y := M)) 1?ler_addr //.
 by rewrite /M (bigD1 [`e_in_base]%fset) //= ler_addl sumr_ge0.
-Admitted.
+Qed.
 
 End Relint.
 
@@ -1178,26 +1194,31 @@ Lemma foo base (P : {poly base}) d :
 Proof.
 move => Pprop0; apply/(iffP idP).
 - rewrite /pb_hull Pprop0.
-  case/bar_relint => // epsilon.
+  case/relint_interior => // epsilon.
   set x := relint_pt.
   set y := x + epsilon *: d.
-  move=> y_in_P y_relint.
-  exists x; exists y; split; [exact: relint_pt_poly | by [] |].
-  have ->: (x - y) = - (epsilon *: d) by
-    rewrite /y /x -[X in X = _]add0r addrA addrKA add0r.
-  apply: subv_anti; rewrite -!memvE; apply/andP; split.
-  + apply/vlineP; exists (-epsilon^-1).
-    rewrite scalerN scalerA mulNr mulVr.
-    by rewrite scaleN1r opprK.
-    rewrite unitfE.
-Admitted.
+  case => epsilon_gt0 y_in_P y_relint.
+  exists x; exists y; split => //.
+  + by exact: relint_pt_poly.
+  + rewrite -[X in _ = <[X]>%VS]add0r addrA addrKA add0r.
+    apply: subv_anti; rewrite -!memvE memvN memvZ ?memv_line // andbT.
+    apply/vlineP; exists (- epsilon^-1); rewrite scalerN scaleNr opprK scalerA.
+    by rewrite mulVr ?scale1r //; rewrite unitfE eq_sym ltr_neq.
+- case=> x [y [x_in_P y_in_P /eqP]].
+  rewrite eqEsubv => /andP [/vlineP [k -> _]].
+  rewrite memvZ //.
+  move/poly_subsetP: (pb_hull_subset P) => sub_hull.
+  move: (sub_hull y y_in_P) (sub_hull x x_in_P);
+    rewrite !affE => y_hull x_hull.
+  by rewrite (in_dirP y_hull) addrC -addrA addNr addr0.
+Qed.
 
 (* => x, y \in pb_hull P, so y-x \in dir (pb_hull P) thanks to in_dirP
- * <=
+* <=
  * x := relint P
  * take y = x + ϵ *: d with ϵ != small enough so that y \in P
  *)
-
+ 
 Lemma toto base (P : {poly base}) x :
   x \in P -> pb_hull P = [affine (dir (pb_hull P)) & x].
 Admitted.
