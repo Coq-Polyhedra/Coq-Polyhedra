@@ -1221,24 +1221,53 @@ Qed.
  
 Lemma toto base (P : {poly base}) x :
   x \in P -> pb_hull P = [affine (dir (pb_hull P)) & x].
-Admitted.
+Proof.
+case: (emptyP P) => [->|]; [by rewrite mem_poly0|].
+move=> Pprop0 x_in_P.
+apply/affine_eqP=> y; rewrite in_mk_affine.
+have x_in_hullP: x \in pb_hull P.
+- move/poly_subsetP: (pb_hull_subset P) => P_sub_hull.
+  by move: (P_sub_hull x x_in_P); rewrite affE.
+by rewrite (in_dirP x_in_hullP) addrCA addrN addr0.
+Qed.
 
 Definition hull (P : 'poly[R]_n) := pb_hull (\repr P).
 
 Lemma pb_hullP base (P : {poly base}) V :
   (P `<=` V%:PH :> 'poly[R]_n) = (pb_hull P `<=` V).
-Admitted.
+Proof.
+case: (emptyP P).
+- by move=> Ppoly0; rewrite /pb_hull Ppoly0 ltx0 !le0x.
+move=> Pprop0; apply/sameP/idP/(iffP idP).
+- move/poly_subsetP=> P_sub_V; apply/affine_leP => x.
+  move: (toto (relint_pt_poly Pprop0)) => ->.
+  case/in_mk_affineP => d /(foo _ Pprop0) [x0 [y0 [x0_in_P y0_in_P]]].
+  move/eqP; rewrite eqEsubv => /andP [].
+  rewrite -memvE; case/vlineP => k -> _ ->.
+  move: (P_sub_V _ (relint_pt_poly Pprop0)); rewrite affE => ?.
+  rewrite -in_dirP //.
+  move: (P_sub_V _ x0_in_P) (P_sub_V _ y0_in_P); rewrite !affE => ? y0_V.
+  by apply: memvZ; rewrite (in_dirP y0_V) addrCA addrN addr0.
+- move/affine_leP=> hullP_sub_V; apply/poly_subsetP => x x_in_P.
+  rewrite affE; apply/hullP_sub_V; rewrite -affE.
+  move/poly_subsetP: (pb_hull_subset P); exact.
+Qed.
 
 Lemma hullE base (P : {poly base}) :
-  hull P = pb_hull P.
+hull P = pb_hull P.
 Proof.
-(* use pb_hullP *)
-Admitted.
+rewrite /hull.
+apply/le_anti/andP; split.
+- by rewrite -pb_hullP reprK pb_hull_subset.
+- by rewrite -pb_hullP -[X in X `<=` _]reprK pb_hull_subset.
+Qed.
 
 (* TODO: change to {subset P <= (hull P)} *)
-Lemma subset_hull P : P `<=` (hull P)%:PH.
+Lemma subset_hull P : {subset P <= (hull P)}.
 Proof.
-Admitted.
+move=> x x_in_P; rewrite /hull -affE.
+by move/poly_subsetP: (pb_hull_subset (\repr P)); apply; rewrite reprK.
+Qed.
 
 Lemma hull0 : hull ([poly0] : 'poly[R]_n) = affine0.
 by rewrite /hull /pb_hull reprK ifF ?poly_properxx.
@@ -1248,7 +1277,8 @@ Lemma hullN0 P : (P `>` [poly0]) = (hull P `>` affine0).
 Proof.
 case/emptyP : (P) => [-> | P_prop0]; first by rewrite hull0 ltxx.
 apply/esym; rewrite -aff_lt0x.
-by apply/(lt_le_trans P_prop0)/subset_hull.
+apply/(lt_le_trans P_prop0)/poly_subsetP=> x ?; rewrite affE.
+exact: subset_hull.
 Qed.
 
 Lemma hullN0_eq base (P : {poly base}) :
@@ -1257,14 +1287,11 @@ Proof.
 by rewrite hullE /pb_hull => ->.
 Qed.
 
-(* TODO: change to
-   P `>` `[poly0] -> dir (hull P) = (befst @: << {eq P} >>)^OC%VS
- *)
 Lemma dir_hull base (P : {poly base}) :
   P `>` [poly0] -> dir (hull P) = (befst @: << {eq P} >>)^OC%VS.
 Proof.
 move => P_prop0.
-by rewrite hullN0_eq // ?dir_affine -?hullN0_eq -?hullN0.
+by rewrite hullN0_eq // dir_affine // -hullN0_eq // -hullN0.
 Qed.
 
 (*Lemma hull_mk_affine base (P : {poly base}) x :
@@ -1281,15 +1308,17 @@ Qed.*)
 Lemma hullP P V :
   (P `<=` V%:PH) = (hull P `<=` V).
 Proof.
+  rewrite -{1}(reprK P) /hull.
+  exact: pb_hullP.
 (* use pb_hullP P *)
-Admitted.
+Qed.
 
 Lemma hull_affine V :
   hull V%:PH = V.
 Proof.
 apply/le_anti/andP; split.
 - by rewrite -hullP.
-- by rewrite -affS subset_hull.
+- by apply/affine_leP => x; rewrite -affE; move/subset_hull.
 Qed.
 
 Lemma hullI (P : 'poly[R]_n) : hull (hull P)%:PH = hull P.
@@ -1304,7 +1333,8 @@ case: (emptyP Q) => [->|];
   first by rewrite lex0 => /eqP ->; exact: lexx.
 elim/polybW : Q => base Q Q_prop0 P_sub_Q.
 rewrite hullN0_eq // -affS hullP hullI -hullP.
-rewrite -hullN0_eq //; apply/(le_trans P_sub_Q); exact: subset_hull.
+rewrite -hullN0_eq //; apply/(le_trans P_sub_Q).
+by rewrite hullP.
 Qed.
 
 Lemma line_subset_hull (P : 'poly[R]_n) (v v' : 'cV[R]_n) :
@@ -1429,7 +1459,7 @@ have: hull P = hull Q.
 - apply/sub_eq_adim; last by rewrite !/dim in dim_eq.
   by apply/hullS/face_subset.
 - rewrite {2}(face_hullI P_face_Q) => ->.
-  by apply/meet_l/subset_hull.
+  by apply/meet_l; rewrite hullP.
 Qed.
 
 Lemma face_dim_geq (P Q : 'poly[R]_n) :
@@ -1467,10 +1497,10 @@ Lemma dim1P (P : 'poly[R]_n) :
 Proof.
 move => dimP1.
 move: (dimP1); case/adim1P => x hull_eq; exists x.
-apply/le_anti/andP; split; first by rewrite -hull_eq subset_hull.
+apply/le_anti/andP; split; first by rewrite -hull_eq hullP.
 have /proper0P [y y_in_P]: P `>` [poly0] by rewrite dimN0 dimP1.
 suff /eqP <-: y == x by rewrite pt_subset.
-move/(poly_leP (subset_hull _)): y_in_P.
+move: (subset_hull y_in_P).
 by rewrite hull_eq in_pt.
 Qed.
 
@@ -1516,7 +1546,7 @@ have [w_in_P d_w] : (w \in P /\ '[d,w] = -(opt_value d_bounded')).
   by apply/ppickP; rewrite -bounded_argminN0.
 have hull_P : hull P = [line d & v].
 - rewrite -dir_eq; apply/mk_affine_dir.
-  by apply: ((eq_subr affE).1 (poly_leP (subset_hull P))). (* TODO: UGLY *)
+  exact: (subset_hull v_in_P).
 pose μ x := ('[d,x] - '[d,v]) / '[|d |]^2.
 have μ_ge0: forall x, x \in P -> μ x >= 0.
 - move => x x_in_P; apply/divr_ge0; rewrite ?vnorm_ge0 ?subr_ge0 //.
@@ -1527,8 +1557,8 @@ have μ_le_μ_w : forall x, x \in P -> μ x <= μ w.
   rewrite in_hs /= vdotNl ler_oppr -d_w => ?.
   by apply/ler_wpmul2r; rewrite ?invr_ge0 ?vnorm_ge0 ?ler_add2r.
 have x_eq : forall x, x \in P -> x = v + μ x *: d.
-- move => x /(poly_leP (subset_hull _)).
-  rewrite inE hull_P => /in_lineP [μ_x x_eq].
+- move => x /subset_hull.
+  rewrite hull_P => /in_lineP [μ_x x_eq].
   suff <-: μ_x = μ x by []; move/(congr1 (vdot d)): (x_eq).
   rewrite vdotDr vdotZr addrC mulrC => /(canLR (addrK _)).
   rewrite -vnorm_eq0 in d_neq0.
@@ -1878,7 +1908,7 @@ set P := 'P(base)%:poly_base => P_face P_pointed Q.
 case/face_setP => {}Q Q_sub_P dim_lt.
 have {Q_sub_P} Q_prop_P : Q `<` P :> 'poly_n.
 - rewrite dim_proper //.
-  by apply/ltn_trans: dim_lt.
+  (*by apply/ltn_trans: dim_lt. QC : That line seems to be irrelevant now*)
 have P_prop0 : P `>` [poly0] by apply: (le_lt_trans (le0x (pval Q))).
 case: (emptyP Q) dim_lt => [ -> | Q_prop0].
 - rewrite dim0 => dimP_gt1.
@@ -2843,6 +2873,6 @@ Qed.
 End DiamondProperty.
 
 (* TODO:
- * revise lemmas in Dimension and Hull
- * introduce relint point and change hullP accordingly
+ * revise lemmas in Dimension and Hull (QC: done)
+ * introduce relint point and change hullP accordingly (QC: done)
  *)
