@@ -35,7 +35,7 @@ via the opam OCaml packages manager.
 
   * Installing the dependencies:
 
-        $> opam install coq coq-mathcomp-field coq-mathcomp-finmap
+        $> opam install dune coq coq-mathcomp-field coq-mathcomp-finmap
 
 Opam can be easily installed from source or via your packages manager:
 
