@@ -1086,7 +1086,7 @@ rewrite in_hp.
 Search _ (_ != _) (_ < _).
 move => x_notin_hpe.
 pose_big_enough N.
-exists (N%:R)^-1 => mu /andP [mu_prop0 mu_leq_Ninv]. 
+exists (N%:R)^-1 => mu /andP [mu_prop0 mu_leq_Ninv].
 *)
 
 Lemma affine_eqP_prop0:
@@ -1185,7 +1185,6 @@ rewrite /pb_hull; case/emptyP : (P) => [->|Pprop0].
   apply/eqP; rewrite -in_hp.
   by move: (P_sub_hpe x x_in_P); rewrite affE.
 Qed.
-  
 
 Lemma foo base (P : {poly base}) d :
   P `>` [poly0] ->
@@ -1199,7 +1198,7 @@ move => Pprop0; apply/(iffP idP).
   set y := x + epsilon *: d.
   case => epsilon_gt0 y_in_P y_relint.
   exists x; exists y; split => //.
-  + by exact: relint_pt_poly.
+  + exact: relint_pt_poly.
   + rewrite -[X in _ = <[X]>%VS]add0r addrA addrKA add0r.
     apply: subv_anti; rewrite -!memvE memvN memvZ ?memv_line // andbT.
     apply/vlineP; exists (- epsilon^-1); rewrite scalerN scaleNr opprK scalerA.
@@ -1218,7 +1217,7 @@ Qed.
  * x := relint P
  * take y = x + ϵ *: d with ϵ != small enough so that y \in P
  *)
- 
+
 Lemma toto base (P : {poly base}) x :
   x \in P -> pb_hull P = [affine (dir (pb_hull P)) & x].
 Proof.
@@ -1262,7 +1261,6 @@ apply/le_anti/andP; split.
 - by rewrite -pb_hullP -[X in X `<=` _]reprK pb_hull_subset.
 Qed.
 
-(* TODO: change to {subset P <= (hull P)} *)
 Lemma subset_hull P : {subset P <= (hull P)}.
 Proof.
 move=> x x_in_P; rewrite /hull -affE.
