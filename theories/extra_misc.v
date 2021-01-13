@@ -287,7 +287,7 @@ Arguments eq_bigl_seq [R idx I op r P1 P2 F].
 Section ExtraNum.
 
 Local Open Scope ring_scope.
-Import GRing.Theory Num.Theory.
+Import GRing.Theory Num.Theory Num.Def.
 
 Variable R : realFieldType.
 Variable m n : nat.
@@ -323,7 +323,7 @@ Fixpoint min_seq (S : seq R) (v : R) :=
   match S with
   | [::] => v
   | [:: x] => x
-  | x :: S' => Num.min x (min_seq S' v)
+  | x :: S' => minr x (min_seq S' v)
   end.
 
 Lemma min_seq_ler (S : seq R) v: forall i, i \in S -> min_seq S v <= i.
@@ -333,10 +333,10 @@ elim: S => [ | x S' IH].
 - move => i; rewrite in_cons; move/orP => [/eqP -> | H].
   + rewrite /=.
     case H': S'; first by done.
-    * rewrite leIx; apply/orP; left; done.
+    * rewrite le_minl; apply/orP; left; done.
   + rewrite /=; move: H.
     case H': S'; first by rewrite in_nil.
-    * by rewrite -H'; move => Hi; rewrite leIx; apply/orP; right; apply: IH.
+    * by rewrite -H'; move => Hi; rewrite le_minl; apply/orP; right; apply: IH.
 Qed.
 
 Lemma min_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | min_seq S v == i] S.
@@ -345,11 +345,11 @@ elim: S => [ | x S']; first by done.
 - case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
   + apply/hasP. case: (leP x (min_seq S' v)) => [H'' |].
     * exists x; first by rewrite mem_head.
-      rewrite /= meet_l //. by case H: S'.
+      rewrite /= min_l //; by case H: S'.
     * move/hasP: IH => [i Hi /= /eqP ->] ?.
       exists i; first by rewrite mem_behead.
       case H: S'; first by move: Hi; rewrite H in_nil.
-      by rewrite meet_r // ltW.
+      by rewrite min_r // ltW.
 Qed.
 
 Variant min_seq_spec (S : seq R) (v : R) : R -> Prop :=
@@ -382,14 +382,14 @@ Proof.
         rewrite /= => /andP [Hxp H_].
         have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
         case Haf: (S); first by apply: Hxp.
-        by rewrite -Haf ltexI Hxp.
+        by rewrite -Haf lt_minr Hxp.
 Qed.
 
 Fixpoint max_seq (S : seq R) (v : R) :=
   match S with
   | [::] => v
   | [:: x] => x
-  | x :: S' => Num.max x (max_seq S' v)
+  | x :: S' => (maxr x (max_seq S' v))
   end.
 
 Lemma max_seq_ger (S : seq R) v: forall i, i \in S -> max_seq S v >= i.
@@ -399,10 +399,10 @@ elim: S => [ /= | x S' IH].
 - move => i; rewrite inE => /orP [/eqP -> | H].
   + rewrite /=.
     case: S' IH => // [?? _ ].
-    by rewrite lexU lexx.
+    by rewrite le_maxr lexx.
   + rewrite /=; move: H.
     case H': S'; first by rewrite in_nil.
-    * by rewrite -H'; move => Hi; rewrite lexU; apply/orP; right; apply: IH.
+    * by rewrite -H'; move => Hi; rewrite le_maxr; apply/orP; right; apply: IH.
 Qed.
 
 Lemma max_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | max_seq S v == i] S.
@@ -411,11 +411,11 @@ elim: S => [ | x S']; first by done.
 - case: (altP (S' =P [::])) => [-> /= | HS /(_ is_true_true) IH _]; first by rewrite eq_refl.
   + apply/hasP. case: (leP (max_seq S' v) x) => [H'' |].
     * exists x; first by rewrite mem_head.
-      rewrite /= join_l //. by case H: S'.
+      rewrite /= max_l //. by case H: S'.
     * move/hasP: IH => [i Hi /= /eqP ->] ?.
       exists i; first by rewrite mem_behead.
       case H: S'; first by move: Hi; rewrite H in_nil.
-      by rewrite join_r // ltW.
+      by rewrite max_r // ltW.
 Qed.
 
 Variant max_seq_spec (S : seq R) (v : R) : R -> Prop :=

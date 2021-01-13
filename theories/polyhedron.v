@@ -8,9 +8,11 @@
 
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect.
+From lattice Require Import relorder.
 From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 
 Import Order.Theory.
+Import RelOrder.Theory.
 
 Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter hpolyhedron.
 
@@ -239,13 +241,17 @@ Context {R : realFieldType} {n : nat}.
 
 Implicit Types (P Q : 'poly[R]_n).
 
-Definition poly0 : 'poly[R]_n := '[ H.poly0 ].
-Definition polyI P Q := '[ H.polyI (hrepr P) (hrepr Q) ].
+Definition _poly0 : 'poly[R]_n := '[ H.poly0 ].
+Definition _polyT : 'poly[R]_n := '[ H.polyT ].
+Definition _polyI P Q := '[ H.polyI (hrepr P) (hrepr Q) ].
 
-Lemma mem_poly0 x : x \in poly0 = false.
+Lemma mem_poly0 x : x \in _poly0 = false.
 Proof. by rewrite repr_equiv H.in_poly0. Qed.
 
-Lemma mem_polyI x P Q : x \in polyI P Q = (x \in P) && (x \in Q).
+Lemma mem_polyT x : x \in _polyT = true.
+Proof. by rewrite repr_equiv H.in_polyT. Qed.
+
+Lemma mem_polyI x P Q : x \in _polyI P Q = (x \in P) && (x \in Q).
 Proof. by rewrite repr_equiv H.in_polyI. Qed.
 
 Definition poly_subset P Q := H.poly_subset (hrepr P) (hrepr Q).
@@ -266,8 +272,8 @@ Local Lemma _poly_subset_refl : reflexive poly_subset.
 by move=> P; apply/poly_subsetP.
 Qed.
 
-Local Lemma _poly_subset_anti : antisymmetric poly_subset.
-move=> P Q /andP[] /poly_subsetP le_PQ /poly_subsetP le_QP.
+Local Lemma _poly_subset_anti : forall P Q, poly_subset P Q -> poly_subset Q P -> P = Q.
+move=> P Q /poly_subsetP le_PQ /poly_subsetP le_QP.
 by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
 Qed.
 
@@ -276,83 +282,68 @@ move=> P2 P1 P3 /poly_subsetP le_12 /poly_subsetP le_23.
 by apply/poly_subsetP=> x /le_12 /le_23.
 Qed.
 
-Fact polyh_display : unit. Proof. exact: tt. Qed.
+Definition _poly_lt (x y : 'poly[R]_n) := (x != y) && (poly_subset x y).
 
-Definition poly_LtPOrderMixin := 
-  LePOrderMixin  (fun _ _ => erefl _) _poly_subset_refl _poly_subset_anti _poly_subset_trans.
+Local Lemma _poly_dlt (x y : 'poly[R]_n) :
+  _poly_lt y x = (x != y) && (poly_subset y x).
+Proof. by rewrite eq_sym. Qed.
 
-Canonical poly_of_LtPOrderType :=
-  Eval hnf in POrderType polyh_display 'poly[R]_n poly_LtPOrderMixin.
+Definition poly_pOrderMixin :=
+  RelOrder.POrder.Mixin
+    _poly_subset_refl _poly_subset_anti _poly_subset_trans
+    (fun x y => erefl _) _poly_dlt.
 
-Lemma poly_leE P Q : (P <= Q)%O = poly_subset P Q.
-Proof. by []. Qed.
+Canonical poly_pOrder :=
+  Eval hnf in POrder poly_subset _poly_lt poly_pOrderMixin.
 
-Lemma poly_leP P Q : reflect {subset P <= Q} (P <= Q)%O.
-Proof. by rewrite poly_leE; apply: (iffP poly_subsetP). Qed.
+Local Lemma _poly_0le P : poly_subset _poly0 P.
+Proof. by apply/poly_subsetP => x; rewrite mem_poly0. Qed.
 
-Program Canonical poly_MeetSemilattice :=
-  Eval hnf in MeetSemilatticeType 'poly[R]_n
-    (@MeetSemilatticeMixin _ _ polyI _ _ _ _).
+Local Lemma _poly_leT P : poly_subset P _polyT.
+Proof. by apply/poly_subsetP => x; rewrite mem_polyT. Qed.
 
-Next Obligation.
-by move=> P Q; apply/poly_eqP=> x; rewrite !mem_polyI andbC.
+Canonical poly_bPOrder := BPOrder poly_subset _poly_lt _poly0 _poly_0le.
+Canonical poly_tPOrder := TPOrder poly_subset _poly_lt _polyT _poly_leT.
+Canonical poly_tbPOrder := [tbPOrder of poly_subset].
+
+Local Lemma _poly_meetC : commutative _polyI.
+Proof. by move=> P Q; apply/poly_eqP=> x; rewrite !mem_polyI andbC. Qed.
+
+Local Lemma _poly_meetA : associative _polyI.
+Proof. by move=> P1 P2 P3; apply/poly_eqP=> x; rewrite !mem_polyI andbA. Qed.
+
+Local Lemma _poly_leEmeet P Q :
+  poly_subset P Q = (_polyI P Q == P).
+Proof.
+apply/poly_subsetP/eqP => [sub|polyI_eq ?].
+- apply/poly_eqP => x; rewrite mem_polyI; apply/andP/idP=> [[]//|?].
+  by split; rewrite ?sub.
+- by rewrite -polyI_eq mem_polyI => /andP[].
 Qed.
 
-Next Obligation.
-by move=> P1 P2 P3; apply/poly_eqP=> x; rewrite !mem_polyI andbA.
-Qed.
+Definition poly_meetMixin :=
+  RelOrder.Meet.Mixin _poly_meetC _poly_meetA _poly_leEmeet.
+Canonical poly_meetOrderType :=
+  Eval hnf in MeetOrder poly_subset _poly_lt _polyI poly_meetMixin.
+Canonical poly_bMeetOrder := [bMeetOrder of poly_subset].
+Canonical poly_tMeetOrder := [tMeetOrder of poly_subset].
+Canonical poly_tbMeetOrder := [tbMeetOrder of poly_subset].
 
-Next Obligation.
-by move=> P; apply/poly_eqP=> x; rewrite !mem_polyI andbb.
-Qed.
+Local Notation le := (le poly_tbMeetOrder).
+Local Notation lt := (lt poly_tbMeetOrder).
+Local Notation meet := (meet poly_tbMeetOrder).
+Local Notation bottom := (bottom poly_tbMeetOrder).
+Local Notation top := (top poly_tbMeetOrder).
 
-Next Obligation.
-apply/poly_leP/eqP => [|<-]; last first.
-+ by move=> c; rewrite mem_polyI => /andP[].
-move=> le_xy; apply/poly_eqP=> c; rewrite mem_polyI.
-by apply: andb_idr; apply: le_xy.
-Qed.
-
-Program Definition poly_bottomMixin :=
-  @BottomMixin polyh_display [porderType of 'poly[R]_n] poly0 _.
-Next Obligation. by apply/poly_leP=> v; rewrite mem_poly0. Qed.
-
-Canonical poly_B :=
-  Eval hnf in BSemilatticeType 'poly[R]_n poly_bottomMixin.
-
-Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
-Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
-
-Definition polyT : 'poly[R]_n := '[ H.polyT ].
-
-Definition bounded (P : 'poly[R]_n) c := H.bounded (hrepr P) c.
-Definition pointed (P : 'poly[R]_n) := H.pointed (hrepr P).
-Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (hrepr P)].
-
-Lemma in_poly0 : poly0 =i pred0.
-Proof. by move => ?; rewrite repr_equiv H.in_poly0. Qed.
-
-Lemma in_polyT : polyT =i predT.
-Proof. by move => ?; rewrite repr_equiv H.in_polyT. Qed.
-End PolyPred.
-
-Notation poly_le   := (@Order.le polyh_display _) (only parsing).
-Notation poly_lt   := (@Order.lt polyh_display _) (only parsing).
-Notation poly_ge   := (@Order.ge polyh_display _) (only parsing).
-Notation poly_gt   := (@Order.gt polyh_display _) (only parsing).
-Notation poly_leif := (@Order.leif polyh_display _) (only parsing).
-Notation poly_cmp  := (@Order.comparable polyh_display _) (only parsing).
-Notation poly_meet := (@Order.meet polyh_display _).
-
-Notation "<=%P"  := poly_le   : fun_scope.
-Notation ">=%P"  := poly_ge   : fun_scope.
-Notation "<%P"   := poly_lt   : fun_scope.
-Notation ">%P"   := poly_gt   : fun_scope.
+Notation "<=%P"  := le   : fun_scope.
+(*Notation ">=%P"  := (>=: poly_of_pOrderType)   : fun_scope.*)
+Notation "<%P"   := lt    : fun_scope.
+(*Notation ">%P"   := poly_gt   : fun_scope.
 Notation "<?=%P" := poly_leif : fun_scope.
 Notation ">=<%P" := poly_cmp  : fun_scope.
-Notation "><%P"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.
+Notation "><%P"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.*)
 
-Notation "`<=` y" := (poly_ge y) : poly_scope.
+(*Notation "`<=` y" := (poly_ge y) : poly_scope.
 Notation "`<=` y :> T" := (`<=` (y : T)) (only parsing) : poly_scope.
 Notation "`>=` y"  := (poly_le y) : poly_scope.
 Notation "`>=` y :> T" := (`>=` (y : T)) (only parsing) : poly_scope.
@@ -366,35 +357,110 @@ Notation "`>=<` y" := (poly_cmp y) : poly_scope.
 Notation "`>=<` y :> T" := (`>=<` (y : T)) (only parsing) : poly_scope.
 
 Notation "`><` y" := (fun x => ~~ (poly_cmp y x)) : poly_scope.
-Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : poly_scope.
+Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : poly_scope.*)
 
-Notation "x `<=` y" := (poly_le x y) : poly_scope.
+Notation "x `<=` y" := (le x y) : poly_scope.
 Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
 Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
 Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
 
-Notation "x `<` y"  := (poly_lt x y) : poly_scope.
+Notation "x `<` y"  := (lt x < y) : poly_scope.
 Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
 Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
 Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
 
-Notation "x `<=` y `<=` z" := ((x `<=` y) && (y `<=` z)) : poly_scope.
-Notation "x `<` y `<=` z" := ((x `<` y) && (y `<=` z)) : poly_scope.
-Notation "x `<=` y `<` z" := ((x `<=` y) && (y `<` z)) : poly_scope.
-Notation "x `<` y `<` z" := ((x `<` y) && (y `<` z)) : poly_scope.
+Notation "x `<=` y `<=` z" := (x <=_poly_tbMeetOrder y <=_poly_tbMeetOrder z) : poly_scope.
+Notation "x `<` y `<=` z" := (x <_poly_tbMeetOrder y <=_poly_tbMeetOrder z) : poly_scope.
+Notation "x `<=` y `<` z" := (x <=_poly_tbMeetOrder y <_poly_tbMeetOrder z) : poly_scope.
+Notation "x `<` y `<` z" := (x <_poly_tbMeetOrder y <_poly_tbMeetOrder z) : poly_scope.
 
-Notation "x `<=` y ?= 'iff' C" := (poly_leif x y C) : poly_scope.
+
+Notation "'[' 'poly0' ']'" := bottom : poly_scope.
+Notation "'[' 'polyT' ']'" := top : poly_scope.
+
+Notation "P `&` Q" := (meet P Q) (at level 48, left associativity) : poly_scope.
+
+
+(*Notation "x `<=` y ?= 'iff' C" := (poly_leif x y C) : poly_scope.
 Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
   (only parsing) : poly_scope.
 
 Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
 Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
+ *)
 
-Notation "'[' 'poly0' ']'" := (@poly0 _ _) : poly_scope.
-Notation "'[' 'polyT' ']'" := (@polyT _ _) : poly_scope.
+Lemma poly_leE P Q : (P `<=` Q) = poly_subset P Q.
+Proof. by []. Qed.
 
-Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
+Lemma poly_leP P Q : reflect {subset P <= Q} (P `<=` Q).
+Proof. by rewrite poly_leE; apply: (iffP poly_subsetP). Qed.
 
+Definition mk_hs b : 'poly[R]_n := '[ H.mk_hs b ].
+Notation "'[' 'hs' b ']'" := (mk_hs b) : poly_scope.
+
+Definition bounded (P : 'poly[R]_n) c := H.bounded (hrepr P) c.
+Definition pointed (P : 'poly[R]_n) := H.pointed (hrepr P).
+Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (hrepr P)].
+
+Lemma in_poly0 : [poly0] =i pred0.
+Proof. by move=> ?; rewrite mem_poly0. Qed.
+
+Lemma in_polyT : [polyT] =i predT.
+Proof. by move=> ?; rewrite mem_polyT. Qed.
+End PolyPred.
+
+(*Notation poly_le   := (@Order.le polyh_display _) (only parsing).
+Notation poly_lt   := (@Order.lt polyh_display _) (only parsing).
+Notation poly_ge   := (@Order.ge polyh_display _) (only parsing).
+Notation poly_gt   := (@Order.gt polyh_display _) (only parsing).
+Notation poly_leif := (@Order.leif polyh_display _) (only parsing).
+Notation poly_cmp  := (@Order.comparable polyh_display _) (only parsing).
+Notation poly_meet := (@Order.meet polyh_display _).*)
+
+Notation "<=%P"  := (le poly_tbMeetOrder)   : fun_scope.
+(*Notation ">=%P"  := (>=: poly_of_pOrderType)   : fun_scope.*)
+Notation "<%P"   := (lt poly_tbMeetOrder)   : fun_scope.
+
+(*Notation ">%P"   := poly_gt   : fun_scope.
+Notation "<?=%P" := poly_leif : fun_scope.
+Notation ">=<%P" := poly_cmp  : fun_scope.
+Notation "><%P"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.*)
+
+(*Notation "`<=` y" := (poly_ge y) : poly_scope.
+Notation "`<=` y :> T" := (`<=` (y : T)) (only parsing) : poly_scope.
+Notation "`>=` y"  := (poly_le y) : poly_scope.
+Notation "`>=` y :> T" := (`>=` (y : T)) (only parsing) : poly_scope.
+
+Notation "`<` y" := (poly_gt y) : poly_scope.
+Notation "`<` y :> T" := (`<` (y : T)) (only parsing) : poly_scope.
+Notation "`>` y" := (poly_lt y) : poly_scope.
+Notation "`>` y :> T" := (`>` (y : T)) (only parsing) : poly_scope.
+
+Notation "`>=<` y" := (poly_cmp y) : poly_scope.
+Notation "`>=<` y :> T" := (`>=<` (y : T)) (only parsing) : poly_scope.
+
+Notation "`><` y" := (fun x => ~~ (poly_cmp y x)) : poly_scope.
+Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : poly_scope.*)
+
+Notation "x `<=` y" := (x <=_poly_tbMeetOrder y) : poly_scope.
+Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
+Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
+Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
+
+Notation "x `<` y"  := (x <_poly_tbMeetOrder y) : poly_scope.
+Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
+Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
+Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
+
+Notation "x `<=` y `<=` z" := (x <=_poly_tbMeetOrder y <=_poly_tbMeetOrder z) : poly_scope.
+Notation "x `<` y `<=` z" := (x <_poly_tbMeetOrder y <=_poly_tbMeetOrder z) : poly_scope.
+Notation "x `<=` y `<` z" := (x <=_poly_tbMeetOrder y <_poly_tbMeetOrder z) : poly_scope.
+Notation "x `<` y `<` z" := (x <_poly_tbMeetOrder y <_poly_tbMeetOrder z) : poly_scope.
+
+Notation "'[' 'poly0' ']'" := (bottom poly_tbMeetOrder) : poly_scope.
+Notation "'[' 'polyT' ']'" := (top poly_tbMeetOrder) : poly_scope.
+Notation polyI := (meet poly_tbMeetOrder).
+Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
 Notation "'[' 'hs' b ']'" := (mk_hs b%PH).
 
 Notation "\polyI_ ( i <- r | P ) F" :=
@@ -465,7 +531,7 @@ Lemma big_polyI_mono (I : Type) (r : seq I) (P : pred I) (F : I -> 'hpoly[R]_n) 
 Proof.
 have class_of_morph : {morph (fun x : 'hpoly[R]_n => '[x]) : x y / H.polyI x y >-> x `&` y}.
 - by move => Q Q'; rewrite polyI_mono.
-have polyT_mono : '[H.polyT] = polyT by done.
+have polyT_mono : '[H.polyT] = [polyT] by done.
 by rewrite (@big_morph _ _ _ _ _ _ _ class_of_morph (@polyT_mono _ _)).
 Qed.
 
@@ -484,7 +550,7 @@ Lemma notin_hs :
 Proof.
 set t := (forall b, _).
 suff Ht: t by split; [ | move => c α x; rewrite Ht ].
-by move => b x; rewrite in_hs ltNge.
+move => b x; rewrite in_hs ltNge.
 Qed.
 
 Lemma in_hsN (e : lrel[R]_n) x : (x \in [hs -e]) = ('[e.1,x] <= e.2).
