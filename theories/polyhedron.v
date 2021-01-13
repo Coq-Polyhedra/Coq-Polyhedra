@@ -349,13 +349,7 @@ Canonical poly_tMeetOrder := [tMeetOrder of poly_subset].
 Canonical poly_tbMeetOrder := [tbMeetOrder of poly_subset].
 Definition poly_preLatticeMixin := MeetPreLatticeMixin poly_tbMeetOrder.
 Canonical poly_preLattice :=
-  PreLattice (<=:poly_pOrder) (<:poly_pOrder) _ _ _ poly_preLatticeMixin.
-(*Local Notation le := (le poly_tbMeetOrder).
-Local Notation lt := (lt poly_tbMeetOrder).
-Local Notation meet := (meet poly_tbMeetOrder).
-Local Notation bottom := (bottom poly_tbMeetOrder).
-Local Notation top := (top poly_tbMeetOrder).
- *)
+  PreLattice poly_subset _poly_lt _ _ _ poly_preLatticeMixin.
 
 Notation "<=%P"  := (le poly_pOrder) : fun_scope.
 Notation "<%P"   := (lt poly_pOrder) : fun_scope.
