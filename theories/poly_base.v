@@ -714,8 +714,8 @@ move => I [P_eq _] Pprop0; apply: val_inj => /=.
 suff ->: 'P^=(base; {eq P}) =
   \polyI_(I : {fsubset base} | val P `<=` 'P^=(base; I)) 'P^= (base; I) :> 'poly[R]_n.
 - rewrite (rwP eqP) eq_le; apply/andP; split.
-  + by apply/big_polyIsP.
-  + rewrite P_eq; apply/big_poly_inf; exact: lexx.
+  + by apply/RT.meetsP.
+  + rewrite P_eq; apply/RT.meets_inf; exact: lexx.
 - rewrite polyEq_big_polyI /active; first by rewrite unlock_with.
   apply/pred0Pn; rewrite P_eq /=; exists I.
   exact: lexx.
@@ -1016,7 +1016,7 @@ Lemma line_subset_hull (P : 'poly[R]_n) (v v' : 'cV[R]_n) :
 Proof.
 elim/polybW: P => base P v_in_P v'_in_P.
 have P_prop0: P `>` [poly0] by apply/proper0P; exists v.
-rewrite hullN0_eq // affine_span; apply/big_polyIsP => e _.
+rewrite hullN0_eq // affine_span; apply/RT.meetsP => e _.
 by apply/line_subset_hp; apply/(poly_subsetP (poly_base_subset_hp (valP _))).
 Qed.
 
@@ -1877,7 +1877,7 @@ case/altP: (F =P 1)%O => [-> | F_neq_P].
       move: (fsvalP i) => ?; rewrite activeP /= fsub1set.
       by move: i_in; rewrite in_set in_fsetD => /andP[].
     * rewrite leEfaces -F'_eq polyI_facet //.
-      - apply/big_polyIsP => i _.
+      - apply/RT.meetsP => i _.
         + have i_in_base : val i \in base.
           * move: (valP i); rewrite in_fsetD => /andP[_].
             by apply/fsubsetP/fsubset_subP.
@@ -1918,7 +1918,7 @@ case: {2}(dim 'P(base)) (erefl (dim 'P(base))) => [dimP0|].
       rewrite leEfaces /= -(polyEqT_poly0 P_compact) //=.
       suff ->: 'P^=(base; base) =
         \polyI_(i : base | (val i) \notin E) 'P^=(base; [fset (val i)]).
-      + apply/big_polyIsP => i i_notin.
+      + apply/RT.meetsP => i i_notin.
         suff: (\meet_(x in S) x <= [` h _ (valP i)]%fset)%O.
           by rewrite leEfaces /=; apply/le_trans.
         apply/meets_inf/imsetP; exists i => //; by rewrite in_set i_notin.
