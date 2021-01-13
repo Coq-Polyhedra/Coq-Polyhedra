@@ -8,7 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect.
-From lattice Require Import relorder.
+From lattice Require Import relorder finlattice.
 From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 
 Import Order.Theory.
@@ -347,7 +347,9 @@ Canonical poly_meetOrder :=
 Canonical poly_bMeetOrder := [bMeetOrder of poly_subset].
 Canonical poly_tMeetOrder := [tMeetOrder of poly_subset].
 Canonical poly_tbMeetOrder := [tbMeetOrder of poly_subset].
-
+Definition poly_preLatticeMixin := MeetPreLatticeMixin poly_tbMeetOrder.
+Canonical poly_preLattice :=
+  PreLattice (<=:poly_pOrder) (<:poly_pOrder) _ _ _ poly_preLatticeMixin.
 (*Local Notation le := (le poly_tbMeetOrder).
 Local Notation lt := (lt poly_tbMeetOrder).
 Local Notation meet := (meet poly_tbMeetOrder).
