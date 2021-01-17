@@ -532,11 +532,10 @@ apply/andP; split; apply/stableP=> F F';
   have->: X = \big[polyI/(pval P)]_(i <- face_set P | (F `<=` i) && (F' `<=` i)) i.
   admit.
   rewrite big_seq_cond.
-  elim/big_ind : _.
+  elim/big_ind: _.
   + exact: pvalP.
   + move=> Q Q' Q_base Q'_base.
-    have->: Q = PolyBase Q_base by [].
-    have->: Q' = PolyBase Q'_base by [].
+    have-> : Q `&` Q' = (PolyBase Q_base) `&` (PolyBase Q'_base) by [].
     exact: pvalP.
   + by move=> Q /and3P [/face_has_base].
 Admitted.
@@ -581,13 +580,13 @@ Lemma face_subset (F : 'poly[R]_n) (P : 'poly[R]_n)  :
   F \in face_lattice P -> F `<=` P.
 Proof. elim/polybW: P => base P; by case/faceP => ?. Qed.
 
-(*
-Lemma face_set0 : face_lattice [poly0] = [fset [poly0]]%fset.
+Lemma face0 :
+  face_lattice [poly0] = [finlattice [poly0] for poly_preLattice].
 Proof.
-apply/fsetP => P; rewrite !inE /=; apply/idP/idP.
+apply/finlattice_eqP => P; rewrite !inE; apply/idP/idP.
 - by move/face_subset; rewrite RT.lex0.
-- move/eqP ->; exact: face_set_self.
-Qed.*)
+- move/eqP ->; exact: face_self.
+Qed.
 
 Lemma argmin_in_face_lattice (P : 'poly[R]_n) c :
   bounded P c -> argmin P c \in face_set P.
@@ -1607,7 +1606,7 @@ Qed.
 Lemma vertex_set0 : (vertex_set ([poly0])) = fset0.
 Proof.
 apply/fsetP => x; rewrite in_vertex_setP.
-by rewrite face_set0 !inE; apply/negbTE; rewrite -RT.lt0x pt_proper0.
+by rewrite face0 !inE; apply/negbTE; rewrite -RT.lt0x pt_proper0.
 Qed.
 
 Lemma vertex_set1 (v : 'cV[R]_n) : vertex_set [pt v] = [fset v]%fset.
@@ -1615,7 +1614,7 @@ Proof.
 apply/fsetP => x; apply/idP/idP.
 - by move/vertex_set_subset; rewrite in_pt => /eqP ->; rewrite inE.
 - rewrite inE => /eqP ->.
-  by rewrite in_vertex_setP face_set_self.
+  by rewrite in_vertex_setP face_self.
 Qed.
 
 Lemma vertex_setN0 (P : 'poly[R]_n) :
@@ -1643,7 +1642,7 @@ Lemma opt_vertex (P : 'poly[R]_n) c :
 Proof.
 move => P_pointed c_bounded.
 set F := argmin P c.
-have F_face : F \in face_set P by apply/argmin_in_face_set.
+have F_face : F \in face_set P by apply/argmin_in_face_lattice.
 have F_pointed : pointed F by apply/(pointedS (argmin_subset _ _)).
 have F_prop0 : F `>` [poly0] by rewrite -bounded_argminN0.
 move/(vertex_setN0 F_prop0)/fset0Pn: F_pointed => [x x_vtx_F].
@@ -1668,13 +1667,14 @@ Qed.
 Implicit Type P : 'pointed[R]_n.
 
 Lemma graded (P0 : 'pointed[R]_n) (Q Q' : 'poly[R]_n) :
-  Q \in face_set P0 -> Q' \in face_set P0 -> Q `<=` Q' -> ((dim Q).+1 < (dim Q'))%N ->
-    exists2 F, F \in face_set P0 & Q `<` F `<` Q'.
+  Q \in face_lattice P0 -> Q' \in face_lattice P0 ->
+  Q `<=` Q' -> ((dim Q).+1 < (dim Q'))%N ->
+    exists2 F, F \in face_lattice P0 & Q `<` F `<` Q'.
 Proof.
 move => Q_face Q'_face Q_sub_Q'.
 have Q'_pointed : pointed Q' by apply/(face_pointed (valP P0)).
-have {Q_face Q_sub_Q'} : Q \in face_set Q'.
-  by rewrite (face_set_of_face Q'_face) !inE Q_face Q_sub_Q'.
+have {Q_face Q_sub_Q'} : Q \in face_lattice Q'.
+  by rewrite (face_lattice_of_face Q'_face) in_interval.
 move: Q' Q'_face Q'_pointed Q; elim/non_redundant_baseW => base non_redundant.
 set P := 'P(base)%:poly_base => P_face P_pointed Q.
 case/faceP => {}Q Q_sub_P dim_lt.
@@ -1687,7 +1687,7 @@ case: (emptyP Q) dim_lt => [ -> | Q_prop0].
   case/fset0Pn : (vertex_setN0 P_prop0 P_pointed) => x.
   rewrite in_vertex_setP => x_vtx.
   exists [pt x].
-  + by move: x_vtx; apply/fsubsetP/(face_setS P_face).
+  + by move: x_vtx; apply/fsubsetP/(faceS P_face).
   + by rewrite pt_proper0 dim_proper ?dim_pt ?face_subset.
 - have eqQ_prop_eqP : ({eq P} `<` {eq Q})%fset by apply/active_proper.
   move/fproperP: (eqQ_prop_eqP) => [_ [i i_in_eqQ i_notin_eqP]].
@@ -1702,7 +1702,7 @@ case: (emptyP Q) dim_lt => [ -> | Q_prop0].
     * move: i_notin_eqP; apply: contraNneq => /pval_inj <-.
       rewrite -fsub1set; exact: active_polyEq.
   exists (pval S).
-  + apply/(fsubsetP (face_setS P_face)).
+  + apply/(fsubsetP (faceS P_face)).
     by rewrite face_setE RT.ltW.
   + by apply/andP; split.
 Qed.
@@ -2076,8 +2076,8 @@ case/altP: (#|` vertex_set S| =P 0%N) => /= [ /cardfs0_eq -> _|].
     by rewrite conv_pt dim_pt dim_segm neq.
 Qed.
 
-Lemma face_set_segm (v v' : 'cV[R]_n) :
-  face_set [segm v & v'] = [fset [poly0]; [pt v]; [pt v']; [segm v & v']]%fset.
+Lemma face_lattice_segm (v v' : 'cV[R]_n) :
+  face_lattice [segm v & v'] = [fset [poly0]; [pt v]; [pt v']; [segm v & v']]%fset :> {fset _}.
 Proof.
 set S := conv _.
 apply/eqP; rewrite eqEfsubset; apply/andP; split; last first.
