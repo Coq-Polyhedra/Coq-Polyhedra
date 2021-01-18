@@ -249,7 +249,7 @@ Local Notation "1" := idx.
 
 Variable op : Monoid.com_law 1.
 
-Lemma big_rem_idx r (P Q : pred I) F :
+Lemma big_and_idx r (P Q : pred I) F :
   (forall i, i \in r -> P i && ~~(Q i) -> F i = idx) -> \big[op/idx]_(i <- r | P i) F i = \big[op/idx]_(i <- r | (P i) && Q i) F i.
 Proof.
 move => H.
@@ -280,7 +280,7 @@ Qed.
 
 End Big.
 
-Arguments big_rem_idx [R idx I op r P Q F].
+Arguments big_and_idx [R idx I op r P Q F].
 Arguments eq_big_seq_congr2 [R idx I op T T' r F].
 Arguments eq_bigl_seq [R idx I op r P1 P2 F].
 
