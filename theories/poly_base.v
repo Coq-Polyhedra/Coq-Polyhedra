@@ -2344,6 +2344,12 @@ Section VertexFigure.
 
 Context {R : realFieldType} {n : nat}.
 
+Lemma foobar (P : 'compact[R]_n) (x : 'poly[R]_n) :
+  x \in face_lattice P -> atom (face_lattice P) x ->
+  exists Q : 'compact[R]_n,
+  exists f : {fmorphism (Interval.FinLatInterval (face_lattice P) x \ftop_(face_lattice P)) >-> face_lattice Q}%O, bijective f.
+Admitted.
+
 Definition face_set_itv (P : 'poly[R]_n) F F' :=
   [fset Q in face_lattice P | F `<=` Q `<=` F']%fset.
 
