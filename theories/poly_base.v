@@ -2571,23 +2571,78 @@ End VertexFigure.
 Local Open Scope order_scope.
 
 Section ClosednessByInterval.
-Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
+Context (R : realFieldType) (n : nat).
 
-Lemma closed_by_interval x y :
+Lemma proper_pt (P : 'poly[R]_n) v : P `<` [pt v] -> P = [poly0].
+Proof.
+apply/contraTeq; case/poly_eq0Pn=> w w_in.
+apply/contraT; rewrite negbK => P_lt.
+have /poly_leP/(_ _ w_in): P `<=` [pt v] by apply/RT.ltW.
+rewrite in_pt => /eqP w_eq_v.
+move: P_lt; rewrite -w_eq_v.
+by case/poly_properP => _ [z]; rewrite in_pt => /eqP ->; rewrite w_in.
+Qed.
+
+Lemma atom_face (P : 'pointed[R]_n) Q :
+  reflect (exists2 v, v \in vertex_set P & Q = [pt v])
+          (atom (face_lattice P) Q).
+Proof.
+apply/(iffP atomP); rewrite fbot_face_lattice.
+- case=> Q_face Q_prop0 Q_min.
+  have Q_pointed: pointed Q by apply/(pointedS (face_subset Q_face))/valP.
+  case/fset0Pn: (vertex_setN0 Q_prop0 Q_pointed)=> v v_vtx_Q.
+  have v_vtx_P: v \in vertex_set P by move: v_vtx_Q; apply/fsubsetP/vertex_setS.
+  exists v => //.
+  have v_in: [pt v] `<=` Q by rewrite pt_subset vertex_set_subset.
+  apply/(RT.le_anti [leo:<=%P])/andP; split=> //.
+  rewrite RT.comparable_leNgt ?RT.ge_comparable //.
+  by apply/Q_min; by rewrite -?in_vertex_setP ?pt_proper0.
+- case=> v v_vtx ->; split; rewrite -?in_vertex_setP ?pt_proper0 //.
+  move=> Q' _; apply/contraL.
+  by move/proper_pt ->; rewrite RT.ltxx.
+Qed.
+
+Lemma closed_by_interval (P : 'compact[R]_n) x y :
   x \in face_lattice P -> y \in face_lattice P -> x `<=` y ->
    exists Q : 'compact[R]_n,
    exists f : {fmorphism [< x; y >]_(face_lattice P) >-> face_lattice Q},
-     bijective f (*& rank y = (dim Q + rank x)%N*).
+     {in [< x; y >]_(face_lattice P) & on (face_lattice Q), bijective f}.
+(*& rank y = (dim Q + rank x)%N*)
 Proof.
+move => x_in y_in x_le_y.
 pose Pt (S : {finLattice poly_preLattice}) :=
-  exists Q : 'compact[R]_n, exists f : {fmorphism S >-> face_lattice Q}, bijective f.
-have: Pt (face_lattice P). exists P.
-have:
-exists id.
+  exists Q : 'compact[R]_n, exists f : {fmorphism S >-> face_lattice Q},
+      {in S & on (face_lattice Q), bijective f}.
+suff h_Pt : forall S x y, x \in S -> y \in S -> x `<=` y ->
+                                      Pt S -> Pt [< x; y >]_S.
+- apply/h_Pt => //.
+  + exists P; exists (fmorph_id (face_lattice P)); exact: in_on_bij_id.
+- apply/(ind_id (P := Pt)). (* FIX IT *)
+  + move=> S z z_atom [Q] [f] f_bij.
+    have f_morph : fmorphism [< z; \ftop_S >]_S [< f z; f \ftop_S >]_(face_lattice Q) f.
+      by apply/fmorph_itv; rewrite ?mem_ftop ?lef1 ?mem_atom //.
+    suff [Q' [g g_bij]]: Pt [<f z; f \ftop_S>]_(face_lattice Q).
+    - exists Q'; exists (fcomp (FMorphism f_morph) g); apply/fcomp_bij =>//.
+      by apply/fmorph_itv_bij; rewrite ?mem_ftop ?lef1 ?mem_atom.
+    - have [v v_vtx ->]: exists2 v, v \in vertex_set Q & f z = [pt v].
+      by apply/atom_face/fmorph_atom.
+      rewrite fmorph1 ftop_face_lattice.
+      exact: (vertex_figure v_vtx).
+  + move=> S z /mem_coatom zS [Q] [f] f_bij.
+    pose Q' := f z.
+    have Q'_face: Q' \in face_lattice Q by rewrite fmorph_premeet_closed.
+    have Q'_compact: compact Q'
+      by apply/face_compact: Q'_face; apply: (valP Q).
+    have itv_eq: [< f \fbot_S; f z >]_(face_lattice Q) = face_lattice Q'.
+      by rewrite fmorph0 fbot_face_lattice (face_lattice_of_face Q'_face).
+    have f_morph: fmorphism [< \fbot_S; z >]_S [< f \fbot_S; f z >]_(face_lattice Q) f.
+      by apply/fmorph_itv; rewrite ?mem_fbot ?le0f //.
+    rewrite itv_eq in f_morph.
+    exists (Compact Q'_compact); exists (FMorphism f_morph).
+    by rewrite -{1}itv_eq; apply/fmorph_itv_bij; rewrite ?mem_fbot ?le0f //.
+Qed.
 
-
-  apply/(@ind_id _ (@poly_preLattice R n)).
-
+(*
 Lemma closed_by_interval_r (x : face_lattice P) :
    exists Q : 'compact[R]_n,
    exists2 f : {omorphism '[< x; 1 >] -> face_lattice Q},
@@ -2679,21 +2734,38 @@ have ->: dim (fsval I) = rank (g 1 : JL).
   by have /= -> := omorph1 (TBOMorphism og).
 rewrite rank_morph_bij // {2}/rank /= /vrank /=.
 by rewrite subnK //; apply/le_homo_rank.
-Qed.
+Qed.*)
 End ClosednessByInterval.
 
 (* -------------------------------------------------------------------- *)
 Global Instance expose_lexx (disp : unit) (L : porderType disp) (x : L) :
   expose (x <= x)%O := Expose (lexx x).
 
+(*
+Section Diamond.
+Context {T : choiceType} {L : {preLattice T}}.
+
+Implicit Type (S : {finLattice L}).
+
+Definition is_diamond S :=
+  [exists x, [exists y, [&& (S == [fset z in [:: x; y; \fbot_S; \ftop_S]], ~~ (x <=_L y) & ~~ (y <=_L x)]]].
+
+                                              x \in S
+
+*)
 (* -------------------------------------------------------------------- *)
-Section DiamondProperty.
+(*Section DiamondProperty.
+
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
-Lemma diamond (x y : face_lattice P) :
-  rank y = (rank x).+2 -> x <= y ->
-  exists z1 z2 : face_lattice P,
-    [/\ forall z : '[<x; y>], val z \in [:: x; y; z1; z2]
+Lemma diamond x y :
+  x \in face_lattice P -> y \in face_lattice Q ->
+    x `<=` y -> dim y = (dim x).+2 ->
+    exists z1 z2, : face_lattice P,
+  [/\ z1 \in face_lattice P,
+
+
+   forall z : '[<x; y>], val z \in [:: x; y; z1; z2]
       , rank z1 = (rank x).+1
       , rank z2 = (rank x).+1
       , x <= z1 <= y & x <= z2 <= y].
@@ -2746,3 +2818,4 @@ exists (val y1), (val y2); split; first move=> z.
 + by apply: (valP y2).
 Qed.
 End DiamondProperty.
+*)
