@@ -8,13 +8,14 @@
 
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect.
-From lattice Require Import relorder finlattice.
 From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
+From lattice Require Import relorder finlattice.
 
 Import Order.Theory.
 (*Import RelOrder.Theory.*)
 
 Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter hpolyhedron.
+
 
 Set Implicit Arguments.
 Unset Strict Implicit.
@@ -525,7 +526,7 @@ rewrite lt_def in_hs => ->.
 by rewrite in_hp andbT.
 Qed.
 
-Let inE := (@in_poly0, @in_polyT, in_hp, in_polyI, in_hs, inE).
+Let inE := (@in_poly0, @in_polyT, in_hp, in_polyI, in_hs, @inE).
 
 Lemma hs_hp c (x : lrel[R]_n) : c \in [hp x] -> c \in [hs x].
 Proof. by rewrite !inE => /eqP->. Qed.
@@ -1378,7 +1379,7 @@ Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : poly_scope.
 Notation "''P' ( base )" := (poly_of_base (base)%fset) : poly_scope.
 Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 
-Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, inE).
+Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, @inE).
 
 Module Proj0.
 Section Proj0.
