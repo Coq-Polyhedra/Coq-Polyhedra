@@ -2347,11 +2347,12 @@ Context {R : realFieldType} {n : nat}.
 Lemma slice_polyI (e : lrel[R]_n) : {morph slice e : P Q / P `&` Q}.
 Proof. move=> P Q; by rewrite RT.meetACA RT.meetxx. Qed.
 
+Check poly_preLattice.
+
 Lemma vertex_figure (P : 'compact[R]_n) v :
   v \in vertex_set P ->
   exists Q : 'compact[R]_n,
-    exists f : {fmorphism [< [pt v]; P>]_(face_lattice P) >-> face_lattice Q}%O,
-      {in [< [pt v]; P >]_(face_lattice P) & on (face_lattice Q), bijective f}.
+  isof poly_preLattice [< [pt v]; P >]_(face_lattice P) (face_lattice Q).
 Proof.
 case: P => [[]] /=; elim/polybW => base P _ P_compact v_vtx.
 (*case/atomP => x_face; rewrite fbot_face_lattice => x_lt0 x_atom.
@@ -2369,6 +2370,20 @@ pose e := xchoose (conv_sep_hp (sep_vertex P_compact v_vtx)).
 have hyp: vf_hyp P v e.
 + split=> //; exact: (xchooseP (conv_sep_hp (sep_vertex P_compact v_vtx))).
 pose Q := Compact (compact_slice (Compact P_compact) e); exists Q. (* UGLY *)
+set phi := slice e.
+apply/(@misof_isof _ _ [< [pt v]; P >]_(face_lattice P) (face_lattice Q) phi).
+apply:meet_isof.
+- exact: VertexFigurePolyBase.vf_inj.
+- apply/eqP/fset_eqP => z; apply/(sameP idP)/(iffP idP). (* rewrite lemma vf_surj*)
+  + have ->: face_lattice Q = face_lattice (phi P) by [].
+    case/(VertexFigurePolyBase.vf_surj P_compact hyp)=> z' z'mem ->.
+    by rewrite in_imfset.
+  + case/imfsetP => z' z'mem ->.
+    by apply: (VertexFigurePolyBase.vf_im hyp).
+- move=> ????; exact: slice_polyI.
+Qed.
+
+(*Search _ face_lattice.
 have slice_bij :
   {in [< [pt v]; P >]_(face_lattice P) & on (face_lattice Q), bijective (slice e)}.
 + apply/(inj_surj_bij _ _ _ _ _ _ (poly0_face _)). (* UGLY, FIX IT *)
@@ -2381,7 +2396,7 @@ have slice_morph:
   - by apply/VertexFigurePolyBase.vf_im.
   - by move=>??; rewrite slice_polyI.
 exists (FMorphism slice_morph) => //.
-Qed.
+Qed.*)
 
 (*
 Definition face_set_itv (P : 'poly[R]_n) F F' :=
@@ -2604,21 +2619,55 @@ Qed.
 
 Lemma closed_by_interval (P : 'compact[R]_n) x y :
   x \in face_lattice P -> y \in face_lattice P -> x `<=` y ->
-   exists Q : 'compact[R]_n,
-   exists f : {fmorphism [< x; y >]_(face_lattice P) >-> face_lattice Q},
-     {in [< x; y >]_(face_lattice P) & on (face_lattice Q), bijective f}.
+  exists Q : 'compact[R]_n,
+  isof poly_preLattice [< x; y >]_(face_lattice P) (face_lattice Q).
 (*& rank y = (dim Q + rank x)%N*)
 Proof.
 move => x_in y_in x_le_y.
 pose Pt (S : {finLattice poly_preLattice}) :=
-  exists Q : 'compact[R]_n, exists f : {fmorphism S >-> face_lattice Q},
-      {in S & on (face_lattice Q), bijective f}.
-suff h_Pt : forall S x y, x \in S -> y \in S -> x `<=` y ->
-                                      Pt S -> Pt [< x; y >]_S.
-- apply/h_Pt => //.
-  + exists P; exists (fmorph_id (face_lattice P)); exact: in_on_bij_id.
+  exists Q : 'compact[R]_n, isof poly_preLattice S (face_lattice Q).
+suff h_Pt : forall (S : {finLattice poly_preLattice}) x y,
+  x \in S -> y \in S -> x `<=` y ->
+  Pt S -> Pt [< x; y >]_S.
+- apply/h_Pt => //; exists P; exact: isof_refl.
+(*+ exists P; exists (fmorph_id (face_lattice P)); exact: in_on_bij_id.*)
 - apply/(ind_id (P := Pt)). (* FIX IT *)
-  + move=> S z z_atom [Q] [f] f_bij.
+  + move=> S z z_atom [Q] /isofP [f f_surj f_inj].
+    have itv_img: [< f z; f \ftop_S >]_(face_lattice Q) =
+    f @` ([< z; \ftop_S >]_S : {fset _}) :> {fset _}.
+    - rewrite fmorph_itv ?mem_ftop ?lef1 ?(mem_atom z_atom) //.
+      by congr Interval.interval; apply: val_inj => /=; rewrite f_surj.
+    suff [Q' isof_itvQ']: Pt [< f z; f \ftop_S >]_(face_lattice Q).
+    - exists Q'; apply:(isof_trans _ isof_itvQ'); exists f.
+      rewrite itv_img.
+      apply:(itv_isomorph (S2 := (face_lattice Q)));
+        rewrite ?lef1 ?mem_ftop ?(mem_atom z_atom) //.
+      apply/misofP; split => //; exact: fmorphismP.
+    - move/atom_face:(fmorph_atom (misof_fmorph f_inj f_surj) z_atom).
+      case => v vtx_v ->.
+      rewrite (misof1 (misof_fmorph f_inj f_surj)) ftop_face_lattice.
+      exact: (vertex_figure vtx_v).
+  + move=> S z coatom_z [Q] /isofP [f f_surj f_inj].
+    pose Q' := f z.
+    have Q'face: Q' \in face_lattice Q by
+      rewrite inE -f_surj in_imfset ?(mem_coatom coatom_z).
+    have Q'compact : compact Q' by
+      apply/face_compact: Q'face; exact: (valP Q).
+    have itv_eq :
+      [< f \fbot_S; f z >]_(face_lattice Q) = face_lattice Q' by
+      rewrite (misof0 (misof_fmorph f_inj f_surj)) fbot_face_lattice
+        (face_lattice_of_face Q'face).
+    exists (Compact (Q'compact)); rewrite -itv_eq; exists f.
+    have ->: [< f \fbot_S; f z >]_(face_lattice Q) =
+      f @` ([< \fbot_S; z >]_S : {fset _}) :> {fset _}.
+    - rewrite fmorph_itv ?le0f ?mem_fbot ?(mem_coatom coatom_z) //.
+      congr Interval.interval; exact: val_inj. 
+    apply: (itv_isomorph (S2:=(face_lattice Q)));
+      rewrite ?le0f ?mem_fbot ?(mem_coatom coatom_z) //.
+    apply/misofP; split=> //; exact: fmorphismP.
+Qed.
+  
+(*+ move=> S z z_atom [Q] [f] f_bij.
     have f_morph : fmorphism [< z; \ftop_S >]_S [< f z; f \ftop_S >]_(face_lattice Q) f.
       by apply/fmorph_itv; rewrite ?mem_ftop ?lef1 ?mem_atom //.
     suff [Q' [g g_bij]]: Pt [<f z; f \ftop_S>]_(face_lattice Q).
@@ -2640,7 +2689,7 @@ suff h_Pt : forall S x y, x \in S -> y \in S -> x `<=` y ->
     rewrite itv_eq in f_morph.
     exists (Compact Q'_compact); exists (FMorphism f_morph).
     by rewrite -{1}itv_eq; apply/fmorph_itv_bij; rewrite ?mem_fbot ?le0f //.
-Qed.
+Qed.*)
 
 (*
 Lemma closed_by_interval_r (x : face_lattice P) :
