@@ -9,7 +9,7 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
-From lattice Require Import relorder finlattice.
+From lattice Require Import finlattice.
 
 Import Order.Theory.
 (*Import RelOrder.Theory.*)
@@ -289,8 +289,8 @@ Local Lemma _poly_subset_refl : reflexive poly_subset.
 by move=> P; apply/_poly_subsetP.
 Qed.
 
-Local Lemma _poly_subset_anti : forall P Q, poly_subset P Q -> poly_subset Q P -> P = Q.
-move=> P Q /_poly_subsetP le_PQ /_poly_subsetP le_QP.
+Local Lemma _poly_subset_anti : antisymmetric poly_subset.
+move=> P Q /andP [/_poly_subsetP le_PQ /_poly_subsetP le_QP].
 by apply/poly_eqP=> x; apply/idP/idP => [/le_PQ|/le_QP].
 Qed.
 
@@ -301,14 +301,13 @@ Qed.
 
 Definition _poly_lt (x y : 'poly[R]_n) := (x != y) && (poly_subset x y).
 
-Local Lemma _poly_dlt (x y : 'poly[R]_n) :
-  _poly_lt y x = (x != y) && (poly_subset y x).
+Local Lemma _poly_lt_def (x y : 'poly[R]_n) :
+  _poly_lt x y = (y != x) && (poly_subset x y).
 Proof. by rewrite eq_sym. Qed.
 
 Definition poly_pOrderMixin :=
-  RelOrder.POrder.Mixin
-    _poly_subset_refl _poly_subset_anti _poly_subset_trans
-    (fun x y => erefl _) _poly_dlt.
+  LePOrderMixin
+    _poly_lt_def _poly_subset_refl _poly_subset_anti _poly_subset_trans.
 
 Canonical poly_pOrder :=
   Eval hnf in POrder poly_subset _poly_lt poly_pOrderMixin.
@@ -347,10 +346,11 @@ Canonical poly_tMeetOrder := [tMeetOrder of poly_subset].
 Canonical poly_tbMeetOrder := [tbMeetOrder of poly_subset].
 Definition poly_preLatticeMixin := MeetPreLatticeMixin poly_tbMeetOrder.
 Canonical poly_preLattice :=
-  PreLattice _ _ _ _ _ poly_preLatticeMixin.
+  PreLattice poly_subset _poly_lt (nosimpl _) (nosimpl _) (nosimpl _)
+             poly_preLatticeMixin.
 
-Notation "<=%P"  := (le poly_pOrder) : fun_scope.
-Notation "<%P"   := (lt poly_pOrder) : fun_scope.
+Notation "<=%P"  := (RelOrder.le poly_pOrder) : fun_scope.
+Notation "<%P"   := (RelOrder.lt poly_pOrder) : fun_scope.
 
 Notation "x `<=` y" := (x <=_poly_pOrder y) : poly_scope.
 Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
@@ -367,9 +367,9 @@ Notation "x `<` y `<=` z" := (x <_poly_pOrder y <=_poly_pOrder z) : poly_scope.
 Notation "x `<=` y `<` z" := (x <=_poly_pOrder y <_poly_pOrder z) : poly_scope.
 Notation "x `<` y `<` z" := (x <_poly_pOrder y <_poly_pOrder z) : poly_scope.
 
-Notation "'[' 'poly0' ']'" := (bottom poly_bPOrder) : poly_scope.
-Notation "'[' 'polyT' ']'" := (top poly_tPOrder) : poly_scope.
-Notation polyI := (meet poly_meetOrder).
+Notation "'[' 'poly0' ']'" := (RelOrder.bottom poly_bPOrder) : poly_scope.
+Notation "'[' 'polyT' ']'" := (RelOrder.top poly_tPOrder) : poly_scope.
+Notation polyI := (RelOrder.meet poly_meetOrder).
 Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
 
 Lemma poly_leP {P Q} : reflect {subset P <= Q} (P `<=` Q).
@@ -389,8 +389,8 @@ Lemma in_polyT : [polyT] =i predT.
 Proof. by move=> ?; rewrite mem_polyT. Qed.
 End PolyPred.
 
-Notation "<=%P"  := (le poly_pOrder)   : fun_scope.
-Notation "<%P"   := (lt poly_pOrder)   : fun_scope.
+Notation "<=%P"  := (RelOrder.le poly_pOrder)   : fun_scope.
+Notation "<%P"   := (RelOrder.lt poly_pOrder)   : fun_scope.
 
 Notation "x `<=` y" := (x <=_poly_pOrder y) : poly_scope.
 Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
@@ -407,9 +407,9 @@ Notation "x `<` y `<=` z" := ((x <_poly_pOrder y) && (y <=_poly_pOrder z)) : pol
 Notation "x `<=` y `<` z" := ((x <=_poly_pOrder y) && (y <_poly_pOrder z)) : poly_scope.
 Notation "x `<` y `<` z" := ((x <_poly_pOrder y) && (y <_poly_pOrder z)) : poly_scope.
 
-Notation "'[' 'poly0' ']'" := (bottom poly_bPOrder) : poly_scope.
-Notation "'[' 'polyT' ']'" := (top poly_tPOrder) : poly_scope.
-Notation polyI := (meet poly_meetOrder).
+Notation "'[' 'poly0' ']'" := (RelOrder.bottom poly_bPOrder) : poly_scope.
+Notation "'[' 'polyT' ']'" := (RelOrder.top poly_tPOrder) : poly_scope.
+Notation polyI := (RelOrder.meet poly_meetOrder).
 Notation "P `&` Q" := (polyI P Q) (at level 48, left associativity) : poly_scope.
 Notation "'[' 'hs' b ']'" := (mk_hs b%PH).
 
@@ -692,9 +692,8 @@ Lemma poly_properP {P Q : 'poly[R]_n} :
 Proof.
 rewrite RT.lt_def; apply: (iffP andP).
 + case=> ne_QP le_PQ; split; first by apply/poly_leP.
-  apply/poly_lePn; by rewrite (RT.eq_le [leo: <=%P]) le_PQ in ne_QP.
-case=> /poly_leP => -> [x xQ xPN]. split=> //.
-by apply/negP=> /eqP/poly_eqP /(_ x); rewrite xQ (negbTE xPN).
+  by apply/poly_lePn; apply/contra: ne_QP; rewrite (RT.eq_le [leo: <=%P]) => ->.
+by case=> /poly_leP -> [x xQ xPN]; split; first apply/contra: xPN => /eqP <-.
 Qed.
 
 Lemma boundedP {P : 'poly[R]_n} {c} :

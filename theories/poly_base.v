@@ -10,7 +10,7 @@
 Require Import Recdef.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 
-From lattice Require Import extra_misc relorder xbigop finlattice.
+From lattice Require Import extra_misc xbigop finlattice.
 Require Import extra_misc inner_product extra_matrix (*xorder*) vector_order row_submx.
 Require Import hpolyhedron polyhedron barycenter.
 
@@ -522,7 +522,7 @@ Qed.
 
 Lemma face_closed (P : 'poly[R]_n) :
   [&& premeet_closed poly_preLattice (face_set P),
-      premeet_closed [preLattice of <=:(poly_preLattice^~)] (face_set P) &
+      premeet_closed [preLattice of dual_rel poly_subset] (face_set P) &
       face_set P != fset0].
 Proof.
 elim/polybW: P => base P.
