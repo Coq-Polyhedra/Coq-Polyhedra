@@ -27,9 +27,12 @@ Program Definition fset_meetJoinMixin :=
 Next Obligation. Proof. by rewrite fproperEneq eq_sym. Qed.
 
 Canonical fset_porderType := POrderType fset_display {fset T} fset_meetJoinMixin.
+Canonical fset_bPOrderType := BPOrderType {fset T} (BottomMixin (@fsub0set T)).
 Canonical fset_meetSemilatticeType := MeetSemilatticeType {fset T} fset_meetJoinMixin.
-Canonical fset_latticeType := LatticeType {fset T} fset_meetJoinMixin.
-Canonical fset_bSemilatticeType := BSemilatticeType {fset T} (BottomMixin (@fsub0set T)).
+Canonical fset_bMeetSemilatticeType := [bMeetSemilatticeType of {fset T}].
+Canonical fset_joinSemilatticeType := JoinSemilatticeType {fset T} fset_meetJoinMixin.
+Canonical fset_bJoinSemilatticeType := [bJoinSemilatticeType of {fset T}].
+Canonical fset_latticeType := [latticeType of {fset T}].
 Canonical fset_bLatticeType := [bLatticeType of {fset T}].
 Canonical fset_distrLatticeType := DistrLatticeType {fset T} fset_meetJoinMixin.
 Canonical fset_bDistrLatticeType := [bDistrLatticeType of {fset T}].
@@ -59,18 +62,30 @@ Proof. by rewrite !(inE, fsetTE) andbT. Qed.
 
 Definition inE := (inE, fsetTE, fsetCE).
 
-Program Canonical fset_tbLatticeType :=
-  TBLatticeType {fset T} (@TopMixin _ _ fsetT _).
+Program Canonical fset_tPOrderType :=
+  TPOrderType {fset T} (@TopMixin _ _ fsetT _).
 
 Next Obligation. Proof. by apply/fsubsetP=> v _; rewrite inE. Qed.
 
-Canonical fset_tbDistrLatticeType := [tbDistrLatticeType of {fset T}].
+Canonical fset_tbPOrderType := [tbPOrderType of {fset T}].
+
+Canonical finPOrderType := [finPOrderType of {fset T}].
+Canonical finBPOrderType := [finBPOrderType of {fset T}].
+Canonical finTPOrderType := [finTPOrderType of {fset T}].
+Canonical finTBPOrderType := [finTBPOrderType of {fset T}].
+
+Canonical tLatticeType := [tLatticeType of {fset T}].
+Canonical tbLatticeType := [tbLatticeType of {fset T}].
+Canonical finLatticeType := [finLatticeType of {fset T}].
+Canonical finTBLatticeType := [finTBLatticeType of {fset T}].
+
+Canonical tDistrLatticeType := [tDistrLatticeType of {fset T}].
+Canonical tbDistrLatticeType := [tbDistrLatticeType of {fset T}].
+Canonical finDistrLatticeType := [finDistrLatticeType of {fset T}].
+Canonical finTBDistrLatticeType := [finTBDistrLatticeType of {fset T}].
 
 Program Canonical ctbDistrLatticeType := CTBDistrLatticeType {fset T}
   (@CTBDistrLatticeMixin _ _ fsetD fsetC _).
 
-Canonical finPOrderType        := [finPOrderType of {fset T}].
-Canonical finLatticeType       := [finLatticeType of {fset T}].
-Canonical finDistrLatticeType  := [finDistrLatticeType of {fset T}].
-Canonical finCDistrLatticeType := [finCDistrLatticeType of {fset T}].
+Canonical finCTBDistrLatticeType := [finCTBDistrLatticeType of {fset T}].
 End FinLattice.
