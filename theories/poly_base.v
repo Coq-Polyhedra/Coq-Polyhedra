@@ -2279,7 +2279,7 @@ case: (emptyP F) => [->| F_prop0].
   by rewrite fsetU1K ?vf_e0_notin_eq ?vf_P_in_L.
 Qed.
 
-(*Lemma vf_dim (F : 'poly[R]_n) :
+Lemma vf_dim (F : 'poly[R]_n) :
   F \in L -> (dim F = (dim (Φ F)).+1)%N.
 Proof.
 move => F_in_L; move: (F_in_L); move/vf_L_face: F_in_L; case/face_setP => {}F F_sub_P F_in_L.
@@ -2292,7 +2292,7 @@ case: (ltnP 1 (dim F)) => [dim_gt1 | ?].
     apply/poly_lePn; exists v; first by rewrite vf_L_v_in.
     by move: sep_v; apply/contraNN/poly_leP/hp_subset_hs.
 - by rewrite [pval _]vf_dim1 // dim_pt vf_slice_pt dim0.
-Qed.*)
+Qed.
 
 End VertexFigurePolyBase.
 End VertexFigurePolyBase.
@@ -2322,6 +2322,14 @@ Lemma vf_im (P : 'compact[R]_n) v e F :
 Proof.
 case: P => [[]]; elim/polybW => base P ? P_compact /= hyp F_in.
 by apply/(VertexFigurePolyBase.vf_im hyp); rewrite face_set_itv_vtx ?hyp.1.
+Qed.
+
+Lemma vf_dim (P : 'compact[R]_n) v e F :
+  vf_hyp P v e -> F \in face_set_itv P ([pt v]) P ->
+                       dim F = (dim (slice e F)).+1.
+Proof.
+case: P => [[]]; elim/polybW => base P ? P_compact /= hyp F_in.
+by apply/(VertexFigurePolyBase.vf_dim P_compact hyp); rewrite face_set_itv_vtx ?hyp.1.
 Qed.
 
 Lemma vf_inj (P : 'compact[R]_n) v e :
@@ -2679,20 +2687,39 @@ rewrite in_cons=> /orP; case => [/eqP-> //|].
 by apply/(ind a a_vtx).
 Qed.
 
-Variable (P : 'poly[R]_n).
+(* TODO: the next statement is redundant with the statements in Section VertexFigure. *
+   It should be merged (and the next one is the right way to state it.                *)
 
-Hypothesis P_compact : compact P.
-
-Lemma vertex_set_slice_dim1 v : v \in vertex_set P ->
+Lemma vertex_set_slice_dim (P : 'poly[R]_n) v :
+  compact P -> v \in vertex_set P ->
   forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
-       forall F, F \in face_set P -> (v \in F) -> (dim F >= 1)%N -> (slice e F `>` [poly0]).
-Admitted.
+       forall F, F \in face_set P -> (v \in F) -> dim F = (dim (slice e F)).+1%N.
+Proof.
+elim/polybW: P => base P P_compact v_vtx e e_sep F F_face v_in_F.
+rewrite (VertexFigurePolyBase.vf_dim P_compact (v_vtx, e_sep)) //.
+by rewrite inE /=; apply/andP.
+Qed.
 
-Lemma vertex_set_slice v : v \in vertex_set P ->
+Lemma vertex_set_slice (P : 'poly[R]_n) v :
+  compact P -> v \in vertex_set P ->
   forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
        vertex_set (slice e P) =
        [fset ppick (slice e F) | F in face_set P & ((v \in F) && (dim F == 2%N))]%fset.
-Admitted.
+Proof.
+elim/polybW: P => base P P_compact v_vtx e e_sep.
+apply/fsetP => ?; apply/imfsetP/imfsetP =>
+  [[F] /= /andP [F_face dimF1] -> | [F] /= /and3P [F_face v_in_F dimF2] ->].
++ case/(VertexFigurePolyBase.vf_surj P_compact (v_vtx, e_sep)): F_face => F'.
+  rewrite inE=> /andP [F'_face v_in_F'] F'_eq.
+  exists F'; rewrite ?F'_eq ?inE //; apply/and3P; split=> //.
+  by rewrite (vertex_set_slice_dim P_compact v_vtx e_sep) // -F'_eq eqSS.
++ exists (slice e F) => //; rewrite inE /=; apply/andP; split.
+  - by apply/(VertexFigurePolyBase.vf_im (v_vtx, e_sep)); rewrite inE; apply/andP.
+  - by move: dimF2; rewrite (vertex_set_slice_dim P_compact v_vtx e_sep).
+Qed.
+
+Variable (P : 'poly[R]_n).
+Hypothesis (P_compact : compact P).
 
 Definition improve c :=
   [rel v w | (adj P v w) && ('[c,w] < '[c,v])].
@@ -2733,20 +2760,19 @@ suff: x \in [hs [<c, '[ c, v]>]].
   by rewrite subr_cp0; move/andP: α01 => [].
 - move: x_in_slice; rewrite [slice _ _]conv_vertex_set;
     last by apply/(subset_compact P_compact)/leIr.
-  rewrite (vertex_set_slice v_vtx) ?(xchooseP sep) // => /in_convP [ω ω_supp ->].
+  rewrite (vertex_set_slice P_compact v_vtx) ?(xchooseP sep) // => /in_convP [ω ω_supp ->].
   apply/convexW; first apply/mem_poly_convex.
   move => z /(fsubsetP ω_supp)/imfsetP => [[F] /and3P [F_face v_in_F /eqP dimF2] ->].
-  have : v \in vertex_set F by rewrite (vertex_set_face F_face) in_imfset // inE ?v_vtx.
-  move: (F_face).
-  move/(dim2P (face_compact P_compact F_face)): dimF2 => [y [y' -> y_neq_y' yy'_face]].
+  have slice_prop0 : slice e F `>` [poly0].
+  - rewrite (vertex_set_slice_dim P_compact v_vtx (xchooseP sep)) // in dimF2.
+    by move/succn_inj: dimF2; rewrite dimN0 => ->.
+  have: v \in vertex_set F by rewrite (vertex_set_face F_face) in_imfset // inE ?v_vtx.
+  move: (F_face) slice_prop0.
+  move/(dim2P (face_compact P_compact F_face)): dimF2 => [y [y' -> y_neq_y' yy'_face yy'_prop0]].
   have adj_y_y': adj P y y' by rewrite inE yy'_face y_neq_y'.
   move/vertex_setS: (yy'_face); rewrite vertex_set_segm => /fsubsetP sub_vtx v_in.
-  have slice_prop0 : slice e [segm y & y'] `>` [poly0].
-  - apply/(vertex_set_slice_dim1 v_vtx) => //; first by apply/(xchooseP sep).
-    + by apply/in_conv.
-    + by rewrite dim_segm y_neq_y'.
-  suff: slice e [segm y & y'] `<=` [hs [<c, '[ c, v]>]]
-    by move/poly_leP/(_ _ (ppickP slice_prop0)).
+  suff: slice e [segm y & y'] `<=` [hs [<c, '[ c, v]>]].
+    by move/poly_leP/(_ _ (ppickP yy'_prop0)).
   apply/(le_trans (leIr _ _))/conv_subset.
   move: v_in adj_y_y' => /fset2P; case => <-;
     by move => adj_v u /fset2P; case => ->; rewrite in_hs // adj_vert // adj_sym.
@@ -2844,7 +2870,7 @@ Lemma connected_graph (P: 'poly[R]_n) v w :
   compact P -> v \in vertex_set P -> w \in vertex_set P ->
     exists2 p, (path (adj P) v p) & w = last v p.
 Proof.
-move => P_compact v_vtx; rewrite in_vertex_setP.
+move=> P_compact v_vtx; rewrite in_vertex_setP.
 move/face_argmin/(_ (pt_proper0 _)) => [c c_bouned argmin_eq].
 exists (mk_path P_compact c v); first by apply/(sub_path (@sub_improve_adj _ _ _ _))/mk_pathP.
 by move: (mk_path_argmin P_compact c v_vtx); rewrite -argmin_eq vertex_set1 inE=> /eqP.
@@ -2855,34 +2881,37 @@ Definition sdisjoint (T : eqType) (s s' : seq T) :=
 
 Lemma sdisjointP (T : eqType) (s s' : seq T) :
   reflect (forall x, x \in s' -> x \notin s) (sdisjoint s s').
-Admitted.
+exact: allP. Qed.
 
 Lemma sdisjoint_sym (T : eqType) (s s' : seq T) :
   sdisjoint s s' = sdisjoint s' s.
-Admitted.
+by apply/sdisjointP/sdisjointP=> [h x|h x]; apply/contraTN/h. Qed.
 
 Lemma sdisjoint_revl (T : eqType) (s s' : seq T) :
   sdisjoint (rev s) s' = sdisjoint s s'.
-Admitted.
+by apply/sdisjointP/sdisjointP=> [h x /h | h x /h]; rewrite mem_rev. Qed.
 
 Lemma sdisjoint_revr (T : eqType) (s s' : seq T) :
   sdisjoint s (rev s') = sdisjoint s s'.
-Admitted.
+by rewrite sdisjoint_sym sdisjoint_revl sdisjoint_sym. Qed.
 
 Lemma sdisjoint_catr  (T : eqType) (s s' s'' : seq T) :
   sdisjoint s (s' ++ s'') = (sdisjoint s s') && (sdisjoint s s'').
-Admitted.
-
-Lemma sdisjoint_catl  (T : eqType) (s s' s'' : seq T) :
-  sdisjoint (s ++ s') s'' = (sdisjoint s s'') && (sdisjoint s' s'').
-Admitted.
+apply/sdisjointP/andP => [h | [/sdisjointP h' /sdisjointP h''] x].
+- by split; apply/sdisjointP => x x_in; apply/h; rewrite mem_cat; apply/orP; [left | right].
+- by rewrite mem_cat; case/orP; [apply/h' | apply/h''].
+Qed.
 
 Lemma subseq_sdisjoint (T : eqType) (s s' s'' : seq T) :
   subseq s' s'' -> sdisjoint s s'' -> sdisjoint s s'.
-Admitted.
+Proof.
+move => /mem_subseq sub /sdisjointP h.
+by apply/sdisjointP=> x /sub; apply/h.
+Qed.
 
 Lemma improve_path_lt (P : 'poly[R]_n) c p x v :
   path (improve P c) v p -> x \in p -> '[c,x] < '[c,v].
+Proof.
 move: v; elim: p => // [a p] ind.
 move=> v p_path.
 have a_lt_v: '[c,a] < '[c,v] by case/andP: p_path => /andP [_].
@@ -2909,7 +2938,7 @@ Qed.
 
 Lemma subseq_belast (T : eqType) (x : T) s :
   subseq (belast x s) (x :: s).
-Admitted.
+Proof. by rewrite lastI subseq_rcons. Qed.
 
 Hypothesis n_gt0 : (n > 0)%N.
 
