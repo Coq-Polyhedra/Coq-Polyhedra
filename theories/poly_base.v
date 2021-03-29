@@ -2758,14 +2758,6 @@ suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
     by move => adj_v u /fset2P; case => ->; rewrite in_hs //= neigh_v // adj_sym.
 Qed.
 
-End Graph.
-
-Section MkPath.
-
-Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
-
-Hypothesis P_compact : compact P.
-
 Variable (c : 'cV[R]_n).
 
 Definition improve :=
@@ -2776,7 +2768,7 @@ Proof.
 by move => ??/andP [].
 Qed.
 
-Lemma improving_neighbor (v : 'cV[R]_n) :
+Lemma argminN_improve (v : 'cV[R]_n) :
   v \in vertex_set P -> v \notin argmin P c -> exists w, improve v w.
 Proof.
 move => v_vtx v_notin.
@@ -2824,7 +2816,7 @@ elim: k {-2}k (leqnn k).
   move/orP=> [/eqP -> v h_v v_vtx|]; last by apply: ind.
   have: v \notin argmin P c
     by rewrite heightP ?vertex_set_subset // h_v.
-  case/(improving_neighbor v_vtx)=> w /[dup] imp_v_w /andP [/adj_vtxr w_vtx w_lt_v].
+  case/(argminN_improve v_vtx)=> w /[dup] imp_v_w /andP [/adj_vtxr w_vtx w_lt_v].
   have h_w: (height w <= m)%N.
   + rewrite -ltnS -h_v.
     apply/fproper_ltn_card/fproperP; split.
@@ -2835,7 +2827,7 @@ elim: k {-2}k (leqnn k).
   by exists (w :: p) => //; apply/andP.
 Qed.
 
-End MkPath.
+End Graph.
 
 Section Connectness.
 
