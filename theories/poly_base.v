@@ -102,9 +102,9 @@ Context (R : realFieldType) (n : nat) .
 Definition Compact (P : 'poly[R]_n) (cp : compact P) :=
   @mkCompact R n (Pointed (compact_pointed cp)) cp.
 
-Lemma compact_slice (P : 'compact[R]_n) e : compact (slice e P).
-Proof. by apply/(subset_compact (valP P))/le_slice. Qed.
-Canonical compact_slice_compact P e := Compact (compact_slice P e).
+Lemma compact_slice (P : 'poly[R]_n) e : compact P -> compact (slice e P).
+Proof. by move=> P_compact; apply/(subset_compact P_compact)/le_slice. Qed.
+Canonical compact_slice_compact (P : 'compact[R]_n) e := Compact (compact_slice e (valP P)).
 End CompactPointed.
 
 (* -------------------------------------------------------------------- *)
@@ -2472,7 +2472,7 @@ Proof.
 move => x_atom.
 pose v := vtx_of_atom x_atom.
 pose e := xchoose (conv_sep_hp (sep_vertex (valP P) (valP v))).
-pose Q := Compact (compact_slice P e); exists Q.
+pose Q := Compact (compact_slice e (valP P)); exists Q.
 pose f := lift_slice x_atom.
 have f_bij : bijective f.
 - apply/inj_surj_bij; by [apply/lift_slice_inj | apply/lift_slice_surj].
@@ -2660,9 +2660,7 @@ Definition adj P :=
   [rel v w : 'cV[R]_n | (v != w) && ([segm v & w] \in face_set P)].
 
 Lemma adj_sym P v w : adj P v w = adj P w v. (*symmetric adj.*)
-Proof.
-by rewrite /= eq_sym fsetUC.
-Qed.
+Proof. by rewrite /= eq_sym fsetUC. Qed.
 
 Lemma adj_vtxl P (v w : 'cV[R]_n) : adj P v w -> v \in vertex_set P.
 Proof.
@@ -2670,9 +2668,7 @@ by move/andP => [_] segm_face; apply/(fsubsetP (vertex_setS segm_face));
    rewrite vertex_set_segm; rewrite !inE eq_refl.
 Qed.
 Lemma adj_vtxr P (v w : 'cV[R]_n) : adj P v w -> w \in vertex_set P.
-Proof.
-by rewrite adj_sym; apply/adj_vtxl.
-Qed.
+Proof. by rewrite adj_sym; apply/adj_vtxl. Qed.
 
 Lemma sub_adj P F : F \in face_set P -> subrel (adj F) (adj P).
 Proof.
@@ -2719,52 +2715,36 @@ apply/fsetP => ?; apply/imfsetP/imfsetP =>
 Qed.
 
 Variable (P : 'poly[R]_n).
+
 Hypothesis (P_compact : compact P).
 
-Definition improve c :=
-  [rel v w | (adj P v w) && ('[c,w] < '[c,v])].
-
-Lemma sub_improve_adj c: subrel (improve c) (adj P).
+Lemma adj_argmin (c v : 'cV[R]_n) :
+  v \in vertex_set P -> (forall w, adj P v w -> '[c,v] <= '[c,w]) -> v \in argmin P c.
 Proof.
-by move => ??/andP [].
-Qed.
-
-Lemma improving_neighbor (c v : 'cV[R]_n) :
-  v \in vertex_set P -> v \notin argmin P c -> exists w, improve c v w.
-Proof.
-move => v_vtx v_notin.
-have P_prop0 : P `>` [poly0] by apply/proper0P; exists v; apply/vertex_set_subset.
-suff /existsP: [exists w : vertex_set P, adj P v (fsval w) &&  ('[c,fsval w] < '[c,v])]
-  by move => [w ?]; exists (fsval w).
-move: v_notin; apply/contraR; rewrite negb_exists => /forallP adj_vert.
-have {}adj_vert: forall w, adj P v w -> '[c,w] >= '[c,v].
-- move => w adj; move/adj_vtxr: (adj) => w_vtx.
-  by move/(_ [` w_vtx]%fset): adj_vert; rewrite adj /= leNgt.
-have c_bounded : bounded P c by apply/compactP.
+move=> v_vtx neigh_v.
 rewrite in_argmin vertex_set_subset //=.
-rewrite [P]conv_vertex_set //; apply/conv_subset.
-move => w; case/altP : (w =P v) => [ -> _| w_neq_v w_vtx]; first by rewrite in_hs.
+have P_prop0 : P `>` [poly0] by apply/proper0P; exists v; apply/vertex_set_subset.
 pose sep := conv_sep_hp (sep_vertex P_compact v_vtx).
 pose e := xchoose sep.
 pose sep_v := (sep_hpP (xchooseP sep)).1.
 pose sep_other := (sep_hpP (xchooseP sep)).2.
-have w_in_hs : w \in [hs e].
-  by apply/hsN_subset/sep_other/in_conv; rewrite !inE w_neq_v /=.
-move: (hp_itv w_in_hs sep_v) => [α α01].
-set x := _ + _ => x_in_hp.
-have {x_in_hp} x_in_slice : x \in slice e P
-  by rewrite in_polyI x_in_hp /= mem_poly_convex ?ltW_le ?vertex_set_subset.
-suff: x \in [hs [<c, '[ c, v]>]].
-- rewrite !in_hs /= /x combine2C combine2_line vdotDr ler_addl.
+suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
+- rewrite [P]conv_vertex_set //; apply/conv_subset.
+  move => w; case/altP : (w =P v) => [-> _| w_neq_v w_vtx]; first by rewrite in_hs.
+  have w_in_hs : w \in [hs e].
+    by apply/hsN_subset/sep_other/in_conv; rewrite !inE w_neq_v /=.
+  move: (hp_itv w_in_hs sep_v) => [α α01].
+  set x := _ + _ => x_in_hp.
+  have {x_in_hp} /(poly_leP slice_sub) : x \in slice e P
+    by rewrite in_polyI x_in_hp /= mem_poly_convex ?ltW_le ?vertex_set_subset.
+  rewrite !in_hs /= /x combine2C combine2_line vdotDr ler_addl.
   rewrite vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
   by rewrite subr_cp0; move/andP: α01 => [].
-- move: x_in_slice; rewrite [slice _ _]conv_vertex_set;
-    last by apply/(subset_compact P_compact)/leIr.
-  rewrite (vertex_set_slice P_compact v_vtx) ?(xchooseP sep) // => /in_convP [ω ω_supp ->].
-  apply/convexW; first apply/mem_poly_convex.
-  move => z /(fsubsetP ω_supp)/imfsetP => [[F] /and3P [F_face v_in_F /eqP dimF2] ->].
+- rewrite [slice _ _]conv_vertex_set ?compact_slice //; apply/conv_subset=> z.
+  rewrite (vertex_set_slice P_compact v_vtx) ?(xchooseP sep) //.
+  move/imfsetP => [F /and3P [F_face v_in_F /eqP dimF2] ->].
   have slice_prop0 : slice e F `>` [poly0].
-  - rewrite (vertex_set_slice_dim P_compact v_vtx (xchooseP sep)) // in dimF2.
+  + rewrite (vertex_set_slice_dim P_compact v_vtx (xchooseP sep)) // in dimF2.
     by move/succn_inj: dimF2; rewrite dimN0 => ->.
   have: v \in vertex_set F by rewrite (vertex_set_face F_face) in_imfset // inE ?v_vtx.
   move: (F_face) slice_prop0.
@@ -2775,7 +2755,7 @@ suff: x \in [hs [<c, '[ c, v]>]].
     by move/poly_leP/(_ _ (ppickP yy'_prop0)).
   apply/(le_trans (leIr _ _))/conv_subset.
   move: v_in adj_y_y' => /fset2P; case => <-;
-    by move => adj_v u /fset2P; case => ->; rewrite in_hs // adj_vert // adj_sym.
+    by move => adj_v u /fset2P; case => ->; rewrite in_hs //= neigh_v // adj_sym.
 Qed.
 
 End Graph.
@@ -2787,6 +2767,25 @@ Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
 Hypothesis P_compact : compact P.
 Variable c : 'cV[R]_n.
 
+Definition improve c :=
+  [rel v w | (adj P v w) && ('[c,w] < '[c,v])].
+
+Lemma sub_improve_adj : subrel (improve c) (adj P).
+Proof.
+by move => ??/andP [].
+Qed.
+
+Lemma improving_neighbor (v : 'cV[R]_n) :
+  v \in vertex_set P -> v \notin argmin P c -> exists w, improve c v w.
+Proof.
+move => v_vtx v_notin.
+suff /existsP: [exists w : vertex_set P, adj P v (fsval w) &&  ('[c,fsval w] < '[c,v])]
+  by move => [w ?]; exists (fsval w).
+move: v_notin; apply/contraR; rewrite negb_exists => /forallP neigh_v.
+apply/adj_argmin => // w /[dup] w_adj /adj_vtxr w_vtx.
+by move/(_ [` w_vtx]%fset): neigh_v; rewrite w_adj /= leNgt.
+Qed.
+
 Definition height (v : 'cV[R]_n) :=
   #|` [fset w in vertex_set P | '[c,w] <= '[c,v]] |%fset.
 
@@ -2794,19 +2793,19 @@ Definition mk_improve (v : 'cV[R]_n) :=
   match @idP (v \in vertex_set P) with
   | ReflectT v_vtx =>
     match @idPn (v \in argmin P c) with
-    | ReflectT v_notin => xchoose (improving_neighbor P_compact v_vtx v_notin)
+    | ReflectT v_notin => xchoose (improving_neighbor v_vtx v_notin)
     | _ => v
     end
   | _ => v
   end.
 
 Lemma mk_improveE (v : 'cV[R]_n) (v_vtx : v \in vertex_set P) (v_notin : v \notin argmin P c) :
-  let w := mk_improve v in improve P c v w.
+  let w := mk_improve v in improve c v w.
 Proof.
 rewrite /mk_improve.
 case: {-}_/idP => [h|]; rewrite ?v_vtx //.
 case: {-}_/idPn => [h'|]; rewrite ?v_notin //.
-by apply/(xchooseP (improving_neighbor _ _ _)).
+by apply/(xchooseP (improving_neighbor _ _)).
 Qed.
 
 Lemma mk_improve_in_vertex_set (v : 'cV[R]_n) :
@@ -2815,7 +2814,7 @@ Proof.
 move => v_vtx; rewrite /mk_improve.
 case: {-}_/idP => [h|]; rewrite ?v_vtx //.
 case: {-}_/idPn => [h'| //].
-by move: (xchooseP (improving_neighbor P_compact h h')) => /andP [/adj_vtxr ? _].
+by move: (xchooseP (improving_neighbor h h')) => /andP [/adj_vtxr ? _].
 Qed.
 
 Function mk_path (v : 'cV[R]_n) {measure height v} : seq 'cV_n :=
@@ -2837,10 +2836,10 @@ suff w_lt_v: '[c,w] < '[c,v].
 Qed.
 
 Lemma mk_pathP :
-  forall v, path (improve P c) v (mk_path v).
+  forall v, path (improve c) v (mk_path v).
 Proof.
-apply/(@mk_path_rect (path (improve P c))) => [v /andP [v_vtx v_notin] w | //=].
-suff: improve P c v w by rewrite /= => -> ->.
+apply/(@mk_path_rect (path (improve c))) => [v /andP [v_vtx v_notin] w | //=].
+suff: improve c v w by rewrite /= => -> ->.
 by rewrite /w; apply: mk_improveE.
 Qed.
 
