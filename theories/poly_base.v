@@ -2765,18 +2765,19 @@ Section MkPath.
 Context {R : realFieldType} {n : nat} (P : 'poly[R]_n).
 
 Hypothesis P_compact : compact P.
-Variable c : 'cV[R]_n.
 
-Definition improve c :=
+Variable (c : 'cV[R]_n).
+
+Definition improve :=
   [rel v w | (adj P v w) && ('[c,w] < '[c,v])].
 
-Lemma sub_improve_adj : subrel (improve c) (adj P).
+Lemma sub_improve_adj : subrel improve (adj P).
 Proof.
 by move => ??/andP [].
 Qed.
 
 Lemma improving_neighbor (v : 'cV[R]_n) :
-  v \in vertex_set P -> v \notin argmin P c -> exists w, improve c v w.
+  v \in vertex_set P -> v \notin argmin P c -> exists w, improve v w.
 Proof.
 move => v_vtx v_notin.
 suff /existsP: [exists w : vertex_set P, adj P v (fsval w) &&  ('[c,fsval w] < '[c,v])]
@@ -2787,76 +2788,51 @@ by move/(_ [` w_vtx]%fset): neigh_v; rewrite w_adj /= leNgt.
 Qed.
 
 Definition height (v : 'cV[R]_n) :=
-  #|` [fset w in vertex_set P | '[c,w] <= '[c,v]] |%fset.
+  #|` [fset w in vertex_set P | '[c,w] < '[c,v]] |%fset.
 
-Definition mk_improve (v : 'cV[R]_n) :=
-  match @idP (v \in vertex_set P) with
-  | ReflectT v_vtx =>
-    match @idPn (v \in argmin P c) with
-    | ReflectT v_notin => xchoose (improving_neighbor v_vtx v_notin)
-    | _ => v
-    end
-  | _ => v
-  end.
-
-Lemma mk_improveE (v : 'cV[R]_n) (v_vtx : v \in vertex_set P) (v_notin : v \notin argmin P c) :
-  let w := mk_improve v in improve c v w.
+Lemma heightP v :
+  v \in P -> ((v \in argmin P c) = (height v == 0%N)).
 Proof.
-rewrite /mk_improve.
-case: {-}_/idP => [h|]; rewrite ?v_vtx //.
-case: {-}_/idPn => [h'|]; rewrite ?v_notin //.
-by apply/(xchooseP (improving_neighbor _ _)).
+move=> v_in; rewrite in_argmin {}v_in /=.
+apply/idP/eqP.
+- move/poly_leP=> sub.
+  apply/eqP; rewrite cardfs_eq0.
+  apply/contraT; case/fset0Pn=> w.
+  rewrite !inE=> /andP [/vertex_set_subset/sub].
+  by rewrite in_hs /= => /le_lt_trans/[apply]; rewrite ltxx.
+- move=> h0.
+  rewrite [P]conv_vertex_set //; apply/conv_subset=> w.
+  rewrite in_hs /= => w_vtx; move: h0; apply/contra_eqT.
+  rewrite -ltNge cardfs_eq0 => c_w_v.
+  by apply/fset0Pn; exists w; rewrite !inE; apply/andP.
 Qed.
 
-Lemma mk_improve_in_vertex_set (v : 'cV[R]_n) :
-  v \in vertex_set P -> mk_improve v \in vertex_set P.
+Lemma improve_path {v : 'cV[R]_n} :
+  v \in vertex_set P ->
+        exists2 p, path improve v p & last v p \in vertex_set (argmin P c).
 Proof.
-move => v_vtx; rewrite /mk_improve.
-case: {-}_/idP => [h|]; rewrite ?v_vtx //.
-case: {-}_/idPn => [h'| //].
-by move: (xchooseP (improving_neighbor h h')) => /andP [/adj_vtxr ? _].
-Qed.
-
-Function mk_path (v : 'cV[R]_n) {measure height v} : seq 'cV_n :=
-  if (v \in vertex_set P) && (v \notin argmin P c) then
-    let w := mk_improve v in
-    w :: mk_path w
-  else [::].
-Proof.
-move => v /andP [v_vtx v_notin].
-set w := mk_improve v; apply/ssrnat.leP.
-suff w_lt_v: '[c,w] < '[c,v].
-- rewrite /height.
-  set S_w := [fset _ | _ in _ & _]%fset; set S_v := [fset _ | _ in _ & _]%fset.
-  apply/fproper_ltn_card/fproperP; split.
-  + move => x; rewrite !inE /= => /andP [-> /=].
-    by move/le_lt_trans/(_ w_lt_v)/ltW.
-  + by exists v; rewrite !inE v_vtx //= -?ltNge.
-- by rewrite /w; move/andP : (mk_improveE v_vtx v_notin) => [_].
-Qed.
-
-Lemma mk_pathP :
-  forall v, path (improve c) v (mk_path v).
-Proof.
-apply/(@mk_path_rect (path (improve c))) => [v /andP [v_vtx v_notin] w | //=].
-suff: improve c v w by rewrite /= => -> ->.
-by rewrite /w; apply: mk_improveE.
-Qed.
-
-Lemma mk_path_argmin :
-  forall v, v \in vertex_set P -> (last v (mk_path v)) \in (vertex_set (argmin P c)).
-Proof.
-pose P' v s := v \in vertex_set P -> (last v s) \in (vertex_set (argmin P c)).
-apply/(@mk_path_rect P') => [v _| v ? <-].
-- by rewrite /P' /= => h ?; apply/h/mk_improve_in_vertex_set.
-- case: ifP => [// | /negbT]; rewrite negb_and => /orP; case; rewrite /P' /=.
-  + by move/negP.
-  + rewrite negbK => v_in _ v_vtx.
-    rewrite (vertex_set_face (P := P)).
-    * by rewrite inE /=; apply/andP.
-    * apply/argmin_in_face_set/compactP=> //.
-      apply/proper0P; exists v.
-      by move: v_in; apply/poly_leP/argmin_subset.
+move: v {-1}(height v) (erefl (height v)) => /[swap] k.
+elim: k {-2}k (leqnn k).
+- move=> k0; rewrite leqn0=> /eqP ->.
+  move=> v /[swap] v_vtx /eqP; rewrite -heightP => [v_in|]; last exact: vertex_set_subset.
+  exists [::] => //=.
+  rewrite (vertex_set_face (P := P)).
+  + by rewrite !inE; apply/andP.
+  + apply/argmin_in_face_set/compactP=> //.
+    by apply/proper0P; exists v; apply/vertex_set_subset.
+- move=> m ind k; rewrite leq_eqVlt ltnS.
+  move/orP=> [/eqP -> v h_v v_vtx|]; last by apply: ind.
+  have: v \notin argmin P c
+    by rewrite heightP ?vertex_set_subset // h_v.
+  case/(improving_neighbor v_vtx)=> w /[dup] imp_v_w /andP [/adj_vtxr w_vtx w_lt_v].
+  have h_w: (height w <= m)%N.
+  + rewrite -ltnS -h_v.
+    apply/fproper_ltn_card/fproperP; split.
+    * move => x; rewrite !inE /= => /andP [-> /=].
+      by move/lt_trans/(_ w_lt_v).
+  * by exists w; rewrite !inE w_vtx //= ltxx.
+  case: (ind _ h_w _ (erefl _) w_vtx) => p p_path last_in.
+  by exists (w :: p) => //; apply/andP.
 Qed.
 
 End MkPath.
@@ -2871,8 +2847,10 @@ Lemma connected_graph (P: 'poly[R]_n) v w :
 Proof.
 move=> P_compact v_vtx; rewrite in_vertex_setP.
 move/face_argmin/(_ (pt_proper0 _)) => [c c_bouned argmin_eq].
-exists (mk_path P_compact c v); first by apply/(sub_path (@sub_improve_adj _ _ _ _))/mk_pathP.
-by move: (mk_path_argmin P_compact c v_vtx); rewrite -argmin_eq vertex_set1 inE=> /eqP.
+case: (improve_path P_compact c v_vtx) => p.
+move/(sub_path (@sub_improve_adj _ _ _ c))=> p_path.
+rewrite -argmin_eq vertex_set1 inE=> /eqP <-.
+by exists p.
 Qed.
 
 Definition sdisjoint (T : eqType) (s s' : seq T) :=
@@ -2924,10 +2902,11 @@ Lemma path_lt (P : 'poly[R]_n) c v :
   exists p, [/\ path (adj P) v p, last v p \in vertex_set (argmin P c)
                                          & (forall w, w \in p -> '[c,w] < '[c,v])].
 Proof.
-move => P_compact v_vtx; exists (mk_path P_compact c v); split.
-- by apply/(sub_path (@sub_improve_adj _ _ _ _))/mk_pathP.
-- exact: mk_path_argmin.
-- by move=> w; move: (mk_pathP P_compact c v); apply/improve_path_lt.
+move => P_compact v_vtx.
+case: (improve_path P_compact c v_vtx)=> p p_path last_in.
+exists p; split=> //.
+- by apply/(sub_path (@sub_improve_adj _ _ _ c)).
+- by move=> w; apply/improve_path_lt: p_path.
 Qed.
 
 Lemma last_rev (T : Type) (x : T) s :
