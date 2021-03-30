@@ -2739,7 +2739,7 @@ suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
     by rewrite in_polyI x_in_hp /= mem_poly_convex ?ltW_le ?vertex_set_subset.
   rewrite !in_hs /= /x combine2C combine2_line vdotDr ler_addl.
   rewrite vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
-  by rewrite subr_cp0; move/andP: α01 => [].
+  by rewrite subr_cp0; move/andP: α01=> [].
 - rewrite [slice _ _]conv_vertex_set ?compact_slice //; apply/conv_subset=> z.
   rewrite (vertex_set_slice P_compact v_vtx) ?(xchooseP sep) //.
   move/imfsetP => [F /and3P [F_face v_in_F /eqP dimF2] ->].
@@ -2754,8 +2754,8 @@ suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
   suff: slice e [segm y & y'] `<=` [hs [<c, '[ c, v]>]].
     by move/poly_leP/(_ _ (ppickP yy'_prop0)).
   apply/(le_trans (leIr _ _))/conv_subset.
-  move: v_in adj_y_y' => /fset2P; case => <-;
-    by move => adj_v u /fset2P; case => ->; rewrite in_hs //= neigh_v // adj_sym.
+  move: v_in adj_y_y' => /fset2P; case=> <-;
+    by move => adj_v u /fset2P; case=> ->; rewrite in_hs //= neigh_v // adj_sym.
 Qed.
 
 Variable (c : 'cV[R]_n).
@@ -2805,7 +2805,7 @@ Lemma improve_path {v : 'cV[R]_n} :
 Proof.
 move: v {-1}(height v) (erefl (height v)) => /[swap] k.
 elim: k {-2}k (leqnn k).
-- move=> k0; rewrite leqn0=> /eqP ->.
+- move=> ?; rewrite leqn0=> /eqP ->.
   move=> v /[swap] v_vtx /eqP; rewrite -heightP => [v_in|]; last exact: vertex_set_subset.
   exists [::] => //=.
   rewrite (vertex_set_face (P := P)).
@@ -2840,42 +2840,9 @@ Proof.
 move=> P_compact v_vtx; rewrite in_vertex_setP.
 move/face_argmin/(_ (pt_proper0 _)) => [c c_bouned argmin_eq].
 case: (improve_path P_compact c v_vtx) => p.
-move/(sub_path (@sub_improve_adj _ _ _ c))=> p_path.
+move/(sub_path (sub_improve_adj (c := c)))=> p_path.
 rewrite -argmin_eq vertex_set1 inE=> /eqP <-.
 by exists p.
-Qed.
-
-Definition sdisjoint (T : eqType) (s s' : seq T) :=
-  all (fun x => x \notin s) s'.
-
-Lemma sdisjointP (T : eqType) (s s' : seq T) :
-  reflect (forall x, x \in s' -> x \notin s) (sdisjoint s s').
-exact: allP. Qed.
-
-Lemma sdisjoint_sym (T : eqType) (s s' : seq T) :
-  sdisjoint s s' = sdisjoint s' s.
-by apply/sdisjointP/sdisjointP=> [h x|h x]; apply/contraTN/h. Qed.
-
-Lemma sdisjoint_revl (T : eqType) (s s' : seq T) :
-  sdisjoint (rev s) s' = sdisjoint s s'.
-by apply/sdisjointP/sdisjointP=> [h x /h | h x /h]; rewrite mem_rev. Qed.
-
-Lemma sdisjoint_revr (T : eqType) (s s' : seq T) :
-  sdisjoint s (rev s') = sdisjoint s s'.
-by rewrite sdisjoint_sym sdisjoint_revl sdisjoint_sym. Qed.
-
-Lemma sdisjoint_catr  (T : eqType) (s s' s'' : seq T) :
-  sdisjoint s (s' ++ s'') = (sdisjoint s s') && (sdisjoint s s'').
-apply/sdisjointP/andP => [h | [/sdisjointP h' /sdisjointP h''] x].
-- by split; apply/sdisjointP => x x_in; apply/h; rewrite mem_cat; apply/orP; [left | right].
-- by rewrite mem_cat; case/orP; [apply/h' | apply/h''].
-Qed.
-
-Lemma subseq_sdisjoint (T : eqType) (s s' s'' : seq T) :
-  subseq s' s'' -> sdisjoint s s'' -> sdisjoint s s'.
-Proof.
-move => /mem_subseq sub /sdisjointP h.
-by apply/sdisjointP=> x /sub; apply/h.
 Qed.
 
 Lemma improve_path_lt (P : 'poly[R]_n) c p x v :
@@ -2889,33 +2856,12 @@ apply/lt_trans: a_lt_v; apply/ind=> //.
 by case/andP: p_path.
 Qed.
 
-Lemma path_lt (P : 'poly[R]_n) c v :
-  compact P -> v \in vertex_set P ->
-  exists p, [/\ path (adj P) v p, last v p \in vertex_set (argmin P c)
-                                         & (forall w, w \in p -> '[c,w] < '[c,v])].
-Proof.
-move => P_compact v_vtx.
-case: (improve_path P_compact c v_vtx)=> p p_path last_in.
-exists p; split=> //.
-- by apply/(sub_path (@sub_improve_adj _ _ _ c)).
-- by move=> w; apply/improve_path_lt: p_path.
-Qed.
-
-Lemma last_rev (T : Type) (x : T) s :
-  last (last x s) (rev (belast x s)) = x.
-by case: s => //= [a s']; rewrite rev_cons last_rcons.
-Qed.
-
-Lemma subseq_belast (T : eqType) (x : T) s :
-  subseq (belast x s) (x :: s).
-Proof. by rewrite lastI subseq_rcons. Qed.
-
-Hypothesis n_gt0 : (n > 0)%N.
+Hypothesis (n_gt0 : n > 0).
 
 Lemma balinski (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) v w :
   compact P -> dim P = n.+1%N -> (V `<=` vertex_set P)%fset -> #|` V | = n.-1%N ->
     v \in (vertex_set P `\` V)%fset -> w \in (vertex_set P `\` V)%fset ->
-      exists p, [/\ (path (adj P) v p), w = last v p & (sdisjoint V p)].
+      exists p, [/\ (path (adj P) v p), w = last v p & all [predC V] p].
 Proof.
 set S := (_ `\` _)%fset.
 move=> P_compact dimP V_sub V_card v_in_S w_in_S.
@@ -2945,24 +2891,28 @@ suff [e [z] [V'_sub z_in_P e_z e_w]]:
     forall x, x \in V -> '[c,x] = α
       by move=> x x_in_V; apply/eqP; rewrite -in_hp; apply/V'_sub/fset1Ur.
   have c_w : '[c,w] <= α by rewrite in_hsN in e_w.
-  case: (path_lt c P_compact v_vtx) => p1 [p1_path last_p1 cp1].
-  case: (path_lt c P_compact w_vtx) => p2 [p2_path last_p2 cp2].
+  case: (improve_path P_compact c v_vtx)
+    => p1 /[swap] last_p1 /[dup] /(sub_path (sub_improve_adj (c := c))) p1_path
+         /improve_path_lt cp1.
+  case: (improve_path P_compact c w_vtx)
+    => p2 /[swap] last_p2 /[dup] /(sub_path (sub_improve_adj (c := c))) p2_path
+         /improve_path_lt cp2.
   case: (connected_graph F_compact last_p1 last_p2) => p3 p3_path last_p3.
   exists (p1 ++ p3 ++ (rev (belast w p2))); split.
   + rewrite !cat_path; apply/and3P; split=> //.
     * by move: p3_path; apply/(sub_path (sub_adj _)).
     * by rewrite -last_p3 rev_path -(eq_path (adj_sym P)).
-  + by rewrite !last_cat -last_p3 last_rev.
-  + rewrite !sdisjoint_catr; apply/and3P; split.
-    * apply/sdisjointP => x /cp1.
+  + rewrite !last_cat -last_p3.
+    by case: (p2) => //= ??; rewrite rev_cons /= last_rcons.
+  + rewrite !all_cat; apply/and3P; split.
+    * apply/allP => x /cp1.
       by apply/contraL=> /c_V ->; rewrite c_v ltxx.
-    * apply/sdisjointP=> x /(path_adj last_p1 p3_path)/vertex_set_subset/c_F.
+    * apply/allP=> x /(path_adj last_p1 p3_path)/vertex_set_subset/c_F.
       by apply/contraL=> /c_V ->; rewrite ltxx.
-    * rewrite sdisjoint_revr.
-      apply/(subseq_sdisjoint (subseq_belast _ _))=> /=; apply/andP; split.
+    * rewrite all_rev; apply/allP=> x /mem_belast.
+      rewrite inE=> /orP [/eqP ->|/cp2 ].
       - by move: w_in_S; rewrite inE => /andP [].
-      - apply/sdisjointP => x /cp2.
-        by apply/contraL=> /c_V ->; rewrite -leNgt.
+      - by apply/contraL=> /c_V ->; rewrite -leNgt.
 - have : (0 < #|` V' | <= n)%N.
   + apply/andP; split.
     * rewrite cardfs_gt0; apply/fset0Pn; exists v; apply/fset1U1.
