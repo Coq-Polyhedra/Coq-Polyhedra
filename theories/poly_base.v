@@ -2691,7 +2691,7 @@ Lemma vertex_set_slice_dim (P : 'poly[R]_n) v :
   forall e, [e separates v from ((vertex_set P) `\ v)%fset] ->
        forall F, F \in face_set P -> (v \in F) -> dim F = (dim (slice e F)).+1%N.
 Proof.
-elim/polybW: P => base P P_compact v_vtx e e_sep F F_face v_in_F.
+  elim/polybW: P => base P P_compact v_vtx e e_sep F F_face v_in_F.
 rewrite (VertexFigurePolyBase.vf_dim P_compact (v_vtx, e_sep)) //.
 by rewrite inE /=; apply/andP.
 Qed.
@@ -2856,7 +2856,7 @@ Qed.
 
 Hypothesis (n_gt0 : n > 0).
 
-Lemma balinski (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) v w :
+Theorem balinski (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) v w :
   compact P -> dim P = n.+1 -> (V `<=` vertex_set P)%fset -> #|` V | = n.-1 ->
     v \in (vertex_set P `\` V)%fset -> w \in (vertex_set P `\` V)%fset ->
       exists p, [/\ (path (adj P) v p), w = last v p & all [predC V] p].
@@ -2897,7 +2897,7 @@ suff [e [z] [V'_sub z_in_P e_z e_w]]:
          /improve_path_lt cp2.
   case: (connected_graph F_compact last_p1 last_p2) => p3 p3_path last_p3.
   exists (p1 ++ p3 ++ (rev (belast w p2))); split.
-  + rewrite !cat_path; apply/and3P => //.
+  + rewrite !cat_path; apply/and3P; split=> //.
     * by move: p3_path; apply/(sub_path (sub_adj _)).
     * by rewrite -last_p3 rev_path -(eq_path (adj_sym P)).
   + rewrite !last_cat -last_p3.
