@@ -2764,9 +2764,7 @@ Definition improve :=
   [rel v w | (adj P v w) && ('[c,w] < '[c,v])].
 
 Lemma sub_improve_adj : subrel improve (adj P).
-Proof.
-by move => ??/andP [].
-Qed.
+by move => ??/andP []. Qed.
 
 Lemma argminN_improve (v : 'cV[R]_n) :
   v \in vertex_set P -> v \notin argmin P c -> exists w, improve v w.
@@ -2859,7 +2857,7 @@ Qed.
 Hypothesis (n_gt0 : n > 0).
 
 Lemma balinski (P : 'poly[R]_n) (V : {fset 'cV[R]_n}) v w :
-  compact P -> dim P = n.+1%N -> (V `<=` vertex_set P)%fset -> #|` V | = n.-1%N ->
+  compact P -> dim P = n.+1 -> (V `<=` vertex_set P)%fset -> #|` V | = n.-1 ->
     v \in (vertex_set P `\` V)%fset -> w \in (vertex_set P `\` V)%fset ->
       exists p, [/\ (path (adj P) v p), w = last v p & all [predC V] p].
 Proof.
@@ -2899,7 +2897,7 @@ suff [e [z] [V'_sub z_in_P e_z e_w]]:
          /improve_path_lt cp2.
   case: (connected_graph F_compact last_p1 last_p2) => p3 p3_path last_p3.
   exists (p1 ++ p3 ++ (rev (belast w p2))); split.
-  + rewrite !cat_path; apply/and3P; split=> //.
+  + rewrite !cat_path; apply/and3P => //.
     * by move: p3_path; apply/(sub_path (sub_adj _)).
     * by rewrite -last_p3 rev_path -(eq_path (adj_sym P)).
   + rewrite !last_cat -last_p3.
@@ -2913,7 +2911,7 @@ suff [e [z] [V'_sub z_in_P e_z e_w]]:
       rewrite inE=> /orP [/eqP ->|/cp2 ].
       - by move: w_in_S; rewrite inE => /andP [].
       - by apply/contraL=> /c_V ->; rewrite -leNgt.
-- have : (0 < #|` V' | <= n)%N.
+- have: (0 < #|` V' | <= n)%N.
   + apply/andP; split.
     * rewrite cardfs_gt0; apply/fset0Pn; exists v; apply/fset1U1.
     * rewrite cardfsU1 V_card addnC.
