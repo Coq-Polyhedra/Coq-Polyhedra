@@ -479,7 +479,7 @@ Lemma le1_fconvex w x : w x <= 1.
 Proof.
 case: finsuppP => // xw; rewrite -(wgt1_fconvex w) weightE.
 rewrite -(big_seq_fsetE _ _ predT) /= -(fsetD1K xw).
-rewrite finmap.big_setU1 ?fsetD11 //= ler_addl.
+rewrite big_fsetU1 ?fsetD11 //= ler_addl.
 by apply: sumr_ge0=> i _; apply: ge0_fconvex.
 Qed.
 
@@ -574,7 +574,7 @@ Proof. apply/convexP; split=> /=.
 + rewrite (@weightwE _ _ [fset x; y]%fset) ?finsupp_sub //.
   case: (x =P y) => [->|/eqP ne_xy]; first rewrite fsetUid big_fset1.
   - by rewrite fsfunE /= fset11 eqxx !mul1r addrNK.
-  rewrite -(big_seq_fsetE _ _ predT) /= big_setU1 ?in_fset1 //=.
+  rewrite -(big_seq_fsetE _ _ predT) /= big_fsetU1 ?in_fset1 //=.
   rewrite big_seq_fset1 !fsfunE !(fset21, fset22) [y == x]eq_sym.
   by rewrite !(eqxx, negbTE ne_xy) !Monoid.simpm /= addrNK.
 Qed.
@@ -599,7 +599,7 @@ rewrite (combinewE (finsupp_fseg a x y)); case: (x =P y) => [<-|].
 + by rewrite fsetUid big_fset1 fsegE /= eqxx !mul1r -scalerDl.
 move/eqP => ne_xy; pose F z := fseg a x y z *: z.
 rewrite -(big_seq_fsetE _ _ predT F) {}/F /=.
-rewrite finmap.big_setU1 ?in_fset1 //= big_seq_fset1 !fsegE.
+rewrite big_fsetU1 ?in_fset1 //= big_seq_fset1 !fsegE.
 by rewrite [y == x]eq_sym !(eqxx, negbTE ne_xy) !Monoid.simpm.
 Qed.
 
@@ -619,9 +619,9 @@ Proof. split.
     move: le_w_pq; rewrite fsetUid => /fcvx1E_finsupp.
     by move=> ->; rewrite eqxx.
   pose F x := w x *: x; rewrite -(big_seq_fsetE _ _ predT F) /=.
-  rewrite finmap.big_setU1 ?in_fset1 //= big_seq_fset1 {}/F.
+  rewrite big_fsetU1 ?in_fset1 //= big_seq_fset1 {}/F.
   move: (weightwE le_w_pq); rewrite -(big_seq_fsetE _ _ predT) /=.
-  rewrite finmap.big_setU1 ?in_fset1 // big_seq_fset1 /=.
+  rewrite big_fsetU1 ?in_fset1 // big_seq_fset1 /=.
   by rewrite wgt1_fconvex => ->; rewrite addrK.
 Qed.
 End CvxSegment.
@@ -729,10 +729,10 @@ move: {-2}(finsupp _) (erefl (finsupp w)) => X.
 elim/finSet_rect: X w wP => X ih w wP XE.
 have /negP/negP := fconvex_insupp_neq0 w.
 rewrite -XE => /fset0Pn[x xX]; rewrite -(fsetD1K xX).
-rewrite finmap.big_setU1 ?fsetD11 //=.
+rewrite big_fsetU1 ?fsetD11 //=.
 have w1: \sum_(y <- (X `\ x)%fset) w y = 1 - w x.
 + rewrite -(wgt1_fconvex w) weightE -(big_seq_fsetE _ _ predT) /=.
-  rewrite -XE -[in RHS](fsetD1K xX) finmap.big_setU1 ?fsetD11 //=.
+  rewrite -XE -[in RHS](fsetD1K xX) big_fsetU1 ?fsetD11 //=.
   by rewrite addrAC subrr add0r.
 have := le1_fconvex w x; rewrite le_eqVlt => /orP[/eqP wxE|lt1_wx].
 + rewrite wxE scale1r big1_seq /= ?addr0; last by apply: wP; rewrite -XE.
@@ -768,5 +768,3 @@ have /= := ih (X `\ x)%fset _ (mkConvexfun cvx_wR); apply=> //.
 + by move=> y; rewrite supp_wR in_fsetD1 => /andP[_]; rewrite XE => /wP.
 Qed.
 End ConvexPred.
-
-

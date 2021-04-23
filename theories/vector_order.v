@@ -192,19 +192,19 @@ Definition lev_min x y := \col_i (Num.min (x i 0) (y i 0)).
 Lemma lev_maxC x y :
   lev_max x y = lev_max y x.
 Proof.
-apply/colP => i; rewrite !mxE; apply: joinC.
+apply/colP => i; rewrite !mxE; apply: maxC.
 Qed.
 
 Lemma lev_minC x y :
   lev_min x y = lev_min y x.
 Proof.
-apply/colP => i; rewrite !mxE; apply: meetC.
+apply/colP => i; rewrite !mxE; apply: minC.
 Qed.
 
 Lemma lev_maxl x y :
   (lev_max x y) >=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE lexU lexx.
+by apply/forallP => i; rewrite !mxE le_maxr lexx.
 Qed.
 
 Lemma lev_maxr x y :
@@ -216,7 +216,7 @@ Qed.
 Lemma lev_minl x y :
   (lev_min x y) <=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE leIx lexx.
+by apply/forallP => i; rewrite !mxE le_minl lexx.
 Qed.
 
 Lemma lev_minr x y :
@@ -808,17 +808,17 @@ have ->: [seq j <- iota 0 n | (j < i0)%N] = iota 0 i0.
   + by move => j; rewrite mem_iota leq0n /= add0n.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{2}[n](subnKC (ltnW Hi0)).
-  by rewrite iota_add add0n; apply: prefix_subseq.
+  by rewrite iotaD add0n; apply: prefix_subseq.
 have ->: [seq j <- iota 0 n | (i0 < j < n )%N] = iota (i0.+1) (n - (i0.+1)).
 - have /eq_filter -> : (fun j => (i0 < j < n)%N) =1 (fun j => j \in iota (i0.+1) (n - (i0.+1))).
   + by move => j; rewrite mem_iota subnKC //.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{4}[n](subnKC Hi0).
-  by rewrite iota_add add0n; apply: suffix_subseq.
-rewrite -{1}[n](subnKC (ltnW Hi0)) iota_add add0n.
+  by rewrite iotaD add0n; apply: suffix_subseq.
+rewrite -{1}[n](subnKC (ltnW Hi0)) iotaD add0n.
 apply/(congr1 (fun s => _ ++ s)).
 suff ->: (n - i0 = 1 + (n - i0.+1))%N
-  by rewrite iota_add addn1 /=.
+  by rewrite iotaD addn1 /=.
 - by rewrite -subn_gt0 in Hi0; rewrite add1n subnS prednK.
 Qed.
 

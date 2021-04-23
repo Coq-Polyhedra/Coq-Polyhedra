@@ -248,13 +248,13 @@ Variable f: T -> T'.
 Hypothesis injf: injective f.
 
 Definition liftf (i: 'I_#|A|) :=
-  (enum_rank_in (mem_imset f (enum_valP i)) (f (enum_val i))): 'I_#|f @: A|.
+  (enum_rank_in (imset_f f (enum_valP i)) (f (enum_val i))): 'I_#|f @: A|.
 
 Lemma liftf_inj : injective liftf.
 Proof.
 move => i i'.
 move/(congr1 enum_val).
-do 2![rewrite enum_rankK_in; last exact: (mem_imset _ (enum_valP _))].
+do 2![rewrite enum_rankK_in; last exact: (imset_f _ (enum_valP _))].
 move/injf; exact: enum_val_inj.
 Qed.
 
@@ -294,7 +294,7 @@ Proof.
 apply/matrixP => i j.
 rewrite row_submx_mxE mxE.
 rewrite !mxE castmxE /= cast_ord_id row_submx_mxE.
-by rewrite permE cast_ordK enum_rankK_in; last exact: (mem_imset _ (enum_valP _)).
+by rewrite permE cast_ordK enum_rankK_in; last exact: (imset_f _ (enum_valP _)).
 Qed.
 
 End RowSubmxPerm.
@@ -337,7 +337,7 @@ have ->: (s1 = [seq (nat_of_ord i) | i <- enum 'I_m])
   by exact: eq_map.
 have ->: (s2 = map (addn m) [seq (nat_of_ord i)%N | i <- enum 'I_n])
   by rewrite -map_comp; exact: eq_map.
-by rewrite 2!val_enum_ord -iota_addl [in RHS]addnC -iota_add.
+by rewrite 2!val_enum_ord -iotaDl [in RHS]addnC -iotaD.
 Qed.
 
 CoInductive split_spec' (i : 'I_(m + n)) : 'I_m + 'I_n -> bool -> Type :=
@@ -415,7 +415,7 @@ have ->: s1 = [seq (lshift n i) | i <- enum I].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /lshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s1}; set s1 := (X in X ++ _).
 rewrite nth_cat size_map /= -cardE ltn_ord.
 rewrite (nth_map (enum_default i)) //=.
@@ -461,7 +461,7 @@ have ->: s2 = [seq (rshift m i) | i <- enum J].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /rshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite (nth_map (enum_default i)) //=.
   by rewrite -cardE ltn_ord.
 Qed.
@@ -516,7 +516,7 @@ have ->: s1 = [seq (lshift n i) | i <- enum I].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /lshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s1}; set s1 := (X in X ++ _).
 rewrite nth_cat size_map /= -cardE ltn_ord.
 rewrite (nth_map (enum_default i)) //.
@@ -545,7 +545,7 @@ have ->: s1 = [seq (lshift n i) | i <- enum I].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /lshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s1}; set s1 := (X in X ++ _).
 have ->: s2 = [seq x <- [seq rshift m i | i <- enum 'I_n] | (mem [set rshift m x | x in J]) x].
 - apply: eq_in_filter => j /mapP [j' Hj' ->].
@@ -560,7 +560,7 @@ have ->: s2 = [seq (rshift m i) | i <- enum J].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /rshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s2}; set s2 := (X in _ ++ X).
 rewrite nth_cat size_map /= -cardE.
 rewrite -[X in (_ < X)%N]addn0 ltn_add2l ltn0.

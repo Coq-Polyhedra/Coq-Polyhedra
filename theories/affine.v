@@ -17,8 +17,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
-Import GRing.Theory Num.Theory.
-
+Import Order.TTheory GRing.Theory Num.Theory.
 Local Open Scope poly_scope.
 
 Reserved Notation "''affine[' R ]_ n"
@@ -570,12 +569,21 @@ Qed.
 Definition affine_LtPOrderMixin :=
   LePOrderMixin (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
 
-Canonical affine_LtPOrderType :=
+Canonical affine_POrderType :=
   Eval hnf in POrderType poly_display 'affine[R]_n affine_LtPOrderMixin.
 
-Program Canonical affine_MeetSemilattice :=
-  Eval hnf in MeetSemilatticeType 'affine[R]_n
-    (@MeetSemilatticeMixin _ _ affineI _ _ _ _).
+Program Definition affine_bottomMixin :=
+  @BottomMixin poly_display [porderType of 'affine[R]_n] affine0 _.
+
+Next Obligation.
+by apply/affine_leP => v; rewrite in_affine0.
+Qed.
+
+Program Canonical affine_PBOrderType :=
+  Eval hnf in BPOrderType 'affine[R]_n affine_bottomMixin.
+
+Program Definition affine_meetMixin :=
+  @MeetMixin _ _ affineI _ _ _.
 
 Next Obligation.
 by move => V V'; apply/affine_eqP => x; rewrite !in_affineI andbC.
@@ -586,32 +594,20 @@ by move => V1 V2 V3; apply/affine_eqP => x; rewrite !in_affineI andbA.
 Qed.
 
 Next Obligation.
-by move => V; apply/affine_eqP => x; rewrite !in_affineI andbb.
-Qed.
-
-Next Obligation.
 apply/affine_leP/eqP => [|<-].
 + move=> le_xy; apply/affine_eqP=> c; rewrite in_affineI.
   by apply: andb_idr; apply: le_xy.
 + by move => c; rewrite in_affineI => /andP[].
 Qed.
 
-Program Definition affine_bottomMixin :=
-  @BottomMixin poly_display [porderType of 'affine[R]_n] affine0 _.
-
-Next Obligation.
-by apply/affine_leP => v; rewrite in_affine0.
-Qed.
-
-Canonical affine_BSemilatticeType :=
-  Eval hnf in BSemilatticeType 'affine[R]_n affine_bottomMixin.
-
+Canonical affine_MeetSemilatticeType :=
+  Eval hnf in MeetSemilatticeType 'affine[R]_n affine_meetMixin.
 End Order.
 
 Module Import Exports.
-Canonical affine_LtPOrderType.
-Canonical affine_MeetSemilattice.
-Canonical affine_BSemilatticeType.
+Canonical affine_POrderType.
+Canonical affine_PBOrderType.
+Canonical affine_MeetSemilatticeType.
 End Exports.
 End Order.
 
@@ -674,7 +670,7 @@ Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
 Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
 
 Notation "'[' 'affine0' ']'" :=
-  (@Order.bottom poly_display Order.affine_BSemilatticeType ) : poly_scope.
+  (@Order.bottom poly_display [bPOrderType of 'affine[_]_(_)]) : poly_scope.
 
 Section BasicObjects.
 
@@ -1076,7 +1072,7 @@ have e_notin: (befst e \notin befst @: U)%VS.
 rewrite -affine_addv in V_prop0 *.
 rewrite ?adimN0_eq ?dir_affine //; apply congr1; rewrite !dim_orthv.
 move/dir_affine: V_prop0.
-rewrite limg_add limg_line.
+rewrite limgD limg_line.
 move/(canLR orthK)/(congr1 (@dimv _ _)).
 rewrite dim_add_line // => dim_eq.
 by rewrite subnSK -?dim_eq ?dim_leqn.
