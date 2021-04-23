@@ -323,7 +323,7 @@ Fixpoint min_seq (S : seq R) (v : R) :=
   match S with
   | [::] => v
   | [:: x] => x
-  | x :: S' => Num.min x (min_seq S' v)
+  | x :: S' => Order.min x (min_seq S' v)
   end.
 
 Lemma min_seq_ler (S : seq R) v: forall i, i \in S -> min_seq S v <= i.
@@ -389,7 +389,7 @@ Fixpoint max_seq (S : seq R) (v : R) :=
   match S with
   | [::] => v
   | [:: x] => x
-  | x :: S' => Num.max x (max_seq S' v)
+  | x :: S' => Order.max x (max_seq S' v)
   end.
 
 Lemma max_seq_ger (S : seq R) v: forall i, i \in S -> max_seq S v >= i.
@@ -473,7 +473,7 @@ Variable T T' : finType.
 Lemma imset_inj (f : T -> T') (S S' : {set T}) : injective f -> f @: S = f @: S' -> S = S'.
 Proof.
 move => f_inj f_S_eq_f_S'.
-apply/setP => i; apply/idP/idP; move/(mem_imset f).
+apply/setP => i; apply/idP/idP; move/(imset_f f).
 - by rewrite f_S_eq_f_S' => /imsetP [j j_in_S']; move/f_inj => ->.
 - by rewrite -f_S_eq_f_S' => /imsetP [j j_in_S]; move/f_inj => ->.
 Qed.

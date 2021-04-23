@@ -228,7 +228,7 @@ Qed.
 Lemma add_lev_min_max x y :
   lev_min x y + lev_max x y = x + y.
 Proof.
-by apply/colP => i; rewrite !mxE; apply: addr_min_max.
+by apply/colP => i; rewrite !mxE /= addr_min_max.
 Qed.
 
 Definition pos_part x := lev_max x 0.

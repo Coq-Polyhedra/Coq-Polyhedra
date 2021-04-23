@@ -1,4 +1,5 @@
 -R theories Polyhedra
+-R _build/default/theories Polyhedra
 
 -arg -w -arg -notation-overridden
 -arg -w -arg -redundant-canonical-projection

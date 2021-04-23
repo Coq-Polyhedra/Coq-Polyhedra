@@ -260,7 +260,7 @@ Lemma unbounded_certificate x0 d K:
          exists x, x \in polyhedron A b /\ '[c,x] < K.
 Proof.
 move => /forallP Hx0 /forallP Hd Hcd.
-set M := Num.max (0%R) ('[c,d]^-1 * (K - 1 - '[c, x0])).
+set M := ((0%R) `|` ('[c,d]^-1 * (K - 1 - '[c, x0])))%O.
 set x := x0 + M *: d.
 exists x; split.
 + apply/forallP => j.

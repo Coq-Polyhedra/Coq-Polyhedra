@@ -19,9 +19,6 @@ Unset Printing Implicit Defensive.
 Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
-Declare Scope poly_scope.
-Delimit Scope poly_scope with PH.
-
 (* -------------------------------------------------------------------- *)
 Reserved Notation "'lrel' [ R ]_ n"
   (at level 8, format "'lrel' [ R ]_ n").
@@ -37,12 +34,6 @@ Reserved Notation "'base_t'"
 
 Reserved Notation "[< A , b >]"
   (at level 8, format "[< A ,  b >]").
-
-Reserved Notation "''hpoly[' R ]_ n"
-  (at level 8, format "''hpoly[' R ]_ n").
-
-Reserved Notation "''hpoly_' n"
-  (at level 8, format "''hpoly_' n").
 
 (* -------------------------------------------------------------------- *)
 Section Base.

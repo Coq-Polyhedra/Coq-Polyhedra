@@ -34,5 +34,5 @@ RUN \
 	opam pin add -n coq 8.11.1 && \
 	opam pin add -n https://github.com/Coq-Polyhedra/mathcomp.git && \
 	opam pin add -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git && \
-	opam install coq coq-mathcomp-field coq-mathcomp-finmap && \
+	opam install dune coq coq-mathcomp-field coq-mathcomp-finmap && \
 	opam clean

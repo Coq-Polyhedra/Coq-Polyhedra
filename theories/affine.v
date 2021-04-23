@@ -18,8 +18,14 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope ring_scope.
 Import Order.TTheory GRing.Theory Num.Theory.
-Local Open Scope poly_scope.
 
+(* -------------------------------------------------------------------- *)
+Declare Scope polyh_scope.
+Delimit Scope polyh_scope with PH.
+
+Local Open Scope polyh_scope.
+
+(* -------------------------------------------------------------------- *)
 Reserved Notation "''affine[' R ]_ n"
   (at level 8, n at level 2, format "''affine[' R ]_ n").
 Reserved Notation "''affine[' R ]"
@@ -32,43 +38,45 @@ Reserved Notation "[ 'affine' U & Ω ]"
 Reserved Notation "[ 'hp' e ]" (at level 0, format "[ 'hp'  e ]").
 Reserved Notation "[ 'pt' Ω ]" (at level 0, format "[ 'pt'  Ω ]").
 Reserved Notation "[ 'line' c & Ω ]"  (at level 0, format "[ 'line'  c  &  Ω ]").
+
 Reserved Notation "'[' 'affine0' ']'" (at level 0).
 Reserved Notation "'[' 'affineT' ']'" (at level 0).
 
-Reserved Notation "\affineI_ i F"
+(* -------------------------------------------------------------------- *)
+Reserved Notation "\polyI_ i F"
   (at level 41, F at level 41, i at level 0,
-           format "'[' \affineI_ i '/  '  F ']'").
-Reserved Notation "\affineI_ ( i <- r | P ) F"
+           format "'[' \polyI_ i '/  '  F ']'").
+Reserved Notation "\polyI_ ( i <- r | P ) F"
   (at level 41, F at level 41, i, r at level 50,
-           format "'[' \affineI_ ( i  <-  r  |  P ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( i <- r ) F"
+           format "'[' \polyI_ ( i  <-  r  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i <- r ) F"
   (at level 41, F at level 41, i, r at level 50,
-           format "'[' \affineI_ ( i  <-  r ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( m <= i < n | P ) F"
+           format "'[' \polyI_ ( i  <-  r ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( m <= i < n | P ) F"
   (at level 41, F at level 41, i, m, n at level 50,
-           format "'[' \affineI_ ( m  <=  i  <  n  |  P ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( m <= i < n ) F"
+           format "'[' \polyI_ ( m  <=  i  <  n  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( m <= i < n ) F"
   (at level 41, F at level 41, i, m, n at level 50,
-           format "'[' \affineI_ ( m  <=  i  <  n ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( i | P ) F"
+           format "'[' \polyI_ ( m  <=  i  <  n ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i | P ) F"
   (at level 41, F at level 41, i at level 50,
-           format "'[' \affineI_ ( i  |  P ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( i : t | P ) F"
+           format "'[' \polyI_ ( i  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i : t | P ) F"
   (at level 41, F at level 41, i at level 50).
-Reserved Notation "\affineI_ ( i : t ) F"
+Reserved Notation "\polyI_ ( i : t ) F"
   (at level 41, F at level 41, i at level 50).
-Reserved Notation "\affineI_ ( i < n | P ) F"
+Reserved Notation "\polyI_ ( i < n | P ) F"
   (at level 41, F at level 41, i, n at level 50,
-           format "'[' \affineI_ ( i  <  n  |  P ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( i < n ) F"
+           format "'[' \polyI_ ( i  <  n  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i < n ) F"
   (at level 41, F at level 41, i, n at level 50,
-           format "'[' \affineI_ ( i  <  n )  F ']'").
-Reserved Notation "\affineI_ ( i 'in' A | P ) F"
+           format "'[' \polyI_ ( i  <  n )  F ']'").
+Reserved Notation "\polyI_ ( i 'in' A | P ) F"
   (at level 41, F at level 41, i, A at level 50,
-           format "'[' \affineI_ ( i  'in'  A  |  P ) '/  '  F ']'").
-Reserved Notation "\affineI_ ( i 'in' A ) F"
+           format "'[' \polyI_ ( i  'in'  A  |  P ) '/  '  F ']'").
+Reserved Notation "\polyI_ ( i 'in' A ) F"
   (at level 41, F at level 41, i, A at level 50,
-           format "'[' \affineI_ ( i  'in'  A ) '/  '  F ']'").
+           format "'[' \polyI_ ( i  'in'  A ) '/  '  F ']'").
 
 Reserved Notation "x `<=` y `<=` z" (at level 70, y, z at next level).
 Reserved Notation "x `<=` y `<` z" (at level 70, y, z at next level).
@@ -106,6 +114,92 @@ Reserved Notation "x `<=` y ?= 'iff' c"
 Reserved Notation "x `<=` y ?= 'iff' c :> T"
   (at level 70, y, c at next level,
        format "x '[hv'  `<=`  y '/'  ?=  'iff'  c  :> T ']'").
+
+(* -------------------------------------------------------------------- *)
+Fact polyh_display : unit. Proof. exact: tt. Qed.
+
+Notation poly_0    := (@Order.bottom polyh_display) (only parsing).
+Notation poly_1    := (@Order.top polyh_display) (only parsing).
+Notation poly_le   := (@Order.le polyh_display _) (only parsing).
+Notation poly_lt   := (@Order.lt polyh_display _) (only parsing).
+Notation poly_ge   := (@Order.ge polyh_display _) (only parsing).
+Notation poly_gt   := (@Order.gt polyh_display _) (only parsing).
+Notation poly_leif := (@Order.leif polyh_display _) (only parsing).
+Notation poly_cmp  := (@Order.comparable polyh_display _) (only parsing).
+Notation poly_meet := (@Order.meet polyh_display _).
+
+Notation "<=%PH"  := poly_le   : fun_scope.
+Notation ">=%PH"  := poly_ge   : fun_scope.
+Notation "<%PH"   := poly_lt   : fun_scope.
+Notation ">%PH"   := poly_gt   : fun_scope.
+Notation "<?=%PH" := poly_leif : fun_scope.
+Notation ">=<%PH" := poly_cmp  : fun_scope.
+Notation "><%PH"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.
+
+Notation "`<=` y" := (poly_ge y) : polyh_scope.
+Notation "`<=` y :> T" := (`<=` (y : T)) (only parsing) : polyh_scope.
+Notation "`>=` y"  := (poly_le y) : polyh_scope.
+Notation "`>=` y :> T" := (`>=` (y : T)) (only parsing) : polyh_scope.
+
+Notation "`<` y" := (poly_gt y) : polyh_scope.
+Notation "`<` y :> T" := (`<` (y : T)) (only parsing) : polyh_scope.
+Notation "`>` y" := (poly_lt y) : polyh_scope.
+Notation "`>` y :> T" := (`>` (y : T)) (only parsing) : polyh_scope.
+
+Notation "`>=<` y" := (poly_cmp y) : polyh_scope.
+Notation "`>=<` y :> T" := (`>=<` (y : T)) (only parsing) : polyh_scope.
+
+Notation "`><` y" := (fun x => ~~ (poly_cmp y x)) : polyh_scope.
+Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : polyh_scope.
+
+Notation "x `<=` y" := (poly_le x y) : polyh_scope.
+Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : polyh_scope.
+Notation "x `>=` y" := (y `<=` x) (only parsing) : polyh_scope.
+Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : polyh_scope.
+
+Notation "x `<` y"  := (poly_lt x y) : polyh_scope.
+Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : polyh_scope.
+Notation "x `>` y"  := (y `<` x) (only parsing) : polyh_scope.
+Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : polyh_scope.
+
+Notation "x `<=` y `<=` z" := ((x `<=` y) && (y `<=` z)) : polyh_scope.
+Notation "x `<` y `<=` z" := ((x `<` y) && (y `<=` z)) : polyh_scope.
+Notation "x `<=` y `<` z" := ((x `<=` y) && (y `<` z)) : polyh_scope.
+Notation "x `<` y `<` z" := ((x `<` y) && (y `<` z)) : polyh_scope.
+
+Notation "x `<=` y ?= 'iff' C" := (poly_leif x y C) : polyh_scope.
+Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
+  (only parsing) : polyh_scope.
+
+Notation "x `>=<` y" := (poly_cmp x y) : polyh_scope.
+Notation "x >< y" := (~~ (poly_cmp x y)) : polyh_scope.
+
+Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : polyh_scope.
+
+Notation "\meet_ ( i <- r | P ) F" :=
+  (\big[poly_meet/poly_1]_(i <- r | P%B) F).
+Notation "\meet_ ( i <- r ) F" :=
+  (\big[poly_meet/poly_1]_(i <- r) F).
+Notation "\meet_ ( i | P ) F" :=
+  (\big[poly_meet/poly_1]_(i | P%B) F).
+Notation "\meet_ i F" :=
+  (\big[poly_meet/poly_1]_i F).
+Notation "\meet_ ( i : I | P ) F" :=
+  (\big[poly_meet/poly_1]_(i : I | P%B) F) (only parsing).
+Notation "\meet_ ( i : I ) F" :=
+  (\big[poly_meet/poly_1]_(i : I) F) (only parsing).
+Notation "\meet_ ( m <= i < n | P ) F" :=
+ (\big[poly_meet/poly_1]_(m <= i < n | P%B) F).
+Notation "\meet_ ( m <= i < n ) F" :=
+ (\big[poly_meet/poly_1]_(m <= i < n) F).
+Notation "\meet_ ( i < n | P ) F" :=
+ (\big[poly_meet/poly_1]_(i < n | P%B) F).
+Notation "\meet_ ( i < n ) F" :=
+ (\big[poly_meet/poly_1]_(i < n) F).
+Notation "\meet_ ( i 'in' A | P ) F" :=
+ (\big[poly_meet/poly_1]_(i in A | P%B) F).
+Notation "\meet_ ( i 'in' A ) F" :=
+ (\big[poly_meet/poly_1]_(i in A) F).
 
 Section Solve.
 
@@ -384,7 +478,7 @@ Qed.
 Definition mk_affine W Ω : 'affine[R]_n :=
   [affine ((be_lift Ω) @: W^OC)%VS].
 
-Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : poly_scope.
+Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : polyh_scope.
 
 Lemma in_mk_affine W Ω x :
   (x \in [affine W & Ω]) = (x - Ω \in W).
@@ -538,9 +632,7 @@ Qed.
 
 End Specs.
 
-Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : poly_scope.
-
-Fact poly_display : unit. Proof. exact: tt. Qed.
+Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : polyh_scope.
 
 Module Order.
 Section Order.
@@ -570,10 +662,10 @@ Definition affine_LtPOrderMixin :=
   LePOrderMixin (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
 
 Canonical affine_POrderType :=
-  Eval hnf in POrderType poly_display 'affine[R]_n affine_LtPOrderMixin.
+  Eval hnf in POrderType polyh_display 'affine[R]_n affine_LtPOrderMixin.
 
 Program Definition affine_bottomMixin :=
-  @BottomMixin poly_display [porderType of 'affine[R]_n] affine0 _.
+  @BottomMixin polyh_display [porderType of 'affine[R]_n] affine0 _.
 
 Next Obligation.
 by apply/affine_leP => v; rewrite in_affine0.
@@ -602,75 +694,21 @@ Qed.
 
 Canonical affine_MeetSemilatticeType :=
   Eval hnf in MeetSemilatticeType 'affine[R]_n affine_meetMixin.
+
+Canonical affine_bMeetSemilatticeType := [bMeetSemilatticeType of 'affine[R]_n].
 End Order.
 
 Module Import Exports.
 Canonical affine_POrderType.
 Canonical affine_PBOrderType.
 Canonical affine_MeetSemilatticeType.
+Canonical affine_bMeetSemilatticeType.
 End Exports.
 End Order.
 
 Export Order.Exports.
 
-Notation poly_le   := (@Order.le poly_display _) (only parsing).
-Notation poly_lt   := (@Order.lt poly_display _) (only parsing).
-Notation poly_ge   := (@Order.ge poly_display _) (only parsing).
-Notation poly_gt   := (@Order.gt poly_display _) (only parsing).
-Notation poly_leif := (@Order.leif poly_display _) (only parsing).
-Notation poly_cmp  := (@Order.comparable poly_display _) (only parsing).
-Notation poly_meet := (@Order.meet poly_display _).
-
-Notation "<=%PH"  := poly_le   : fun_scope.
-Notation ">=%PH"  := poly_ge   : fun_scope.
-Notation "<%PH"   := poly_lt   : fun_scope.
-Notation ">%PH"   := poly_gt   : fun_scope.
-Notation "<?=%PH" := poly_leif : fun_scope.
-Notation ">=<%PH" := poly_cmp  : fun_scope.
-Notation "><%PH"  := (fun x y => ~~ (poly_cmp x y)) : fun_scope.
-
-Notation "`<=` y" := (poly_ge y) : poly_scope.
-Notation "`<=` y :> T" := (`<=` (y : T)) (only parsing) : poly_scope.
-Notation "`>=` y"  := (poly_le y) : poly_scope.
-Notation "`>=` y :> T" := (`>=` (y : T)) (only parsing) : poly_scope.
-
-Notation "`<` y" := (poly_gt y) : poly_scope.
-Notation "`<` y :> T" := (`<` (y : T)) (only parsing) : poly_scope.
-Notation "`>` y" := (poly_lt y) : poly_scope.
-Notation "`>` y :> T" := (`>` (y : T)) (only parsing) : poly_scope.
-
-Notation "`>=<` y" := (poly_cmp y) : poly_scope.
-Notation "`>=<` y :> T" := (`>=<` (y : T)) (only parsing) : poly_scope.
-
-Notation "`><` y" := (fun x => ~~ (poly_cmp y x)) : poly_scope.
-Notation "`><` y :> T" := (`><` (y : T)) (only parsing) : poly_scope.
-
-Notation "x `<=` y" := (poly_le x y) : poly_scope.
-Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
-Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
-Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
-
-Notation "x `<` y"  := (poly_lt x y) : poly_scope.
-Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
-Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
-Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
-
-Notation "x `<=` y `<=` z" := ((x `<=` y) && (y `<=` z)) : poly_scope.
-Notation "x `<` y `<=` z" := ((x `<` y) && (y `<=` z)) : poly_scope.
-Notation "x `<=` y `<` z" := ((x `<=` y) && (y `<` z)) : poly_scope.
-Notation "x `<` y `<` z" := ((x `<` y) && (y `<` z)) : poly_scope.
-
-Notation "x `<=` y ?= 'iff' C" := (poly_leif x y C) : poly_scope.
-Notation "x `<=` y ?= 'iff' C :> R" := ((x : R) `<=` (y : R) ?= iff C)
-  (only parsing) : poly_scope.
-
-Notation "x `>=<` y" := (poly_cmp x y) : poly_scope.
-Notation "x >< y" := (~~ (poly_cmp x y)) : poly_scope.
-
-Notation "P `&` Q" := (poly_meet P Q) (at level 48, left associativity) : poly_scope.
-
-Notation "'[' 'affine0' ']'" :=
-  (@Order.bottom poly_display [bPOrderType of 'affine[_]_(_)]) : poly_scope.
+Notation "'[' 'affine0' ']'" := affine0.
 
 Section BasicObjects.
 
@@ -776,7 +814,7 @@ Qed.
 
 Definition affineT : 'affine[R]_n := [hp 0].
 
-Notation "'[' 'affineT' ']'" := affineT : poly_scope.
+Notation "'[' 'affineT' ']'" := affineT : polyh_scope.
 
 Lemma in_affineT x : x \in affineT = true.
 Proof.
@@ -790,86 +828,36 @@ have nullv_in_affineT : 0 \in affineT by rewrite in_affineT.
 by apply/vspaceP => ?; rewrite memvf (in_dirP nullv_in_affineT) in_affineT.
 Qed.
 
-Lemma affineIC : commutative (@affineI R n).
-Proof. by apply: meetC. Qed.
+Program Definition affine_topMixin :=
+  @TopMixin polyh_display [porderType of 'affine[R]_n] affineT _.
 
-Lemma affineIA : associative (@affineI R n).
-Proof. by apply: meetA. Qed.
+Next Obligation. by apply/affine_leP=> ? _; rewrite in_affineT. Qed.
 
-Lemma affineTI : left_id affineT (@affineI R n).
-Proof.
-by move => P; apply/affine_eqP => x; rewrite in_affineI in_affineT.
-Qed.
+Canonical affine_tPOrderType := TPOrderType 'affine[R]_n affine_topMixin.
+Canonical affine_tbPOrderType := [tbPOrderType of 'affine[R]_n].
 
-Lemma affineIT : right_id affineT (@affineI R n).
-Proof.
-by move => P; apply/affine_eqP => x; rewrite  in_affineI in_affineT andbT.
-Qed.
-
-Canonical affineI_monoid := Monoid.Law affineIA affineTI affineIT.
-Canonical affineI_comonoid := Monoid.ComLaw affineIC.
-
-Notation "\affineI_ ( i <- r | P ) F" :=
-  (\big[affineI/affineT]_(i <- r | P%B) F).
-Notation "\affineI_ ( i <- r ) F" :=
-  (\big[affineI/affineT]_(i <- r) F).
-Notation "\affineI_ ( i | P ) F" :=
-  (\big[affineI/affineT]_(i | P%B) F).
-Notation "\affineI_ i F" :=
-  (\big[affineI/affineT]_i F).
-Notation "\affineI_ ( i : I | P ) F" :=
-  (\big[affineI/affineT]_(i : I | P%B) F) (only parsing).
-Notation "\affineI_ ( i : I ) F" :=
-  (\big[affineI/affineT]_(i : I) F) (only parsing).
-Notation "\affineI_ ( m <= i < n | P ) F" :=
- (\big[affineI/affineT]_(m <= i < n | P%B) F).
-Notation "\affineI_ ( m <= i < n ) F" :=
- (\big[affineI/affineT]_(m <= i < n) F).
-Notation "\affineI_ ( i < n | P ) F" :=
- (\big[affineI/affineT]_(i < n | P%B) F).
-Notation "\affineI_ ( i < n ) F" :=
- (\big[affineI/affineT]_(i < n) F).
-Notation "\affineI_ ( i 'in' A | P ) F" :=
- (\big[affineI/affineT]_(i in A | P%B) F).
-Notation "\affineI_ ( i 'in' A ) F" :=
- (\big[affineI/affineT]_(i in A) F).
-
-Lemma big_affine_inf (I : finType) (j : I) (P : pred I) (F : I -> 'affine[R]_n) :
-  P j -> (\affineI_(i | P i) F i <= F j)%O.
-Proof. (* RK *)
-move => ?; rewrite (bigD1 j) //=.
-apply/affine_leP => v; rewrite in_affineI.
-by move/andP => [? _].
-Qed.
+Canonical affine_tMeetSemilatticeType := [tMeetSemilatticeType of 'affine[R]_n].
+Canonical affine_tbMeetSemilatticeType := [tbMeetSemilatticeType of 'affine[R]_n].
 
 Lemma in_big_affineIP (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
-  reflect (forall i : I, P i -> x \in (F i)) (x \in \affineI_(i | P i) (F i)).
-Proof. (* RK *)
+  reflect (forall i : I, P i -> x \in (F i)) (x \in \meet_(i | P i) (F i)).
+Proof.
 apply: (iffP idP) => [? i Pi | x_in_F].
-- by apply: (affine_leP (big_affine_inf F Pi)).
+- by apply: (affine_leP (meets_inf F Pi)).
 - elim/big_rec: _ => [|i V Pi ?]; first by rewrite in_affineT.
   by rewrite in_affineI; apply/andP; split; [apply: (x_in_F i) | done].
 Qed.
 
 Lemma in_big_affineI (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
-  (x \in \affineI_(i | P i) (F i)) = [forall i, P i ==> (x \in F i)].
+  (x \in \meet_(i | P i) (F i)) = [forall i, P i ==> (x \in F i)].
 Proof. (* RK *)
 apply/in_big_affineIP/idP.
 - by move => Hforall; apply/forallP => i; apply/implyP/Hforall.
 - by move/forallP => Hforall i; apply/implyP/Hforall.
 Qed.
 
-Lemma big_affineIsP (I : finType) Q (P : pred I) (F : I -> 'affine[R]_n) :
-  reflect (forall i : I, P i -> Q `<=` F i) (Q `<=` \affineI_(i | P i) F i).
-Proof.
-apply: (iffP idP) => [/affine_leP Hsubset ? ?| Hsubset_forall];
-  apply/affine_leP => ? in_Q.
-- by apply: (in_big_affineIP _ _ _ (Hsubset _ in_Q)).
-- by apply/in_big_affineIP => i Pi; apply/(affine_leP (Hsubset_forall i Pi)).
-Qed.
-
 Lemma affine_span (I : base_t[R,n]) :
-  [affine <<I>>] = \affineI_(e : I) [hp (val e)].
+  [affine <<I>>] = \meet_(e : I) [hp (val e)].
 Proof. (* RK *)
 apply/affine_eqP => x.
 rewrite in_affineE.
@@ -921,35 +909,10 @@ Qed.
 
 End BasicObjects.
 
-Notation "'[' 'hp' e  ']'" := [affine <[e]> ] : poly_scope.
-Notation "'[' 'line' d & Ω ']'" := [affine <[d]> & Ω] : poly_scope.
-Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω] : poly_scope.
-Notation "'[' 'affineT' ']'" := (@affineT _ _) : poly_scope.
-
-Notation "\affineI_ ( i <- r | P ) F" :=
-  (\big[affineI/affineT]_(i <- r | P%B) F).
-Notation "\affineI_ ( i <- r ) F" :=
-  (\big[affineI/affineT]_(i <- r) F).
-Notation "\affineI_ ( i | P ) F" :=
-  (\big[affineI/affineT]_(i | P%B) F).
-Notation "\affineI_ i F" :=
-  (\big[affineI/affineT]_i F).
-Notation "\affineI_ ( i : I | P ) F" :=
-  (\big[affineI/affineT]_(i : I | P%B) F) (only parsing).
-Notation "\affineI_ ( i : I ) F" :=
-  (\big[affineI/affineT]_(i : I) F) (only parsing).
-Notation "\affineI_ ( m <= i < n | P ) F" :=
- (\big[affineI/affineT]_(m <= i < n | P%B) F).
-Notation "\affineI_ ( m <= i < n ) F" :=
- (\big[affineI/affineT]_(m <= i < n) F).
-Notation "\affineI_ ( i < n | P ) F" :=
- (\big[affineI/affineT]_(i < n | P%B) F).
-Notation "\affineI_ ( i < n ) F" :=
- (\big[affineI/affineT]_(i < n) F).
-Notation "\affineI_ ( i 'in' A | P ) F" :=
- (\big[affineI/affineT]_(i in A | P%B) F).
-Notation "\affineI_ ( i 'in' A ) F" :=
- (\big[affineI/affineT]_(i in A) F).
+Notation "'[' 'hp' e  ']'" := [affine <[e]> ] : polyh_scope.
+Notation "'[' 'line' d & Ω ']'" := [affine <[d]> & Ω] : polyh_scope.
+Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω] : polyh_scope.
+Notation "'[' 'affineT' ']'" := (@affineT _ _) : polyh_scope.
 
 Section Dimension.
 
