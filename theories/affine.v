@@ -770,6 +770,7 @@ case/affineP: V => [_  |U [? Hin_affine] /affine_leP Hsubset];
 by apply/subvP => ?; rewrite (in_dirP Hin_affine) (in_dirP (Hsubset _ Hin_affine)); apply/Hsubset.
 Qed.
 
+(* TODO: change name *)
 Lemma affineS' U U' :
   [affine U] `>` [affine0] -> [affine U] `<=` [affine U'] = (U' <= U)%VS.
 Proof.
@@ -1016,25 +1017,25 @@ apply/in_affineP/andP.
   by rewrite vdotDl; apply: congr2; by [exact: x_in_U | exact: x_in_U'].
 Qed.
 
-Lemma dim_affineI U e :
-  let V := [affine U] `&` [hp e] in
-  ~~ ([affine U] `<=` [hp e]) -> V `>` [affine0] ->
-  adim [affine U] = (adim V).+1%N.
+Lemma dim_affineI V e :
+  let V' := V `&` [hp e] in
+  ~~ (V `<=` [hp e]) -> V' `>` [affine0] ->
+  adim V = (adim V').+1%N.
 Proof.
-move => /= U_subN_e V_prop0.
+case/affineP: V; rewrite ?le0x // => [U] _ /= U_subN_e V'_prop0.
 have [U_prop0 e_prop0]:
   ([affine0] `<` [affine U]) /\ ([affine0] `<` [hp e]).
-- by split; apply: (lt_le_trans V_prop0); rewrite ?leIl ?leIr.
+- by split; apply: (lt_le_trans V'_prop0); rewrite ?leIl ?leIr.
 have e_notin: (befst e \notin befst @: U)%VS.
 - move: U_subN_e; apply: contraNN.
-  case/affine_proper0P: V_prop0 => x.
+  case/affine_proper0P: V'_prop0 => x.
   rewrite in_affineI => /andP [x_in_U x_in_e].
   move/(memv_img (be_lift x)).
   rewrite be_liftE -?in_affineE ?be_lift_hp //.
   exact: affineS.
-rewrite -affine_addv in V_prop0 *.
+rewrite -affine_addv in V'_prop0 *.
 rewrite ?adimN0_eq ?dir_affine //; apply congr1; rewrite !dim_orthv.
-move/dir_affine: V_prop0.
+move/dir_affine: V'_prop0.
 rewrite limgD limg_line.
 move/(canLR orthK)/(congr1 (@dimv _ _)).
 rewrite dim_add_line // => dim_eq.

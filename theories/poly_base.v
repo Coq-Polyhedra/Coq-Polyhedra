@@ -834,20 +834,15 @@ case: (poly_baseP P) => [->| I [P_eq P_prop0]]; first by [].
 rewrite {2}[Q]repr_active // => /fproperP [/fsubsetP eq_sub] [i i_in i_notin].
 rewrite [P]repr_active //.
 apply/andP; split; last exact: polyEq_antimono.
-rewrite eq_le andbC /= polyEq_antimono //=.
+rewrite eq_le /= polyEq_antimono //=.
 apply/poly_lePn.
 move: i_notin; rewrite in_active.
 - move/poly_lePn => [x x_in_Q x_notin].
-(*
   exists x; first by move/(poly_leP subset_repr_active): x_in_Q.
-<<<<<<< HEAD
   move: x_notin; apply: contra; move: x {x_in_Q}.
   by apply/poly_leP/polyEq_hp.
-=======
-  move: x_notin; apply: contra => x_in; exact: (polyEq_eq x_in).
->>>>>>> master
 - move: i_in; apply/fsubsetP; exact: fsubset_subP.
-*) Admitted.
+Qed.
 
 Lemma active_proper (P Q : {poly base}) :
   [poly0] `<` P -> P `<` Q :> 'poly_n -> ({eq Q} `<` {eq P})%fset.
@@ -1681,28 +1676,17 @@ Lemma dim_facet (i : lrel) (i_in : i \in base) :
   i \notin ({eq P} : {fset _}) -> dim P = (dim 'P^=(base; [fset i])%:poly_base).+1%N.
 Proof.
 set S := 'P^=(_; _)%:poly_base.
-move => i_notin_eqP.
-move/(facet_proper i_in): (i_notin_eqP) => S_prop_P.
+move=> /[dup] i_notin_eqP /(facet_proper i_in)=> S_prop_P.
 have i_notin_span: i \notin << {eq P} >>%VS.
 - move: S_prop_P; apply/contraTN; move/in_span_active.
   by rewrite /= polyEq1 => /meet_l ->; rewrite ltxx.
-have hull_S: hull S = [affine (<<{eq P}>> + <[i]>)%VS].
-- rewrite hullN0_eq ?facet_proper0 //.
-  by rewrite activeU1 span_fsetU span_fset1.
-rewrite dim_hull hullN0_eq // [in RHS]dim_hull hull_S !dim_affine.
-Admitted.
-(*
-apply/dim_affineI => //.
-by rewrite -hull_S -hullN0 facet_proper0.
-Qed.*)
-
-(*
-rewrite activeU1 span_fsetU span_fset1 ?dim_add_line ?subnSK //=.
-suff: (dim P > 1)%N by rewrite dimN0_eq // ltnS subn_gt0.
-move/ltW: (S_prop_P).
-rewrite -face_setE => /face_dim_lt/(_ (face_set_self _))/(_ S_prop_P).
-by apply/leq_ltn_trans; rewrite -dimN0 facet_proper0.
-Qed.*)
+have hull_S: hull S = hull P `&` [hp i].
+- rewrite !hullN0_eq ?facet_proper0 //.
+  by rewrite activeU1 span_fsetU span_fset1 affine_addv.
+rewrite dim_hull [in RHS]dim_hull hull_S !dim_affine.
+apply/dim_affineI; last by rewrite -hull_S -hullN0 facet_proper0.
+by rewrite -hullP in_span_activeP.
+Qed.
 
 Lemma facetP (F : {poly base}) :
   (F `>` [poly0]) -> dim P = (dim F).+1%N ->
@@ -2521,18 +2505,18 @@ Lemma vf_dim (F : 'poly[R]_n) :
   F \in L -> (dim F = (dim (Φ F)).+1)%N.
 Proof.
 move => F_in_L; move: (F_in_L); move/vf_L_face: F_in_L; case/face_setP => {}F F_sub_P F_in_L.
-case: (ltnP 1 (dim F)) => [dim_gt1 | ?].
-- rewrite ?dimN0_eq ?vf_prop0 ?vf_L_prop0 //.
-  congr _.+1. admit.
-(* STRUB
-  rewrite vf_eq //=.
-  rewrite span_fsetU span_fset1 addvC dim_add_line ?subnSK //=.
-  + by rewrite dimN0_eq ?ltnS ?subn_gt0 ?vf_L_prop0 in dim_gt1.
-  + rewrite -in_span_activeP ?vf_L_prop0 //.
-    apply/poly_lePn; exists v; first by rewrite vf_L_v_in.
-    by move: sep_v; apply/contraNN/poly_leP/hp_subset_hs. *)
+case: (ltnP 1 (dim F)) => [dim_gt1 | ?]; last first.
 - by rewrite [pval _]vf_dim1 // dim_pt vf_slice_pt dim0.
-Admitted.
+- have hull_PhiF : hull (Φ F) = (hull F) `&` [hp e0].
+  + rewrite !hullN0_eq ?vf_prop0 ?vf_eq //.
+    * by rewrite span_fsetU span_fset1 affine_addv meetC.
+    * by rewrite dimN0; apply/ltn_trans: dim_gt1.
+  rewrite dim_hull [in RHS]dim_hull hull_PhiF !dim_affine.
+  apply/dim_affineI; last by rewrite -hull_PhiF -hullN0 vf_prop0.
+  rewrite -hullP.
+  apply/poly_lePn; exists v; first by rewrite vf_L_v_in.
+  by move: sep_v; apply/contraNN; rewrite affE; apply/hp_subset_hs.
+Qed.
 
 End VertexFigurePolyBase.
 End VertexFigurePolyBase.
@@ -2981,8 +2965,7 @@ suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
   move: (hp_itv w_in_hs sep_v) => [α α01].
   set x := _ + _ => /= x_in_hp.
   have {x_in_hp} /(poly_leP slice_sub) : x \in slice e P.
-  - rewrite in_polyI /=; apply/andP; split.
-    - admit.
+  - rewrite in_polyI /=; apply/andP; split; first by rewrite affE.
     by rewrite mem_poly_convex ?ltW_le ?vertex_set_subset.
   rewrite !in_hs /= /x combine2C combine2_line vdotDr ler_addl.
   rewrite vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
@@ -3003,7 +2986,7 @@ suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
   apply/(le_trans (leIr _ _))/conv_subset.
   move: v_in adj_y_y' => /fset2P; case=> <-;
     by move => adj_v u /fset2P; case=> ->; rewrite in_hs //= neigh_v // adj_sym.
-Admitted.
+Qed.
 
 Variable (c : 'cV[R]_n).
 

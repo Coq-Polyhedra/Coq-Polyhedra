@@ -482,7 +482,9 @@ by apply/poly_leP/affine_leP => incl x; rewrite ?affE => x_in;
 Qed.
 
 Lemma aff_lt : {mono aff : V V' / (V `<` V') >-> (V `<` V')}.
-Admitted.
+Proof.
+by move=> ??; rewrite !lt_def affS (inj_eq aff_inj).
+Qed.
 
 Lemma aff0 : affine0%:PH = [poly0] :> 'poly[R]_n.
 Proof.
@@ -834,13 +836,14 @@ Qed.
 Lemma ex_iff T (P1 P2 : T -> Prop) :
   (forall x : T, P1 x <-> P2 x) -> ((exists x, P1 x) <-> (exists x, P2 x)).
 Proof.
-by move=> H; split; move=> [x Hx]; exists x; apply H.
+by move=> H; split; move=> [x Hx]; exists x; apply/H.
 Qed.
 
 Lemma ex2_iff T (P1 P2 Q : T -> Prop) :
   (forall x : T, P1 x <-> P2 x) -> ((exists2 x, P1 x & Q x) <-> (exists2 x, P2 x & Q x)).
 Proof.
-Admitted.
+by move=> H; split; move=> [x Hx]; exists x; try by apply/H.
+Qed.
 
 Lemma line_subset_hs (e : lrel[R]_n) (Ω c : 'cV[R]_n) :
   Ω \in [hs e] -> ([line c & Ω ]%:PH `<=` [hs e]) = ('[e.1,c] == 0).
@@ -1088,7 +1091,8 @@ Qed.
 Lemma polyEq_hp base I e :
   e \in I -> 'P^=(base; I) `<=` [hp e]%:PH.
 Proof.
-Admitted.
+by move=> e_in; apply/poly_leP=> x /in_polyEqP [/(_ _ e_in)]; rewrite affE.
+Qed.
 
 Lemma polyEq0 {base : base_t} :
   'P^=(base; fset0) = 'P(base).
