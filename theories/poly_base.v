@@ -1073,7 +1073,7 @@ Definition pb_dim (base : base_t[R,n]) (P : {poly base}) :=
     (n - \dim << {eq P} >>).+1%N
   else 0%N.
 
-Notation "\dim P" := (pb_dim P) (at level 10, P at level 8) : poly_scope.
+Notation "\dim P" := (pb_dim P) : poly_scope.
 
 Definition dim (P : 'poly[R]_n) := \dim (\repr P).
 
@@ -1363,7 +1363,7 @@ Qed.
 
 End Dimension.
 
-Notation "\dim P" := (pb_dim P) (at level 10, P at level 8) : poly_scope.
+Notation "\dim P" := (pb_dim P) : poly_scope.
 
 Section Facet.
 

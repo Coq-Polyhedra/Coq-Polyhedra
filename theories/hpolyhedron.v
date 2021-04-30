@@ -779,11 +779,11 @@ End Lift.
 Module Import Exports.
 Canonical hpoly_eqType.
 Canonical hpoly_choiceType.
-Notation "''hpoly[' R ]_ n" := (@hpoly R n) (at level 8).
-Notation "''hpoly_' n" := ('hpoly[_]_n) (at level 8).
-Notation "P .`c" := (hpoly_c P) (at level 2, format "P .`c").
-Notation "P .`A" := (hpoly_A P) (at level 2, format "P .`A").
-Notation "P .`b" := (hpoly_b P) (at level 2, format "P .`b").
+Notation "''hpoly[' R ]_ n" := (@hpoly R n).
+Notation "''hpoly_' n" := ('hpoly[_]_n).
+Notation "P .`c" := (hpoly_c P).
+Notation "P .`A" := (hpoly_A P).
+Notation "P .`b" := (hpoly_b P).
 End Exports.
 End HPolyhedron.
 

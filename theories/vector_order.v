@@ -809,17 +809,17 @@ have ->: [seq j <- iota 0 n | (j < i0)%N] = iota 0 i0.
   + by move => j; rewrite mem_iota leq0n /= add0n.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{2}[n](subnKC (ltnW Hi0)).
-  by rewrite iota_add add0n; apply: prefix_subseq.
+  by rewrite iotaD add0n; apply: prefix_subseq.
 have ->: [seq j <- iota 0 n | (i0 < j < n )%N] = iota (i0.+1) (n - (i0.+1)).
 - have /eq_filter -> : (fun j => (i0 < j < n)%N) =1 (fun j => j \in iota (i0.+1) (n - (i0.+1))).
   + by move => j; rewrite mem_iota subnKC //.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{4}[n](subnKC Hi0).
-  by rewrite iota_add add0n; apply: suffix_subseq.
-rewrite -{1}[n](subnKC (ltnW Hi0)) iota_add add0n.
+  by rewrite iotaD add0n; apply: suffix_subseq.
+rewrite -{1}[n](subnKC (ltnW Hi0)) iotaD add0n.
 apply/(congr1 (fun s => _ ++ s)).
 suff ->: (n - i0 = 1 + (n - i0.+1))%N
-  by rewrite iota_add addn1 /=.
+  by rewrite iotaD addn1 /=.
 - by rewrite -subn_gt0 in Hi0; rewrite add1n subnS prednK.
 Qed.
 

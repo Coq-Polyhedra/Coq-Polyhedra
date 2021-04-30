@@ -337,7 +337,7 @@ have ->: (s1 = [seq (nat_of_ord i) | i <- enum 'I_m])
   by exact: eq_map.
 have ->: (s2 = map (addn m) [seq (nat_of_ord i)%N | i <- enum 'I_n])
   by rewrite -map_comp; exact: eq_map.
-by rewrite 2!val_enum_ord -iota_addl [in RHS]addnC -iota_add.
+by rewrite 2!val_enum_ord -iotaDl [in RHS]addnC -iotaD.
 Qed.
 
 CoInductive split_spec' (i : 'I_(m + n)) : 'I_m + 'I_n -> bool -> Type :=

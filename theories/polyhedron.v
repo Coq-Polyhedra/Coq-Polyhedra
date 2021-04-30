@@ -84,11 +84,9 @@ Reserved Notation "\polyI_ ( i | P ) F"
   (at level 41, F at level 41, i at level 50,
            format "'[' \polyI_ ( i  |  P ) '/  '  F ']'").
 Reserved Notation "\polyI_ ( i : t | P ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\polyI_ ( i : t ) F"
-  (at level 41, F at level 41, i at level 50,
-           only parsing).
+  (at level 41, F at level 41, i at level 50).
 Reserved Notation "\polyI_ ( i < n | P ) F"
   (at level 41, F at level 41, i, n at level 50,
            format "'[' \polyI_ ( i  <  n  |  P ) '/  '  F ']'").
