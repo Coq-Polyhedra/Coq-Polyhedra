@@ -6,14 +6,14 @@ Formalizing convex polyhedra in Coq
 
 ### Prerequisites
 
-  * [Coq](https://coq.inria.fr) (>= 8.9, < 8.11~)
-  * The [Mathematical Components](https://github.com/math-comp/math-comp) library (= dev)
-  * The [Mathematical Components Finite Map](https://github.com/math-comp/finmap) library (= dev)
+  * [Coq](https://coq.inria.fr) (>= 8.12)
+  * The [Mathematical Components](https://github.com/math-comp/math-comp) library (= local-branch)
+  * The [Mathematical Components Finite Map](https://github.com/math-comp/finmap) library (= local-branch)
 
-For the development packages, these source (git) hashes are known to work:
+For the development packages, these source (git) are known to work:
 
-  * Mathematical Components: 7d04173b
-  * Mathematical Components Finite Map: 48c1330c
+  * Mathematical Components: https://github.com/Coq-Polyhedra/mathcomp.git 
+  * Mathematical Components Finite Map: https://github.com/Coq-Polyhedra/finmap.git
 
 ### Installing prerequisites from opam
 
@@ -31,6 +31,8 @@ via the opam OCaml packages manager.
         $> opam repo add coq-released https://coq.inria.fr/opam/released
         $> opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
         $> opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
+        $> opam pin add -n https://github.com/Coq-Polyhedra/mathcomp.git
+        $> opam pin add -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git
         $> opam update
 
   * Installing the dependencies:
