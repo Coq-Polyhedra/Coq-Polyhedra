@@ -159,7 +159,7 @@ Notation "'[' P 'has' '\base' base ']'" := (has_base base P) : polyh_scope.
 Context {base : base_t[R,n]}.
 
 Lemma has_baseP {P : 'poly[R]_n} :
-  reflect ((P `>` [poly0]) -> exists I : {fsubset base}, P = 'P^=(base; I))
+  reflect (P `>` [poly0] -> exists I : {fsubset base}, P = 'P^=(base; I))
           [P has \base base].
 Proof.
 by apply/(iffP implyP) => [H /H /exists_eqP [I ->]| H /H [I ->]];
@@ -1023,7 +1023,7 @@ Definition pb_hull base (P : {poly base}) : 'affine_n :=
   if P `>` [poly0] then
     [affine << {eq P} >>]
   else
-    affine0.
+    [affine0].
 
 Lemma pb_hull_subset base (P : {poly base}) :
   (P `<=` (pb_hull P)%:PH :> 'poly[R]_n).
@@ -1174,23 +1174,10 @@ move => P_prop0.
 by rewrite hullN0_eq // dir_affine // -hullN0_eq // -hullN0.
 Qed.
 
-(*Lemma hull_mk_affine base (P : {poly base}) x :
-  x \in P -> hull P = [affine (befst @: << {eq P} >>)^OC%VS & x].
-Proof.
-move => x_in.
-have P_prop0: (P `>` [poly0]) by apply/proper0P; exists x.
-move/poly_leP/(eq_subr affE)/(_ _ x_in): (subset_hull P) => x_in_hull.
-apply/(dir_eq x_in_hull); rewrite ?orig_affine //.
-move: (P_prop0); rewrite hullN0 hullN0_eq // => ?.
-by rewrite dir_affine // dir_mk_affine.
-Qed.*)
-
 Lemma hullP P V :
   (P `<=` V%:PH) = (hull P `<=` V).
 Proof.
-  rewrite -{1}(reprK P) /hull.
-  exact: pb_hullP.
-(* use pb_hullP P *)
+rewrite -{1}(reprK P) /hull; exact: pb_hullP.
 Qed.
 
 Lemma hull_affine V :
@@ -1266,7 +1253,7 @@ move=> P_prop0.
 apply/idP/idP; last by apply/in_span_active.
 have hullP_prop0: hull P `>` [affine0] by rewrite -hullN0.
 rewrite hullP hullN0_eq // in hullP_prop0 *.
-by rewrite affineS' ?memvE.
+by rewrite affine_mono ?memvE.
 Qed.
 
 End AffineHull.
@@ -1290,13 +1277,6 @@ Qed.
 
 Lemma dimN0 (P : 'poly[R]_n) : (P `>` [poly0]) = (\pdim P > 0)%N.
 Proof. by rewrite hullN0 adimN0. Qed.
-
-(* TODO: replace this by two statements
- * Lemma dir_hull :
-     (P `>` [poly0]) -> dir (hull P) = (befst @: << eq P >>)^OC
- * Lemma dimN0 :
-     (P `>` [poly0]) -> dim P = \dim (dir (hull P)).+1%N
- *)
 
 Lemma dimN0_eq (base : base_t[R,n]) (P : {poly base}) :
   (P `>` [poly0]) -> \pdim P = (\dim (dir (hull P))).+1%N.
@@ -2251,7 +2231,6 @@ move/orP; case => [| i_in_base];
   first by rewrite in_fset1 => /eqP -> _; rewrite inE in_fset1 eq_refl.
 apply/contraTT; rewrite inE negb_or => /andP [_].
 rewrite in_active // => /poly_lePn => [[x] x_in_F x_notin_hp].
-(* TODO : remove code duplication by introducing the right suff *)
 case: (boolP (x \in [hs -e0])) => [x_in | /hsN_subset x_in].
 - move: (vf_L_other_pt F_in_L dimF_gt1) => [w w_in_F w_notin].
   move: (hp_itv x_in w_notin) => [α α01].
@@ -2740,11 +2719,6 @@ exists (val y1), (val y2); split; first move=> z.
 Qed.
 End DiamondProperty.
 
-(* TODO:
- * revise lemmas in Dimension and Hull (QC: done)
- * introduce relint point and change hullP accordingly (QC: done)
- *)
-
 Section Graph.
 
 Context {R : realFieldType} {n : nat}.
@@ -2775,9 +2749,6 @@ elim: p => // [a p] ind v v_vtx /= /andP [/adj_vtxr a_vtx p_path] x.
 rewrite in_cons=> /orP; case => [/eqP-> //|].
 by apply/(ind a a_vtx).
 Qed.
-
-(* TODO: the next statement is redundant with the statements in Section VertexFigure. *
-   It should be merged (and the next one is the right way to state it.                *)
 
 Lemma vertex_set_slice_dim (P : 'poly[R]_n) v :
   compact P -> v \in vertex_set P ->

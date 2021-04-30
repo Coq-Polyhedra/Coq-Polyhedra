@@ -770,8 +770,7 @@ case/affineP: V => [_  |U [? Hin_affine] /affine_leP Hsubset];
 by apply/subvP => ?; rewrite (in_dirP Hin_affine) (in_dirP (Hsubset _ Hin_affine)); apply/Hsubset.
 Qed.
 
-(* TODO: change name *)
-Lemma affineS' U U' :
+Lemma affine_mono U U' :
   [affine U] `>` [affine0] -> [affine U] `<=` [affine U'] = (U' <= U)%VS.
 Proof.
 move => U_neq0.
@@ -823,7 +822,6 @@ by rewrite in_hp vdot0l eq_refl.
 Qed.
 
 Lemma dir_affineT : dir affineT = fullv.
-(* RK: I have added this result *)
 Proof.
 have nullv_in_affineT : 0 \in affineT by rewrite in_affineT.
 by apply/vspaceP => ?; rewrite memvf (in_dirP nullv_in_affineT) in_affineT.
@@ -1049,8 +1047,6 @@ Qed.
 
 Lemma dimv_eq1P (K : fieldType) (vT : vectType K) (V : {vspace vT}) :
   reflect (exists2 v, v != 0 & V = <[v]>%VS) (\dim V == 1%N).
-(* RK: I added this result which I could not find but it is quite natural.
-       If we keep it, I suppose it should be somewhere else. *)
 (* TODO: move to extra_vector.v *)
 Proof.
 apply/(iffP idP) => [/eqP dim_V_eq1 |[? neq0 ->]];
@@ -1184,38 +1180,3 @@ move => w; case/altP : (w =P v) => [-> _| w_neq_v w_in_V].
 Qed.
 
 End Dimension.
-
-(*
-Lemma affine_subset (U V : {vspace lrel[R]_n}) :
-  (affine V `>` [poly0]) -> affine V `<=` affine U -> (U <= V)%VS.
-Proof.
-move/proper0P => [x x_in_affV] /poly_subsetP aff_sub.
-have x_in_affU : x \in affine U by exact: aff_sub.
-have: ((befst @: V)^OC <= (befst @: U)^OC)%VS.
-- apply/subvP => d d_in.
-  pose y := x + d.
-  have /aff_sub: y \in affine V by apply/(in_affine_orth _ x_in_affV); exists d.
-  by move/(in_affine_orth _ x_in_affU) => [d' d'_in /addrI ->].
-rewrite orthS => /subvP fst_sub; apply/subvP => e e_in_U.
-move/(memv_img befst)/fst_sub/memv_imgP: (e_in_U) => [e' e'_in_V fst_eq].
-suff ->: e = e' by [].
-rewrite !lfunE /= in fst_eq.
-apply/(befst_inj (x := x) _ _ fst_eq).
-- by apply: (poly_subsetP (affineS1 e_in_U)).
-- by apply: (poly_subsetP (affineS1 e'_in_V)).
-Qed.
-
-Lemma affine_inj (U V : {vspace lrel[R]_n}) :
-  (affine U `>` [poly0]) -> affine U = affine V -> U = V.
-Proof.
-move => affU_prop0 aff_eq.
-have affV_prop0 : (affine V `>` [poly0]) by rewrite -aff_eq.
-by apply/subv_anti/andP; split; apply/affine_subset => //; rewrite aff_eq poly_subset_refl.
-Qed.*)
-
-(* TODO:
- * 1/ improve the naming scheme (too many occurences of "affine",
-      mk_affine is bad name,
-      use the letter 'a' in the name of lemmas (compare with 'v' in vector.v)
- * 2/ more notation for be_*, e.g. \fst, \lift_x, etc
- * 3/ adim -> dim, and dim in poly_base.v -> \dim *)
