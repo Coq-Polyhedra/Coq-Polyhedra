@@ -186,25 +186,25 @@ apply/eqP; rewrite -subr_eq0.
 apply/eqP; exact: (vdot_lev_eq0 Hx).
 Qed.
 
-Definition lev_max x y := \col_i (Order.join (x i 0) (y i 0)).
-Definition lev_min x y := \col_i (Order.meet (x i 0) (y i 0)).
+Definition lev_max x y := \col_i (Num.max (x i 0) (y i 0)).
+Definition lev_min x y := \col_i (Num.min (x i 0) (y i 0)).
 
 Lemma lev_maxC x y :
   lev_max x y = lev_max y x.
 Proof.
-apply/colP => i; rewrite !mxE; apply: joinC.
+apply/colP => i; rewrite !mxE; apply: maxC.
 Qed.
 
 Lemma lev_minC x y :
   lev_min x y = lev_min y x.
 Proof.
-apply/colP => i; rewrite !mxE; apply: meetC.
+apply/colP => i; rewrite !mxE; apply: minC.
 Qed.
 
 Lemma lev_maxl x y :
   (lev_max x y) >=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE lexU lexx.
+by apply/forallP => i; rewrite !mxE le_maxr lexx.
 Qed.
 
 Lemma lev_maxr x y :
@@ -216,7 +216,7 @@ Qed.
 Lemma lev_minl x y :
   (lev_min x y) <=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE leIx lexx.
+by apply/forallP => i; rewrite !mxE le_minl lexx.
 Qed.
 
 Lemma lev_minr x y :
@@ -228,8 +228,7 @@ Qed.
 Lemma add_lev_min_max x y :
   lev_min x y + lev_max x y = x + y.
 Proof.
-apply/colP => i; rewrite !mxE /=.
-by rewrite joinEtotal meetEtotal; apply: addr_min_max.
+by apply/colP => i; rewrite !mxE /= addr_min_max.
 Qed.
 
 Definition pos_part x := lev_max x 0.

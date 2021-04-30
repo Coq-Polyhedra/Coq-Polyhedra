@@ -627,6 +627,51 @@ Qed.
 End CvxSegment.
 
 (* -------------------------------------------------------------------- *)
+Section CvxUniform.
+Context {R : realFieldType} {L : lmodType R}.
+Variable V : {fset L}.
+
+Definition fsuni: {fsfun L ~> R} := [fsfun _ in V => #|` V|%:R^-1].
+
+Lemma fsuni_finsupp: finsupp fsuni = V.
+Proof.
+apply/fsetP => x; rewrite mem_finsupp /fsuni fsfunE.
+case: ifP => //.
+- move=> x_in_V; rewrite invr_neq0=> //.
+  rewrite pnatr_eq0 -lt0n cardfs_gt0.
+  by apply/fset0Pn; exists x.
+- by move=> _; rewrite eq_refl.
+Qed.
+
+Definition fsavg := combine fsuni.
+
+Hypothesis VProp0 : V != fset0.
+
+Lemma cvxavg_r: @convex L R fsuni.
+Proof.
+apply/convexP; split=> /=.
+- move=> x _; rewrite fsfunE; case: ifP => // _.
+  by rewrite invr_ge0 ler0n.
+- rewrite weightE (eq_bigr (fun=> #|` V|%:R^-1)) /=.
+  + move=> i _; rewrite fsfunE.
+    by rewrite -{1}fsuni_finsupp (fsvalP i).
+  + rewrite sumr_const cardT /= fsuni_finsupp -cardE -cardfE.
+    rewrite -(@mulr_natl _ _ #|` V|) divff //.
+    by move: VProp0; rewrite -cardfs_gt0 -(ltr0n R); move/lt0r_neq0.
+Qed.
+  
+Definition cvxuni := nosimpl (mkConvexfun cvxavg_r).
+Definition cvxavg := combine cvxuni.
+
+Lemma cvxavg_fsavg : cvxavg = fsavg.
+Proof.
+by rewrite /cvxavg /fsavg /=.
+Qed.
+
+
+End CvxUniform.
+
+(* -------------------------------------------------------------------- *)
 Section Bary.
 Context {R : realDomainType} {L : lmodType R}.
 
