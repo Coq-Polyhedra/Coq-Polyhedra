@@ -1023,7 +1023,7 @@ Definition pb_hull base (P : {poly base}) : 'affine_n :=
   if P `>` [poly0] then
     [affine << {eq P} >>]
   else
-    affine0.
+    [affine0].
 
 Lemma pb_hull_subset base (P : {poly base}) :
   (P `<=` (pb_hull P)%:PH :> 'poly[R]_n).
