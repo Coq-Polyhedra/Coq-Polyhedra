@@ -76,6 +76,27 @@ move => y Hy; apply: (H y).
 - by apply: mem_behead.
 Qed.
 
+(*TODO : find a better name ?*)
+Lemma subseq_lcat {T : eqType} (l A B : seq T):
+  subseq l (A ++ B) -> (forall x, x \in l -> x \notin B) ->
+  subseq l A.
+Proof.
+move=> subAB HB.
+elim: l A B subAB HB=> [|h t IH].
+  by move=> ??; rewrite !sub0seq.
+move=> A B subAB HB.
+move: (HB h); rewrite in_cons eqxx /= => /(_ isT) /negPf hnB.
+move/mem_subseq: (subAB) => /(_ h); rewrite in_cons eqxx /=.
+move/(_ isT); rewrite mem_cat hnB orbF=> hA.
+move: (in_take (index h A) hA); rewrite ltnn.
+case/path.splitP: hA subAB HB=> Ag Ad + HB.
+elim: Ag=> [| Agh Agt IHAg].
+- rewrite /= eqxx=> subAB _; apply/(IH Ad B)=> //.
+  by move=> x xt; apply: HB; rewrite in_cons xt orbT.
+- rewrite rcons_cons /= in_cons => + /Bool.orb_false_elim [AghF AgtF].
+  rewrite AghF=> subAB; exact: IHAg.
+Qed.
+
 Lemma discr_seq (T : eqType) (x : T) (s : seq T) (P : pred T) :
   ~~ P x -> all P s -> x \notin s.
 Proof.
@@ -933,156 +954,187 @@ elim; rewrite ?span_nil ?nil_basis // => y s0 S0.
     by move/addv_idPr => ->; rewrite (span_basis base0).
 Qed.
 
+Definition max_basis {K : fieldType} {vT : vectType K} (b S : seq vT):=
+  forall x b1 b2, b = b1 ++ (x :: b2) ->
+  exists S1 S2,
+  [/\ S = S1 ++ (x :: S2), subseq b1 S1, subseq b2 S2
+  & (<<S2>> <= <<b2>>)%VS].
 
-Lemma is_sg_drop {K : fieldType} {vT : vectType K} (S s : seq vT):
-  is_span_gen s S ->
-  forall i, S`_i \notin s ->
-  S`_i \in << [ seq x <- drop i S | x \in s ] >>%VS.
+
+Lemma is_sg_max {K : fieldType} {vT : vectType K} (S b : seq vT):
+  is_span_gen b S -> max_basis b S.
 Proof.
-elim=> /=; first move=> ? _; rewrite ?nth_nil ?span_nil ?mem0v //.
-+ move=> x t T xt span_t IH [|j]; first by rewrite nth0 inE eqxx.
-  rewrite -nth_behead inE negb_or /=.
-  case/andP=> Tj_neq /IH.
-  set R := [seq _ <- _ | _]; set R' := [seq _ <- _ | _].
-  have/sub_span/subvP: {subset R <= R'} by
-    move=> y; rewrite !mem_filter in_cons; case/andP => -> ->; rewrite orbT.
-  exact.
-+ move=> x t T xt span_t IH [|j] /=; last exact: IH.
-  move/negPf=> ->; rewrite (eq_span (Y:=t)) //.
-  move=> y; rewrite mem_filter; apply: andb_idr.
-  move: y; exact/mem_subseq/is_sg_sub.
+elim=> [| b0 b' S' b0_span is_sgH IH | b0 b' S' b0_span is_sgH IH].
+- by move=> x b1 b2 /(congr1 size); rewrite size_cat /= addnS.
+- move=> x b1 b2; case: b1.
+  + move/eqP; rewrite eqseq_cons=> /andP [/eqP <- /eqP <-].
+    exists [::]; exists S'; split=> //; rewrite ?(is_sg_sub is_sgH) //.
+    by rewrite (span_basis (is_sg_basis is_sgH)) subvv.
+  + move=> b1h b1t /eqP; rewrite cat_cons eqseq_cons=> /andP [] /=.
+    move/eqP=> <- /eqP/IH [S1 [S2 [????]]].
+    exists (b0 :: S1); exists S2=> /=; rewrite eqxx; split=> //.
+    apply/eqP; rewrite eqseq_cons eqxx; exact/eqP.
+- move=> x b1 b2 /IH [S1 [S2]].
+  case=> -> ???; exists (b0 :: S1); exists S2; split=> //.
+  apply: (@subseq_trans _ S1)=> //; exact: subseq_cons.
 Qed.
 
-(*TODO :
-  changer la définition de max_basis,
-  la dernière proposition ne réflète pas que l'on
-  extrait des éléments de la base spécifiquement*)
-Definition max_basis {K : fieldType} {vT : vectType K} (s S : seq vT):=
-  [/\ basis_of <<S>>%VS s, subseq s S & 
-  (forall i, S`_i \notin s ->
-  S`_i \in << [ seq x <- drop i S | x \in s ] >>%VS)].
-
-Lemma is_span_gen_max {K: fieldType} {vT : vectType K} (S s : seq vT):
-  is_span_gen s S -> max_basis s S.
+Lemma max_basis_cons {K : fieldType} {vT : vectType K} (h : vT) E B:
+  basis_of << h :: E >>%VS (h :: B) ->
+  max_basis (h :: B) (h :: E) ->
+  max_basis B E.
 Proof.
-move=> spanH; split;
-  [exact: is_sg_basis |exact: is_sg_sub | exact: is_sg_drop].
+move=> base_hB max_hB x b1 b2 B_eq.
+move: (max_hB x (h::b1) b2); rewrite B_eq cat_cons.
+case/(_ erefl)=> E1 [E2] [].
+have /negPf x_n_h: h != x.
+- apply/contraT; rewrite negbK=> /eqP contr.
+  move/basis_free: base_hB; rewrite free_cons.
+  by rewrite memv_span // B_eq contr mem_cat in_cons eqxx orbT.
+case: E1; first move/eqP; rewrite ?eqseq_cons ?x_n_h //.
+move=> a l /eqP; rewrite cat_cons eqseq_cons.
+case/andP=> /eqP -> /eqP /=; rewrite eqxx.
+by move=> ????; exists l; exists E2; split.
 Qed.
 
-Lemma foo {K : fieldType} {vT : vectType K} (E B s : seq vT):
-  max_basis B E -> is_span_gen s E -> B = s.
+Lemma max_basis_cons_cat {K : fieldType} {vT : vectType K}
+  (h v: vT) E1 E2 B: 
+  basis_of <<v :: E1 ++ h :: E2>>%VS (h :: B) ->
+  max_basis (h :: B) (v :: E1 ++ h :: E2) ->
+  subseq B E2 -> (<<E2>> <= <<B>>)%VS ->
+  max_basis (h :: B) (E1 ++ h :: E2).
 Proof.
-elim: E B s=> [|hE tE IH]//.
-  by move=> B s [_ + _]; rewrite subseq0 => /eqP -> /is_sg_nil ->.
-move=> B s [base_b sub_b drop_b] /is_sg_inv [].
-(*Si on a ajouté hE dans la base s,
-  alors on montre que B = hE :: B',
-  puis que B' vérifie l'hypothèse d'induction*)
-- case=> -> /= span_s hE_n_span.
-  have hE_B: hE \in B.
-  + apply: contraT=> hE_n_B; move: (drop_b 0%nat hE_n_B)=> /=.
-    rewrite ifN //.
-    move/(subvP (sub_span _))=> /(_ tE).
-    move/(_ (mem_subseq (filter_subseq _ _))).
-    move/is_sg_basis/span_basis: span_s => <- contr.
-    by rewrite contr in hE_n_span.
-  have hE_n_tE : hE \notin tE.
-  + move: hE_n_span; apply: contra=> /memv_span.
-    by move/is_sg_basis/span_basis: span_s=> ->.
-  have hE_tE_nth : forall i, tE`_i != hE.
-  + admit.
-  have B_eq: B = hE :: behead B.
-  + case: B base_b sub_b drop_b hE_B=> //= hB tB _ + _.
-    case: ifP; first by move/eqP => ->.
-    move=> _ + hE_contr; move/mem_subseq/(_ _ hE_contr)=> contr.
-    by rewrite contr in hE_n_tE.
-  rewrite B_eq /= ?eqxx in base_b sub_b drop_b hE_B *; congr cons.
-  apply/IH=> //=; split=> //=.
-  + apply/andP; split; last first.
-    * by move: (basis_free base_b); rewrite free_cons=> /andP [].
-    * rewrite eqEsubv (sub_span (mem_subseq sub_b)) /=.
-      apply/span_subvP=> y y_tE.
-      case/boolP: (y \in behead B); first by move/memv_span.
-      case/(nthP 0): y_tE=> i i_size <- y_n_B'.
-      move: (drop_b i.+1)=> /=.
-      rewrite in_cons negb_or y_n_B' andbT.
-      move/(_ (hE_tE_nth _)); move: tE`_i; apply/subvP/sub_span.
-      move=> z; rewrite mem_filter andbC; case/andP=> /mem_drop.
-      case/(nthP 0)=> j _ <-; rewrite in_cons.
-      by move/negPf: (hE_tE_nth j)=> -> /=.
-  + move=> i tEi_B'; move: (drop_b i.+1)=> /=.
-    rewrite in_cons negb_or (hE_tE_nth) tEi_B' /=.
-    move/(_ isT); move: tE`_i; apply/subvP/sub_span.
-    move=> y; rewrite !mem_filter andbC in_cons; case/andP=> y_drop.
-    rewrite y_drop andbT; case/orP=> //.
-    move: y_drop=> /mem_drop /(nthP 0) [j _ <-].
-    by move/negPf: (hE_tE_nth j) => ->.
-(*  Si hE a été exclu de la base s,
-    alors on montre que ça ne peut pas être
-    l'élément de tête de B,
-    et on applique l'hypothèse d'induction à B tout entier
+move=> base_hB max_hB sub_B span_B x [|b0 b1'] b2.
+- move/eqP; rewrite eqseq_cons; case/andP=> /eqP -> /eqP <-.
+  by exists E1; exists E2; rewrite sub0seq; split.
+- move=> /[dup] /eqP; rewrite {1}cat_cons eqseq_cons.
+  case/andP=> /eqP <- /eqP B_eq.
+  case/max_hB=> S1 [S2] [].
+  case: S1=> // ? S1' /eqP; rewrite cat_cons eqseq_cons.
+  case/andP=> /eqP <- /eqP E_eq sub_b1 sub_b2 span_b2.
+  exists S1'; exists S2; split=> //.
+  move: sub_b1=> /=; case: ifP=> // /eqP h_eq sub_S1'.
+  apply: (subseq_lcat (B:= x :: S2)).
+  + rewrite -E_eq -[h :: b1']cat0s cat_subseq ?sub0seq //=.
+    rewrite eqxx; apply: (subseq_trans _ sub_B).
+    by rewrite B_eq prefix_subseq.
+  + move=> y y_hb1'; apply: contraT; rewrite negbK=> y_xS2.
+    move/basis_free : base_hB=> /[dup] free_hB.
+    rewrite B_eq -cat_cons cat_free.
+    case/and3P => _ _ /directv_addP /eqP.
+    rewrite -subv0; move/subvP=> /(_ y).
+    rewrite (_ : y \in _) => [/(_ isT)|].
+    * rewrite memv0=> /eqP y0.
+      move: (@free_not0 _ _ y _ free_hB).
+      rewrite B_eq -cat_cons mem_cat y_hb1' y0 eqxx; exact.
+    * rewrite memv_cap memv_span //= span_cons.
+      suff ->: (<<b2>> = <<S2>>)%VS by rewrite -span_cons memv_span.
+      apply/eqP; rewrite eqEsubv span_b2 sub_span //.
+      exact: mem_subseq.
+Qed.
+
+
+
+(*  move=> x [|a l].
+      - move=> b2 /eqP; rewrite eqseq_cons=> /andP [/eqP <- /eqP <-].
+        by exists E1t; exists E2; split=> //; rewrite sub0seq.
+      - move=> b2 /eqP; rewrite cat_cons eqseq_cons.
+        case/andP=> /eqP <- /eqP tB_eq.
+        move: (max_B x (hB::l) b2); rewrite tB_eq.
+        case/(_ erefl)=> S1 [S2] [].
+        case: S1=> // hS1 tS1 /eqP.
+        rewrite cat_cons eqseq_cons.
+        case/andP=> /eqP <- /eqP tE_eqx subS1 subS2 spanS2.
+        exists tS1; exists S2; split=> //.
+        move: subS1=> /=; case: ifP => // /eqP hB_eq sub_tS1.
+        have hB_n_S2: hB \notin x :: S2.
+        + apply/contraT; rewrite negbK in_cons=> orH.
+          move/basis_free: base_B; rewrite free_cons tB_eq.
+          rewrite span_cat -[hB]add0r memv_add ?mem0v //.
+          rewrite span_cons.
+          case/orP: orH=> [/eqP ->| hB_S2].
+            by rewrite -[x]addr0 memv_add ?mem0v // addr0 memv_line.
+          rewrite -[hB]add0r memv_add ?mem0v //.
+          by move/subvP: spanS2; apply; apply/memv_span.
+          move: (subseq_refl (E1t ++ hB :: E2)).
+          rewrite {2}tE_eqx.
+          have: subseq (hB :: l) (E1t ++ hB :: E2).
+          + rewrite -[X in subseq X _]cat0s cat_subseq ?sub0seq //= eqxx.
+            by apply: (subseq_trans _ sub_tB); rewrite tB_eq prefix_subseq.
+          move=> H1 H2; move: (subseq_trans H1 H2).
+          have l_n_xS2: forall y, y \in l -> y \notin (x :: S2).
+          + move=> y /[dup] /memv_span yspan yl.
+            move/basis_free: base_B; rewrite free_cons.
+            case/andP => _; rewrite tB_eq cat_free.
+            case/and3P=> free_l _ /directv_addP /eqP.
+            apply: contraTN=> /memv_span.
+            rewrite span_cons (_ : (<<S2>> = <<b2>>)%VS) -?span_cons.
+            * move=> y_xb2; rewrite -subv0; apply/subvPn.
+              exists y; rewrite ?memv_cap ?yspan ?y_xb2 //.
+              rewrite memv0; exact: (free_not0 free_l).
+            * apply/eqP; rewrite eqEsubv spanS2 /= sub_span //.
+              exact:mem_subseq.
+          move/subseq_lcat; apply=> y; rewrite in_cons.
+          case/orP=> [/eqP ->|] //; exact: l_n_xS2.
+
 *)
-- case=> hE_span span_s; apply/IH=> //.
-  have span_eq : <<tE>>%VS = <<hE :: tE>>%VS.
-  + apply/eqP.
-    rewrite eqEsubv (sub_span (mem_subseq (subseq_cons _ _))) /=.
-    apply/span_subvP=> y; rewrite in_cons.
-    case/orP; last by move/memv_span.
-    by move/eqP=> ->; move/is_sg_basis/span_basis: span_s=> <-.
-  split.
-  + by rewrite span_eq.
-  + case: B base_b sub_b drop_b=> /=; rewrite ?sub0seq //.
-    move=> hB tB base_b sub_b drop_b.
-    move: (sub_b); rewrite ifN //.
-    apply: contraT; rewrite negbK; move/eqP=> hB_hE.
-    rewrite hB_hE ?eqxx in base_b sub_b drop_b.
-    move/is_sg_basis/span_basis: (span_s) hE_span=> -> hE_span.
-    move: (base_b); rewrite -span_eq; move/basis_free; rewrite free_cons.
-    case/andP => /negPf <- _.
-    admit.
-    (*
-    TODO : problème dans la définition de drop_b,
-    nouvelle définition à choisir
-    *)
-  + by move=> i tEi_B'; move: (drop_b i.+1 tEi_B').
-Admitted.
 
-Lemma is_span_gen_map {K : fieldType} {vT1 vT2: vectType K}
+Lemma is_max_sg {K : fieldType} {vT : vectType K} (E B : seq vT):
+  basis_of <<E>>%VS B -> subseq B E -> max_basis B E ->
+  is_span_gen B E.
+Proof.
+elim: E B=> [|hE tE IH].
+  move=> B _; rewrite subseq0=> /eqP -> _; exact: NilSpan.
+case=> [|hB tB].
+- move=> span_b sub_b max_b.
+  apply/SpanMemT; rewrite ?(span_basis span_b) ?memv_span ?in_cons ?eqxx //.
+  apply/IH; rewrite ?sub0seq //.
+  + apply/andP; rewrite nil_free; split=> //.
+    rewrite (span_basis span_b) eqEsubv [X in _ && X]sub_span ?andbT.
+    * by rewrite -(span_basis span_b) span_nil sub0v.
+    * by move=> x; rewrite in_cons=> ->; rewrite orbT.
+  + move=> x b1 b2; case: b1=> //.
+- move=> + + /[dup] /(_ hB [::] tB erefl) [E1 [E2 [E_eq _ sub_tB span_tB]]].
+  rewrite E_eq; case: E1 E_eq => /= [|E1h E1t].
+  + move/eqP; rewrite eqseq_cons=> /andP [_ /eqP tE_E2]; rewrite -tE_E2.
+    move=> base_B _ max_B; apply: SpanMemF.
+      by move/basis_free: base_B; rewrite free_cons=> /andP [].
+    apply/IH; rewrite ?tE_E2 //.
+    * apply/andP.
+      move/basis_free: (base_B); rewrite free_cons=> /andP [_ ->].
+      split=> //; rewrite eqEsubv span_tB sub_span //.
+      exact: mem_subseq.
+    * by apply: (max_basis_cons (h:=hB)); rewrite -tE_E2.
+  + move/eqP; rewrite eqseq_cons=> /andP [/eqP hE_eq /eqP tE_eq].
+    move=> base_B _ max_B; apply/SpanMemT.
+      by rewrite (span_basis base_B) memv_span // in_cons eqxx.
+    rewrite -tE_eq; apply/IH; rewrite tE_eq.
+    * apply/andP; move/basis_free: (base_B)=> ->; split=> //.
+      rewrite (span_basis base_B) eqEsubv [X in _ && X]sub_span ?andbT.
+      - rewrite -(span_basis base_B); apply/span_subvP.
+        move=> x x_B; apply/memv_span; rewrite mem_cat.
+        apply/orP; right; move: x x_B; apply/mem_subseq=> /=.
+        by rewrite eqxx.
+      - by move=> x xH; rewrite in_cons xH orbT.
+    * by rewrite -[X in subseq X _]cat0s cat_subseq ?sub0seq //= eqxx.
+    * exact: (max_basis_cons_cat (v:=E1h)).
+Qed.
+
+Lemma is_sgP {K : fieldType} {vT : vectType K} (E B : seq vT):
+  is_span_gen B E <->
+  [/\ basis_of <<E>>%VS B, subseq B E & max_basis B E].
+Proof.
+split.
+- move=> is_sgH; split;
+  [exact: is_sg_basis | exact: is_sg_sub | exact: is_sg_max ].
+- case; exact: is_max_sg.
+Qed.
+
+(* Lemma is_span_gen_map {K : fieldType} {vT1 vT2: vectType K}
   (s S : seq vT1) (f : 'Hom(vT1, vT2)):
   {in <<S>>%VS &, injective f} -> (is_span_gen s S) <-> (is_span_gen (map f s) (map f S)).
 Proof.
-Admitted.
-(* move=> inj_f; split.
-- move: inj_f => /[swap]; elim; first (move=> _; exact: NilSpan).
-  + move=> /= x t T x_n_t span_t ? inj_f; apply: SpanMemF=> //.
-    - move: x_n_t; apply: contra.
-      rewrite -limg_span => /memv_imgP [y y_t].
-      move/mem_subseq/sub_span/subvP: (is_span_gen_sub span_t).
-      move/(_ y y_t).
-      Search _ span.
-
-
-move=> inj_f; split.
-+ elim; first exact: NilSpan.
-  - move=> x s' S' xs' _ span_f;  apply: SpanMemF=> //=.
-    rewrite -limg_span; move: xs'.
-    by apply: contra => /memv_imgP [x' ?] /inj_f ->.
-  - move=> x' s' S' xs' _ span_f; apply: SpanMemT=> //=.
-    rewrite -limg_span; exact: memv_img.
-+ elim: S s.
-  - move=> s /= /is_span_gen_nil; case: s=> // _; exact: NilSpan.
-  - move=> a l IH /=; case.
-    + move=> /= spanH; move: (is_span_gen0 spanH) => H.
-      move : (is_span_gen_nil_cons spanH)=> ?.
-      apply: SpanMemT; last exact: IH.
-      move: (H (f a)); rewrite inE eq_refl /=; move/(_ isT).
-      move/eqP; rewrite -memv_ker span_nil.
-      by move/lker0P/eqP: inj_f 
-    => ->.
-    + move=> a' s' /=.
-      admit.
 Admitted. *)
-
 
 
 Fixpoint span_gen  {K : fieldType} {vT : vectType K} (S : seq vT) := match S with
