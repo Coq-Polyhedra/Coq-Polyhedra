@@ -1812,7 +1812,7 @@ Section Minkowski.
 
 Context {R : realFieldType} {n : nat}.
 
-Lemma conv_vertex_set (P : 'poly[R]_n) :
+Theorem conv_vertex_set (P : 'poly[R]_n) :
   compact P -> P = conv (vertex_set P).
 Proof.
 case: (emptyP P) => [-> _| P_prop0 P_compact].
@@ -2662,7 +2662,7 @@ Global Instance expose_lexx (disp : unit) (L : porderType disp) (x : L) :
 Section DiamondProperty.
 Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
-Lemma diamond (x y : face_set P) :
+Theorem diamond (x y : face_set P) :
   rank y = (rank x).+2 -> x <= y ->
   exists z1 z2 : face_set P,
     [/\ forall z : '[<x; y>], val z \in [:: x; y; z1; z2]
@@ -2896,7 +2896,7 @@ Section Connectness.
 
 Context {R : realFieldType} {n : nat}.
 
-Lemma connected_graph (P: 'poly[R]_n) v w :
+Theorem connected_graph (P: 'poly[R]_n) v w :
   compact P -> v \in vertex_set P -> w \in vertex_set P ->
     exists2 p, (path (adj P) v p) & w = last v p.
 Proof.

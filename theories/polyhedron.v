@@ -347,7 +347,7 @@ Definition ppick P : 'cV[R]_n :=
   end.
 
 Lemma ppickP {P} : (P `>` [poly0]) -> ppick P \in P.
-Proof. (* RK *)
+Proof.
 rewrite /ppick; case: proper0P => [? _ | _] //; exact: xchooseP.
 Qed.
 
@@ -404,19 +404,6 @@ Definition aff V : 'poly[R]_n :=
 
 Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
 
-(* TODO: move to extra_misc *)
-Lemma eq_subl {T : Type} {m m' m'': mem_pred T} :
-  eq_mem m m' -> (sub_mem m m'' <-> sub_mem m' m'').
-Proof.
-by move => eq; split => sub x x_in; apply/sub; rewrite ?eq // -?eq.
-Qed.
-
-Lemma eq_subr {T : Type} {m m' m'': mem_pred T} :
-  eq_mem m' m'' -> (sub_mem m m' <-> sub_mem m m'').
-Proof.
-by move => eq; split => sub x x_in; [rewrite -eq | rewrite eq]; apply/sub.
-Qed.
-
 Lemma affE {V : 'affine[R]_n} : V %:PH =i V.
 Proof.
 rewrite /aff.
@@ -443,7 +430,7 @@ by rewrite ?affE in_pt.
 Qed.
 
 Lemma in_pt_self (Ω : 'cV[R]_n) : Ω \in [pt Ω]%:PH.
-Proof. (* RK *)
+Proof.
 by rewrite in_pt.
 Qed.
 
@@ -566,7 +553,7 @@ apply: (iffP poly_leP) => [sub x x_in_P | sub x x_in_P ];
 Qed.
 
 Lemma hs_antimono (c : 'cV_n) (d d' : R) :
-  d <= d' -> [hs [<c, d'>]] `<=` [hs [<c, d>]]. (* RK *)
+  d <= d' -> [hs [<c, d'>]] `<=` [hs [<c, d>]].
 Proof.
 move => d_le_d'.
 apply/poly_subset_hsP => x.
@@ -666,7 +653,7 @@ Qed.
 
 Lemma bounded_mono1 (P Q : 'poly[R]_n) c :
   bounded P c -> [poly0] `<` Q `<=` P -> bounded Q c.
-Proof. (* RK *)
+Proof.
 move => /boundedPP [x /andP [_ /poly_leP sPhs]] /andP [Q_non_empty /poly_leP sQP].
 apply/contraT => /(boundedPn Q_non_empty) Q_unbounded.
 move: (Q_unbounded '[ c, x]) => [y y_in_Q x_y_vdot_sineq].
@@ -698,7 +685,7 @@ Qed.
 
 Lemma opt_value_antimono1 P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
   Q `<=` P -> opt_value bounded_P <= opt_value bounded_Q.
-Proof. (* RK *)
+Proof.
 move => /poly_leP sQP.
 move: (opt_point bounded_Q) => [x x_in_Q <-].
 move/sQP/(poly_leP (opt_value_lower_bound bounded_P)) : x_in_Q.
@@ -737,7 +724,7 @@ Qed.
 
 Lemma bounded_argminN0 P c :
   (bounded P c) = (argmin P c `>` [poly0]).
-Proof. (* RK *)
+Proof.
 apply/idP/idP => [/boundedP [x ? ?] | /proper0P [x]].
 - apply/proper0P; exists x.
   by rewrite in_argmin; apply/andP.
@@ -746,25 +733,25 @@ apply/idP/idP => [/boundedP [x ? ?] | /proper0P [x]].
 Qed.
 
 Lemma argmin_subset P c : argmin P c `<=` P.
-Proof. (* RK *)
+Proof.
 rewrite /argmin; case: {-}_/idP => [bounded_P | _].
 + by apply: leIl. + by apply: le0x.
 Qed.
 
 Lemma argmin_opt_value P c (bounded_P : bounded P c) :
   argmin P c `<=` [hp [<c, opt_value bounded_P>]]%:PH.
-Proof. (* RK *)
+Proof.
 rewrite argmin_polyI; exact: leIr.
 Qed.
 
 Lemma argmin_lower_bound {c x y} P :
   x \in argmin P c -> y \in P -> '[c,x] <= '[c,y].
-Proof. (* RK *)
+Proof.
 by rewrite in_argmin; move/andP => [_ /poly_subset_hsP/(_ y)].
 Qed.
 
 Lemma subset_opt_value P Q c (bounded_P : bounded P c) (bounded_Q : bounded Q c) :
-  argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q. (* RK *)
+  argmin Q c `<=` P `<=` Q -> opt_value bounded_P = opt_value bounded_Q.
 Proof.
 move => /andP [/poly_leP s_argminQ_P ?].
 apply/eqP; rewrite eq_le; apply/andP; split; last by apply: opt_value_antimono1.
@@ -778,7 +765,7 @@ Qed.
 
 Lemma subset_argmin {P Q} {c} :
   bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c = argmin Q c.
-Proof. (* RK *)
+Proof.
 move => bounded_Q /andP [? ?]; apply/le_anti.
 rewrite {-2}/argmin; case: {-}_/idP => [bounded_P | unbounded_P]; apply/andP; split.
 - rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
@@ -795,7 +782,7 @@ Qed.
 
 Lemma argmin_eq {P} {c v x} :
   v \in argmin P c -> reflect (x \in P /\ '[c,x] = '[c,v]) (x \in argmin P c).
-Proof. (* RK *)
+Proof.
 move => v_in_argmin; rewrite in_argmin.
 apply: (iffP idP) => [/andP [? /poly_leP sPhs] | [? ->]].
 - split; first by done.
@@ -829,19 +816,6 @@ Lemma argmin_polyIN (P : 'poly[R]_n) (c : 'cV_n) (bounded_P : bounded P c) :
 Proof.
 rewrite argmin_polyI hpE meetA [X in X `&` _ = _]meet_l //.
 by apply: opt_value_lower_bound.
-Qed.
-
-(* TODO: move to extra_misc *)
-Lemma ex_iff T (P1 P2 : T -> Prop) :
-  (forall x : T, P1 x <-> P2 x) -> ((exists x, P1 x) <-> (exists x, P2 x)).
-Proof.
-by move=> H; split; move=> [x Hx]; exists x; apply/H.
-Qed.
-
-Lemma ex2_iff T (P1 P2 Q : T -> Prop) :
-  (forall x : T, P1 x <-> P2 x) -> ((exists2 x, P1 x & Q x) <-> (exists2 x, P2 x & Q x)).
-Proof.
-by move=> H; split; move=> [x Hx]; exists x; try by apply/H.
 Qed.
 
 Lemma line_subset_hs (e : lrel[R]_n) (Ω c : 'cV[R]_n) :
@@ -1463,7 +1437,7 @@ Definition proj0 (P : 'poly[R]_n.+1) :=
   let base := xchoose (is_poly_of_base P) in
   'P(Proj0.proj0 base).
 
-Lemma proj0P {P} {x} :
+Theorem proj0P {P} {x} : (* Fourier-Motzkin Elimination *)
   reflect (exists2 y, x = row' 0 y & y \in P) (x \in proj0 P).
 Proof.
 rewrite /proj0; move: (xchooseP (is_poly_of_base P)) => /eqP {1}->.
@@ -1506,7 +1480,7 @@ End Proj.
 
 End Projection.
 
-Section Map.
+Section Map. (* Image of a polyhedron by a linear map *)
 
 Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 
@@ -1710,18 +1684,18 @@ apply/idP/eqP => [/in_convP [w le_wΩ ->]| ->].
 Qed.
 
 Lemma pt_proper0 (Ω : 'cV[R]_n) : [poly0] `<` ([pt Ω]%:PH). (* TODO: useful ?*)
-Proof. (* RK *)
+Proof.
 by apply/proper0P; exists Ω; rewrite in_pt_self.
 Qed.
 
 Lemma ppick_pt (Ω : 'cV[R]_n) :
   ppick [pt Ω]%:PH = Ω.
-Proof. (* RK *)
+Proof.
 by apply/eqP; rewrite -in_pt -affE; apply/ppickP; exact: pt_proper0.
 Qed.
 
 Lemma pt_subset (Ω : 'cV[R]_n) P : [pt Ω]%:PH `<=` P = (Ω \in P).
-Proof. (* RK *)
+Proof.
 by apply/idP/idP => [/poly_leP s_ptΩ_P | ?];
   [ apply/s_ptΩ_P; rewrite in_pt_self
   | apply/poly_leP => v; rewrite in_pt => /eqP ->].
@@ -1899,7 +1873,7 @@ Qed.
 
 Variable (x : 'cV[R]_n).
 
-Lemma separation :
+Theorem separation :
   x \notin conv V -> exists2 e, x \notin [hs e] & (conv V `<=` [hs e]).
 Proof.
 move => x_notin.

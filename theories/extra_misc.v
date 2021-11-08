@@ -54,6 +54,18 @@ Qed.
 Arguments exists_andP {T A B}.
 Prenex Implicits exists_andP.
 
+Lemma ex_iff T (P1 P2 : T -> Prop) :
+  (forall x : T, P1 x <-> P2 x) -> ((exists x, P1 x) <-> (exists x, P2 x)).
+Proof.
+by move=> H; split; move=> [x Hx]; exists x; apply/H.
+Qed.
+
+Lemma ex2_iff T (P1 P2 Q : T -> Prop) :
+  (forall x : T, P1 x <-> P2 x) -> ((exists2 x, P1 x & Q x) <-> (exists2 x, P2 x & Q x)).
+Proof.
+by move=> H; split; move=> [x Hx]; exists x; try by apply/H.
+Qed.
+
 Lemma intro_existsT (T: Type) (P: T -> Prop) (b: bool) (H: reflect (exists x, P x) b) (x: T):
   P x -> b.
 Proof.
@@ -229,13 +241,24 @@ Proof.
 by move => H ?; rewrite (ltn_divLR _ _ H).
 Qed.
 
-
 Lemma subn_inj (p q r : nat) : (p <= r)%N -> (q <= r)%N -> (r - p == r - q)%N = (p == q).
 Proof.
 move => p_le_r q_le_r; apply/eqP/idP; last by move/eqP => ->.
 move/(congr1 (addn^~ p)); rewrite subnK // addnC.
 move/(congr1 (addn^~ q)); rewrite -addnA subnK // addnC.
 by move/addIn => ->.
+Qed.
+
+Lemma eq_subl {T : Type} {m m' m'': mem_pred T} :
+  eq_mem m m' -> (sub_mem m m'' <-> sub_mem m' m'').
+Proof.
+by move => eq; split => sub x x_in; apply/sub; rewrite ?eq // -?eq.
+Qed.
+
+Lemma eq_subr {T : Type} {m m' m'': mem_pred T} :
+  eq_mem m' m'' -> (sub_mem m m' <-> sub_mem m m'').
+Proof.
+by move => eq; split => sub x x_in; [rewrite -eq | rewrite eq]; apply/sub.
 Qed.
 
 End Basic.
