@@ -22,7 +22,7 @@ via the opam OCaml packages manager.
 
   * Optionally, switch to a dedicated compiler:
 
-        $> opam switch -A $OVERSION coq-polyhedra
+        $> opam switch create ocaml-base-compiler.$OVERSION coq-polyhedra
 
      where $OVERSION is a valid OCaml version (e.g. 4.07.1)
 
@@ -54,30 +54,6 @@ Opam can be easily installed from source or via your packages manager:
 See [https://opam.ocaml.org/doc/Install.html] for how to install opam.
 
 See [https://opam.ocaml.org/doc/Usage.html] for how to initialize opam
-
-### Using a docker image
-
-We provide a docker image with all the required dependencies. See
-the [docker website](https://docs.docker.com/) for more information on
-installing docker.
-
-Once installed, you can pull the Docker image:
-
-        $> docker pull coqpolyhedra/build-box
-
-Type:
-
-        $> make run-in-docker
-
-to compile the project with the Coq bundled in the Docker image. (Do a
-`make distclean` first if you compiled the project on your host).
-
-You can also start a shell in the docker image:
-
-        $> docker run --rm -ti -v $PWD:/home/ci/project -w /home/ci/project coqpolyhedra/build-box /bin/bash --login
-
-The project directory is automatically mounted in Docker and is
-located in `/home/ci/project`.
 
 ### Compilation
 
