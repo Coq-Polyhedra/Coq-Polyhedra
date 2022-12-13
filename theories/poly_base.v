@@ -12,7 +12,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra 
 
 From lattice Require Import extra_misc xbigop finlattice.
 Require Import extra_misc inner_product extra_matrix (*xorder*) vector_order row_submx.
-Require Import hpolyhedron polyhedron barycenter.
+Require Import hpolyhedron polyhedron barycenter lrel.
 
 Import Order.Theory.
 
@@ -530,7 +530,7 @@ apply/and3P; split; try do [apply/premeet_closedP=> F F';
   case/faceP=> {}F F_sub_P;
   case/faceP=> {}F' F'_sub_P; rewrite /= /Mmeet /Mjoin face_setE].
 - by rewrite RT.leIxl.
-- by apply/(RT.meet_max_seq (face_self P)) => //; apply/andP; split.
+- by apply/(RT.meets_max_seq (face_self P)) => //; apply/andP; split.
   set X := (X in [X has \base base]).
   have ->: X = \polyI_(i <- face_set P | (F `<=` i) && (F' `<=` i)) i by [].
   rewrite big_seq_cond
@@ -1296,7 +1296,7 @@ by rewrite dim_hull hull_line dim_line subr_eq0 eq_sym.
 Qed.
 
 Lemma dim2P (P : 'poly[R]_n) :
-  compact P -> dim P = 2 -> exists v, exists2 w, P = [segm v & w] & v != w.
+  compact P -> dim P = 2%nat -> exists v, exists2 w, P = [segm v & w] & v != w.
 Proof.
 elim/polybW: P => base P P_compact dimP2.
 have P_prop0 : P `>` [poly0] by rewrite dimN0 dimP2.
@@ -2613,7 +2613,8 @@ Lemma closed_by_interval (P : 'pointed[R]_n) x y :
              & isof poly_preLattice [< x; y >]_(face_lattice P) (face_lattice Q).
 (*& rank y = (dim Q + rank x)%N*)
 Proof.
-move => P_compact x_in y_in x_le_y.
+Admitted.
+(* move => P_compact x_in y_in x_le_y.
 pose Pt (S : {finLattice poly_preLattice}) :=
   exists2 Q : 'pointed[R]_n, compact Q & isof poly_preLattice S (face_lattice Q).
 suff h_Pt : forall (S : {finLattice poly_preLattice}) x y,
@@ -2621,9 +2622,9 @@ suff h_Pt : forall (S : {finLattice poly_preLattice}) x y,
   Pt S -> Pt [< x; y >]_S.
 - apply/h_Pt => //; exists P => //; exact: isof_refl.
 - apply/(ind_id (P := Pt)). (* FIX IT *)
-  + move=> S z z_atom [Q] Q_compact /isofP [f] f_surj f_inj.
-    have /atom_face [v v_vtx fz_v]: atom (face_lattice Q) (f z)
-      by rewrite fmorph_atom //; apply/misof_fmorph. (* TODO: fix *)
+  + move=> S z z_atom [Q] Q_compact /isofP [f] /misofP misof_f.
+    have /atom_face [v v_vtx fz_v]: atom (face_lattice Q) (f z) by
+      apply: (fmorph_atom misof_f). (* TODO: fix *)
     case: (vertex_figure Q_compact v_vtx) => Q' Q'_compact Q'_iso.
     exists (Pointed (compact_pointed Q'_compact)) => //. (* TODO: fix it *)
     apply/isof_trans: Q'_iso; exists f.
@@ -2652,7 +2653,7 @@ suff h_Pt : forall (S : {finLattice poly_preLattice}) x y,
       rewrite fmorph0.
       have ->: \codom f = face_lattice Q by apply/val_inj=> //. (* TODO: fix it *)
       by rewrite fbot_face_lattice -face_lattice_of_face.
-Qed.
+Qed. *)
 
 (*
 Lemma closed_by_interval_r (x : face_lattice P) :

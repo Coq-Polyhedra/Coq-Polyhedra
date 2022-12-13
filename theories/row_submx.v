@@ -1,13 +1,13 @@
 (* --------------------------------------------------------------------
- * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
- * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
- * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ * Copyright (c) - 2017--2021 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2021 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2021 - Pierre-Yves Strub <pierre-yves@strub.nu>
  *
  * Distributed under the terms of the CeCILL-B-V1 license
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
 From mathcomp Require Import fingroup perm.
 Require Import extra_misc inner_product vector_order extra_matrix.
 
@@ -236,6 +236,19 @@ rewrite row_submx_row enum_rankK_in //.
 exact: row_sub.
 Qed.
 
+
+
+Lemma row_submx_eq {m n : nat} (A B : 'M_(m,n)) (I : {set 'I_m}):
+  [forall i, (i \in I) ==> (row i A == row i B)] = 
+  (row_submx A I == row_submx B I).
+Proof.
+apply/idP/idP=> h.
+- apply/eqP/row_submx_row_matrixP=> i iI; apply/eqP.
+  by move/forallP: h=> /(_ i); rewrite iI.
+- apply/forallP=> i; apply/implyP=> iI; apply/eqP.
+  by move/eqP/row_submx_row_matrixP: h; apply.
+Qed.
+
 End RowSubmx.
 
 Section ExtraFinType.
@@ -248,13 +261,13 @@ Variable f: T -> T'.
 Hypothesis injf: injective f.
 
 Definition liftf (i: 'I_#|A|) :=
-  (enum_rank_in (mem_imset f (enum_valP i)) (f (enum_val i))): 'I_#|f @: A|.
+  (enum_rank_in (imset_f f (enum_valP i)) (f (enum_val i))): 'I_#|f @: A|.
 
 Lemma liftf_inj : injective liftf.
 Proof.
 move => i i'.
 move/(congr1 enum_val).
-do 2![rewrite enum_rankK_in; last exact: (mem_imset _ (enum_valP _))].
+do 2![rewrite enum_rankK_in; last exact: (imset_f _ (enum_valP _))].
 move/injf; exact: enum_val_inj.
 Qed.
 
@@ -294,7 +307,7 @@ Proof.
 apply/matrixP => i j.
 rewrite row_submx_mxE mxE.
 rewrite !mxE castmxE /= cast_ord_id row_submx_mxE.
-by rewrite permE cast_ordK enum_rankK_in; last exact: (mem_imset _ (enum_valP _)).
+by rewrite permE cast_ordK enum_rankK_in; last exact: (imset_f _ (enum_valP _)).
 Qed.
 
 End RowSubmxPerm.
@@ -337,7 +350,7 @@ have ->: (s1 = [seq (nat_of_ord i) | i <- enum 'I_m])
   by exact: eq_map.
 have ->: (s2 = map (addn m) [seq (nat_of_ord i)%N | i <- enum 'I_n])
   by rewrite -map_comp; exact: eq_map.
-by rewrite 2!val_enum_ord -iota_addl [in RHS]addnC -iota_add.
+by rewrite 2!val_enum_ord -iotaDl [in RHS]addnC -iotaD.
 Qed.
 
 CoInductive split_spec' (i : 'I_(m + n)) : 'I_m + 'I_n -> bool -> Type :=
@@ -415,7 +428,7 @@ have ->: s1 = [seq (lshift n i) | i <- enum I].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /lshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s1}; set s1 := (X in X ++ _).
 rewrite nth_cat size_map /= -cardE ltn_ord.
 rewrite (nth_map (enum_default i)) //=.
@@ -461,7 +474,7 @@ have ->: s2 = [seq (rshift m i) | i <- enum J].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /rshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite (nth_map (enum_default i)) //=.
   by rewrite -cardE ltn_ord.
 Qed.
@@ -516,7 +529,7 @@ have ->: s1 = [seq (lshift n i) | i <- enum I].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /lshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s1}; set s1 := (X in X ++ _).
 rewrite nth_cat size_map /= -cardE ltn_ord.
 rewrite (nth_map (enum_default i)) //.
@@ -545,7 +558,7 @@ have ->: s1 = [seq (lshift n i) | i <- enum I].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /lshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s1}; set s1 := (X in X ++ _).
 have ->: s2 = [seq x <- [seq rshift m i | i <- enum 'I_n] | (mem [set rshift m x | x in J]) x].
 - apply: eq_in_filter => j /mapP [j' Hj' ->].
@@ -560,7 +573,7 @@ have ->: s2 = [seq (rshift m i) | i <- enum J].
   apply/(congr1 (map _)); apply: eq_filter => j.
   rewrite !inE; apply/idP/idP.
   + by move/imsetP => [j' Hj' /rshift_inj ->].
-  + exact: mem_imset.
+  + exact: imset_f.
 rewrite {s2}; set s2 := (X in _ ++ X).
 rewrite nth_cat size_map /= -cardE.
 rewrite -[X in (_ < X)%N]addn0 ltn_add2l ltn0.
@@ -733,3 +746,24 @@ by apply/row_freeP; exists (lsubmx B).
 Qed.
 
 End RowSubmxRowBase.
+
+Section RowSubmxFree.
+
+Variable R: realFieldType.
+Variable p q: nat.
+Variable M: 'M[R]_(p,q).
+Variable bas0: {set 'I_p}.
+
+Lemma row_free_free_submx :
+  row_free (row_submx M bas0) = free [seq row i M | i in bas0].
+Proof.
+rewrite row_free_free; congr free.
+have rowsubmx_eq: (fun i => row i (row_submx M bas0)) =1 (fun i=> row (enum_val i) M).
+  by move=> i; rewrite row_submx_row.
+rewrite (eq_map rowsubmx_eq).
+have size_bas0: size [seq row (enum_val i) M | i <- enum 'I_#|bas0|] = size [seq row i M | i in bas0] by
+  rewrite !size_map -enumT size_enum_ord cardE.
+by rewrite -enum_val_map.
+Qed.
+
+End RowSubmxFree.

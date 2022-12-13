@@ -14,7 +14,7 @@ From lattice Require Import finlattice.
 Import Order.Theory.
 (*Import RelOrder.Theory.*)
 
-Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter hpolyhedron.
+Require Import extra_misc extra_matrix inner_product row_submx vector_order lrel barycenter hpolyhedron.
 
 
 Set Implicit Arguments.
@@ -46,6 +46,8 @@ Arguments RT.eq_le {T}.
 
 Local Open Scope ring_scope.
 Local Open Scope quotient_scope.
+Declare Scope poly_scope.
+Delimit Scope poly_scope with PH.
 Local Open Scope poly_scope.
 
 Import GRing.Theory Num.Theory.
@@ -353,14 +355,14 @@ Notation "<=%P"  := (RelOrder.le poly_pOrder) : fun_scope.
 Notation "<%P"   := (RelOrder.lt poly_pOrder) : fun_scope.
 
 Notation "x `<=` y" := (x <=_poly_pOrder y) : poly_scope.
-Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
-Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
-Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
+Notation "x `<=` y :> T" := ((x : T) `<=` (y : T))%PH (only parsing) : poly_scope.
+Notation "x `>=` y" := (y `<=` x)%PH (only parsing) : poly_scope.
+Notation "x `>=` y :> T" := ((x : T) `>=` (y : T))%PH (only parsing) : poly_scope.
 
 Notation "x `<` y"  := (x <_poly_pOrder y) : poly_scope.
-Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
-Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
-Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
+Notation "x `<` y :> T" := ((x : T) `<` (y : T))%PH (only parsing) : poly_scope.
+Notation "x `>` y"  := (y `<` x)%PH (only parsing) : poly_scope.
+Notation "x `>` y :> T" := ((x : T) `>` (y : T))%PH (only parsing) : poly_scope.
 
 Notation "x `<=` y `<=` z" := (x <=_poly_pOrder y <=_poly_pOrder z) : poly_scope.
 Notation "x `<` y `<=` z" := (x <_poly_pOrder y <=_poly_pOrder z) : poly_scope.
@@ -382,7 +384,7 @@ Definition bounded (P : 'poly[R]_n) c := H.bounded (hrepr P) c.
 Definition pointed (P : 'poly[R]_n) := H.pointed (hrepr P).
 Definition lift_poly (k : nat) (P : 'poly[R]_n) : 'poly[R]_(n+k) := '[ H.lift_poly k (hrepr P)].
 
-Lemma in_poly0 : [poly0] =i pred0.
+Lemma in_poly0 : [poly0]%PH =i pred0.
 Proof. by move=> ?; rewrite mem_poly0. Qed.
 
 Lemma in_polyT : [polyT] =i predT.
@@ -393,14 +395,14 @@ Notation "<=%P"  := (RelOrder.le poly_pOrder)   : fun_scope.
 Notation "<%P"   := (RelOrder.lt poly_pOrder)   : fun_scope.
 
 Notation "x `<=` y" := (x <=_poly_pOrder y) : poly_scope.
-Notation "x `<=` y :> T" := ((x : T) `<=` (y : T)) (only parsing) : poly_scope.
-Notation "x `>=` y" := (y `<=` x) (only parsing) : poly_scope.
-Notation "x `>=` y :> T" := ((x : T) `>=` (y : T)) (only parsing) : poly_scope.
+Notation "x `<=` y :> T" := ((x : T) `<=` (y : T))%PH (only parsing) : poly_scope.
+Notation "x `>=` y" := (y `<=` x)%PH (only parsing) : poly_scope.
+Notation "x `>=` y :> T" := ((x : T) `>=` (y : T))%PH (only parsing) : poly_scope.
 
 Notation "x `<` y"  := (x <_poly_pOrder y) : poly_scope.
-Notation "x `<` y :> T" := ((x : T) `<` (y : T)) (only parsing) : poly_scope.
-Notation "x `>` y"  := (y `<` x) (only parsing) : poly_scope.
-Notation "x `>` y :> T" := ((x : T) `>` (y : T)) (only parsing) : poly_scope.
+Notation "x `<` y :> T" := ((x : T) `<` (y : T))%PH (only parsing) : poly_scope.
+Notation "x `>` y"  := (y `<` x)%PH (only parsing) : poly_scope.
+Notation "x `>` y :> T" := ((x : T) `>` (y : T))%PH (only parsing) : poly_scope.
 
 Notation "x `<=` y `<=` z" := ((x <=_poly_pOrder y) && (y <=_poly_pOrder z)) : poly_scope.
 Notation "x `<` y `<=` z" := ((x <_poly_pOrder y) && (y <=_poly_pOrder z)) : poly_scope.
@@ -441,7 +443,7 @@ Notation "\polyI_ ( i 'in' A ) F" :=
 Section PolyPredTheory.
 Context {R : realFieldType} (n : nat).
 
-Definition mk_hp (e : lrel[R]_n) := [hs e] `&` [hs (-e)].
+Definition mk_hp (e : lrel[R]_n) := ([hs e] `&` [hs (-e)]).
 Notation "'[' 'hp' e  ']'" := (mk_hp e%PH) : poly_scope.
 
 Lemma poly_subset_mono (P Q : 'hpoly[R]_n) : '[P] `<=` '[Q] = H.poly_subset P Q.
@@ -1271,7 +1273,7 @@ apply/poly_eqP=> c; rewrite in_slice; apply/andP/idP.
 Qed.
 
 Local Notation "\- I" := (-%R @` I)%fset
-  (at level 2).
+  (at level 35, I at level 35).
 
 Definition baseEq (base I : base_t[R,n]) := (base `|` \- I)%fset.
 
@@ -1487,7 +1489,7 @@ rewrite in_hs vdot_lift0 get0_eqN1 mulN1r addrC ler_sub_addr -ler_sub_addl.
 by rewrite opprD opprK addrC.
 Qed.
 
-Fact poly_of_sbase : 'P(sbase) = 'P(base).
+Fact poly_of_sbase : ('P(sbase) = 'P(base))%PH.
 Proof.
 apply/poly_eqP => x.
 apply/in_poly_of_baseP/in_poly_of_baseP => [x_in ?? | x_in ? /imfsetP [i i_in ->]].
@@ -1602,7 +1604,6 @@ End Proj.
 End Projection.
 
 Section Map.
-
 Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 
 Let A' := row_mx (-A) (1%:M).
@@ -2100,8 +2101,6 @@ Notation "'[' 'pt' Ω ']'" := [affine 0%VS & Ω] : poly_scope.
 Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset) : poly_scope.
 
 Section Duality.
-
-Local Open Scope poly_scope.
 
 Variable (R : realFieldType) (n : nat) (base : base_t[R,n]).
 
