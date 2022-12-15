@@ -336,8 +336,8 @@ Qed.
 
 Definition of_poly (P : 'poly[R]_n) :=
   xchoose (poly_has_base P).
-Definition to_poly (x : { base : base_t[R,n] & {poly base} })
-  := pval (tagged x).
+Definition to_poly (x : { base : base_t[R,n] & {poly base} }):= 
+  pval (tagged x).
 
 Lemma of_polyK : cancel of_poly to_poly.
 Proof.
