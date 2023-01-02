@@ -720,6 +720,18 @@ Proof.
 by rewrite scalerBl scale1r addrAC -addrA -scalerBr.
 Qed.
 
+Lemma combine2_id (v : L) α:
+  (1 - α) *: v + α *: v = v.
+Proof. by rewrite -scalerDl -addrA addNr addr0 scale1r. Qed.
+
+Lemma combine2_add (v w v' w' : L) α:
+  (1 - α) *: v + α *: w + ((1 - α) *: v' + α *: w') = (1 - α) *: (v + v') + α *: (w + w').
+Proof. by rewrite !scalerDr !addrA; congr (_ + _); rewrite addrAC. Qed.
+
+Lemma combine2_sub (v w v' w' : L) α:
+  (1 - α) *: v + α *: w - ((1 - α) *: v' + α *: w') = (1 - α) *: (v - v') + α *: (w - w').
+Proof. by rewrite opprD -!scalerN combine2_add. Qed.
+
 Hypothesis cvxP : convex_pred.
 
 (* FIXME: TO BE REWORKED *)

@@ -280,6 +280,14 @@ rewrite capfv dimvf /Vector.dim /= muln1 limg_orthv_fun => {2}<-.
 by rewrite addnK.
 Qed.
 
+Lemma orthv_suppl V : (V + V^OC)%VS = fullv.
+Proof.
+apply/eqP; rewrite eqEdim; apply/andP; split; first exact:subvf.
+rewrite dimvf /Vector.dim /= muln1 dimv_disjoint_sum ?direct_orthvP //.
+rewrite dim_orthv subnKC //; move: (dimvf E); rewrite /Vector.dim /= muln1 => <-. 
+exact/dimvS/subvf.
+Qed.
+
 Lemma orthv_spanP (p : nat) (Y : p.-tuple 'cV[R]_n) x :
   reflect (forall y, y \in Y -> '[y,x] = 0) (x \in (span Y)^OC)%VS.
 Proof.
