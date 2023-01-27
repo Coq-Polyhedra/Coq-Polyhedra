@@ -40,9 +40,9 @@ Include RelOrder.TDistrLatticeTheory.
 Include RelOrder.TotalTheory.
 End RT.
 
-Arguments RT.le_anti {T}.
-Arguments RT.ge_anti {T}.
-Arguments RT.eq_le {T}.
+Arguments RT.rle_anti {T}.
+Arguments RT.rge_anti {T}.
+Arguments RT.req_le {T}.
 
 Local Open Scope ring_scope.
 Local Open Scope quotient_scope.
@@ -462,7 +462,7 @@ Qed.
 
 Lemma poly_eq0Pn {P : 'poly[R]_n} : reflect (exists x, x \in P) (P != [poly0]).
 Proof.
-have := @poly_lePn P [poly0]. rewrite (RT.lex0) ; case=> h; constructor.
+have := @poly_lePn P [poly0]. rewrite (RT.rlex0) ; case=> h; constructor.
 + by case: h=> x xP _; exists x.
 + by case=> x xP; apply: h; exists x => //; rewrite in_poly0.
 Qed.
@@ -670,11 +670,11 @@ CoInductive empty_spec (P : 'poly[R]_n) : bool -> bool -> bool -> Set :=
 | NonEmpty of (P `>` [poly0]) : empty_spec P true false false.
 
 Lemma emptyP P : empty_spec P (P `>` [poly0]) (P == [poly0]) (P `<=` [poly0]).
-Proof. by rewrite RT.lex0 RT.lt0x; case: RT.posxP => ?; constructor. Qed.
+Proof. by rewrite RT.rlex0 RT.rlt0x; case: RT.rposxP => ?; constructor. Qed.
 
 Lemma proper0P {P : 'poly[R]_n} :
   reflect (exists x, x \in P) (P `>` [poly0]).
-Proof. by rewrite RT.lt0x; apply: poly_eq0Pn. Qed.
+Proof. by rewrite RT.rlt0x; apply: poly_eq0Pn. Qed.
 
 Definition ppick P : 'cV[R]_n :=
   match (@proper0P P) with
@@ -692,9 +692,9 @@ Lemma poly_properP {P Q : 'poly[R]_n} :
   (* TODO: should {subset P <= Q} to (P `<=` Q) ? *)
   reflect ({subset P <= Q} /\ exists2 x, x \in Q & x \notin P) (P `<` Q).
 Proof.
-rewrite RT.lt_def; apply: (iffP andP).
+rewrite RT.rlt_def; apply: (iffP andP).
 + case=> ne_QP le_PQ; split; first by apply/poly_leP.
-  by apply/poly_lePn; apply/contra: ne_QP; rewrite (RT.eq_le [leo: <=%P]) => ->.
+  by apply/poly_lePn; apply/contra: ne_QP; rewrite (RT.req_le [leo: <=%P]) => ->.
 by case=> /poly_leP -> [x xQ xPN]; split; first apply/contra: xPN => /eqP <-.
 Qed.
 
@@ -729,8 +729,8 @@ Proof.
 (*rewrite -subset0N_proper; move => P_non_empty.*)
 move => P_neq0.
 have hreprP_neq0: ~~ H.poly_subset (hrepr P) H.poly0.
-- move: P_neq0; rewrite RT.lt0x.
-  apply: contraNN => /H.poly_subsetP incl; rewrite -RT.lex0.
+- move: P_neq0; rewrite RT.rlt0x.
+  apply: contraNN => /H.poly_subsetP incl; rewrite -RT.rlex0.
   by apply/poly_leP=> x /incl; rewrite H.in_poly0.
 apply: (iffP (H.boundedPn _ hreprP_neq0)) => [H K | H K]; move/(_ K): H.
 - move/H.poly_subsetPn => [x x_in_P x_not_in_hs].
@@ -823,13 +823,13 @@ Qed.
 Lemma argmin_subset P c : argmin P c `<=` P.
 Proof. (* RK *)
 rewrite /argmin; case: {-}_/idP => [bounded_P | _].
-+ by apply: RT.leIl. + by apply: RT.le0x.
++ by apply: RT.rleIl. + by apply: RT.rle0x.
 Qed.
 
 Lemma argmin_opt_value P c (bounded_P : bounded P c) :
   argmin P c `<=` [hp [<c, opt_value bounded_P>]].
 Proof. (* RK *)
-rewrite argmin_polyI; exact: RT.leIr.
+rewrite argmin_polyI; exact: RT.rleIr.
 Qed.
 
 Lemma argmin_lower_bound {c x y} P :
@@ -854,18 +854,18 @@ Qed.
 Lemma subset_argmin {P Q} {c} :
   bounded Q c -> argmin Q c `<=` P `<=` Q -> argmin P c = argmin Q c.
 Proof. (* RK *)
-move=> bounded_Q /andP [??]; apply/(RT.le_anti [leo: <=%P]). (* UGLY *)
+move=> bounded_Q /andP [??]; apply/(RT.rle_anti [leo: <=%P]). (* UGLY *)
 rewrite {-2}/argmin; case: {-}_/idP => [bounded_P | unbounded_P]; apply/andP; split.
 - rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
-  apply/RT.leI2; [done | exact: RT.lexx].
-- rewrite RT.lexI -(rwP andP); split; first by done.
+  apply/RT.rleI2; [done | exact: RT.rlexx].
+- rewrite RT.rlexI -(rwP andP); split; first by done.
   rewrite (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
   exact: argmin_opt_value.
-- by apply: RT.le0x.
+- by apply: RT.rle0x.
 - move/negP: unbounded_P; apply/contraR.
-  rewrite RT.lex0 -RT.lt0x => non_empty_argmin_Q_c.
+  rewrite RT.rlex0 -RT.rlt0x => non_empty_argmin_Q_c.
   apply/(bounded_mono1 bounded_Q _)/andP; split; last by done.
-  by apply/(RT.lt_le_trans non_empty_argmin_Q_c).
+  by apply/(RT.rlt_le_trans non_empty_argmin_Q_c).
 Qed.
 
 Lemma argmin_eq {P} {c v x} :
@@ -902,7 +902,7 @@ Qed.
 Lemma argmin_polyIN (P : 'poly[R]_n) (c : 'cV_n) (bounded_P : bounded P c) :
   argmin P c = P `&` [hs -[<c, opt_value bounded_P>]].
 Proof.
-rewrite argmin_polyI /mk_hp RT.meetA [X in X `&` _ = _]RT.meet_l //.
+rewrite argmin_polyI /mk_hp RT.rmeetA [X in X `&` _ = _]RT.rmeet_l //.
 by apply: opt_value_lower_bound.
 Qed.
 
@@ -975,7 +975,7 @@ Proof.
 move => P_sub_Q.
 apply: contraTT; move/pointedPn => [Ω [c c_neq0 line_sub]].
 apply/pointedPn; exists Ω; exists c => //.
-by apply/(RT.le_trans line_sub).
+by apply/(RT.rle_trans line_sub).
 Qed.
 
 Definition mk_hline (c Ω : 'cV[R]_n) :=
@@ -1005,7 +1005,7 @@ Definition compact (P : 'poly[R]_n) :=
 
 Lemma compact0 : compact ([poly0]).
 Proof.
-by rewrite /compact RT.ltxx.
+by rewrite /compact RT.rltxx.
 Qed.
 
 Lemma compactP_Linfty (P : 'poly[R]_n) :
@@ -1079,7 +1079,7 @@ Proof.
 move => P_compact Q_sub_P.
 case: (emptyP Q) => [->| Q_prop0]; rewrite ?compact0 //.
 apply/compactP => // c.
-have P_prop0: P `>` [poly0] by apply/RT.lt_le_trans: Q_sub_P.
+have P_prop0: P `>` [poly0] by apply/RT.rlt_le_trans: Q_sub_P.
 have h: [poly0] `<` Q `<=` P by apply/andP; split.
 by move/(compactP P_prop0)/(_ c)/bounded_mono1/(_ h): P_compact.
 Qed.
@@ -1088,11 +1088,11 @@ Definition slice (b : lrel) P := [hp b] `&` P.
 
 Lemma slice0 (b : lrel) : slice b ([poly0]) = [poly0].
 Proof.
-by rewrite /slice RT.meetx0.
+by rewrite /slice RT.rmeetx0.
 Qed.
 
 Lemma sliceS (e : lrel[R]_n) : {homo slice e : P Q / P `<=` Q}.
-Proof. by move=> ???; apply: RT.leI2. Qed.
+Proof. by move=> ???; apply: RT.rleI2. Qed.
 
 Lemma in_slice (e : lrel) (P : 'poly_n) c :
   c \in slice e P = (c \in [hp e]) && (c \in P).
@@ -1151,7 +1151,7 @@ Lemma poly_of_base_subset_hs {base : base_t} {e : lrel} :
 Proof.
 move => e_in_base.
 pose e' := [`e_in_base]%fset; have ->: e = fsval e' by done.
-exact: RT.meets_inf.
+exact: RT.rmeets_inf.
 Qed.
 
 Lemma poly_of_base_antimono (base base' : base_t[R,n]) :
@@ -1223,8 +1223,8 @@ Lemma polyEq_big_polyI {base: base_t[R,n]} {I : finType} {P : pred I} {F}  :
   ~~ pred0b P -> \polyI_(i | P i) 'P^=(base; F i) = 'P^=(base; (\bigcup_(i | P i) (F i))%fset).
 Proof.
 move/pred0Pn => [i0 Pi0].
-apply/(RT.le_anti [leo: <=%P])/andP; split; last first.
-- apply/RT.meetsP => [i Pi]; apply/polyEq_antimono; exact: bigfcup_sup.
+apply/(RT.rle_anti [leo: <=%P])/andP; split; last first.
+- apply/RT.rmeetsP => [i Pi]; apply/polyEq_antimono; exact: bigfcup_sup.
 - apply/poly_leP => x /in_big_polyIP x_in.
   apply/in_polyEqP; split; last first.
   rewrite /=.
@@ -1700,7 +1700,7 @@ Qed.
 
 Lemma conv0 : conv fset0 = [poly0].
 Proof.
-apply/eqP; rewrite -RT.lex0.
+apply/eqP; rewrite -RT.rlex0.
 apply/poly_leP => x /in_convP[w].
 by rewrite fsubset0 fconvex_insupp_neq0.
 Qed.
@@ -1872,7 +1872,7 @@ Qed.
 Lemma affine_span (I : base_t[R,n]) :
   affine <<I>>%VS = \polyI_(i : I) [hp (val i)].
 Proof.
-apply/(RT.le_anti [leo: <=%P])/andP; split; apply/poly_leP => [x].
+apply/(RT.rle_anti [leo: <=%P])/andP; split; apply/poly_leP => [x].
 - move/in_affine => x_in.
   by apply/in_big_polyIP => i _; apply/x_in/memv_span/fsvalP.
 - move/in_big_polyIP => x_in; apply/in_affine => v /coord_span ->.
@@ -1888,7 +1888,7 @@ Qed.
 Lemma polyEq_affine (base I : base_t[R,n]) :
   'P^=(base; I) = 'P(base) `&` (affine <<I>>%VS).
 Proof.
-by rewrite affine_span RT.meetC.
+by rewrite affine_span RT.rmeetC.
 Qed.
 
 Lemma affine_subset_poly_of_base (base : base_t[R,n]) :
@@ -1902,7 +1902,7 @@ Qed.
 Lemma polyEqT_affine (base : base_t[R,n]) :
   'P^=(base; base) = affine << base >>.
 Proof.
-by rewrite polyEq_affine RT.meet_r // affine_subset_poly_of_base.
+by rewrite polyEq_affine RT.rmeet_r // affine_subset_poly_of_base.
 Qed.
 
 Lemma affineS :
@@ -1922,7 +1922,7 @@ Qed.
 Lemma affine1 (e : lrel[R]_n) :
   affine <[ e ]>%VS = [hp e].
 Proof.
-apply/(RT.le_anti [leo: <=%P])/andP; split.
+apply/(RT.rle_anti [leo: <=%P])/andP; split.
 - by rewrite affineS1 ?memv_line.
 - apply/poly_leP => x; rewrite in_hp => /eqP x_in_hp.
   apply/in_affine => ? /vlineP [μ ->].
@@ -2059,7 +2059,7 @@ Qed.
 
 Lemma pt_proper (Ω : 'cV[R]_n) P : [pt Ω] `<` P -> (Ω \in P).
 Proof.
-by move/RT.ltW; rewrite pt_subset.
+by move/RT.rltW; rewrite pt_subset.
 Qed.
 
 Lemma line_affine (Ω d : 'cV[R]_n) :
@@ -2112,7 +2112,7 @@ Lemma farkas (e : lrel) :
          (finsupp w `<=` base)%fset
        & (combine w).1 = e.1 /\ (combine w).2 >= e.2.
 Proof.
-rewrite /poly_of_base big_polyI_mono RT.lt0x -RT.lex0 2!poly_subset_mono.
+rewrite /poly_of_base big_polyI_mono RT.rlt0x -RT.rlex0 2!poly_subset_mono.
 exact: H.farkas.
 Qed.
 
@@ -2181,7 +2181,7 @@ Lemma dual_sol_argmin : ('P^=(base; finsupp w) `>` [poly0]) ->
 Proof.
 have PI_sub_P : 'P^=(base; finsupp w) `<=` 'P(base) by exact: polyEq_antimono0.
 move => PI_neq0.
-have P_neq0 : ('P(base) `>` [poly0]) by exact: (RT.lt_le_trans PI_neq0).
+have P_neq0 : ('P(base) `>` [poly0]) by exact: (RT.rlt_le_trans PI_neq0).
 move/proper0P : PI_neq0 => [x x_in_PI].
 set c := (combine w).1; have c_bounded := (dual_sol_bounded P_neq0 le_wb).
 rewrite argmin_polyI.
@@ -2338,7 +2338,7 @@ Lemma poly_of_nonredundant_base (base0 base1: seq lrel[R]_n) :
 Proof.
 elim: base0 base1 => [//=| e base' /= h_ind base1].
 case: ifP => [ | _]; symmetry.
-- by rewrite /= !fset_of_cons !poly_of_baseU1 h_ind RT.meet_r.
+- by rewrite /= !fset_of_cons !poly_of_baseU1 h_ind RT.rmeet_r.
 - rewrite h_ind; apply/congr1.
   by apply/fsetP => i; rewrite !inE /= orbCA.
 Qed.
@@ -2362,7 +2362,7 @@ case: ifP => [ _| /negbT subN e']; first exact: h_ind.
 case/altP: (e =P e') => [eq | /negbTE neq ? /negbTE e'_notin].
 - rewrite !eq in subN *.
   move => ??; move: subN; apply/contra.
-  apply/RT.le_trans/poly_of_base_antimono/fsubsetP => i.
+  apply/RT.rle_trans/poly_of_base_antimono/fsubsetP => i.
   rewrite !inE /= => /andP [/negbTE neq].
   by move/mk_nonredundant_base_subset; rewrite mem_cat inE neq /=.
 - by apply/h_ind; rewrite // inE eq_sym neq e'_notin.
