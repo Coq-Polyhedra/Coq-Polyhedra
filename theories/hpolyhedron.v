@@ -171,13 +171,13 @@ Context {R : realFieldType} {n : nat}.
 Implicit Type (P : 'hpoly[R]_n).
 
 Definition hpoly_c (P : 'hpoly[R]_n) : nat
-  := let: HPoly c A b := P in c.
+  := let: HPoly c _ _ := P in c.
 
 Definition hpoly_A (P : 'hpoly[R]_n) :'M_(hpoly_c P, _)
-  := let: HPoly c A b := P in A.
+  := let: HPoly _ A _ := P in A.
 
 Definition hpoly_b (P : 'hpoly[R]_n) :'cV_(hpoly_c P)
-  := let: HPoly c A b := P in b.
+  := let: HPoly _ _ b := P in b.
 
 Notation "P .`c" := (hpoly_c P).
 Notation "P .`A" := (hpoly_A P).
@@ -454,10 +454,11 @@ rewrite !inE big_andE; apply/forall_inP/forallP => /= h.
   by rewrite tr_col trmxK -row_mul row_cV.
 Qed.
 
-Lemma farkas (e : lrel) :
+(*TODO : notation issue, lrel was enough instead of lrel[R]_n*)
+Lemma farkas (e : lrel[R]_n) :
      ~~ (poly_subset P poly0)
   -> (poly_subset P (mk_hs e))
-  -> exists2 w : {conic lrel ~> R},
+  -> exists2 w : {conic lrel[R]_n ~> R},
          (finsupp w `<=` base)%fset
        & (combine w).1 = e.1 /\ (combine w).2 >= e.2.
 Proof.

@@ -7,7 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra.
+From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
 From mathcomp Require Import fingroup perm.
 Require Import extra_misc inner_product vector_order extra_matrix.
 
@@ -234,6 +234,19 @@ set j := enum_rank_in i'_in_J i'.
 have ->: (row i' M = row j (row_submx M J)).
 rewrite row_submx_row enum_rankK_in //.
 exact: row_sub.
+Qed.
+
+
+
+Lemma row_submx_eq {m n : nat} (A B : 'M_(m,n)) (I : {set 'I_m}):
+  [forall i, (i \in I) ==> (row i A == row i B)] = 
+  (row_submx A I == row_submx B I).
+Proof.
+apply/idP/idP=> h.
+- apply/eqP/row_submx_row_matrixP=> i iI; apply/eqP.
+  by move/forallP: h=> /(_ i); rewrite iI.
+- apply/forallP=> i; apply/implyP=> iI; apply/eqP.
+  by move/eqP/row_submx_row_matrixP: h; apply.
 Qed.
 
 End RowSubmx.
@@ -733,3 +746,24 @@ by apply/row_freeP; exists (lsubmx B).
 Qed.
 
 End RowSubmxRowBase.
+
+Section RowSubmxFree.
+
+Variable R: realFieldType.
+Variable p q: nat.
+Variable M: 'M[R]_(p,q).
+Variable bas0: {set 'I_p}.
+
+Lemma row_free_free_submx :
+  row_free (row_submx M bas0) = free [seq row i M | i in bas0].
+Proof.
+rewrite row_free_free; congr free.
+have rowsubmx_eq: (fun i => row i (row_submx M bas0)) =1 (fun i=> row (enum_val i) M).
+  by move=> i; rewrite row_submx_row.
+rewrite (eq_map rowsubmx_eq).
+have size_bas0: size [seq row (enum_val i) M | i <- enum 'I_#|bas0|] = size [seq row i M | i in bas0] by
+  rewrite !size_map -enumT size_enum_ord cardE.
+by rewrite -enum_val_map.
+Qed.
+
+End RowSubmxFree.

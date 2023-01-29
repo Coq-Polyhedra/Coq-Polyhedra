@@ -21,7 +21,7 @@ Import Order.TTheory GRing.Theory Num.Theory.
 
 (* -------------------------------------------------------------------- *)
 Declare Scope polyh_scope.
-Delimit Scope polyh_scope with PH.
+Delimit Scope polyh_scope with PHH.
 
 Local Open Scope polyh_scope.
 
@@ -527,7 +527,7 @@ Qed.
 Lemma in_dirP V x :
   x \in V -> forall d, (d \in dir V) = (x + d \in V).
 Proof.
-rewrite /dir; case/affineP: V; rewrite ?in_affine0 ?in_affine //.
+rewrite /dir; case/affineP: V; rewrite ?in_affine0 //.
 move => U _ /in_affineP x_in d.
 apply/idP/in_affineP.
 - move/orthvP => h v v_in_U.
@@ -726,22 +726,23 @@ apply/in_affineP =>  ? ?.
 by apply/Hin_affime/Hsubset.
 Qed.
 
+Lemma affine_orth (U : {vspace lrel[R]_n}) x :
+  x \in [affine U] -> [affine U] = [affine (befst @: U)^OC & x].
+Proof.
+move => x_in_aff.
+apply/affine_eqP=> d; rewrite in_mk_affine.
+apply/idP/orthvP=> [/in_affineP in_aff ? /memv_imgP [u u_in_U] ->| H].
+- by rewrite lfunE /= vdotBr ((in_affineP x_in_aff) _ u_in_U) in_aff ?subrr.
+- apply/in_affineP => u u_in_U; rewrite -((in_affineP x_in_aff) _ u_in_U).
+  apply/subr0_eq; rewrite -vdotBr; apply/H/memv_imgP.
+  by exists u => //; rewrite lfunE /=.
+Qed.
+
 Lemma dir_affine U :
   [affine U] `>` [affine0] -> dir [affine U] = (befst @: U)^OC%VS.
 Proof. (* RK *)
-move/andP => [? _].
-have aff_U_neq0: exists x : 'cV_n, x \in [affine U] by apply/affineN0.
-move: aff_U_neq0 => [? in_aff_U].
-apply/vspaceP => d; rewrite (in_dirP in_aff_U).
-apply/idP/orthvP => [/in_affineP in_aff ? /memv_imgP [u u_in_U] ->| H].
-- rewrite lfunE /=; move/eqP: (in_aff _ u_in_U).
-  by rewrite vdotDr ((in_affineP in_aff_U) _ u_in_U) -subr_eq0 [X in X-_]addrC -addrA subrr addr0 => /eqP <-.
-- apply/in_affineP => u u_in_U.
-  rewrite vdotDr ((in_affineP in_aff_U) _ u_in_U).
-  suff ->: '[ u.1, d] = 0 by rewrite addr0.
-  by apply/H/memv_imgP; exists u; [exact: u_in_U | rewrite lfunE].
+by case/andP=> /affineN0 [x /affine_orth ->] _; rewrite dir_mk_affine.
 Qed.
-
 
 Lemma affine_proper0P V :
   reflect (exists x, x \in V) (V `>` [affine0]).

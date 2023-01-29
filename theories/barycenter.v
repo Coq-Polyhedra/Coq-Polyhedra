@@ -8,6 +8,8 @@
 
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect all_algebra finmap.
+Require Import extra_misc inner_product vector_order.
+
 Import Order.Theory.
 
 Set   Implicit Arguments.
@@ -29,11 +31,11 @@ Reserved Notation "{ 'conic' T ~> R }"
 Reserved Notation "{ 'convex' T ~> R }"
   (at level 0, format "{ 'convex'  T  ~>  R }").
 
-Reserved Notation "0 %:FS"
-  (at level 2, format "0 %:FS").
+Reserved Notation "\0 %:FS"
+  (at level 2, format "\0 %:FS").
 
-Reserved Notation "0 %:PFS"
-  (at level 1, format "0 %:PFS").
+Reserved Notation "\0 %:PFS"
+  (at level 1, format "\0 %:PFS").
 
 Reserved Notation "x \bary V"
   (at level 70, format "x  \bary  V").
@@ -43,7 +45,8 @@ Declare Scope conicfun_scope.
 Declare Scope convexfun_scope.
 
 (* -------------------------------------------------------------------- *)
-Notation "{ 'fsfun' T ~> R }" := {fsfun T -> R for fun => 0} : type_scope.
+Notation "{ 'fsfun' T ~> R }" :=
+  {fsfun T -> R for (fun=> 0)} : type_scope.
 
 (* -------------------------------------------------------------------- *)
 Section FsFunZmod.
@@ -59,11 +62,11 @@ Definition fsopp f : {fsfun T ~> R} :=
 Definition fsadd f g : {fsfun T ~> R} :=
   [fsfun x in (finsupp f `|` finsupp g)%fset => f x + g x].
 
-Notation "0 %:FS" := fs0 : fsfun_scope.
-Notation "- f"    := (fsopp f)  : fsfun_scope.
-Notation "f + g"  := (fsadd f g) : fsfun_scope.
+Notation "\0 %:FS" := fs0 : fsfun_scope.
+Notation "- f"     := (fsopp f)  : fsfun_scope.
+Notation "f + g"   := (fsadd f g) : fsfun_scope.
 
-Lemma fs0E x : (0%:FS x)%fsfun = 0.
+Lemma fs0E x : (\0%:FS x)%fsfun = 0.
 Proof. by rewrite fsfunE. Qed.
 
 Lemma fsoppE f x : (- f)%fsfun x = -(f x).
@@ -340,10 +343,10 @@ Definition conicf0 : {conic T ~> R} :=
 Definition conicfD : _ -> _ -> {conic T ~> R} :=
   nosimpl (fun w1 w2 => mkConicFun (conicD (valP w1) (valP w2))).
 
-Notation "0 %:PFS" := conicf0 : conicfun_scope.
+Notation "\0 %:PFS" := conicf0 : conicfun_scope.
 Notation "f + g" := (conicfD f g) : conicfun_scope.
 
-Lemma fconic0E x : (0%:PFS)%cof x = 0.
+Lemma fconic0E x : (\0%:PFS)%cof x = 0.
 Proof. by rewrite fsfunwE. Qed.
 
 Lemma fconicDE w1 w2 x : (w1 + w2)%cof x = w1 x + w2 x.
@@ -374,7 +377,7 @@ Canonical conic_comoid := Monoid.ComLaw addpC.
 Lemma mem_coffinsupp w x : (x \in finsupp w) = (0 < w x).
 Proof. by rewrite mem_finsupp lt_neqAle eq_sym ge0_fconic andbT. Qed.
 
-Lemma coffinsupp0 : finsupp (0%:PFS)%cof = fset0.
+Lemma coffinsupp0 : finsupp (\0%:PFS)%cof = fset0.
 Proof. by rewrite supp_fs0. Qed.
 
 Lemma coffinsuppD w1 w2 :
@@ -390,7 +393,7 @@ Lemma ge0_cofweight w : 0 <= weight w.
 Proof. by apply/conic_weight_ge0/valP. Qed.
 End SubConicTheory.
 
-Notation "0 %:PFS" := conicf0 : conicfun_scope.
+Notation "\0 %:PFS" := conicf0 : conicfun_scope.
 Notation "f + g" := (conicfD f g) : conicfun_scope.
 
 (* -------------------------------------------------------------------- *)
@@ -717,6 +720,18 @@ Proof.
 by rewrite scalerBl scale1r addrAC -addrA -scalerBr.
 Qed.
 
+Lemma combine2_id (v : L) α:
+  (1 - α) *: v + α *: v = v.
+Proof. by rewrite -scalerDl -addrA addNr addr0 scale1r. Qed.
+
+Lemma combine2_add (v w v' w' : L) α:
+  (1 - α) *: v + α *: w + ((1 - α) *: v' + α *: w') = (1 - α) *: (v + v') + α *: (w + w').
+Proof. by rewrite !scalerDr !addrA; congr (_ + _); rewrite addrAC. Qed.
+
+Lemma combine2_sub (v w v' w' : L) α:
+  (1 - α) *: v + α *: w - ((1 - α) *: v' + α *: w') = (1 - α) *: (v - v') + α *: (w - w').
+Proof. by rewrite opprD -!scalerN combine2_add. Qed.
+
 Hypothesis cvxP : convex_pred.
 
 (* FIXME: TO BE REWORKED *)
@@ -768,3 +783,69 @@ have /= := ih (X `\ x)%fset _ (mkConvexfun cvx_wR); apply=> //.
 + by move=> y; rewrite supp_wR in_fsetD1 => /andP[_]; rewrite XE => /wP.
 Qed.
 End ConvexPred.
+
+(* -------------------------------------------------------------------- *)
+Section VectToFsFun.
+Context {T : choiceType} {R : ringType}.
+
+Definition frank (S : {fset T}) (v : S) : 'I_#|`S| :=
+  cast_ord (esym (cardfE _)) (enum_rank v).
+
+Lemma frankK (S : {fset T}) :
+  cancel (fun i : 'I_#|`S| => [`fnthP i]%fset) (@frank S).
+Proof.
+move=> i; apply/(@cast_ord_inj _ _ (cardfE S))/eqP.
+rewrite cast_ordKV -(inj_eq (enum_val_inj)) enum_rankK -(rwP eqP).
+apply/val_eqP => /=; set j := cast_ord _ i.
+rewrite /fnth (tnth_nth (val (enum_default j))) /= {1}enum_fsetE.
+by rewrite (nth_map (enum_default j)) // -cardE -cardfE.
+Qed.
+
+Lemma fnthK (S : {fset T}) :
+  cancel (@frank S) (fun i : 'I_#|`S| => [`fnthP i]%fset).
+Proof.
+move=> x; apply/val_eqP/eqP => /=; rewrite /fnth.
+rewrite (tnth_nth (val x)) /= enum_fsetE /=.
+by rewrite (nth_map x)? nth_enum_rank // -cardE.
+Qed.
+
+Lemma val_fnthK (S : {fset T}) (v : S) : fnth (frank v) = fsval v.
+Proof. by have := fnthK v => /(congr1 val). Qed.
+
+Lemma bij_frank (S : {fset T}) : bijective (@frank S).
+Proof. exact: (Bijective (@fnthK _) (@frankK S)). Qed.
+
+Definition vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) : {fsfun T ~> R} :=
+  [fsfun v : I => c (frank v) 0].
+
+Lemma finsupp_vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) :
+  (finsupp (@vect_to_fsfun I c) `<=` I)%fset.
+Proof.
+apply/fsubsetP=> x; rewrite mem_finsupp fsfun_ffun.
+by case: insubP => //=; rewrite eqxx.
+Qed.
+End VectToFsFun.
+
+
+(* -------------------------------------------------------------------- *)
+Section VectToFsFunTheory.
+Context {T : choiceType} {R : realFieldType}.
+
+Lemma conic_vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) :
+  (0) <=m (c) -> conic (vect_to_fsfun c).
+Proof.
+move=> ge0_c; apply/conicwP => x; rewrite fsfun_ffun.
+by case: insubP => //= i _ _; apply: gev0P.
+Qed.
+
+Lemma convex_vect_to_fsfun (I : {fset T}) (c : 'cV[R]_#|`I|) :
+  (0) <=m (c) -> '[const_mx 1, c] = 1 -> convex (vect_to_fsfun c).
+Proof.
+move=> ge0_c Σc_eq_1; rewrite /convex conic_vect_to_fsfun //=.
+rewrite (weightwE (finsupp_vect_to_fsfun _)) -(rwP eqP).
+move: Σc_eq_1; rewrite vdotC vdotr_const_mx1 => <-.
+rewrite (reindex (@frank _ _)) /=; first by apply/onW_bij/bij_frank.
+apply: eq_bigr=> i _; rewrite fsfun_ffun insubT //=.
+by move=> hin; rewrite fsetsubE.
+Qed.
+End VectToFsFunTheory.

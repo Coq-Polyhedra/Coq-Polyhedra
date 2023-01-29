@@ -935,10 +935,10 @@ End IntervalLattice.
 Notation "'[< a ; b >]" := (interval_of a b).
 Notation "'[< a ; b >]_ R" := (@interval_of _ R a b) (only parsing).
 
-Global Instance expose_le0x (disp : unit) (L : bPOrderType disp) (x : L) :
-  expose (0 <= x) := Expose (le0x x).
-Global Instance expose_lex1 (disp : unit) (L : tPOrderType disp) (x : L) :
-  expose (x <= 1) := Expose (lex1 x).
+Global Instance expose_le0x (disp : unit) (L : tbLatticeType disp) (x : L) :
+  expose (0 <= x)%O := Expose (le0x x).
+Global Instance expose_lex1 (disp : unit) (L : tbLatticeType disp) (x : L) :
+  expose (x <= 1)%O := Expose (lex1 x).
 
 (* -------------------------------------------------------------------- *)
 Section IntervalFinLattice.

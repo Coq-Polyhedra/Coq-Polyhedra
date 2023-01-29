@@ -253,7 +253,8 @@ Fact be_vect_iso : Vector.axiom (n+1) lrel[R]_n.
 Proof.
 pose f (e : lrel[R]_n) := (col_mx e.1 (e.2%:M))^T.
 exists f.
-- move => ???; by rewrite /f raddfD /= -add_col_mx linearD /= -scale_scalar_mx -scale_col_mx linearZ.
+- move => a x y; rewrite /f !raddfD /=.
+  by rewrite -add_col_mx linearD /= -scale_scalar_mx -scale_col_mx linearZ.
 - pose g (x : 'rV_(n+1)) := [< (lsubmx x)^T, (rsubmx x) 0 0 >] : (lrel[R]_n).
   exists g; move => x.
   + apply/eqP/be_eqP; split; rewrite /f /=.
@@ -286,9 +287,17 @@ by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
 Qed.
 
 Lemma fst_lmorph : lmorphism (fst : lrel[R]_n -> 'cV_n).
-by [].
-Qed.
+Proof. by []. Qed.
 
 Definition befst := linfun (Linear fst_lmorph).
+
+Lemma free_lrel (s : seq lrel[R]_n) :
+  free [seq befst x | x <- s] -> free s.
+Proof.
+elim : s=> [| h t IH]; rewrite ?nil_free //.
+rewrite /= !free_cons; case/andP => + /IH ->.
+rewrite andbT; apply/contraNN.
+rewrite -limg_span; exact: memv_img.
+Qed.
 
 End BaseVect.

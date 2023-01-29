@@ -268,7 +268,7 @@ exists x; split.
   rewrite -[X in X <= _]addr0.
   apply: ler_add; first by apply: (Hx0 _).
   - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
-    by rewrite lexU lexx.
+    by rewrite lexUl ?lexx.
 + rewrite vdotDr vdotZr -ltr_subr_addl.
   rewrite -mulrC -ltr_ndivr_mull //.
   rewrite ltxU; apply/orP; right.
