@@ -22,7 +22,6 @@ Import Order.TTheory GRing.Theory Num.Theory.
 (* -------------------------------------------------------------------- *)
 Declare Scope polyh_scope.
 Delimit Scope polyh_scope with PHH.
-
 Local Open Scope polyh_scope.
 
 (* -------------------------------------------------------------------- *)
@@ -676,15 +675,12 @@ Program Canonical affine_PBOrderType :=
 
 Program Definition affine_meetMixin :=
   @MeetMixin _ _ affineI _ _ _.
-
 Next Obligation.
 by move => V V'; apply/affine_eqP => x; rewrite !in_affineI andbC.
 Qed.
-
 Next Obligation.
 by move => V1 V2 V3; apply/affine_eqP => x; rewrite !in_affineI andbA.
 Qed.
-
 Next Obligation.
 apply/affine_leP/eqP => [|<-].
 + move=> le_xy; apply/affine_eqP=> c; rewrite in_affineI.
@@ -708,7 +704,7 @@ End Order.
 
 Export Order.Exports.
 
-Notation "'[' 'affine0' ']'" := affine0.
+Notation "'[' 'affine0' ']'" := affine0 : polyh_scope.
 
 Section BasicObjects.
 

@@ -144,6 +144,9 @@ Reserved Notation "''P' ( base )" (at level 0, format "''P' ( base )").
 Reserved Notation "''P^=' ( base ; I )" (at level 0, format "''P^=' ( base ;  I )").
 Reserved Notation "[ 'segm' u '&' v ]"
   (at level 0, format "[ 'segm'  u  '&'  v ]").
+  Reserved Notation "[ 'hp' e ]" (at level 0, format "[ 'hp'  e ]").
+  Reserved Notation "[ 'pt' Ω ]" (at level 0, format "[ 'pt'  Ω ]").
+  Reserved Notation "[ 'line' c & Ω ]"  (at level 0, format "[ 'line'  c  &  Ω ]").
 
 Section Def.
 Context {R : realFieldType} (n : nat).
@@ -646,7 +649,7 @@ Proof.
 by move => V V'; apply/poly_eqP => x; rewrite in_polyI !affE in_affineI.
 Qed.
 
-Lemma affS : {mono aff : V V' / (V `<=` V') >-> (V `<=` V')%PH}.
+Lemma affS : {mono aff : V V' / (V `<=` V') >-> (V `<=` V')%PH}. 
 Proof.
 move => ??.
 by apply/poly_leP/affine_leP => incl x; rewrite ?affE => x_in;
@@ -1061,7 +1064,7 @@ Qed.
 Definition mk_hline (c Ω : 'cV[R]_n) :=
   ([hs [<c, '[c,Ω]>]] `&` [line c & Ω]%:PH)%PH.
 
-Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : polyh_scope.
+Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : poly_scope.
 
 Lemma in_hlineP (c Ω x : 'cV[R]_n) :
   reflect (exists2 μ, μ >= 0 & x = Ω + μ *: c) (x \in [hline c & Ω]).
@@ -1183,7 +1186,7 @@ Proof. by apply/poly_leP=> x; rewrite in_slice => /andP[]. Qed.
 Definition poly_of_base (base : base_t[R,n]) :=
   \polyI_(b : base) [hs (val b)].
 
-Notation "''P' ( base )" := (poly_of_base (base)%fset) : polyh_scope.
+Notation "''P' ( base )" := (poly_of_base (base)%fset) : poly_scope.
 
 Lemma in_poly_of_base x (base : base_t) :
   (x \in 'P(base)) = [forall b : base, x \in [hs (val b)]].
@@ -1245,7 +1248,7 @@ Qed.
 Definition polyEq (base I : base_t) :=
   ([affine <<I>>]%:PH `&` 'P(base))%PH.
 
-Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : polyh_scope.
+Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 
 Fact in_polyEq x base I :
   (x \in 'P^=(base; I)) = [forall e : I, x \in [hp (val e)]] && (x \in 'P(base)).
@@ -1463,6 +1466,9 @@ Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : poly_scope.
 Notation "''P' ( base )" := (poly_of_base (base)%fset) : poly_scope.
 Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : poly_scope.
 Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
+Notation "[ 'hp' e ]" := [hp e]%PHH%:PH : poly_scope.
+Notation "[ 'pt' Ω ]" := [pt Ω]%PHH%:PH : poly_scope.
+Notation "[ 'line' c & Ω ]" := [line c & Ω]%PHH%:PH : poly_scope.
 
 Definition inE := (@in_poly0, @in_polyT, @in_hp, @in_polyI, @in_hs, @inE).
 
@@ -1694,12 +1700,12 @@ Variable (R : realFieldType) (n k : nat) (A : 'M[R]_(k,n)).
 Let A' := row_mx (-A) (1%:M).
 
 Definition map_poly (P : 'poly_n) :=
-  proj ((lift_poly k P) `&` (\polyI_i ([hp [<(row i A')^T, 0%R>]]%PHH)%:PH)).
+  proj ((lift_poly k P) `&` (\polyI_i [hp [<(row i A')^T, 0%R>]])).
 
 Lemma in_map_polyP (P : 'poly_n) x :
   reflect (exists2 y, x = A*m y & y \in P) (x \in map_poly P).
 Proof.
-have in_vectA' y z : (col_mx y z \in (\polyI_i ([hp [<(row i A')^T, 0%R>]]%PHH)%:PH)) = (z == A *m y).
+have in_vectA' y z : (col_mx y z \in (\polyI_i [hp [<(row i A')^T, 0%R>]])) = (z == A *m y).
 - apply/in_big_polyIP/eqP => [h | /colP h i _];
     do ?[apply/colP => i; move/(_ i isT): h];
     rewrite in_hp /= row_row_mx tr_row_mx vdot_col_mx !row_vdot mul1mx mulNmx mxE;
@@ -1734,7 +1740,7 @@ Definition cone V :=
   map_poly (mat_fset V) orthant.
 
 Definition conv V :=
-  map_poly (mat_fset V) (orthant `&` (([hp [<const_mx 1, 1>]]%PHH)%:PH)).
+  map_poly (mat_fset V) (orthant `&` ([hp [<const_mx 1, 1>]])).
 
 Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset).
 
@@ -1852,7 +1858,7 @@ Qed.
 
 End Hull.
 
-Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset) : polyh_scope.
+Notation "[ 'segm' u '&' v ]" := (conv [fset u; v]%fset) : poly_scope.
 
 Section Affine.
 
@@ -2033,7 +2039,7 @@ Proof.
 by rewrite in_mk_affine memv0 subr_eq0.
 Qed. *)
 
-Lemma conv_pt (Ω : 'cV[R]_n) : conv [fset Ω]%fset = ([pt Ω]%PHH)%:PH.
+Lemma conv_pt (Ω : 'cV[R]_n) : conv [fset Ω]%fset = [pt Ω].
 Proof.
 apply/poly_eqP => x; rewrite in_pt.
 apply/idP/eqP => [/in_convP [w le_wΩ ->]| ->].
@@ -2044,24 +2050,24 @@ apply/idP/eqP => [/in_convP [w le_wΩ ->]| ->].
 + apply/in_convP; exists (fcvx1 Ω); by rewrite ?finsupp_fcvx1 ?combine_fcvx1.
 Qed.
 
-Lemma pt_proper0 (Ω : 'cV[R]_n) : [poly0] `<` (([pt Ω]%PHH)%:PH). (* TODO: useful ?*)
+Lemma pt_proper0 (Ω : 'cV[R]_n) : [poly0] `<` [pt Ω]. (* TODO: useful ?*)
 Proof.
 by apply/proper0P; exists Ω; rewrite in_pt_self.
 Qed.
 
 Lemma ppick_pt (Ω : 'cV[R]_n) :
-  ppick ([pt Ω]%PHH)%:PH = Ω.
+  ppick [pt Ω] = Ω.
 Proof.
 by apply/eqP; rewrite -in_pt -affE; apply/ppickP; exact: pt_proper0.
 Qed.
 
-Lemma pt_subset (Ω : 'cV[R]_n) P : ([pt Ω]%PHH%:PH `<=` P)%PH = (Ω \in P).
+Lemma pt_subset (Ω : 'cV[R]_n) P : ([pt Ω] `<=` P) = (Ω \in P).
 Proof. (* RK *)
 by apply/idP/idP => [/poly_leP s_ptΩ_P | ?];
   [apply/s_ptΩ_P; exact: in_pt_self | apply/poly_leP => v; rewrite in_pt => /eqP ->].
 Qed.
 
-Lemma pt_proper (Ω : 'cV[R]_n) P : (([pt Ω]%PHH)%:PH `<` P)%PH -> (Ω \in P).
+Lemma pt_proper (Ω : 'cV[R]_n) P : ([pt Ω] `<` P)%PH -> (Ω \in P).
 Proof.
 by move/rltW; rewrite pt_subset.
 Qed.
