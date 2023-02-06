@@ -21,7 +21,7 @@ Local Open Scope order_scope.
 
 (* -------------------------------------------------------------------- *)
 Section Misc.
-Context (d : unit) (T : latticeType d).
+Context (d : Order.disp_t) (T : latticeType d).
 
 Lemma leIU (x y : T) : meet x y <= join x y.
 Proof. exact: (le_trans (leIl _ _) (leUl _ _)). Qed.
@@ -30,7 +30,7 @@ End Misc.
 (* -------------------------------------------------------------------- *)
 Module MeetBTFinMixin.
 Section MeetBTFinMixin.
-Context (d : unit) (T : finPOrderType d).
+Context (d : Order.disp_t) (T : finPOrderType d).
 
 Record of_ := Build {
   top    : T;
@@ -139,17 +139,17 @@ Record mixin_of d (T : finTBLatticeType d) := Mixin {
 
 Record class_of (T : Type) := Class {
   base  : FinTBLattice.class_of T;
-  mixin_disp : unit;
+  mixin_disp : Order.disp_t;
   mixin : mixin_of (FinTBLattice.Pack mixin_disp base)
 }.
 
 Local Coercion base : class_of >-> FinTBLattice.class_of.
 
-Structure type (disp : unit) := Pack { sort; _ : class_of sort }.
+Structure type (disp : Order.disp_t) := Pack { sort; _ : class_of sort }.
 
 Local Coercion sort : type >-> Sortclass.
 
-Variables (T : Type) (disp : unit) (cT : type disp).
+Variables (T : Type) (disp : Order.disp_t) (cT : type disp).
 
 Definition class := let: Pack _ c as cT' := cT return class_of cT' in c.
 Definition clone c of phant_id class c := @Pack disp T c.
@@ -264,7 +264,7 @@ End GradedFinLattice.
 Export GradedFinLattice.Exports.
 
 Section GradedDef.
-Context {disp : unit}.
+Context {disp : Order.disp_t}.
 Local Notation gradedFinLatticeType := (gradedFinLatticeType disp).
 Context {T : gradedFinLatticeType}.
 Definition rank : T -> nat := GradedFinLattice.rank
@@ -273,7 +273,7 @@ End GradedDef.
 
 (* -------------------------------------------------------------------- *)
 Section GradedTheory.
-Context (d : unit) (L : gradedFinLatticeType d).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d).
 
 Lemma rank0 : rank (0 : L) = 0%N.
 Proof. by case: L => [? [? ? []]]. Qed.
@@ -322,7 +322,7 @@ End GradedTheory.
 
 (* -------------------------------------------------------------------- *)
 Section RankInd.
-Context (d : unit) (L : gradedFinLatticeType d) (P : L -> Prop).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d) (P : L -> Prop).
 
 Hypothesis PH :
   forall x, (forall y, (rank y < rank x)%N -> P y) -> P x.
@@ -338,7 +338,7 @@ End RankInd.
 
 (* -------------------------------------------------------------------- *)
 Section GradedRankS.
-Context (d : unit) (L : gradedFinLatticeType d).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d).
 
 Lemma graded_rankS (x : L) :
   (0 < rank x)%N -> exists2 y : L, y < x & (rank y).+1 = rank x.
@@ -372,7 +372,7 @@ End GradedRankS.
 Module OMorphism.
 Section ClassDef.
 
-Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
+Context (dL dG : Order.disp_t) (L : latticeType dL) (G : latticeType dG).
 
 Definition axiom (f : L -> G) :=
      {morph f : x y / meet x y}
@@ -405,7 +405,7 @@ Include OMorphism.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section OMorphismP.
-Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
+Context (dL dG : Order.disp_t) (L : latticeType dL) (G : latticeType dG).
 
 Lemma omorphismP (f : L -> G) :
      {morph f : x y / Order.meet x y}
@@ -416,7 +416,7 @@ End OMorphismP.
 
 (* -------------------------------------------------------------------- *)
 Section OMorphismTheory.
-Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
+Context (dL dG : Order.disp_t) (L : latticeType dL) (G : latticeType dG).
 Context (f : {omorphism L -> G}).
 
 Lemma omorphI : {morph f : x y / meet x y}.
@@ -437,7 +437,7 @@ End OMorphismTheory.
 
 (* -------------------------------------------------------------------- *)
 Section OMorphismRank.
-Context (dL dG : unit) (L : gradedFinLatticeType dL) (G : gradedFinLatticeType dG).
+Context (dL dG : Order.disp_t) (L : gradedFinLatticeType dL) (G : gradedFinLatticeType dG).
 
 Lemma can_omorphism (f : L -> G) (g : G -> L) :
   cancel f g -> cancel g f -> omorphism f -> omorphism g.
@@ -462,7 +462,7 @@ End OMorphismRank.
 
 (* -------------------------------------------------------------------- *)
 Section OMorphismBijRank.
-Context (dL dG : unit) (L : gradedFinLatticeType dL) (G : gradedFinLatticeType dG).
+Context (dL dG : Order.disp_t) (L : gradedFinLatticeType dL) (G : gradedFinLatticeType dG).
 
 Lemma rank_morph_bij (f : L -> G) x :
   omorphism f -> bijective f -> rank (f x) = rank x.
@@ -476,7 +476,7 @@ End OMorphismBijRank.
 
 (* -------------------------------------------------------------------- *)
 Section OMorphismComp.
-Context (dL dG dH : unit).
+Context (dL dG dH : Order.disp_t).
 Context (L : latticeType dL).
 Context (G : latticeType dG).
 Context (H : latticeType dH).
@@ -490,7 +490,7 @@ End OMorphismComp.
 
 (* -------------------------------------------------------------------- *)
 Section OMorphismInv.
-Context (dL dG : unit) (L : latticeType dL) (G : latticeType dG).
+Context (dL dG : Order.disp_t) (L : latticeType dL) (G : latticeType dG).
 Context (f : L -> G) (fI : G -> L) (fK : cancel f fI) (Kf : cancel fI f).
 
 Lemma inv_is_omorphism : omorphism f -> omorphism fI.
@@ -503,7 +503,7 @@ End OMorphismInv.
 (* -------------------------------------------------------------------- *)
 Module BOMorphism.
 Section ClassDef.
-Context (dL dG : unit) (L : bLatticeType dL) (G : bLatticeType dG).
+Context (dL dG : Order.disp_t) (L : bLatticeType dL) (G : bLatticeType dG).
 
 Definition mixin_of (f : L -> G) := f 0 = 0.
 
@@ -549,7 +549,7 @@ Include BOMorphism.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section BOMorphismP.
-Context (dL dG : unit) (L : bLatticeType dL) (G : bLatticeType dG).
+Context (dL dG : Order.disp_t) (L : bLatticeType dL) (G : bLatticeType dG).
 
 Lemma bomorphismP (f : L -> G) :
      f 0 = 0
@@ -561,7 +561,7 @@ End BOMorphismP.
 
 (* -------------------------------------------------------------------- *)
 Section BOMorphismTheory.
-Context (dL dG : unit) (L : bLatticeType dL) (G : bLatticeType dG).
+Context (dL dG : Order.disp_t) (L : bLatticeType dL) (G : bLatticeType dG).
 Context (f : {bomorphism L -> G}).
 
 Lemma omorph0 : f 0 = 0.
@@ -570,7 +570,7 @@ End BOMorphismTheory.
 
 (* -------------------------------------------------------------------- *)
 Section BOMorphismComp.
-Context (dL dG dH : unit).
+Context (dL dG dH : Order.disp_t).
 Context (L : bLatticeType dL).
 Context (G : bLatticeType dG).
 Context (H : bLatticeType dH).
@@ -588,7 +588,7 @@ End BOMorphismComp.
 (* -------------------------------------------------------------------- *)
 Module TBOMorphism.
 Section ClassDef.
-Context (dL dG : unit) (L : tbLatticeType dL) (G : tbLatticeType dG).
+Context (dL dG : Order.disp_t) (L : tbLatticeType dL) (G : tbLatticeType dG).
 
 Definition mixin_of (f : L -> G) := f 1 = 1.
 
@@ -637,7 +637,7 @@ Include TBOMorphism.Exports.
 
 (* -------------------------------------------------------------------- *)
 Section TBOMorphismP.
-Context (dL dG : unit) (L : tbLatticeType dL) (G : tbLatticeType dG).
+Context (dL dG : Order.disp_t) (L : tbLatticeType dL) (G : tbLatticeType dG).
 
 Lemma tbomorphismP (f : L -> G) :
      f 0 = 0
@@ -650,7 +650,7 @@ End TBOMorphismP.
 
 (* -------------------------------------------------------------------- *)
 Section TBOMorphismTheory.
-Context (dL dG : unit) (L : tbLatticeType dL) (G : tbLatticeType dG).
+Context (dL dG : Order.disp_t) (L : tbLatticeType dL) (G : tbLatticeType dG).
 Context (f : {tbomorphism L -> G}).
 
 Lemma omorph1 : f 1 = 1.
@@ -659,7 +659,7 @@ End TBOMorphismTheory.
 
 (* -------------------------------------------------------------------- *)
 Section TBOMorphismComp.
-Context (dL dG dH : unit).
+Context (dL dG dH : Order.disp_t).
 Context (L : tbLatticeType dL).
 Context (G : tbLatticeType dG).
 Context (H : tbLatticeType dH).
@@ -676,7 +676,7 @@ End TBOMorphismComp.
 
 (* -------------------------------------------------------------------- *)
 Section BijOMorphismB.
-Context (d : unit) (L G : bLatticeType d) (f : L -> G).
+Context (d : Order.disp_t) (L G : bLatticeType d) (f : L -> G).
 
 Lemma bij_omorphism_bomorphism : bijective f -> omorphism f -> bomorphism f.
 Proof.
@@ -688,7 +688,7 @@ End BijOMorphismB.
 
 (* -------------------------------------------------------------------- *)
 Section BijOMorphismTB.
-Context (d : unit) (L G : tbLatticeType d) (f : L -> G).
+Context (d : Order.disp_t) (L G : tbLatticeType d) (f : L -> G).
 
 Lemma bij_omorphism_tbomorphism : bijective f -> omorphism f -> tbomorphism f.
 Proof.
@@ -702,7 +702,7 @@ End BijOMorphismTB.
 
 (* -------------------------------------------------------------------- *)
 Section LatticeClosed.
-Context (d : unit) (L : latticeType d).
+Context (d : Order.disp_t) (L : latticeType d).
 
 Definition lattice_closed (p : {pred L}) :=
   [/\ {in p &, forall x y, x `&` y \in p}
@@ -744,7 +744,7 @@ Canonical LatticePred.Default.lattice.
 End DefaultLatticePred.
 
 Section LatticePredFacts.
-Context (d : unit) (L : latticeType d) (S : {pred L}).
+Context (d : Order.disp_t) (L : latticeType d) (S : {pred L}).
 Context (ltcS : latticePred S) (kS : keyed_pred ltcS).
 
 Lemma lpredIU : lattice_closed kS.
@@ -764,7 +764,7 @@ End LatticePredFacts.
 (* -------------------------------------------------------------------- *)
 Module SubLattices.
 Section Def.
-Context (d : unit) (V : latticeType d) (S : {pred V}).
+Context (d : Order.disp_t) (V : latticeType d) (S : {pred V}).
 Context (subS : latticePred S) (kS : keyed_pred subS).
 Context (U : subType (mem kS)).
 
@@ -824,7 +824,7 @@ Reserved Notation "'[< a ; b >]_ R"
   (at level 2, a, b at level 8, format "''[<' a ;  b '>]_' R").
 
 Section Interval.
-Context (d : unit) (L : latticeType d).
+Context (d : Order.disp_t) (L : latticeType d).
 
 Definition interval (a b : L) := fun x => a <= x <= b.
 
@@ -868,7 +868,7 @@ End Interval.
 
 (* -------------------------------------------------------------------- *)
 Section IntervalLattice.
-Context (d : unit) (L : latticeType d) (a b : L) (a_le_b : expose (a <= b)).
+Context (d : Order.disp_t) (L : latticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
 Inductive interval_of : predArgType :=
   Interval x & x \in interval a b.
@@ -935,14 +935,14 @@ End IntervalLattice.
 Notation "'[< a ; b >]" := (interval_of a b).
 Notation "'[< a ; b >]_ R" := (@interval_of _ R a b) (only parsing).
 
-Global Instance expose_le0x (disp : unit) (L : tbLatticeType disp) (x : L) :
+Global Instance expose_le0x (disp : Order.disp_t) (L : tbLatticeType disp) (x : L) :
   expose (0 <= x)%O := Expose (le0x x).
-Global Instance expose_lex1 (disp : unit) (L : tbLatticeType disp) (x : L) :
+Global Instance expose_lex1 (disp : Order.disp_t) (L : tbLatticeType disp) (x : L) :
   expose (x <= 1)%O := Expose (lex1 x).
 
 (* -------------------------------------------------------------------- *)
 Section IntervalFinLattice.
-Context (d : unit) (L : finLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
+Context (d : Order.disp_t) (L : finLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
 Definition interval_countMixin := [countMixin of '[< a; b >] by <:].
 Canonical interval_countType := Eval hnf in CountType '[< a; b >] interval_countMixin.
@@ -962,7 +962,7 @@ End IntervalFinLattice.
 
 (* -------------------------------------------------------------------- *)
 Section IntervalGradedLattice.
-Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
 Definition vrank (x : '[< a; b >]) := rank (val x) - rank a.
 
@@ -1001,7 +1001,7 @@ End IntervalGradedLattice.
 
 (* -------------------------------------------------------------------- *)
 Section InIntvExpose.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : Order.disp_t) (L : latticeType d) (a b : L).
 Context (x : L) (hx0 : expose (a <= x)) (hx1 : expose (x <= b)).
 
 Local Lemma in_interval : x \in interval a b.
@@ -1011,7 +1011,7 @@ Definition intv_inject := Interval in_interval.
 End InIntvExpose.
 
 Global Instance expose_ltW
-  (disp : unit) (L : tbLatticeType disp) (x y : L) (h : expose (x < y))
+  (disp : Order.disp_t) (L : tbLatticeType disp) (x y : L) (h : expose (x < y))
 : expose (x <= y)%O := Expose (ltW h).
 
 Notation "x %:I_[< a ; b >]" := (@intv_inject _ _ a b x _ _)
@@ -1022,7 +1022,7 @@ Notation "x %:I" := x%:I_[< _; _ >]
 
 (* -------------------------------------------------------------------- *)
 Section IntvWiddenL.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : Order.disp_t) (L : latticeType d) (a b : L).
 Context (a' : L) (le_a : expose (a' <= a)) (x : '[< a; b >]).
 
 Local Lemma in_intervalL : val x \in interval a' b.
@@ -1042,7 +1042,7 @@ Notation "x %:I_[< <~ a' ; >]" := (x %:I_[< _ <~ a' ;  _ >])
 
 (* -------------------------------------------------------------------- *)
 Section IntvWiddenR.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : Order.disp_t) (L : latticeType d) (a b : L).
 Context (b' : L) (le_b : expose (b <= b')) (x : '[< a; b >]).
 
 Local Lemma in_intervalR : val x \in interval a b'.
@@ -1062,7 +1062,7 @@ Notation "x %:I_[< ; b' ~> >]" := (x %:I_[< _ ; b' ~> _ >])
 
 (* -------------------------------------------------------------------- *)
 Section WiddenLMorph.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : Order.disp_t) (L : latticeType d) (a b : L).
 Context (a' : L) (le_b : expose (a' <= a)).
 
 Let wd (z : '[< a; b >]) := z%:I_[< <~ a'; >].
@@ -1076,7 +1076,7 @@ End WiddenLMorph.
 
 (* -------------------------------------------------------------------- *)
 Section WiddenRMorph.
-Context (d : unit) (L : latticeType d) (a b : L).
+Context (d : Order.disp_t) (L : latticeType d) (a b : L).
 Context (b' : L) (le_b : expose (b <= b')).
 
 Let wd (z : '[< a; b >]) := z%:I_[< ; b' ~> >].
@@ -1090,7 +1090,7 @@ End WiddenRMorph.
 
 (* -------------------------------------------------------------------- *)
 Section IntvRankE.
-Context (d : unit) (L : gradedFinLatticeType d) (a b : L) (le_ab: expose (a <= b)).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d) (a b : L) (le_ab: expose (a <= b)).
 Context (x : '[< a ; b >]).
 
 Lemma intv_rankE : rank x = (rank (val x) - rank a)%N.
@@ -1099,7 +1099,7 @@ End IntvRankE.
 
 (* -------------------------------------------------------------------- *)
 Section FullIntvMorphism.
-Context (d : unit) (L : tbLatticeType d).
+Context (d : Order.disp_t) (L : tbLatticeType d).
 
 Let ival := (@val L _ [subType of '[< 0%O; 1%O >]_L]).
 
@@ -1115,7 +1115,7 @@ End FullIntvMorphism.
 
 (* -------------------------------------------------------------------- *)
 Section Atomic.
-Context (d : unit) (L : finTBLatticeType d).
+Context (d : Order.disp_t) (L : finTBLatticeType d).
 
 Definition atom (a : L) :=
   (0 < a) && ~~ [exists x : L, 0 < x < a].
@@ -1134,7 +1134,7 @@ End Atomic.
 
 (* -------------------------------------------------------------------- *)
 Section CoatomAtom.
-Lemma coatom_atom (d : unit) (L : finTBLatticeType d) (a : L) :
+Lemma coatom_atom (d : Order.disp_t) (L : finTBLatticeType d) (a : L) :
   coatom a -> atom (a : L^d).
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
@@ -1142,14 +1142,14 @@ split; first by apply: gt0_a.
 by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
-Lemma coatom_atom_V (d : unit) (L : finTBLatticeType d) (a : L) :
+Lemma coatom_atom_V (d : Order.disp_t) (L : finTBLatticeType d) (a : L) :
   coatom (a : L^d) -> atom a.
 Proof. exact/coatom_atom. Qed.
 End CoatomAtom.
 
 (* -------------------------------------------------------------------- *)
 Section AtomCoatom.
-Lemma atom_coatom (d : unit) (L : finTBLatticeType d) (a : L) :
+Lemma atom_coatom (d : Order.disp_t) (L : finTBLatticeType d) (a : L) :
   atom a -> coatom (a : L^d).
 Proof.
 case/andP=> gt0_a /existsPn h; apply/andP.
@@ -1157,14 +1157,14 @@ split; first by apply: gt0_a.
 by apply/existsPn => /= x; rewrite andbC h.
 Qed.
 
-Lemma atom_coatom_V (d : unit) (L : finTBLatticeType d) (a : L) :
+Lemma atom_coatom_V (d : Order.disp_t) (L : finTBLatticeType d) (a : L) :
   atom (a : L^d) -> coatom a.
 Proof. exact/atom_coatom. Qed.
 End AtomCoatom.
 
 (* -------------------------------------------------------------------- *)
 Section AtomicTheory.
-Context (d : unit) (L : finTBLatticeType d).
+Context (d : Order.disp_t) (L : finTBLatticeType d).
 
 Lemma atomP (a : L) : 0 < a ->
   reflect (forall x, x != 0 -> ~ (x < a)) (atom a).
@@ -1194,7 +1194,7 @@ End AtomicTheory.
 
 (* -------------------------------------------------------------------- *)
 Section CoatomicTheory.
-Context (d : unit) (L : finTBLatticeType d).
+Context (d : Order.disp_t) (L : finTBLatticeType d).
 
 Lemma coatom1n : ~ (coatom (1 : L)).
 Proof. by move=> /coatom_atom /atom0n. Qed.
@@ -1226,7 +1226,7 @@ End CoatomicTheory.
 
 (* -------------------------------------------------------------------- *)
 Section GradedAtomicTheory.
-Context (d : unit) (L : gradedFinLatticeType d).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d).
 
 Lemma atomE (a : L) : (atom a) = (rank a == 1%N).
 Proof.
@@ -1242,7 +1242,7 @@ Qed.
 End GradedAtomicTheory.
 (* -------------------------------------------------------------------- *)
 Section GradedCoAtomicTheory.
-Context (d : unit) (L : gradedFinLatticeType d).
+Context (d : Order.disp_t) (L : gradedFinLatticeType d).
 
 Lemma coatomE (a : L) : (coatom a) = (rank (1 : L) == (rank a).+1%N).
 Proof.

@@ -20,7 +20,7 @@ Open Scope order_scope.
 Open Scope fset_scope.
 
 (* -------------------------------------------------------------------- *)
-Fact fset_display : unit. Proof. exact: tt. Qed.
+Fact fset_display : Order.disp_t. Proof. split; [exact:tt|exact:tt]. Qed.
 
 (* -------------------------------------------------------------------- *)
 Section BDistrLatticeType.
