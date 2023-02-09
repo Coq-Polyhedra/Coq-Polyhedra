@@ -618,6 +618,13 @@ rewrite 2!lex_ltrNge; apply: congr1.
 by rewrite lex_subr_addr addrN.
 Qed.
 
+Lemma lex_ltr_addl x y :
+  x <lex (x + y) = 0 <lex y.
+Proof.
+rewrite lex_ltrNge -[y]opprK -lex_subr_addr -lex_ltrNge addrC lex_gtr_addl.
+by rewrite !lex_ltrNge oppv_gelex0 opprK.
+Qed.
+
 Lemma lex_le_ltr_trans x y z :
   (x <=lex y) -> (y <lex z) -> (x <lex z).
 Proof.
@@ -841,6 +848,110 @@ Proof.
 move => u_lev_v.
 by apply: leqlex_seq_lev; apply/forall_inP.
 Qed.
+
+Lemma sum_lex {p : nat} (v w : 'I_p -> 'rV[R]_n) (P : pred 'I_p):
+  (forall i, P i -> (v i) <=lex (w i)) -> (\sum_(i | P i) v i) <=lex \sum_(i | P i) w i.
+Proof.
+move=> ?; rewrite (@big_ind2 _ _ (leqlex (n:=n))) ?lex_refl //.
+exact/lex_add.
+Qed.
+
+Lemma lev_mul_lex {p: nat} (v : 'rV[R]_p) (M N : 'M[R]_(p,n)):
+  0 <=m (v^T) -> (forall i, (row i M) <=lex (row i N)) -> (v *m M) <=lex (v *m N).
+Proof.
+move/gev0P=> v_ge0 le_MN.
+rewrite !mulmx_sum_row; apply/sum_lex=> i _.
+apply/lex_nnscalar; rewrite ?le_MN //.
+by move: (v_ge0 i); rewrite mxE.
+Qed.
+
+Lemma ltlex_seqP (x y : 'rV_n) l i: i \in l -> x 0 i != y 0 i -> leqlex_seq x y l -> 
+  (exists i l1 l2, [/\ l = l1 ++ i :: l2, (forall j, j \in l1 -> x 0 j = y 0 j) & x 0 i < y 0 i]).
+Proof.
+elim: l=> //= h t ih i_ht xy_n_i; case: ltrgtP=> //; first by (move=> ? _; exists h; exists [::]; exists t).
+move=> xy_h_eq leqlex_xy.
+have i_t: (i \in t).
+- move: i_ht; rewrite in_cons; case/orP=> // /eqP contr. 
+  by move: xy_h_eq xy_n_i; rewrite contr=> ->; rewrite eqxx.
+case: (ih i_t xy_n_i leqlex_xy)=> i' [l1] [l2] [-> j_lt_i' xy_lt_i'].
+exists i'; exists (h :: l1); exists l2; split=> //.
+by move=> j; rewrite in_cons; case/orP=> [/eqP ->|/j_lt_i' ->].
+Qed.
+
+Lemma lex_lev_strictP (u v : 'rV_n): reflect
+  (exists i, (forall j, (nat_of_ord j < nat_of_ord i)%N -> u 0 j = v 0 j) /\ u 0 i < v 0 i)
+  (u <lex v).
+Proof.
+apply/(iffP idP).
+- rewrite /ltrlex /leqlex; case/andP=> xy_n leqlex_xy.
+  have [i [i_In uv_n_i]]: exists i, (i \in enum 'I_n) /\ (u 0 i != v 0 i).
+  + move: xy_n; rewrite -subr_eq0; case/rV0Pn=> i.
+    rewrite !mxE subr_eq0=> ?; exists i; split=> //.
+    by rewrite mem_enum.
+  case: (ltlex_seqP i_In uv_n_i leqlex_xy)=> j [l1] [l2] [In_eq j_lt_eq uv_lt_j].
+  exists j; split=> //.
+  move=> k kj_lt; apply/j_lt_eq.
+  move/eqP: In_eq; rewrite (enum_ord_split j) eqseq_pivotl ?mem_filter ?ltnn //.
+  by case/andP=> /eqP <- _; rewrite mem_filter kj_lt mem_enum.
+- case=> i [eq_le_i lt_i]; apply/(lex_lev_strict (i:=i)); rewrite lt_i andbT.
+  by apply/forallP=> j; apply/implyP=> j_lt_i; rewrite (eq_le_i j j_lt_i) lexx.
+Qed.
+
+Lemma lex_eqOlt (u v : 'rV[R]_n) : (u <=lex v) = (u == v) || (u <lex v).
+Proof. by rewrite /ltrlex; case/boolP: (u == v)=> //= /eqP ->; rewrite lex_refl. Qed.
+
+Lemma lex_ltr_addlt (a b c d : 'rV[R]_n): a <=lex b -> c <lex d ->
+  (a + c) <lex (b + d).
+Proof.
+rewrite lex_eqOlt; case/orP.
+- move/eqP=> -> /andP [+ cd_lex]; rewrite /ltrlex (lex_add2l b) cd_lex andbT.
+  apply/contra_neq=> ?; exact/(addrI b).
+- case/lex_lev_strictP=> i_ab [j_ab_eq i_ab_lt] /lex_lev_strictP [i_cd] [j_cd_eq i_cd_lt].
+  have min_abcd: (minn i_ab i_cd < n)%N by apply/(leq_ltn_trans (n:=i_ab))=> //; exact/geq_minl.
+  apply/lex_lev_strictP; exists (Ordinal min_abcd); split.
+  + by move=> /= j; rewrite ltn_min=> /andP [??]; rewrite !mxE j_ab_eq ?j_cd_eq.
+  + rewrite !mxE.
+    have [h_eq | min_ab | min_cd]: [\/ i_ab = i_cd, (i_ab < i_cd)%N | (i_ab > i_cd)%N] by
+      case: ltngtP=> ?; [exact/Or32 | exact/Or33 | exact/Or31/val_inj].
+    * have ->: (Ordinal min_abcd = i_ab) by apply/val_inj; rewrite /= h_eq minnn.
+      by apply/ltr_add=> //; rewrite h_eq.
+    * have ->: (Ordinal min_abcd = i_ab) by exact/val_inj/minn_idPl/ltnW.
+      by rewrite j_cd_eq //; apply/ltr_le_add.
+    * have ->: (Ordinal min_abcd = i_cd) by exact/val_inj/minn_idPr/ltnW.
+      by rewrite j_ab_eq //; apply/ler_lt_add.
+Qed.
+
+Lemma ltrlex_sum {p : nat} (A B : 'I_p -> 'rV[R]_n):
+  (forall i, (A i) <=lex (B i)) -> (exists j, (A j) <lex (B j)) ->
+  (\sum_i A i) <lex (\sum_i B i).
+Proof.
+move=> AB_lex [j ABj_ltr].
+rewrite !(bigD1_seq j) ?index_enum_uniq ?mem_index_enum //=.
+rewrite addrC [X in _ <lex X]addrC; apply/lex_ltr_addlt=> //.
+apply/sum_lex=> i _; exact/AB_lex.
+Qed.
+
+
+Section IndLexOrder.
+
+Fixpoint ind_lexleq (a b : seq R) := 
+  match a, b with
+  |[::], [::]=> true
+  |ha::ta, hb::tb=> if ha < hb then true else
+                    if ha == hb then ind_lexleq ta tb else false 
+  |_, _=> false
+  end.
+
+Lemma lex_foo (v w : 'rV[R]_n):
+  v <=lex w =
+  ind_lexleq [seq (v 0 i) | i <- (enum 'I_n)] [seq (w 0 i) | i <- (enum 'I_n)].
+Proof.
+rewrite /leqlex.
+elim: (enum 'I_n)=> //= h t ->.
+by case: ifP=> //.
+Qed.
+
+End IndLexOrder.
 
 End ExtraLexOrder.
 

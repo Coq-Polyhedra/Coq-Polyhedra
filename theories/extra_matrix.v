@@ -509,3 +509,88 @@ rewrite /pick_in_ker; case: pickP => [i |].
 Qed.
 
 End PickInKer.
+
+Section RowFree.
+Variable R : realFieldType.
+
+Lemma row_free_free {m n : nat} (A : 'M[R]_(m,n)) :
+  row_free A = free [seq row i A | i <- enum 'I_m].
+Proof.
+have/perm_free ->: perm_eq [seq row i A | i <- enum 'I_m] [tuple row i A | i < m] by [].
+apply/idP/freeP => [/mulmx_free_eq0 mulAeq0 k|mulA0].
+  under eq_bigr do rewrite -tnth_nth tnth_map tnth_ord_tuple.
+  move=> kA0 i; have /eqP : \row_i k i *m A = 0.
+    by rewrite mulmx_sum_row; under eq_bigr do rewrite mxE.
+  by rewrite mulAeq0 => /eqP/rowP/(_ i); rewrite !mxE.
+apply/inj_row_free => v; rewrite mulmx_sum_row => vA0.
+apply/rowP => i; rewrite mxE mulA0//.
+by under eq_bigr do rewrite -tnth_nth tnth_map tnth_ord_tuple.
+Qed.
+
+End RowFree.
+
+Section ExtraKer.
+
+Context {R : realFieldType} (m n: nat) (A : 'M[R]_(m,n)).
+
+Lemma rank1_ker {p : nat} (x y : 'M[R]_(p, m)): \rank (kermx A) = 1%nat ->
+  x *m A = 0 -> y *m A = 0 -> y = 0 \/ exists lambda, x = lambda *m y.
+Proof.
+move=> rank1 /sub_kermxP x_ker /sub_kermxP y_ker.
+case/boolP: (y == 0)=> [/eqP ->| y_n0]; first by left. right.
+apply/submxP; suff ->: (y :=: kermx A)%MS by [].
+apply/eqmxP; move/eq_leqif: (mxrank_leqif_eq y_ker)=> <-.
+move: y_n0 (mxrankS y_ker); rewrite rank1 -mxrank_eq0.
+by case: (\rank y)=> // n' _; rewrite eqSS; case: n'.
+Qed.
+
+End ExtraKer.
+
+Section SpanMatrix.
+
+Lemma vbasis_mat {k n : nat} {R : realFieldType} (S : k.-tuple 'rV[R]_n):
+  (\matrix_i tnth S i == 
+  \matrix_i tnth (vbasis <<S>>) i)%MS.
+Proof.
+apply/rV_eqP=> u; apply/idP/idP.
+- case/submxP=> c ->; rewrite mulmx_sum_row.
+  under eq_bigr=> i _ do rewrite rowK.
+  apply/summx_sub=> i _; apply/scalemx_sub.
+  apply/submxP; exists (\row_j coord (vbasis <<S>>%VS) j (tnth S i)).
+  rewrite mulmx_sum_row; under eq_bigr=> j _ do rewrite rowK mxE [X in _ *: X](tnth_nth 0).
+  exact/coord_vbasis/memv_span/mem_tnth.
+- case/submxP=> c ->; rewrite mulmx_sum_row.
+  under eq_bigr=> i _ do rewrite rowK.
+  apply/summx_sub=> i _; apply/scalemx_sub.
+  apply/submxP; exists (\row_j coord S j (tnth (vbasis <<S>>%VS) i)).
+  rewrite mulmx_sum_row; under eq_bigr=> j _ do rewrite rowK mxE [X in _ *: X](tnth_nth 0).
+  exact/coord_span/vbasis_mem/mem_tnth.
+Qed.
+
+Lemma span_matrix_rV {n k : nat} {R : realFieldType} (S : k.-tuple 'rV[R]_n):
+  \dim (span S) = \rank (\matrix_(i < k) (tnth S i)).
+Proof.
+rewrite (eqmx_rank (vbasis_mat _)).
+apply/anti_leq/andP; split; last by rewrite rank_leq_row.
+rewrite row_leq_rank row_free_free; apply/(basis_free (U:=(span S))).
+under eq_map=> i do rewrite rowK; rewrite map_tnth_enum.
+exact/vbasisP.
+Qed.
+
+Lemma span_matrix_cV {n k : nat} {R : realFieldType} (S : k.-tuple 'cV[R]_n):
+  \dim (span S) = \rank (\matrix_(i < n, j < k) tnth S j i 0).
+Proof.
+set A := matrix_of_fun _ _.
+have ->: A = (\matrix_i tnth (map_tuple trmx S) i)^T by 
+  apply/matrixP=> i j; rewrite !mxE tnth_map !mxE.
+rewrite mxrank_tr -span_matrix_rV /=.
+set St := map _ _.
+have ->: St = [seq (linfun trmx) i | i <- S] by 
+  under eq_map=> x do rewrite lfunE /=.
+rewrite -limg_span limg_dim_eq //=.
+suff ->: lker (linfun trmx) = 0%VS by rewrite capv0.
+move=> F p q; apply/eqP/lker0P=> x y; rewrite !lfunE /=.
+exact/trmx_inj.
+Qed.
+
+End SpanMatrix.

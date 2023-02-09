@@ -1,0 +1,9 @@
+(coq.theory
+  (name PolyhedraHirsch)
+  (theories Polyhedra)
+  (flags -w -notation-overridden
+         -w -projection-no-head-constant
+         -w -redundant-canonical-projection
+         -w -ambiguous-paths
+         -w -uniform-inheritance))
+(include_subdirs qualified)
