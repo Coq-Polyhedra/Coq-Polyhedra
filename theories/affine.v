@@ -216,11 +216,20 @@ Proof.
 by apply: (@big_morph _ lrel[R]_n (fun y => y.1)).
 Qed.
 
+(*TODO : change the name, and maybe put this lemma somewhere else *)
+Lemma sum_lrel_fst_gen (F : finType) (P : pred F) (v : F -> lrel[R]_n) :
+  (\sum_(i : F | P i) v i).1 = (\sum_(i : F | P i) (v i).1).
+Proof. by apply: (@big_morph _ lrel[R]_n (fun y => y.1)). Qed.
+
 Lemma sum_lrel_snd m (v : 'I_m -> lrel[R]_n) : (* RK : I have added this auxiliary lemma. Should it be somewhere else? *)
   (\sum_(i < m) v i).2 = (\sum_(i < m) (v i).2).
 Proof.
 by apply: (@big_morph _ lrel[R]_n (fun y => y.2)).
 Qed.
+
+Lemma sum_lrel_snd_gen (F : finType) (P : pred F) (v : F -> lrel[R]_n) :
+  (\sum_(i : F | P i) v i).2 = (\sum_(i : F | P i) (v i).2).
+Proof. by apply: (@big_morph _ lrel[R]_n (fun y => y.2)). Qed.
 
 Lemma size_vbasis_dim : (* RK : I have added this auxiliary lemma, since I could not find it even if it is quite natural. Should it be somewhere else? *)
   size (vbasis V) = \dim V.

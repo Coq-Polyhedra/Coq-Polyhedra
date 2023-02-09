@@ -161,7 +161,7 @@ Notation "''[|' u |]^2" := '[u, u] : ring_scope.
 
 Section Extra.
 
-Variable n p : nat.
+Variable m n p : nat.
 Variable R : realFieldType.
 
 Lemma vdot_mulmx (A : 'M[R]_(n,p)) u v : '[u, A *m v] = '[A^T *m u, v].
@@ -191,6 +191,14 @@ Lemma row_vdot (A : 'M[R]_(n,p)) x i : '[(row i A)^T, x] = ((A *m x) i 0).
 Proof.
 rewrite mxE.
 apply: eq_bigr => j _.
+by rewrite !mxE.
+Qed.
+
+Lemma matrix_vdot (A : 'M[R]_(n,p)) (B : 'M[R]_(p,m)) i j :
+  '[(row i A)^T, col j B] = (A *m B) i j.
+Proof.
+rewrite mxE.
+apply: eq_bigr=> k _.
 by rewrite !mxE.
 Qed.
 

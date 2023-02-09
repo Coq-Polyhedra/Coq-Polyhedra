@@ -811,11 +811,28 @@ rewrite hpE in_polyI andbC => -> /=.
 by move: x_in_P; apply/poly_leP/opt_value_lower_bound.
 Qed.
 
+Lemma argmin_sep (P : 'poly_n) (c : 'cV[R]_n) (bounded_P : bounded P c) :
+  forall x y, x \in argmin P c -> y \notin argmin P c -> y \in P -> '[c,x] < '[c,y].
+Proof.
+move=> x y x_argc y_nargc yP; rewrite lt_neqAle (argmin_lower_bound x_argc) ?andbT //.
+move: ((elimN (argmin_eq x_argc)) y_nargc); rewrite yP.
+by apply: contra_notN=> /eqP ->.
+Qed.
+
 Lemma argmin_polyIN (P : 'poly[R]_n) (c : 'cV_n) (bounded_P : bounded P c) :
   argmin P c = P `&` [hs -[<c, opt_value bounded_P>]].
 Proof.
 rewrite argmin_polyI hpE meetA [X in X `&` _ = _]meet_l //.
 by apply: opt_value_lower_bound.
+Qed.
+
+Lemma argmin_mem {P} {c} {x y}:
+  x \in argmin P c -> y \in P -> '[c,y] <= '[c,x] -> y \in argmin P c.
+Proof.
+move=> x_arg yP cy.
+have cxy: '[c,y] = '[c,x] by apply/le_anti; rewrite cy /=; exact/(argmin_lower_bound x_arg).
+rewrite in_argmin yP /=; rewrite cxy.
+by move: x_arg; rewrite in_argmin; by case/andP.
 Qed.
 
 Lemma line_subset_hs (e : lrel[R]_n) (Ω c : 'cV[R]_n) :
@@ -1151,7 +1168,7 @@ apply/poly_eqP=> c; rewrite in_slice; apply/andP/idP.
 Qed.
 
 Local Notation "\- I" := (-%R @` I)%fset
-  (at level 2).
+  (at level 35, I at level 35).
 
 Definition baseEq (base I : base_t[R,n]) := (base `|` \- I)%fset.
 
