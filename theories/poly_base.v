@@ -2424,24 +2424,24 @@ Qed.
 Lemma vf_dim (F : 'poly[R]_n) :
   F \in L -> (\pdim F = (\pdim (Φ F)).+1)%N.
 Proof.
-Admitted.
-(* move => F_in_L; move: (F_in_L); move/vf_L_face: F_in_L; case/faceP => {}F F_sub_P F_in_L.
-case: (ltnP 1 (\pdim F)) => [dim_gt1 | ?].
-- rewrite ?dimN0_eq ?vf_prop0 ?vf_L_prop0 //=.
-  apply/congr1; rewrite !dir_hull ?vf_prop0 ?vf_L_prop0 // vf_eq //=.
-  rewrite span_fsetU span_fset1 addvC !dim_orthv limgD limg_line.
-  rewrite dim_add_line ?subnSK //=.
-  + move: (dim_gt1); rewrite dimN0_eq ?ltnS ?subn_gt0 ?vf_L_prop0 //.
-    by rewrite dir_hull ?vf_L_prop0 // dim_orthv subn_gt0.
-  + apply/contraT; rewrite negbK.
-    case/memv_imgP=> e1; rewrite -in_span_activeP ?vf_L_prop0 //.
-    move/poly_leP=> /(_ v); rewrite vf_L_v_in // => /(_ isT).
-    rewrite affE in_hp !lfunE /=.
-    vf_hyp
-    apply/poly_lePn; exists v; first by rewrite vf_L_v_in.
-    by move: sep_v; apply/contraNN/poly_leP/hp_subset_hs.
-- by rewrite [pval _]vf_dim1 // dim_pt vf_slice_pt dim0.
-Qed. *)
+move => F_in_L; move: (F_in_L); move/vf_L_face: F_in_L; case/faceP => {}F F_sub_P F_in_L.
+case: (ltnP 1 (\pdim F)) => [dim_gt1 | ?]; first last.
+  by rewrite [pval _]vf_dim1 // dim_pt vf_slice_pt dim0.
+rewrite ?dimN0_eq ?vf_prop0 ?vf_L_prop0 //=.
+apply/congr1; rewrite !dir_hull ?vf_prop0 ?vf_L_prop0 // vf_eq //=.
+rewrite span_fsetU span_fset1 addvC !dim_orthv limgD limg_line.
+rewrite dim_add_line ?subnSK //=.
++ move: (dim_gt1); rewrite dimN0_eq ?ltnS ?subn_gt0 ?vf_L_prop0 //.
+  by rewrite dir_hull ?vf_L_prop0 // dim_orthv subn_gt0.
++ apply/contraT; rewrite negbK.
+  case/memv_imgP=> e1; rewrite -in_span_activeP ?vf_L_prop0 //.
+  move/poly_leP=> /[dup] /(_ v (vf_L_v_in F_in_L)) v_e1.
+  case: (vf_L_other_pt F_in_L dim_gt1)=> v' v'F v'Ne0 /(_ v' v'F).
+  move=> /[swap]; move: v_e1=> /[swap]. 
+  rewrite !affE !in_hp !lfunE /= => <- /eqP h1 /eqP h2.
+  move/hsN_subset: v'Ne0 sep_v; rewrite in_hs !notin_hs h1 h2.
+  by case: ltP.
+Qed. 
 
 End VertexFigurePolyBase.
 End VertexFigurePolyBase.
@@ -2723,47 +2723,40 @@ Lemma closed_by_interval (P : 'pointed[R]_n) x y :
              & isof [< x; y >]_(face_lattice P) (face_lattice Q).
 (*& rank y = (dim Q + rank x)%N*)
 Proof.
-Admitted.
-(* move => P_compact x_in y_in x_le_y.
-pose Pt (S : {finLattice poly_preLattice}) :=
-  exists2 Q : 'pointed[R]_n, compact Q & isof poly_preLattice S (face_lattice Q).
-suff h_Pt : forall (S : {finLattice poly_preLattice}) x y,
+move => P_compact x_in y_in x_le_y.
+pose Pt S :=
+  exists2 Q : 'pointed[R]_n, compact Q & isof S (face_lattice Q).
+suff h_Pt : forall (S : {finLattice poly_prelatticeType}) x y,
   x \in S -> y \in S -> x `<=` y ->
   Pt S -> Pt [< x; y >]_S.
 - apply/h_Pt => //; exists P => //; exact: isof_refl.
-- apply/(ind_id (P := Pt)). (* FIX IT *)
-  + move=> S z z_atom [Q] Q_compact /isofP [f] /misofP misof_f.
-    have /atom_face [v v_vtx fz_v]: atom (face_lattice Q) (f z) by
-      apply: (fmorph_atom misof_f). (* TODO: fix *)
-    case: (vertex_figure Q_compact v_vtx) => Q' Q'_compact Q'_iso.
-    exists (Pointed (compact_pointed Q'_compact)) => //. (* TODO: fix it *)
-    apply/isof_trans: Q'_iso; exists f.
-    suff ->: [< [pt v]; Q >]_(face_lattice Q) =
-      f @` ([< z; \ftop_S >]_S : {fset _}) :> {fset _}.
-    * apply/(itv_isomorph (S2 := (face_lattice Q))); (* TODO: fix it *)
-        rewrite ?lef1 ?mem_ftop ?mem_atom //.
-      by apply/misof_fmorph. (* TODO: fix it *)
-    * rewrite -fz_v fmorph_itv ?lef1 ?mem_ftop ?mem_atom //.
-      rewrite fmorph1.
-      have ->: \codom f = face_lattice Q by apply/val_inj=> //. (* TODO: fix it *)
-      by rewrite ftop_face_lattice.
-  + move=> S z coatom_z [Q] Q_compact /isofP [f f_surj f_inj].
+- apply: ind_id.
+  + move=> S z /[swap] -[Q compact_Q] [f] /[dup] misof_f. 
+    case/misofP=> f_morph f_inj f_Q /[dup] /andP [zS _].
+    move/(fmorph_atom misof_f)=> /atom_face [v v_vtx v_fz].
+    case: (vertex_figure compact_Q v_vtx)=> Q' compact_Q' QQ'.
+    exists (Pointed (compact_pointed compact_Q'))=> //.
+    apply:(isof_trans _ QQ'); exists f.
+    have:= (itv_isomorph zS (mem_ftop _) (lef1 zS) misof_f).
+    congr misof; rewrite (@fmorph_itv _ _ _ (FMorphism f_morph)) ?mem_ftop ?lef1 //.
+    move=> [:codom_f].
+    by congr Interval.interval=> //; 
+      [abstract: codom_f; exact: codomP| rewrite fmorph1 codom_f ftop_face_lattice].
+  + move=> S z coatom_z -[Q] compact_Q [f] /[dup] misof_f.
+    case/misofP=> f_morph f_inj f_Q.
     pose Q' := f z.
-    have Q'_face: Q' \in face_lattice Q
-      by rewrite inE -f_surj in_imfset ?mem_coatom.
+    have Q'_face: Q' \in face_lattice Q by
+      rewrite inE -f_Q in_imfset ?mem_coatom.
     have Q'_compact : compact Q'
       by apply/face_compact: Q'_face.
-    exists (Pointed (compact_pointed Q'_compact)) => //. (* TODO: fix it *)
-    exists f.
-    suff ->: face_lattice Q' = f @` ([< \fbot_S; z >]_S : {fset _}) :> {fset _}.
-    * apply/(itv_isomorph (S2 := face_lattice Q));
-        rewrite ?le0f ?mem_fbot ?mem_coatom //.
-      by apply/misof_fmorph. (* TODO: fix it *)
-    * rewrite fmorph_itv ?le0f ?mem_fbot ?mem_coatom //.
-      rewrite fmorph0.
-      have ->: \codom f = face_lattice Q by apply/val_inj=> //. (* TODO: fix it *)
-      by rewrite fbot_face_lattice -face_lattice_of_face.
-Qed. *)
+    exists (Pointed (compact_pointed Q'_compact)) => //.
+    exists f; pose F := FMorphism f_morph.
+    suff ->: face_lattice Q' = F @` ([< \fbot_S; z >]_S : {fset _}) :> {fset _} by
+      apply: (itv_isomorph _ _ _ misof_f)=> //; rewrite ?mem_fbot ?le0f ?(mem_coatom coatom_z).
+    rewrite fmorph_itv ?mem_fbot ? le0f ?(mem_coatom coatom_z) //.
+    rewrite fmorph0 (codomP (S2:=(face_lattice Q))) -?f_Q //.
+    by rewrite fbot_face_lattice -face_lattice_of_face.
+Qed.
 
 (*
 Lemma closed_by_interval_r (x : face_lattice P) :
@@ -2993,23 +2986,21 @@ Lemma vertex_set_slice (P : 'poly[R]_n) v :
        vertex_set (slice e P) =
        [fset ppick (slice e F) | F in face_set P & ((v \in F) && (\pdim F == 2%N))]%fset.
 Proof.
-Admitted.
-(* elim/polybW: P => base P P_compact v_vtx e e_sep.
+elim/polybW: P => base P P_compact v_vtx e e_sep.
 apply/fsetP => ?; apply/imfsetP/imfsetP =>
   [[F] /= /andP [F_face dimF1] -> | [F] /= /and3P [F_face v_in_F dimF2] ->].
-+ rewrite inE in F_face.
-  move: (VertexFigurePolyBase.vf_surj P_compact (v_vtx, e_sep)) F_face => <-.
++ move: (VertexFigurePolyBase.vf_surj P_compact (v_vtx, e_sep)) F_face => /(congr1 val) /= <-.
   case/imfsetP=> F' /=.
-  rewrite Interval.intervalE ?face_self ?pt_subset -? in_vertex_setP //; last by
-    apply/vertex_set_subset.
+  rewrite (@Interval.intervalE _ _ (face_lattice P)) ?face_self ?pt_subset -?in_vertex_setP //; last by
+  apply/vertex_set_subset.
   case/and3P=> F'_face vF' _ F'_slice; exists F'; last by rewrite F'_slice.
   rewrite !inE vF' F'_face /= (vertex_set_slice_dim P_compact v_vtx e_sep) //.
   by rewrite -F'_slice (eqP dimF1).
 + exists (slice e F) => //; rewrite inE /=; apply/andP; split.
-  - apply/(VertexFigurePolyBase.vf_im (v_vtx, e_sep)); rewrite inE.
+  - apply/(VertexFigurePolyBase.vf_im (v_vtx, e_sep)).
     apply/mem_itv=> //; [by rewrite pt_subset|by case/faceP: F_face].
   - by move: dimF2; rewrite (vertex_set_slice_dim P_compact v_vtx e_sep).
-Qed. *)
+Qed.
 
 Variable (P : 'poly[R]_n).
 
