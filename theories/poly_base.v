@@ -2730,7 +2730,7 @@ suff h_Pt : forall (S : {finLattice poly_prelatticeType}) x y,
   x \in S -> y \in S -> x `<=` y ->
   Pt S -> Pt [< x; y >]_S.
 - apply/h_Pt => //; exists P => //; exact: isof_refl.
-- apply: ind_id.
+- apply: itv_induction.
   + move=> S z /[swap] -[Q compact_Q] [?] /misof_fmorph. 
     case=> g /[dup] /misofP [g_morph g_inj gS] misof_g _.
     move=> /[dup] /andP [zS _].
