@@ -2731,14 +2731,15 @@ suff h_Pt : forall (S : {finLattice poly_prelatticeType}) x y,
   Pt S -> Pt [< x; y >]_S.
 - apply/h_Pt => //; exists P => //; exact: isof_refl.
 - apply: ind_id.
-  + move=> S z /[swap] -[Q compact_Q] [f] /[dup] misof_f. 
-    case/misofP=> f_morph f_inj f_Q /[dup] /andP [zS _].
-    move/(fmorph_atom misof_f)=> /atom_face [v v_vtx v_fz].
+  + move=> S z /[swap] -[Q compact_Q] [?] /misof_fmorph. 
+    case=> g /[dup] /misofP [g_morph g_inj gS] misof_g _.
+    move=> /[dup] /andP [zS _].
+    move/(fmorph_atom misof_g)=> /atom_face [v v_vtx v_fz].
     case: (vertex_figure compact_Q v_vtx)=> Q' compact_Q' QQ'.
     exists (Pointed (compact_pointed compact_Q'))=> //.
-    apply:(isof_trans _ QQ'); exists f.
-    have:= (itv_isomorph zS (mem_ftop _) (lef1 zS) misof_f).
-    congr misof; rewrite (@fmorph_itv _ _ _ (FMorphism f_morph)) ?mem_ftop ?lef1 //.
+    apply:(isof_trans _ QQ'); exists g.
+    have:= (sublattice_misof misof_g (itv_sublattice S z \ftop_S)).
+    congr misof; rewrite fmorph_itv ?mem_ftop ?lef1 //.
     move=> [:codom_f].
     by congr Interval.interval=> //; 
       [abstract: codom_f; exact: codomP| rewrite fmorph1 codom_f ftop_face_lattice].
@@ -2751,8 +2752,8 @@ suff h_Pt : forall (S : {finLattice poly_prelatticeType}) x y,
       by apply/face_compact: Q'_face.
     exists (Pointed (compact_pointed Q'_compact)) => //.
     exists f; pose F := FMorphism f_morph.
-    suff ->: face_lattice Q' = F @` ([< \fbot_S; z >]_S : {fset _}) :> {fset _} by
-      apply: (itv_isomorph _ _ _ misof_f)=> //; rewrite ?mem_fbot ?le0f ?(mem_coatom coatom_z).
+    suff ->: face_lattice Q' = F @` ([< \fbot_S; z >]_S : {fset _}) :> {fset _}.
+      apply: sublattice_misof; [exact:misof_f|exact: itv_sublattice].
     rewrite fmorph_itv ?mem_fbot ? le0f ?(mem_coatom coatom_z) //.
     rewrite fmorph0 (codomP (S2:=(face_lattice Q))) -?f_Q //.
     by rewrite fbot_face_lattice -face_lattice_of_face.
