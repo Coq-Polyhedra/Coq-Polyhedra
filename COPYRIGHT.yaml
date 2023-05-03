@@ -7,6 +7,6 @@ copyrights:
     style: "coq"
     license: "CeCILL-B-V1"
     copyrights:
-      - { who: "XAVIER" , date: "2017--2020" }
-      - { who: "RICARDO", date: "2017--2020" }
-      - { who: "PY"     , date: "2019--2020" }
+      - { who: "XAVIER" , date: "2017--2021" }
+      - { who: "RICARDO", date: "2017--2021" }
+      - { who: "PY"     , date: "2019--2021" }

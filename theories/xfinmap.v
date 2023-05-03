@@ -1,3 +1,11 @@
+(* --------------------------------------------------------------------
+ * Copyright (c) - 2017--2021 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2021 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2021 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ *
+ * Distributed under the terms of the CeCILL-B-V1 license
+ * -------------------------------------------------------------------- *)
+
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect finmap.
 
@@ -12,7 +20,7 @@ Open Scope order_scope.
 Open Scope fset_scope.
 
 (* -------------------------------------------------------------------- *)
-Fact fset_display : unit. Proof. exact: tt. Qed.
+Fact fset_display : Order.disp_t. Proof. split; [exact:tt|exact:tt]. Qed.
 
 (* -------------------------------------------------------------------- *)
 Section BDistrLatticeType.

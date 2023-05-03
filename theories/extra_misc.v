@@ -60,6 +60,18 @@ Qed.
 Arguments exists_andP {T A B}.
 Prenex Implicits exists_andP.
 
+Lemma ex_iff T (P1 P2 : T -> Prop) :
+  (forall x : T, P1 x <-> P2 x) -> ((exists x, P1 x) <-> (exists x, P2 x)).
+Proof.
+by move=> H; split; move=> [x Hx]; exists x; apply/H.
+Qed.
+
+Lemma ex2_iff T (P1 P2 Q : T -> Prop) :
+  (forall x : T, P1 x <-> P2 x) -> ((exists2 x, P1 x & Q x) <-> (exists2 x, P2 x & Q x)).
+Proof.
+by move=> H; split; move=> [x Hx]; exists x; try by apply/H.
+Qed.
+
 Lemma intro_existsT (T: Type) (P: T -> Prop) (b: bool) (H: reflect (exists x, P x) b) (x: T):
   P x -> b.
 Proof.

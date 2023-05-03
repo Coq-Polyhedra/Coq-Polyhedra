@@ -1,7 +1,7 @@
 (* --------------------------------------------------------------------
- * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
- * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
- * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ * Copyright (c) - 2017--2021 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2021 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2021 - Pierre-Yves Strub <pierre-yves@strub.nu>
  *
  * Distributed under the terms of the CeCILL-B-V1 license
  * -------------------------------------------------------------------- *)
@@ -228,7 +228,7 @@ Qed.
 Lemma add_lev_min_max x y :
   lev_min x y + lev_max x y = x + y.
 Proof.
-by apply/colP => i; rewrite !mxE; apply: addr_min_max.
+by apply/colP => i; rewrite !mxE /= addr_min_max.
 Qed.
 
 Definition pos_part x := lev_max x 0.
@@ -808,17 +808,17 @@ have ->: [seq j <- iota 0 n | (j < i0)%N] = iota 0 i0.
   + by move => j; rewrite mem_iota leq0n /= add0n.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{2}[n](subnKC (ltnW Hi0)).
-  by rewrite iota_add add0n; apply: prefix_subseq.
+  by rewrite iotaD add0n; apply: prefix_subseq.
 have ->: [seq j <- iota 0 n | (i0 < j < n )%N] = iota (i0.+1) (n - (i0.+1)).
 - have /eq_filter -> : (fun j => (i0 < j < n)%N) =1 (fun j => j \in iota (i0.+1) (n - (i0.+1))).
   + by move => j; rewrite mem_iota subnKC //.
   symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
   rewrite -{4}[n](subnKC Hi0).
-  by rewrite iota_add add0n; apply: suffix_subseq.
-rewrite -{1}[n](subnKC (ltnW Hi0)) iota_add add0n.
+  by rewrite iotaD add0n; apply: suffix_subseq.
+rewrite -{1}[n](subnKC (ltnW Hi0)) iotaD add0n.
 apply/(congr1 (fun s => _ ++ s)).
 suff ->: (n - i0 = 1 + (n - i0.+1))%N
-  by rewrite iota_add addn1 /=.
+  by rewrite iotaD addn1 /=.
 - by rewrite -subn_gt0 in Hi0; rewrite add1n subnS prednK.
 Qed.
 

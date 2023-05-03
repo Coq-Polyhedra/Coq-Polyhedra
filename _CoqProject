@@ -1,1 +1,23 @@
+-R theories Polyhedra
 -R _build/default/theories Polyhedra
+
+-arg -w -arg -notation-overridden
+-arg -w -arg -redundant-canonical-projection
+-arg -w -arg -projection-no-head-constant
+-arg -w -arg -ambiguous-paths
+-arg -w -arg -uniform-inheritance
+
+theories/xorder.v
+theories/xfinmap.v
+theories/extra_misc.v
+theories/extra_matrix.v
+theories/inner_product.v
+theories/vector_order.v
+theories/row_submx.v
+theories/simplex.v
+theories/barycenter.v
+theories/hpolyhedron.v
+theories/polyhedron.v
+theories/poly_base.v
+theories/lrel.v
+theories/affine.v

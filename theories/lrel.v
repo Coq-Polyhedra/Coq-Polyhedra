@@ -264,7 +264,6 @@ exists f.
     * by rewrite /f mxE col_mxEu !mxE.
     * by rewrite /f mxE col_mxEd mxE [i']ord1_eq0 mulr1n /= mxE.
 Qed.
-
 Definition be_vectMixin := VectMixin be_vect_iso.
 Canonical be_vectType := VectType R lrel[R]_n be_vectMixin.
 

@@ -19,3 +19,8 @@ clean:
 # --------------------------------------------------------------------
 license:
 	scripts/license COPYRIGHT.yaml theories/*.v
+
+# --------------------------------------------------------------------
+run-in-docker:
+	docker run --rm -ti -v $$PWD:/home/ci/project \
+	  coqpolyhedra/build-box opam config exec -- make -C project

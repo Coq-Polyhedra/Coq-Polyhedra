@@ -31,8 +31,10 @@ RUN \
 	opam repo add coq-released https://coq.inria.fr/opam/released && \
 	opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev && \
 	opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev && \
-	opam pin add -n coq 8.11.1 && \
+	opam pin add -n coq 8.13.2 && \
 	opam pin add -n https://github.com/Coq-Polyhedra/mathcomp.git && \
 	opam pin add -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git && \
+	opam install depext && \
+	opam depext coq && \
 	opam install dune coq coq-mathcomp-field coq-mathcomp-finmap && \
 	opam clean

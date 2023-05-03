@@ -1,7 +1,7 @@
 (* --------------------------------------------------------------------
- * Copyright (c) - 2017--2020 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
- * Copyright (c) - 2017--2020 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
- * Copyright (c) - 2019--2020 - Pierre-Yves Strub <pierre-yves@strub.nu>
+ * Copyright (c) - 2017--2021 - Xavier Allamigeon <xavier.allamigeon at inria.fr>
+ * Copyright (c) - 2017--2021 - Ricardo D. Katz <katz@cifasis-conicet.gov.ar>
+ * Copyright (c) - 2019--2021 - Pierre-Yves Strub <pierre-yves@strub.nu>
  *
  * Distributed under the terms of the CeCILL-B-V1 license
  * -------------------------------------------------------------------- *)
@@ -260,7 +260,7 @@ Lemma unbounded_certificate x0 d K:
          exists x, x \in polyhedron A b /\ '[c,x] < K.
 Proof.
 move => /forallP Hx0 /forallP Hd Hcd.
-set M := Num.max (0%R) ('[c,d]^-1 * (K - 1 - '[c, x0])).
+set M := ((0%R) `|` ('[c,d]^-1 * (K - 1 - '[c, x0])))%O.
 set x := x0 + M *: d.
 exists x; split.
 + apply/forallP => j.
@@ -268,10 +268,10 @@ exists x; split.
   rewrite -[X in X <= _]addr0.
   apply: ler_add; first by apply: (Hx0 _).
   - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
-    by rewrite le_maxr lexx.
+    by rewrite lexUl ?lexx.
 + rewrite vdotDr vdotZr -ltr_subr_addl.
   rewrite -mulrC -ltr_ndivr_mull //.
-  rewrite lt_maxr; apply/orP; right.
+  rewrite ltxU; apply/orP; right.
   rewrite -(ltr_nmul2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
   by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10.
 Qed.
