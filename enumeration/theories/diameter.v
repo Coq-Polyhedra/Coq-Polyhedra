@@ -1319,10 +1319,12 @@ Definition high_BFS {T : choiceType} (G : graph T) x:=
 Definition high_diameter_BFS {T : choiceType} (G : graph T):=
   Hdiameter_BFS G (successors G).
 
+Definition eccentricity {T : choiceType} (G : graph T) x:=
+  \max_(p : epath G | is_shortest p && (src p == x)) size_path p.
+
 Lemma high_BFSE {T : choiceType} (G : graph T) x:
   x \in vertices G -> 
-  high_BFS G x = 
-  \max_(p : epath G | is_shortest p && (src p == x)) size_path p.
+  high_BFS G x = eccentricity G x.  
 Proof. by move=> xG; rewrite /high_BFS BFSP. Qed.
 
 Lemma high_diameter_BFSE {T : choiceType} (G : graph T):
