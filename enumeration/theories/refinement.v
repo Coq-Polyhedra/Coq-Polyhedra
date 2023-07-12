@@ -1441,7 +1441,6 @@ Qed.
 Definition lbl_graph_to_high_lbl {t T: Type} (f : t -> T) gl:=
   (graph_to_high gl.1, arr_map f gl.2).
 
-
 Lemma spec_func_lbl_graph {t : Type} {T : choiceType}
   (r : t -> T -> Prop) (f : t -> T) (P : t -> Prop):
   spec_func r f P ->

@@ -139,11 +139,14 @@ apply/sub_gisof=> //.
   + apply/fsubsetP=> y' /imfsetP [/= y].
     rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges xG yG).
     by rewrite -in_succE => /[swap] ->.
-  + rewrite lex_graph_regular ?vtx_mk_graph ?inE // card_in_imfset /=.
+  + rewrite lex_graph_regular ?vtx_mk_graph ?inE // ?card_in_imfset /=.
     * move/forallP: enum_h=> /(_ [`xG]) /and5P [_ _ _ + _].
       by rewrite /reg_verification=> /eqP ->.
     * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
       exact:to_feas_bas_inj.
+    * apply/Simplex.feasibleP. 
+      exists (Simplex.point_of_basis b I0).
+      exact: Simplex.lex_feasible_basis_is_feasible.
 Qed.
 
 End LexCorrectness.

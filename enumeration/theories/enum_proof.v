@@ -357,57 +357,16 @@ Context (I : Simplex.lex_feasible_basis A b).
 Section MkNeigh.
 
 Context (i : 'I_#|I|).
-Definition obj_reg :=
-  (\sum_(j < #|I| | (enum_val j) != (enum_val i)) row j (row_submx A I)) -
-  row i (row_submx A I).
-
-Lemma red_cost_reg :
-  (Simplex.reduced_cost_of_basis (obj_reg^T) I) = const_mx 1%:R - 2%:R *: (delta_mx i 0).
-Proof.
-rewrite /Simplex.reduced_cost_of_basis -trmx_mul.
-rewrite /obj_reg mulmxBl mulmx_suml -row_mul qmulmxV ?row1; last exact/Simplex.basis_is_basis.
-apply/matrixP=> p q; rewrite (ord1_eq0 q) !mxE eqxx andbT /=.
-rewrite summxE.
-under eq_bigr=> j ?.
-- rewrite -row_mul qmulmxV; last exact/Simplex.basis_is_basis.
-  rewrite row1 mxE eqxx /=.
-over.
-case/boolP: (p == i)=> /= [/eqP p_i | /negPf p_n_i].
-- rewrite mulr1 -mulrnBl !mulr1n opprD addNKr.
-  apply/subr0_eq/eqP; rewrite opprK -addrA addNr addr0.
-  have h: forall j, enum_val j != enum_val i -> (p == j) = false by 
-    move=> j; apply/contra_neqF=> /eqP/(congr1 enum_val) <-; rewrite p_i.
-  under eq_bigr=> j j_n_i do rewrite (h _ j_n_i).
-  by rewrite sumr_const /= mul0rn.
-- rewrite mulr0n mulr0 !subr0.
-  rewrite (bigD1_ord p) /=; last first.
-  + apply/contraT; rewrite negbK=> /eqP h; move: p_n_i.
-    by move/enum_val_inj: h=> ->; rewrite eqxx.
-  rewrite eqxx /=; apply/eqP; rewrite -subr_eq0 addrC mulr1n addKr.
-  under eq_bigr=> j ? do rewrite eq_liftF.
-  by rewrite sumr_const mul0rn.
-Qed.
-
-Lemma pick_reg : 
-  [pick i0 | Simplex.reduced_cost_of_basis obj_reg^T I i0 0 < 0 ] = Some i.
-Proof.
-rewrite red_cost_reg.
-have pick_h: forall x, (1%:R - 2%:R * (x == i)%:R < 0) = (x == i) by
-  move=> ? x; case: (_ == _); rewrite /= ?mulr0n ?mulr0 ?subr0 ?ltr10 ?mulr1n ?mulr1 ?subr_lt0 ?ltr1n.
-under eq_pick=> j do rewrite !mxE eqxx andbT pick_h.
-case: pickP=> /=; last by (move/(_  i); rewrite eqxx).
-by move=> ? /eqP ->.
-Qed.
 
 Lemma reg_infeas_dir : ~~ Simplex.feasible_dir A (Simplex.direction i).
 Proof.
-rewrite /Simplex.feasible_dir /=; apply/contraT; rewrite negbK.
-move/(Simplex.unbounded_cert_on_basis (b:=b) (c:=obj_reg^T)).
-move: pick_reg; case: pickP=> // j /[swap]; case=> -> ->.
-rewrite unpt_pt_is_feas.
-move: P_compact=> /(_ (obj_reg^T)).
-move/Simplex.boundedP_lower_bound=> /(_ (feas_bas0 I)) [K] h /(_ K isT isT).
-by case=> x [x_poly]; rewrite ltNge h.
+apply/contraT; rewrite negbK.
+move/Simplex.feasibleP: P_feasible=> [x_0].
+move/Simplex.unbounded_certificate=> /[apply] /(_ (- (Simplex.direction i))).
+rewrite vdotNl oppr_lt0 vnorm_gt0 Simplex.direction_neq0.
+move: P_compact=> /(_ (- (Simplex.direction i))) /(Simplex.boundedP_lower_bound _ P_feasible).
+case=> K=> + /(_ K isT) [x [x_P x_K]].
+by move=> /(_ x x_P); rewrite leNgt x_K.
 Qed.
 
 Definition neigh_reg := Simplex.lex_rule_fbasis reg_infeas_dir.

@@ -1415,6 +1415,18 @@ Section RelGraphR.
 
 Context {t : Type} {T : choiceType} (r : t -> T -> Prop).
 
+Lemma rel_graph_eccentricity gl G:
+  rel_spec r eq->
+  @rel_graph_r _ _ r gl G -> 
+  forall i x, mem_vertex gl.1 i-> x \in vertices G->
+  r gl.2.[i] x-> 
+  nat_of_bin (BFS gl.1 i) = eccentricity G x.
+Proof.
+move=> r_eq; case=> G' /[dup] glG' [_ [gG' lL] G'G] i x ig xG ix.
+rewrite (rel_struct_BFS gG') // (gisof_high_BFSE G'G) -?(rel_struct_vtx gG') //.
+by rewrite -(rel_graph_r_spec r_eq glG' G'G ig xG ix) high_BFSE.
+Qed.
+
 Lemma rel_graph_diameter:
   (@rel_graph_r _ _ r =~> (fun x y=> nat_of_bin x = y))
   (fun gl=> diameter_BFS gl.1) diameter.
