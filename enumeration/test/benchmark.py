@@ -176,10 +176,10 @@ def writer(stream):
     print(st,file=stream)
   return output
 
-def bench2csv(kind,res):
+def bench2csv(kind,res, compute):
   taskdir = os.path.join(BENCH_DIR,kind)
   os.makedirs(taskdir,exist_ok=True)
-  file_name = f"{kind}_" + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
+  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
   taskfile = os.path.join(taskdir, file_name)
   with open(taskfile, "w", newline='') as stream:
     output = writer(stream)
@@ -194,7 +194,7 @@ def bench2csv(kind,res):
         csvwriter.writerows(res)
 
 def one_task(kind,prefix,nmin,nmax,compute):
-  bench2csv(kind,TASK[kind](prefix,nmin,nmax,compute))
+  bench2csv(kind,TASK[kind](prefix,nmin,nmax,compute),compute)
 
 def all_tasks(prefix,nmin,nmax,compute):
   gen(prefix,nmin,nmax,compute)
