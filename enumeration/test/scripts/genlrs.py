@@ -5,7 +5,10 @@ import os, argparse as argp, subprocess as sp, abc
 import itertools as it, fractions as fc
 import math
 
-from . import core
+if __name__ == "__main__":
+    import core
+else:
+    from . import core
 
 def usage_and_exit():
     print("Incorrect usage of parameter")
