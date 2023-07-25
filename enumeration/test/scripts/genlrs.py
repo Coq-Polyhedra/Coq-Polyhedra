@@ -92,11 +92,11 @@ class Cross(LRS):
 # --------------------------------------------------------------------
 
 class Cyclic(LRS):
-    def __init__(self, m, d):
-        super().__init__('cyclic', m, d)
+    def __init__(self, d, m):
+        super().__init__('cyclic', d, m)
         if len(self.args) != 2:
             usage_and_exit()
-        self.m, self.d = self.args[0], self.args[1]
+        self.d, self.m = self.args[0], self.args[1]
 
     def generate(self, stream):
       m, d = self.m, self.d
@@ -158,9 +158,9 @@ class Cyclic(LRS):
 #         output("allbases")
 
 # --------------------------------------------------------------------
-class Permutahedron(LRS):
+class Permutohedron(LRS):
     def __init__(self, n):
-        super().__init__('permutahedron', n)
+        super().__init__('permutohedron', n)
         if len(self.args) != 1:
             usage_and_ext()
         self.n = self.args[0]
@@ -190,7 +190,7 @@ def optparser():
   parser = argp.ArgumentParser(
       description="Generate and compute polyhedron files, using lrs")
 
-  parser.add_argument(dest="polytope", help="Polytope kind", choices=["cube", "cross", "cyclic", "permutahedron"])
+  parser.add_argument(dest="polytope", help="Polytope kind", choices=["cube", "cross", "cyclic", "permutohedron"])
   parser.add_argument(dest="args", nargs="+", type=int, help="Polytope parameters")
 
   return parser
@@ -201,7 +201,7 @@ COMMANDS = dict(
     cross       = 'Cross',
     cyclic      = 'Cyclic',
     # birkhoff    = 'Birkhoff',
-    permutahedron = 'Permutahedron'
+    permutohedron = 'Permutohedron'
 )
 
 # --------------------------------------------------------------------

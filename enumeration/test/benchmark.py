@@ -15,6 +15,7 @@ CWD = os.getcwd()
 TIME_MEM_PREFIX = r'TIMEFMT="%E : real time, %M : max memory" && '
 HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
+DEF_GEN = {"cube" : (3,13), "cross" : (3,7), "cyclic" : (3,10), "permutohedron" : (3,7)}
 
 # --------------------------------------------------------------------
 
@@ -158,7 +159,6 @@ def clean_data(prefix,nmin,nmax,compute):
             os.remove(path_ext)
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-DEF_GEN = {"cube" : (3,13), "cross" : (3,7), "cyclic" : (3,10), "permutahedron" : (3,7)}
 def gen(prefix,nmin,nmax,compute):
   if prefix != "":
     polytopes = {prefix : (nmin, nmax)}
@@ -167,7 +167,7 @@ def gen(prefix,nmin,nmax,compute):
   for poly, (n, N) in polytopes.items():
     for k in range(n, N+1):
       if poly == "cyclic":
-        genlrs.generate_lrs(poly, 2*k, k)
+        genlrs.generate_lrs(poly, k, 2*k)
       else:
         genlrs.generate_lrs(poly, k)
 # --------------------------------------------------------------------
@@ -218,12 +218,12 @@ ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "all" : all_ta
 
 def optparser():
   parser = argp.ArgumentParser(
-    description="Lauch the selected benchmark")
+    description="Launch the selected benchmark")
 
   parser.add_argument(dest="kind", help="The kind of execution required", 
                       choices=list(TASK.keys()) + list(ADDITIONAL.keys()))
   
-  parser.add_argument("-p", "--prefix", dest="prefix", nargs="*", help=r"Specifies the subset on which perform the benchmarks. PREFIX is either 'hirsch' or (cube|cross|cyclic|permutahedron). Only the latter needs MIN and MAX", default=["","0","0"])
+  parser.add_argument("-p", "--prefix", dest="prefix", nargs="*", help=r"Specifies the subset on which perform the benchmarks. PREFIX is either 'hirsch' or (cube|cross|cyclic|permutohedron). Only the latter needs MIN and MAX", default=["","0","0"])
   parser.add_argument("-c", "--compute", dest="compute", help=r"vm_compute is the reduction strategy used by default, this option allows to perform using compute instead", action="store_const", const="compute", default="vm_compute")
 
   return parser
