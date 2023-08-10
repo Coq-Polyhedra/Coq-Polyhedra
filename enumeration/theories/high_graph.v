@@ -34,10 +34,10 @@ Context (T : choiceType).
 Implicit Type (fs : {fsfun T -> option {fset T} with None}).
 
 Definition codom_sub fs :=
-  [forall x : finsupp fs, (odflt fset0 (fs (val x))) `<=` finsupp fs].
+  [forall x : finsupp fs, (odflt fset0 (fs (val x))) `<=` finsupp fs `\ (val x)].
 
 Lemma codom_subP fs :
-  reflect {in (finsupp fs), forall x, odflt fset0 (fs x) `<=` finsupp fs}
+  reflect {in (finsupp fs), forall x, odflt fset0 (fs x) `<=` finsupp fs `\ x}
 		(codom_sub fs).
 Proof.
 apply/(iffP idP).
@@ -46,7 +46,7 @@ apply/(iffP idP).
 Qed.
 
 Record graph :=
-  Graph { fs : {fsfun T -> option {fset T} with None};
+  Graph { fs;
           _  : codom_sub fs}.
 
 Coercion graph_val (G : graph) := let: Graph g _ := G in g.
@@ -107,12 +107,12 @@ Definition edges (g : graph T) : rel T :=
 (* create_graph -> mk_graph *)
 
 Program Definition mk_graph (V : {fset T}) (E : rel T) : graph T :=
-  @Graph _ [fsfun v in V => Some [fset w | w in V & E v w] | None] _.
+  @Graph _ [fsfun v in V => Some ([fset w | w in V & E v w] `\ v) | None] _.
 Next Obligation.
 apply/codom_subP=> x x_in.
 rewrite fsfunE ifT /=; last by move: x_in; apply/fsubsetP/finsupp_sub.
-apply/fsubsetP=> y; rewrite !inE /= =>/andP [y_in] _.
-by rewrite mem_finsupp fsfunE y_in.
+apply/fsubsetP=> y; rewrite !inE /= => /and3P [yx yV Exy].
+by rewrite mem_finsupp fsfunE yV yx.
 Qed.
 
 Section Lemmas.
@@ -151,7 +151,6 @@ apply/(iffP idP).
 - by move=> ?; apply/vtx_prop0/fset0Pn.
 Qed.
 
-
 Lemma in_succE (G : graph T) (x y : T) :
   y \in successors G x = edges G x y.
 Proof. by []. Qed.
@@ -168,7 +167,8 @@ Lemma edge_vtxr (G : graph T) (x y : T) :
 Proof.
 move/[dup] => /edge_vtxl.
 case: G=> f; rewrite /edges /vertices /successors /=.
-move/codom_subP => /(_ x) codom_f /codom_f /fsubsetP; exact.
+move/codom_subP => /(_ x) codom_f /codom_f /fsubsetP.
+move=> /[apply]; exact/fsubsetP/fsubD1set.
 Qed.
 
 Lemma edge_vtxlr (G : graph T) (x y : T):
@@ -176,9 +176,24 @@ Lemma edge_vtxlr (G : graph T) (x y : T):
 Proof. by move=> /[dup] /edge_vtxl -> /edge_vtxr ->. Qed.
 
 
-Lemma sub_succ (G : graph T) (x : T) :
+Lemma sub_succ (G : graph T) (x : T):
   successors G x `<=` vertices G.
 Proof. apply/fsubsetP=> y; rewrite in_succE; exact: edge_vtxr. Qed.
+
+Lemma succxx (G : graph T) (x : T):
+  x \notin successors G x.
+Proof. 
+rewrite /successors; case: G=> /= => fs /codom_subP codom_fs.
+by case: finsuppP=> //= /codom_fs /fsubsetD1P [].
+Qed.
+
+Lemma edgesxx (G : graph T) (x : T):
+  ~~ edges G x x.
+Proof. by rewrite succxx. Qed.
+
+Lemma edges_neq (G : graph T) (x y : T):
+  edges G x y -> x != y.
+Proof. apply/contraTN=> /eqP ->; exact: edgesxx. Qed.
 
 Section MkGraph.
 Context (V : {fset T}) (E : rel T).
@@ -190,19 +205,19 @@ apply/eqP; rewrite eqEfsubset; apply/andP; split.
 - by apply/fsubsetP=> x; rewrite mem_finsupp fsfunE => ->.
 Qed.
 
-Lemma edge_mk_graph : {in V&, forall x y, edges (mk_graph V E) x y = E x y}.
+Lemma edge_mk_graph : {in V&, forall x y, edges (mk_graph V E) x y = (y != x) && E x y}.
 Proof.
 by move=> x y xV yV; rewrite -in_succE /successors /= fsfunE xV /= !inE yV.
 Qed.
 
 Lemma succ_mk_graph : {in V, forall x,
-  successors (mk_graph V E) x = [fset y in V | E x y]}.
+  successors (mk_graph V E) x = [fset y in V | E x y] `\ x}.
 Proof.
 move=> x xV; apply/fsetP=> y; rewrite in_succE !inE /=.
 apply/idP/idP.
 - move=> /[dup] /edge_vtxr; rewrite vtx_mk_graph=> yV.
   by rewrite edge_mk_graph // yV.
-- by case/andP => /= yV xEy; rewrite edge_mk_graph.
+- by case/and3P => /= yx yV xEy; rewrite edge_mk_graph ?yx.
 Qed.
 
 End MkGraph.
@@ -641,6 +656,7 @@ Definition regular := forall v : T, v \in vertices G -> #|` successors G v| = n.
 End Regular.
 
 Section ImageGraph.
+
 Context {T1 T2 : choiceType} (G : graph T1) (f : T1 -> T2).
 Let V := vertices G.
 Let E := edges G.
@@ -653,105 +669,66 @@ Lemma vtx_img_graph : vertices img_graph = f @` V.
 Proof. by rewrite vtx_mk_graph. Qed.
 
 Lemma edge_img_graph x y : reflect
-  (exists v, (exists w, [/\ f v = x, f w = y & (E v w)]))
+  ((y != x) /\
+  (exists v, (exists w, [/\ f v = x, f w = y & (E v w)])))
   (edges img_graph x y).
 Proof.
 apply/(iffP idP).
 - move/[dup]/[dup] => /edge_vtxl + /edge_vtxr.
-  rewrite vtx_img_graph=> xV2 yV2; rewrite edge_mk_graph //=.
-	+ case/existsP=> x'; case/existsP=> y'; case/and3P => /eqP <- /eqP <- ?.
-		by exists (fsval x'); exists (fsval y'); split.
-- case=> x' [y'] [<- <- /[dup] /[dup] /edge_vtxl x'V /edge_vtxr y'V x'Gy'].
-	rewrite edge_mk_graph ?in_imfset //=.
-	apply/existsP; exists [` x'V]; apply/existsP; exists [` y'V].
-	by rewrite !eq_refl x'Gy'.
+  rewrite vtx_img_graph=> /imfsetP /= [v vV ->] /imfsetP /= [w wV ->].
+  rewrite edge_mk_graph ?in_imfset //=.
+  case/andP=> fwv.
+  case/existsP=> v' /existsP [w'] /and3P [/eqP fvv' /eqP fww' Evw'].
+  split=> //.
+  by exists (fsval v'); exists (fsval w'); split.
+- case=> yx [] x' [y'] [fxx' fyy'].
+  move/[dup]/[dup] => /edge_vtxl x'V /edge_vtxr y'V ?.
+  rewrite edge_mk_graph ?yx -?fxx' -?fyy' ?in_imfset //=.
+  apply/existsP; exists [` x'V]; apply/existsP; exists [`y'V].
+  by apply/and3P; split.
 Qed.
+
+(* Lemma edge_img_graph_xx x: ~~ (edges img_graph x x).
+Proof. by apply/contraT; rewrite negbK; case/edge_img_graph=> ? [?] []; rewrite eq_refl. Qed. *)
 
 End ImageGraph.
 
-Notation "f '@°' G" := (img_graph G f) (at level 24, format "f  '@°'  G").
+Notation "f @/ G" := (img_graph G f) (at level 24, format "f  '@/'  G").
 
-Section ImgTheory.
-Lemma img_graph0 {T1 T2 : choiceType} (f : T1 -> T2): f @° (graph0 T1) = graph0 T2.
+Section ImageTheory.
+
+Lemma img_graph0 {T1 T2 : choiceType} (f : T1 -> T2): 
+  f @/ (graph0 T1) = (graph0 T2).
 Proof.
 apply/graphE; split.
-- rewrite vtx_img_graph !vtx0; apply/fsetP=> x; apply/idP/idP/negP.
-  by case/imfsetP.
-- move=> x y; rewrite edge0.
-  apply/(introF (edge_img_graph (graph0 T1) f x y)).
-  by case=> ? [? []]; rewrite edge0.
+- by rewrite vtx_img_graph !vtx0 imfset0.
+- move=> x y; rewrite edge0; apply/negbTE/negP.
+  case/edge_img_graph=> _ [? [?] [_ _]].
+  by rewrite edge0.
 Qed.
 
-Lemma comp_img_graph {T1 T2 T3: choiceType} (f : T1 -> T2) (g : T2 -> T3) (G : graph T1) : (g \o f) @° G = g @° (f @° G).
+Lemma comp_img_graph {T1 T2 T3: choiceType} (f : T1 -> T2) (g : T2 -> T3) (G : graph T1) : (g \o f) @/ G = g @/ (f @/ G).
 Proof.
 apply/graphE; split.
 - rewrite !vtx_img_graph; apply/fsetP=> x; apply/idP/idP.
-  + by case/imfsetP=> /= x0 x0G ->; apply/in_imfset/in_imfset.
-  + case/imfsetP=> /= x0 /imfsetP [/= x1 x1G -> ->]; apply/imfsetP.
-    by exists x1.
+  + case/imfsetP=> /= x' x'G ->; apply/imfsetP=> /=.
+    by exists (f x')=> //; apply/imfsetP=> /=; exists x'.
+  + case/imfsetP=> /= x' /imfsetP [/= x'' x''G -> ->].
+    by apply/imfsetP; exists x''.
 - move=> x y; apply/idP/idP.
-  + case/edge_img_graph => x' [y' [<- <- x'Gy']]; apply/edge_img_graph.
-    exists (f x')=> //; exists (f y')=> //; split=> //; apply/edge_img_graph.
-    by exists x'=> //; exists y'.
-  + case/edge_img_graph => x' [y' [<- <- /edge_img_graph]].
-		case=> x'' [y'' [<- <- xGy'']]; apply/edge_img_graph.
-		by exists x''; exists y''.
+  + case/edge_img_graph=> /= yx [x'] [y'] [gfx' gfy' x'Gy'].
+    apply/edge_img_graph; split=> //.
+    exists (f x'); exists (f y'); split=> //; apply/edge_img_graph; split=> //.
+    * apply/negP=> /eqP/(congr1 g); rewrite gfx' gfy'.
+      by move/eqP; apply/negP.
+    * by exists x'; exists y'.
+  + case/edge_img_graph=> yx [x'] [y'] [gxx' gyy'].
+    case/edge_img_graph=> yx' [x''] [y''] [fxx'' fyy'' xGy''].
+    apply/edge_img_graph; split=> //.
+    by exists x''; exists y''; rewrite /= fxx'' fyy''.
 Qed.
 
-Lemma cancel_img_graph {T1 T2 : choiceType} (f : T1 -> T2) (g : T2 -> T1) (G : graph T1):
-  {in vertices G, cancel f g} -> (g \o f) @° G = G.
-Proof.
-move=> can_fg; apply/graphE; split; first (apply/fsetP=> x; apply/idP/idP).
-- rewrite !vtx_img_graph=> /imfsetP [ /= x' x'G ->].
-  by rewrite can_fg.
-- move=> xG; rewrite vtx_img_graph; apply/imfsetP=> /=; exists x; rewrite ?can_fg //.
-- move=> x y; apply/idP/idP.
-  + case/edge_img_graph=> /= x' [y'] [<- <-].
-    move=> /[dup] /[dup] /edge_vtxl x'G /edge_vtxr y'G.
-    by rewrite !can_fg.
-  + move=> /[dup] /[dup] /edge_vtxl xG /edge_vtxr yG ?.
-    by apply/edge_img_graph; exists x; exists y=> /=; rewrite !can_fg //; split.
-Qed.
-
-
-End ImgTheory.
-
-Section QuotientGraph.
-
-Context {T1 T2 : choiceType} (G : graph T1) (f : T1 -> T2).
-Let V := vertices G.
-Let E := edges G.
-
-Definition quot_graph := mk_graph (f @` V)
-  [rel x y | [exists v : V, [exists w : V,
-  [&& f (val v) == x, f (val w) == y, x != y & E (val v) (val w)]]]].
-
-Lemma vtx_quot_graph : vertices quot_graph = f @` V.
-Proof. by rewrite vtx_mk_graph. Qed.
-
-Lemma edge_quot_graph x y : reflect
-  (exists v, (exists w, [/\ f v = x, f w = y, x != y & (E v w)]))
-  (edges quot_graph x y).
-Proof.
-apply/(iffP idP).
-- move/[dup]/[dup] => /edge_vtxl + /edge_vtxr.
-  rewrite vtx_quot_graph=> /imfsetP /= [v vV ->] /imfsetP /= [w wV ->].
-  rewrite edge_mk_graph ?in_imfset //=.
-  case/existsP=> v' /existsP [w'] /and4P [/eqP <- /eqP <- ??].
-  by exists (fsval v'); exists (fsval w'); split.
-- case=> x' [y'] [<- <- ?].
-  move/[dup]/[dup] => /edge_vtxl x'V /edge_vtxr y'V ?.
-  rewrite edge_mk_graph ?in_imfset //=.
-  apply/existsP; exists [` x'V]; apply/existsP; exists [`y'V].
-  by apply/and4P; split.
-Qed.
-
-Lemma edge_quot_graph_xx x: ~~ (edges quot_graph x x).
-Proof. by apply/contraT; rewrite negbK; case/edge_quot_graph=> ? [?] []; rewrite eq_refl. Qed.
-
-End QuotientGraph.
-
-Notation "f @/ G" := (quot_graph G f) (at level 24, format "f  '@/'  G").
+End ImageTheory.
 
 Section GIsomorphism.
 
@@ -761,7 +738,7 @@ Let V2 := vertices G2.
 Let E1 := edges G1.
 Let E2 := edges G2.
 
-Definition gisof f := {in V1&, injective f} /\ f @° G1 = G2.
+Definition gisof f := {in V1&, injective f} /\ f @/ G1 = G2.
 Definition giso := exists f, gisof f.
 
 Section IsoProofs.
@@ -772,9 +749,10 @@ Proof. by case. Qed.
 Lemma gisof_edge f : gisof f -> {in V1&, forall x y, E1 x y = E2 (f x) (f y)}.
 Proof.
 case=> f_inj f_G1 x y xV1 yV1; rewrite /E2 -f_G1; apply/idP/idP.
-- move=> xG1y; apply/edge_img_graph.
-  by exists x => //; exists y.
-- case/edge_img_graph => x' [y' [+ + /[dup] /[dup] /edge_vtxl x'V1 /edge_vtxr y'V1]].
+- move=> xG1y; apply/edge_img_graph; split.
+  + by move: (edges_neq xG1y); apply:contraNN=> /eqP/f_inj ->.
+  + exists x => //; exists y; split=> //.
+- case/edge_img_graph => _ [] x' [y' [+ + /[dup] /[dup] /edge_vtxl x'V1 /edge_vtxr y'V1]].
 	by move/f_inj=> -> // /f_inj ->.
 Qed.
 
@@ -790,14 +768,16 @@ split.
 - case=> f_inj f_bij f_morph; split=> //.
   apply/graphE; rewrite vtx_img_graph f_bij; split=> // x y.
   apply/idP/idP.
-  + case/edge_img_graph=> x' [y' [<- <-]].
+  + case/edge_img_graph => _ [] x' [y' [<- <-]].
 		move=> /[dup] /[dup] /edge_vtxl x'V1 /edge_vtxr y'V1.
 		by rewrite -/E1 (f_morph _ _ x'V1 y'V1).
 	+ move=> /[dup] /[dup] /edge_vtxl + /edge_vtxr.
 		rewrite -/V1 -/V2 -f_bij.
 		case/imfsetP=> /= x' x'V1 -> /imfsetP [/= y' y'V1 ->].
 		rewrite -/E2 -f_morph // => x'G1y'.
-		by apply/edge_img_graph; exists x'; exists y'.
+		apply/edge_img_graph; split.
+    * by move:(edges_neq x'G1y'); apply/contraNN=> /eqP /f_inj ->.
+    * by exists x'; exists y'.
 Qed.
 
 Lemma gisoE: giso <-> exists f,
@@ -1034,7 +1014,10 @@ elim/has_pathW.
 - by apply/has_pathxx; rewrite vtx_img_graph in_imfset.
 - move=> S x0 S_path S_vtx /[dup] /S_path xG_x0 /S_vtx x0G y0 x0Gy0.
   apply/(has_path_trans xG_x0)/has_path_edge.
-  + by apply/edge_img_graph; exists x0=> //; exists y0.
+  + apply/edge_img_graph; split. 
+    * move: (edges_neq x0Gy0); apply: contra_neq.
+      move/f_inj=> -> //; exact/(edge_vtxr x0Gy0).
+    * by exists x0=> //; exists y0.
 Qed.
 
 Lemma giso_connected {T1 T2 : choiceType} (G1 : graph T1) (G2 : graph T2) :
@@ -1050,10 +1033,12 @@ Lemma gisof_succ {T1 T2 : choiceType} (G1 : graph T1) (G2 : graph T2) f x:
   successors G2 (f x) = f @` (successors G1 x).
 Proof.
 case=> f_inj <- xG1; apply/fsetP=> y; rewrite in_succE; apply/idP/idP.
-- case/edge_img_graph=> x' [y'] [+ <- /[dup] /edge_vtxl x'G1].
+- case/edge_img_graph=> _ [x'] [y'] [+ <- /[dup] /edge_vtxl x'G1].
   by move/f_inj=> <- // ?; apply/in_imfset.
-- case/imfsetP=> /= y' xGy' ->; apply/edge_img_graph.
-  by exists x; exists y'.
+- case/imfsetP=> /= y' xGy' ->; apply/edge_img_graph; split.
+  * move: (edges_neq xGy'); apply/contra_neq.
+    move/f_inj=> -> //; exact:(edge_vtxr xGy').
+  * by exists x; exists y'.
 Qed.
 
 Lemma giso_regular {T1 T2 : choiceType} (G1 : graph T1) (G2 : graph T2) n :
@@ -1076,7 +1061,7 @@ Proof.
 move=> fghC G1_G2 G3_img_G1 G4_img_G2.
 have vtx_G3G4: vertices G3 = vertices G4.
 - rewrite G3_img_G1 G4_img_G2.
-  rewrite !vtx_quot_graph -(gisof_vtx G1_G2).
+  rewrite !vtx_img_graph -(gisof_vtx G1_G2).
   apply/fsetP=> x; apply/idP/idP.
   + case/imfsetP=> /= x' x'G1 ->; rewrite fghC //.
     by apply/imfsetP; exists (f x')=> //; apply/imfsetP; exists x'.
@@ -1085,16 +1070,16 @@ have vtx_G3G4: vertices G3 = vertices G4.
 apply/graphE; split=> //.
 move=> x y; rewrite G3_img_G1 G4_img_G2.
 apply/idP/idP.
-- case/edge_quot_graph=> x' [y'] [<- <-] /[swap].
-  move=> /[dup] /[dup] /edge_vtxl + /edge_vtxr; move=> x'G1 y'G1.
-  move=> G1_xy'; rewrite !fghC // => hf_xy'.
-  apply/edge_quot_graph; exists (f x'), (f y'); split=> //.
-  by rewrite -(gisof_edge G1_G2).
-- case/edge_quot_graph=> ? [?] [<- <- /[swap]].
-  move=> /[dup] /[dup] /edge_vtxl + /edge_vtxr.
-  rewrite -(gisof_vtx G1_G2)=> /imfsetP [/= x' x'G1 ->] /imfsetP [/= y' y'G1 ->].
-  rewrite -(gisof_edge G1_G2) // -!fghC // => G1_xy' g_xy'.
-  by apply/edge_quot_graph; exists x',y'; split.
+- case/edge_img_graph=> ? [x'] [y'] [gxx' gyy'].
+  move=> /[dup] /edge_vtxlr []; move=> x'G1 y'G1.
+  move=> G1_xy'; apply/edge_img_graph; split=> //.
+  by exists (f x'), (f y'); rewrite -!fghC //  -(gisof_edge G1_G2).
+- case/edge_img_graph=> yx [x'] [y'] [hxx' hyy'].
+  move=> /[dup] /edge_vtxlr [].
+  rewrite -(gisof_vtx G1_G2) => /imfsetP [/= x'' x''G1 fxx''] /imfsetP [/= y'' y''G1 fyy''].
+  rewrite fxx'' fyy'' -(gisof_edge G1_G2) // => G1_xy''.
+  apply/edge_img_graph; split=> //. 
+  by exists x'',y''; rewrite !fghC // -fxx'' -fyy''.
 Qed.
 
 

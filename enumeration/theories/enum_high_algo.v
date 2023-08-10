@@ -122,7 +122,7 @@ Lemma to_feas_bas_edges : {in vertices G &,
   edges lex_graph (to_feas_bas x) (to_feas_bas y)}.
 Proof.
 move=> x y xG yG; rewrite edge_mk_graph ?inE // -in_succE => yx.
-rewrite /set_adjacence /=.
+rewrite splx_adj_neq /set_adjacence /=.
 move/forallP: enum_h=> /(_ [`xG]) /and5P [_ _ _ _].
 move/forallP=> /(_ [`yx]) /=; rewrite /inter_verification.
 by rewrite /to_feas_bas; case: {-}_/idP=> // p; case: {-}_/idP.

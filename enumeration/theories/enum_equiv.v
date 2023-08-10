@@ -966,7 +966,7 @@ Proof. move: (lex_format_prop0 format_h); exact/is_emptyPn. Qed.
 
 Definition G_lex_func i : (enum_type m' n') := (set_i i, mat_i i).
 
-Definition G_lex : (high_graph.graph (enum_type m' n')) := G_lex_func @° (to_graph_struct g_lex).
+Definition G_lex : (high_graph.graph (enum_type m' n')) := G_lex_func @/ (to_graph_struct g_lex).
 
 Lemma G_lex_func_inj: {in vertices (to_graph_struct g_lex) &, injective G_lex_func}.
 Proof.
@@ -978,7 +978,7 @@ Qed.
 
 Lemma G_lex_vtx:
   G_lex_func @` vertices (to_graph_struct g_lex) = vertices G_lex.
-Proof. by rewrite vtx_img_graph. Qed.
+Proof. by rewrite vtx_app_graph. Qed.
 
 Lemma G_lex_edge:
   {in vertices (to_graph_struct g_lex) &, forall x y,
@@ -988,9 +988,9 @@ Proof.
 move=> i j; rewrite !to_graph_vtx=> i_g_lex j_g_lex.
 rewrite to_graph_edge ?to_graph_vtx //.
 apply/idP/idP.
-- move=> g_lex_ij; apply/edge_img_graph; exists i, j; split; rewrite ?G_lex_funcP //.
+- move=> g_lex_ij; apply/edge_app_graph; exists i, j; split; rewrite ?G_lex_funcP //.
   by rewrite to_graph_edge ?to_graph_vtx.
-- case/edge_img_graph=> i' [j'] [++ /[dup] g_lex_ij' /edge_vtxlr [i'_g_lex j'_g_lex]].
+- case/edge_app_graph=> i' [j'] [++ /[dup] g_lex_ij' /edge_vtxlr [i'_g_lex j'_g_lex]].
   move: i'_g_lex j'_g_lex g_lex_ij'; rewrite !to_graph_vtx=> i'_g_lex j'_g_lex. 
   rewrite to_graph_edge ?to_graph_vtx // => g_lex_ij'.
   move/G_lex_func_inj; rewrite !to_graph_vtx => <- //.
@@ -1274,7 +1274,7 @@ End ToEnumType.
 
 Section LexCertCorrect.
 
-Definition G_lex := (fun i=> to_enum_type lbll.[i]) @° (to_graph_struct gl).
+Definition G_lex := (fun i=> to_enum_type lbll.[i]) @/ (to_graph_struct gl).
 
 Section Vert.
 
@@ -1372,12 +1372,12 @@ Proof.
 apply/gisofE; split.
 - move=> i j; rewrite vtx_mk_graph !in_fset /= !mem_irangeE !le0x /=.
   rewrite ltEint; exact: to_enum_type_inj.
-- by rewrite vtx_img_graph.
+- by rewrite vtx_app_graph.
 - move=> i j; rewrite !to_graph_vtx=> i_gl j_gl.
   rewrite to_graph_edge ?to_graph_vtx //; apply/idP/idP.
-  + move=> mem_edge; apply/edge_img_graph; exists i,j.
+  + move=> mem_edge; apply/edge_app_graph; exists i,j.
     by split=> //; rewrite to_graph_edge ?to_graph_vtx.
-  + case/edge_img_graph=> i' [j'] [++ edg_ij'].
+  + case/edge_app_graph=> i' [j'] [++ edg_ij'].
     move/to_enum_type_inj=> + /to_enum_type_inj.
     move=> <- //; first move=> <- //.
     * move: (edg_ij'); rewrite to_graph_edge //; 
@@ -1610,9 +1610,9 @@ Lemma len_lblr (i : int): mem_vertex gr i ->
 Proof.
 move/is_lbl_quotP: quot_h=> lbl_quot_h.
 move: (lbl_quot_quot lbl_quot_h)=> glr_quot_h.
-case/(quot_graph_morf_complete glr_quot_h)=> i' i'gl ->.
+case/(img_graph_morf_complete glr_quot_h)=> i' i'gl ->.
 move:(lbl_quot_vert lbl_quot_h)=> /(_ i').
-rewrite -(quot_graph_length glr_quot_h).
+rewrite -(img_graph_length glr_quot_h).
 rewrite ltEint=> /(_ i'gl) /eq_array_relP [ <- _].
 case:(enum_dim_point format_h i'gl)=> _ /(_ 0%uint63).
 rewrite n'E => <- //; rewrite ltEint_nat succ_intE //.
@@ -1641,12 +1641,12 @@ move/is_lbl_quotP: quot_h=> lbl_quot_h.
 move: (lbl_quot_quot lbl_quot_h)=> glr_quot_h.
 move=> igl; apply/trmx_inj.
 move: (lbl_quot_vert lbl_quot_h)=> /(_ i).
-rewrite -(quot_graph_length glr_quot_h) ltEint=> /(_ igl).
+rewrite -(img_graph_length glr_quot_h) ltEint=> /(_ igl).
 move=> /[dup] /eq_array_relP [len_eq _].
 move/BQR_rV_injl => /(_ n); apply. 
 - apply/BQR_cV_tr/(phi_rat_bigQ igl).
 - apply/BQR_cV_tr/BQ2R_cVP_cast.
-  move:(quot_graph_morf_correct glr_quot_h igl). 
+  move:(img_graph_morf_correct glr_quot_h igl). 
   exact: len_lblr.
 Qed.
 
@@ -1654,15 +1654,15 @@ Lemma G_vert_vtx : vertices G_vert = vertices ((@phi m' n')@/ G_lex).
 Proof.
 move/is_lbl_quotP: quot_h=> lbl_quot_h.
 move: (lbl_quot_quot lbl_quot_h)=> glr_quot_h.
-rewrite !vtx_quot_graph !vtx_img_graph.
+rewrite !vtx_img_graph !vtx_app_graph.
 apply/fsetP=> x; apply/idP/idP.
 - case/imfsetP=> /= ?; rewrite to_graph_vtx.
-  case/(quot_graph_morf_complete glr_quot_h)=> i igl -> ->.
+  case/(img_graph_morf_complete glr_quot_h)=> i igl -> ->.
   apply/imfsetP=> /=; exists (to_enum_type lbll.[i]); 
     first by (apply/in_imfset; rewrite to_graph_vtx).
   by rewrite phiE.
 - case/imfsetP=> /= ? /imfsetP [/= i]; rewrite to_graph_vtx=> igl -> ->.
-  apply/imfsetP=> /=; exists morf.[i]; rewrite ?to_graph_vtx ?(quot_graph_morf_correct glr_quot_h) //.
+  apply/imfsetP=> /=; exists morf.[i]; rewrite ?to_graph_vtx ?(img_graph_morf_correct glr_quot_h) //.
   by rewrite phiE.
 Qed.
 
@@ -1674,26 +1674,26 @@ move: (lbl_quot_quot lbl_quot_h)=> glr_quot_h.
 apply/gisofE; split=> //.
 - by rewrite imfset_id G_vert_vtx.
 - move=> x y xG_vert yG_vert; apply/idP/idP.
-  + case/edge_quot_graph=> /= i [j] [x_eq y_eq x_n_y].
+  + case/edge_img_graph=> /= i [j] [x_eq y_eq x_n_y].
     move=> /[dup] /[dup] /edge_vtxl + /edge_vtxr.
     rewrite !to_graph_vtx => igr jgr; rewrite to_graph_edge ?to_graph_vtx //.
-    case/(quot_graph_edge_morf glr_quot_h igr jgr)=> i_n_j.
+    case/(img_graph_edge_morf glr_quot_h igr jgr)=> i_n_j.
     case=> i' [j'] [i'gl j'gl i_eq j_eq gl_ij'].
-    apply/edge_quot_graph; exists (to_enum_type lbll.[i']), (to_enum_type lbll.[j']).
+    apply/edge_img_graph; exists (to_enum_type lbll.[i']), (to_enum_type lbll.[j']).
     split; rewrite ?phiE // ?i_eq ?j_eq //.
-    apply/edge_img_graph; exists i', j'; split=> //.
+    apply/edge_app_graph; exists i', j'; split=> //.
     by rewrite to_graph_edge ?to_graph_vtx.
-  + case/edge_quot_graph=> /= e [e'] [x_eq y_eq x_n_y].
+  + case/edge_img_graph=> /= e [e'] [x_eq y_eq x_n_y].
     move=> /[dup] /[dup] /edge_vtxl eG_lex /edge_vtxr e'G_lex.
-    case/edge_img_graph=> /= i [j] [e_eq e'_eq].
+    case/edge_app_graph=> /= i [j] [e_eq e'_eq].
     move=> /[dup] /[dup] /edge_vtxl + /edge_vtxr.
     rewrite !to_graph_vtx=> igl jgl; rewrite to_graph_edge ?to_graph_vtx //.
-    move=> gl_ij; apply/edge_quot_graph. 
+    move=> gl_ij; apply/edge_img_graph. 
     exists morf.[i], morf.[j]; rewrite x_n_y -x_eq -y_eq -e_eq -e'_eq.
     rewrite !phiE //; split=> //; rewrite to_graph_edge ?to_graph_vtx; try
-      exact/(quot_graph_morf_correct glr_quot_h).
-    apply/(quot_graph_edge_morf glr_quot_h); try
-      exact/(quot_graph_morf_correct glr_quot_h).
+      exact/(img_graph_morf_correct glr_quot_h).
+    apply/(img_graph_edge_morf glr_quot_h); try
+      exact/(img_graph_morf_correct glr_quot_h).
     split; last by (exists i, j; split).
     apply/eqP=> morf_eq.
     move: x_n_y; rewrite -x_eq -y_eq -e_eq -e'_eq !phiE //.
@@ -1737,11 +1737,11 @@ apply/gisofE; split.
 - by rewrite !vtx_mk_graph.
 - move=> i j; rewrite !to_graph_vtx=> igr jgr; apply/idP/idP.
   + rewrite to_graph_edge ?to_graph_vtx // => gr_ij.
-    apply/edge_quot_graph; exists i, j; split=> //; rewrite ?to_graph_edge ?to_graph_vtx //.
-    move/(quot_graph_edge_morf glr_quot_h igr jgr) : gr_ij=> /=.
+    apply/edge_img_graph; exists i, j; split=> //; rewrite ?to_graph_edge ?to_graph_vtx //.
+    move/(img_graph_edge_morf glr_quot_h igr jgr) : gr_ij=> /=.
     case=> + _; apply/contra=> /eqP /in_gr_inj; rewrite !to_graph_vtx.
     by move/(_ igr jgr)=> ->.
-  + case/edge_quot_graph=> i' [j'] [++ _ /[dup] /[dup] /edge_vtxl i'gr /edge_vtxr j'gr].
+  + case/edge_img_graph=> i' [j'] [++ _ /[dup] /[dup] /edge_vtxl i'gr /edge_vtxr j'gr].
     move/(in_gr_inj i'gr); rewrite to_graph_vtx=> /(_ igr) ->. 
     by move/(in_gr_inj j'gr); rewrite to_graph_vtx=> /(_ jgr) ->.
 Qed.
@@ -1784,8 +1784,8 @@ Lemma map_lblr_length i: (i < Uint63.succ (LFC.n Po))%O -> n = length lblr.[map_
 Proof.
 case: (dim_full_testP_map Po_dim)=> <- /[apply].
 case/is_lbl_quotP: quot_h=> gl_gr <- + _ mapi_gr.
-move: (quot_graph_morf_complete gl_gr)=> /(_ _ mapi_gr).
-case=> j j_gl -> /(_ j); rewrite -(quot_graph_length gl_gr).
+move: (img_graph_morf_complete gl_gr)=> /(_ _ mapi_gr).
+case=> j j_gl -> /(_ j); rewrite -(img_graph_length gl_gr).
 move/(_ j_gl); case/andP=> /eqP <- _.
 case: (enum_dim_point format_h j_gl)=> _ /(_ 0%uint63) ->; rewrite ?n'E //.
 rewrite ltEint_nat succ_intE ?ltn0Sn //; exact: (length_lt_max Po).

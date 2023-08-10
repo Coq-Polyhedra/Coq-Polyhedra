@@ -293,6 +293,20 @@ Definition lex_graph := mk_graph [fset x | x : Simplex.lex_feasible_basis A b] s
 Lemma splx_adj_sym I J: set_adjacence I J -> set_adjacence J I.
 Proof. by rewrite /set_adjacence setIC. Qed.
 
+Lemma splx_adj_xx (I : Simplex.lex_feasible_basis A b): ~~ set_adjacence I I.
+Proof.
+rewrite /set_adjacence setIid Simplex.prebasis_card.
+by elim: n'.
+Qed.
+
+Lemma splx_adj_neq (I J : Simplex.lex_feasible_basis A b):
+  (J != I) && set_adjacence I J = set_adjacence I J.
+Proof.
+rewrite andb_idl //.
+move=> adj_IJ; apply: contraT; rewrite negbK=> /eqP IJ.
+by move: adj_IJ; rewrite IJ (negPf (splx_adj_xx I)).
+Qed.
+
 Section SplxGraphConnected.
 
 Context (I J: Simplex.lex_feasible_basis A b).
@@ -337,7 +351,7 @@ Lemma path_to_J: path (edges lex_graph) I (Simplex.phase2_exec obj_conn^T I).
 Proof.
 move: (Simplex.phase2_exec_adj (obj_conn^T) I).
 set f := (fun _ => _); suff eq_rel_edge: f =2 edges lex_graph by rewrite (eq_path eq_rel_edge).
-by move=> x y; rewrite edge_mk_graph ?in_fsetE.
+by move=> x y; rewrite edge_mk_graph ?in_fsetE // splx_adj_neq.
 Qed.
 
 Program Definition conn_splx_gpath := @GPath _ lex_graph I J (shorten I (Simplex.phase2_exec (obj_conn^T) I)) _ _ _.
@@ -437,7 +451,7 @@ Lemma succ_reg :
   successors lex_graph I = neigh_reg_fset.
 Proof.
 apply/fsetP=> J; rewrite ?succ_mk_graph ?in_fsetE !inE //=.
-apply/idP/idP.
+apply/idP/idP; rewrite splx_adj_neq.
 - case/neigh_reg_surj=> i ->; exact/in_imfset.
 - case/imfsetP=> /= i _ ->; exact/neigh_reg_adj.
 Qed.
@@ -991,14 +1005,15 @@ apply/gisof_idE/gisofE; split => //=; rewrite !vtx_mk_graph.
   rewrite !inE /=; apply/idP/idP=> /imfsetP [x' /= _ ->]; apply/in_imfset=> //.
   exact/in_imfset.
 - move=> x y x_vtx y_vtx; apply/idP/idP.
-  + rewrite edge_mk_graph=> // /[dup] edge_xy.
+  + rewrite edge_mk_graph=> // /andP [?] /[dup] edge_xy.
     move/adj_IJ=> [I] [J] [splx_adj_IJ splx_pt_Ix splx_pt_Jy].
-    apply/edge_quot_graph; exists I, J; split=> //; first by case/andP: edge_xy.
-    rewrite edge_mk_graph //; exact/in_imfset.
-  + case/edge_quot_graph=> I [J] [splx_pt_Ix splx_pt_Jy x_n_y].
-    rewrite edge_mk_graph ?in_imfset //.
+    apply/edge_img_graph; split=> //.
+    exists I, J; split=> //.
+    rewrite edge_mk_graph ?splx_adj_neq //; exact/in_imfset.
+  + case/edge_img_graph=> yx [I] [J] [splx_pt_Ix splx_pt_Jy].
+    rewrite edge_mk_graph ?in_imfset // splx_adj_neq.
     move/adj_xy; rewrite /Quotient.x /Quotient.y splx_pt_Ix splx_pt_Jy.
-    by move/(_ x_n_y)=> ?; rewrite edge_mk_graph.
+    by rewrite eq_sym; move/(_ yx)=> ? //; rewrite edge_mk_graph // yx.
 Qed.
 
 End Quotient.

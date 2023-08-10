@@ -174,6 +174,16 @@ Lemma nth_arr_to_seq {T : Type} (a : array T) n:
   (n < length a)%nat -> nth (default a) (arr_to_seq a) n = a.[nat_to_int n].
 Proof. by move=> n_len; rewrite (nth_map 0%uint63) ?size_irange0 // nth_irange0. Qed.
 
+Lemma mem_arr_to_seq {T : eqType} (a : array T) x:
+  x \in arr_to_seq a ->
+  exists2 i, (i < length a)%O & a.[i] = x.
+Proof.
+case/(nthP (default a))=> i; rewrite size_arr_to_seq=> i_len nth_i.
+exists (nat_to_int i).
+- rewrite ltEint_nat nat_to_intK //; apply/int_threshold_length/i_len.
+- by move:nth_i; rewrite nth_arr_to_seq.
+Qed.
+
 Definition arr_fold {T S : Type} (f : T -> S -> S) (a : array T) (x : S):=
   foldl (fun s t=> f t s) x (arr_to_seq a).
 
