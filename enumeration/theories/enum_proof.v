@@ -116,7 +116,7 @@ Proof. by []. Qed.
 
 End Simplex.
 
-Section QuotientGraph.
+Section ImageGraph.
 
 Context (R : realFieldType) (n' m' : nat).
 Local Notation m := (m'.+1).
@@ -286,7 +286,7 @@ Qed.
 
 Section EquivGraphLexi.
 
-Definition set_adjacence := fun I I' : {set 'I_m} =>  #| I :&: I' | == n.-1.
+Definition set_adjacence := fun I I' : {set 'I_m} =>  #|I :&: I'| == n.-1.
 
 Definition lex_graph := mk_graph [fset x | x : Simplex.lex_feasible_basis A b] set_adjacence.
 
@@ -309,7 +309,7 @@ Qed.
 
 Section SplxGraphConnected.
 
-Context (I J: Simplex.lex_feasible_basis A b).
+Context (I J : Simplex.lex_feasible_basis A b).
 Definition obj_conn := \sum_(i < #|J|) (row i (row_submx A J)).
 
 Lemma obj_connE: 
@@ -481,9 +481,9 @@ Qed.
 
 End EquivGraphLexi.
 
-Section Quotient.
+Section Image.
  
-Section VertexQuotient.
+Section VertexImage.
 
 Definition fset_active (bas : {set 'I_m}) :=
   [fset [<(row i A)^T, b i 0>] | i : 'I_m in bas].
@@ -589,9 +589,9 @@ Lemma lexbas_vtx (bas : Simplex.lex_feasible_basis A b) :
   Simplex.point_of_basis b bas \in vertex_set P.
 Proof. by rewrite vertex_quotient_fset; apply/imfsetP; exists bas. Qed.
 
-End VertexQuotient.
+End VertexImage.
 
-Section EdgesQuotient.
+Section EdgesImage.
 
 Lemma fset_active_edge_sub_base (I J: Simplex.prebasis m n) :
   (fset_active I `&` fset_active J `<=` base)%fset.
@@ -991,7 +991,7 @@ rewrite vertex_quotient_fset=> /imfsetP [/= K _ /esym bas_K_x].
 exact/(adj_I_to_J _ bas_K_x).
 Qed.
 
-End EdgesQuotient.
+End EdgesImage.
 
 Definition poly_graph {k : nat} {K : realFieldType}
   (P : 'poly[K]_k):= 
@@ -1012,10 +1012,10 @@ apply/gisof_idE/gisofE; split => //=; rewrite !vtx_mk_graph.
     rewrite edge_mk_graph ?splx_adj_neq //; exact/in_imfset.
   + case/edge_img_graph=> yx [I] [J] [splx_pt_Ix splx_pt_Jy].
     rewrite edge_mk_graph ?in_imfset // splx_adj_neq.
-    move/adj_xy; rewrite /Quotient.x /Quotient.y splx_pt_Ix splx_pt_Jy.
+    move/adj_xy; rewrite /Image.x /Image.y splx_pt_Ix splx_pt_Jy.
     by rewrite eq_sym; move/(_ yx)=> ? //; rewrite edge_mk_graph // yx.
 Qed.
 
-End Quotient.
+End Image.
 
-End QuotientGraph.
+End ImageGraph.
