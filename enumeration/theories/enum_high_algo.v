@@ -225,21 +225,14 @@ Hypothesis G_lex_n0 : G_lex != graph0 _.
 
 (* Hypothesis G_vert_img : G_vert = ((@phi m' n') @/ G_lex). *)
 
-Definition base_of_syst (C : 'M[rat]_(m,n) * 'cV[rat]_m) := 
-  [fset [<(row i C.1)^T, C.2 i 0>] | i : 'I_m].
-Definition poly_of_syst C:= 'P(base_of_syst C).
-
 Local Notation P := (poly_of_syst (A,b)).
 
 Lemma feasA : Simplex.feasible A b.
 Proof. apply/feas_bas0/(I0 G_lex_n0 (G_lex_vtx G_lex_verif)). Qed.
 
-Lemma relA : rel_mat_Po (base_of_syst (A, b)) (A,b).
-Proof. by []. Qed.
-
 Lemma high_img : poly_graph P = 
   ((fun I => Simplex.point_of_basis b I) @/ (lex_graph A b)).
-Proof. by exact/(im_lex_graph_vert_graph boundA feasA relA). Qed.
+Proof. by exact/(im_lex_graph_vert_graph boundA feasA). Qed.
 
 Lemma G_lex_repr : gisof G_lex (lex_graph A b) (to_feas_bas G_lex_n0 (G_lex_vtx G_lex_verif)).
 Proof. exact/repr_lex_graph. Qed.
@@ -285,11 +278,11 @@ Qed.
 
 Lemma high_poly_boundedP: forall c, Simplex.bounded A b c.
 Proof.
-move=> c; rewrite -(boundedE (relA A b)); move: c; apply/compactP.
+move=> c; rewrite -(boundedE); move: c; apply/compactP.
 - case/Simplex.feasibleP: feasA=> x x_in; apply/proper0P; exists x.
-  by rewrite (feasE (relA A b)).
+  by rewrite feasE.
 - apply/compactP_Linfty; exists max_bound=> x.
-  rewrite (feasE (relA A b)) inE => x_Ab i.
+  rewrite feasE inE => x_Ab i.
   case/andP: bound_h=> /forallP /(_ i) + /forallP /(_ i).
   case/andP=> /eqP Y_pos_A Y_pos_pos.
   case/andP=> /eqP Y_neg_A Y_neg_pos.

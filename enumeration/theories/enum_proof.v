@@ -121,74 +121,27 @@ Section ImageGraph.
 Context (R : realFieldType) (n' m' : nat).
 Local Notation m := (m'.+1).
 Local Notation n := (n'.+1).
-Context (base : base_t[R,n]).
 Context (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
+
+Definition base_of_syst (C : 'M[R]_(m,n) * 'cV[R]_m) := 
+  [fset [<(row i C.1)^T, C.2 i 0>] | i : 'I_m].
+Definition poly_of_syst C:= 'P(base_of_syst C).
+
+Local Notation P := (poly_of_syst (A,b)).
+
 Hypothesis P_compact: forall c, Simplex.bounded A b c.
 Hypothesis P_feasible: Simplex.feasible A b.
 
-Local Notation P := 'P(base).
-
-Definition rel_mat_Po (base : base_t[R,n]) (C : 'M[R]_(m,n) * 'cV[R]_m):=
-  [fset [<(row i C.1)^T, C.2 i ord0>] | i : 'I_m] = base.
-  
-Hypothesis r_Ab_base : rel_mat_Po base (A, b).
-(* Hypothesis A_inj : injective (fun i=> row i A). *)
-
-(* Hypothesis size_base : #|`base| = m.
-Definition A_ := (\matrix_(i < #|`base|%fset) ((fnth i).1)^T).
-Definition b_ := (\col_(i < #|`base|%fset) (fnth i).2).
-Definition base_tuple_ := [tuple (tnth [tuple of base] i) | i < #|`base|].
-Definition A := (castmx (size_base, erefl) A_).
-Definition b := (castmx (size_base, erefl) b_).
-Definition base_tuple := (tcast size_base base_tuple_).
-Hypothesis P_compact : compact 'P(base). *)
-
-(* Lemma size_base: #|` base| = m.
-Proof.
-Admitted.
-
-Lemma base_inj (i j : 'I_m): base`_i = base`_j -> i = j.
-Proof.
-suff: {in gtn (size base) &, injective (nth 0 base)} by
-  move=> h base_eq; apply/val_inj/h=> //=; rewrite inE size_base.
-exact/uniqP.
-Qed. *)
-
-
-(* Lemma row_A i : row i A = ((base`_i).1)^T.
-Proof.
-rewrite row_castmx castmx_id rowK.
-by rewrite /fnth (tnth_nth 0).
-Qed. *)
-
-(* Lemma row_b i : row i b = ((base`_i).2)%:M.
-Proof.
-rewrite row_castmx castmx_id /b_.
-apply/matrixP=> p q.
-rewrite !mxE (ord1_eq0 p) (ord1_eq0 q) eqxx mulr1n.
-by rewrite /fnth (tnth_nth 0).
-Qed. *)
-
-
-(* Lemma b_i i : b i 0 = (base`_i).2.
-Proof. by move/matrixP: (row_b i)=> /(_ 0 0); rewrite !mxE eqxx mulr1n. Qed. *)
-
-(* Lemma base_nth (i : 'I_m) : base`_i = base_tuple`_i.
-Proof. by rewrite -tnth_nth tcastE tnth_mktuple (tnth_nth 0) /=. Qed. *)
-
-Lemma feasE x : x \in P = (x \in Simplex.polyhedron A b).
+Lemma feasE x : (x \in P) = (x \in Simplex.polyhedron A b).
 Proof.
 apply/idP/idP.
 - move/in_poly_of_baseP=> x_poly; rewrite inE.
-  apply/forallP=> /= i; rewrite -row_vdot.
-  move/fsetP: r_Ab_base=> /(_ [<(row i A)^T, b i 0>]).
-  rewrite in_imfset //= => /esym /x_poly.
-  by rewrite in_hs /=.
+  apply/forallP=> /= i; rewrite -row_vdot -in_hs.
+  by apply/x_poly/imfsetP; exists i.
 - rewrite inE; move/forallP=> /= x_poly.
   apply/in_poly_of_baseP=> e.
-  move/fsetP: r_Ab_base=> /(_ e) /[swap] ->.
   case/imfsetP=> /= i _ ->; rewrite in_hs /=.
-  rewrite row_vdot; apply: x_poly.
+  rewrite row_vdot; exact: x_poly.
 Qed.
 
 Lemma boundedE c : bounded P c = Simplex.bounded A b c.
@@ -494,10 +447,10 @@ Definition fset_active (bas : {set 'I_m}) :=
   [fset [<(row i A)^T, b i 0>] | i : 'I_m in bas].
 
 Lemma fset_active_sub (bas : Simplex.prebasis m n) :
-  (fset_active bas `<=` base)%fset.
+  (fset_active bas `<=` base_of_syst (A,b))%fset.
 Proof.
 apply/fsubsetP=> e /imfsetP /= [i i_bas ->].
-by rewrite -r_Ab_base in_imfset.
+by rewrite in_imfset.
 Qed.
 
 Lemma fset_active_befst (bas : Simplex.basis A) :
@@ -547,7 +500,7 @@ Qed.
 
 Lemma fset_active_feas (bas : Simplex.lex_feasible_basis A b) :
   [pt Simplex.point_of_basis b bas]%:PH =
-  'P^=(base; fset_active bas).
+  'P^=(base_of_syst (A,b); fset_active bas).
 Proof.
 apply/poly_eqP=> x.
 rewrite in_pt in_polyEq feasE /=.
@@ -598,7 +551,7 @@ End VertexImage.
 Section EdgesImage.
 
 Lemma fset_active_edge_sub_base (I J: Simplex.prebasis m n) :
-  (fset_active I `&` fset_active J `<=` base)%fset.
+  (fset_active I `&` fset_active J `<=` base_of_syst (A,b))%fset.
 Proof. exact/(fsubset_trans (fsubsetIl _ _))/fset_active_sub. Qed.
 
 Definition fset_active_edge_free (I J : Simplex.basis A) :
@@ -748,7 +701,7 @@ Qed.
  
   
 Lemma fset_active_edge_to_lambda z:
-  z \in 'P^=(base; fset_active I `&` fset_active J) -> 
+  z \in 'P^=(base_of_syst (A,b); fset_active I `&` fset_active J) -> 
   exists lambda, z = lambda *: x + (1 - lambda) *: y.
 Proof.
 case/in_polyEqP=> eq_IJ z_feas.
@@ -780,7 +733,7 @@ Qed.
 
 
 Lemma fset_active_edge_to_segm z:
-  z \in 'P^=(base; fset_active I `&` fset_active J) -> 
+  z \in 'P^=(base_of_syst(A,b); fset_active I `&` fset_active J) -> 
   z \in [segm x & y].
 Proof.
 move=> /[dup] /fset_active_edge_to_lambda [lambda ->].
@@ -804,7 +757,7 @@ Qed.
 
 Lemma fset_active_edge_feas:
   [segm x & y] =
-  'P^=(base; fset_active I `&` fset_active J).
+  'P^=(base_of_syst (A,b); fset_active I `&` fset_active J).
 Proof.
 apply/poly_eqP=> z; apply/idP/idP.
 - case/in_segmP=> mu /andP [mu0 mu1] ->.
