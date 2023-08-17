@@ -21,13 +21,13 @@ Local Notation n := n'.+1.
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 Local Notation b_pert := (Simplex.b_pert b).
 
-Context (G : graph (enum_type m' n')).
+(* Context (G : graph (enum_type m' n')). *)
 
-Hypothesis enum_h_r : high_enum_algo A b G.
+(* Hypothesis enum_h_r : high_enum_algo A b G. *)
 Hypothesis P_compact : forall c, Simplex.bounded A b c.
-Hypothesis G_prop0 : G != (graph0 (enum_type m' n')).
+(* Hypothesis G_prop0 : G != (graph0 (enum_type m' n')). *)
 
-Lemma enum_h :
+(* Lemma enum_h :
   [forall e : vertices G,
     [&& card_verification (fsval e),
         feas_verification A b (fsval e),
@@ -36,31 +36,30 @@ Lemma enum_h :
         [forall e' : successors G (fsval e), inter_verification (fsval e) (fsval e')]
     ]
   ].
-Proof. by move: enum_h_r; rewrite high_enum_algoE. Qed.
+Proof. by move: enum_h_r; rewrite high_enum_algoE. Qed. *)
 
 Section ConstructFeasbas.
 
 Context (e : enum_type m' n').
-Hypothesis IxG : e \in (vertices G).
+Hypothesis vertex_e: vertex_verification A b e. 
+(* Hypothesis IxG : e \in (vertices G). *)
 
 Local Notation I := e.1.
-Local Notation x := e.2.
+Local Notation X := e.2.
 
 Lemma I_prebasis : #|I|==n.
 Proof.
-move/forallP:enum_h=> /= /(_ [` IxG]).
-by case/and5P.
+by case/and3P: vertex_e.
 Qed.
 
 Definition prebasis_I := Simplex.Prebasis I_prebasis.
-Definition x_inv := -1 *: (row_submx (col' ord0 x)^T I)^T.
+Definition X_inv := -1 *: (row_submx (col' ord0 X)^T I)^T.
 
 Lemma I_basis : Simplex.is_basis A prebasis_I.
 Proof.
-move/forallP:enum_h=> /= /(_ [` IxG]).
-case/and5P=> _ _ + _ _; rewrite /bas_verification /= => /eqP A_Ix.
+case/and3P: vertex_e=> _ _; rewrite /bas_verification /= => /eqP A_Ix.
 rewrite /Simplex.is_basis /=; apply/row_freeP.
-exists x_inv; rewrite /x_inv -scalemxAr -[X in X *m _]trmxK -trmx_mul tr_col'.
+exists X_inv; rewrite /X_inv -scalemxAr -[X in X *m _]trmxK -trmx_mul tr_col'.
 apply/matrixP=> p q; rewrite !mxE.
 under eq_bigr => [k _] do rewrite !mxE. 
 move: A_Ix=> /matrixP /(_ p (lift ord0 (enum_val q))); rewrite mxE.
@@ -76,78 +75,135 @@ Qed.
 
 Definition basis_I := Simplex.Basis I_basis.
 
-Lemma x_point_of_I : x = Simplex.point_of_basis b_pert basis_I.
+Lemma X_point_of_I : X = Simplex.point_of_basis b_pert basis_I.
 Proof. 
-rewrite -(@Simplex.basis_subset_active_ineq_eq _ _ _ _ _ _ _ x) //=.
+rewrite -(@Simplex.basis_subset_active_ineq_eq _ _ _ _ _ _ _ X) //=.
 apply/subsetP=> i iI; rewrite inE row_mul.
-move/forallP:enum_h=> /= /(_ [` IxG]).
-case/and5P=> _ _ /eqP I_bas _ _.
+case/and3P: vertex_e=> _ _ /eqP I_bas.
 by rewrite -[i](enum_rankK_in iI) // -!row_submx_row -I_bas row_mul.
 Qed.
 
 Lemma I_feasible : Simplex.is_feasible b_pert basis_I.
 Proof.
-move/forallP:enum_h=> /= /(_ [` IxG]).
-case/and5P=> _ + _ _ _; rewrite /feas_verification /=.
-by rewrite x_point_of_I /Simplex.is_feasible.
+case/and3P: vertex_e=> _ + _; rewrite /feas_verification /=.
+by rewrite X_point_of_I /Simplex.is_feasible.
 Qed.
 
 Definition lexbasis_I := Simplex.FeasibleBasis I_feasible.
 
 End ConstructFeasbas.
 
-Lemma I0_def : exists x, x \in vertices G.
-Proof. by move/graph0Pn: G_prop0. Qed.
+Section SubGraph.
+Context (G_lex : graph (enum_type m' n')).
+Hypothesis G_lex_n0 : G_lex != graph0 _.
+Hypothesis G_lex_vtx : all (vertex_verification A b) (vertices G_lex).
+Hypothesis G_lex_edge : 
+  all (fun e=> all (inter_verification e) (successors G_lex e)) (vertices G_lex).
 
-Definition I0 := lexbasis_I (xchooseP I0_def).
+Lemma e0_def : exists e, e \in vertices G_lex.
+Proof. by move/graph0Pn: G_lex_n0. Qed. 
+
+Definition e0 := (xchoose e0_def).
+Lemma G_lex_lex_feas : {in (vertices G_lex), forall e, vertex_verification A b e}.
+Proof. by move/allP: (G_lex_vtx). Qed.
+
+Definition I0 := lexbasis_I (G_lex_lex_feas (xchooseP e0_def)).
 
 Definition to_feas_bas (e : enum_type m' n'):=
-  if @idP (e \in vertices G) is ReflectT h then
-  lexbasis_I h else I0.
+  if @idP (e \in vertices G_lex) is ReflectT h then
+  lexbasis_I (G_lex_lex_feas h) else I0.
 
-Definition lex_graph := lex_graph A b.
+Lemma to_feas_bas_edges : {in vertices G_lex &,
+  forall x y, edges G_lex x y -> 
+  edges (lex_graph A b) (to_feas_bas x) (to_feas_bas y)}.
+Proof.
+move=> x y xG yG; rewrite edge_mk_graph ?inE // -in_succE => yx.
+rewrite splx_adj_neq /set_adjacence /=.
+move/allP: G_lex_edge=> /(_ x xG) /allP /(_ y yx); rewrite /inter_verification.
+by rewrite /to_feas_bas; case: {-}_/idP=> // p; case: {-}_/idP.
+Qed.
 
-Lemma to_feas_bas_inj : {in vertices G &, injective to_feas_bas}.
+End SubGraph.
+
+Section RegGraph.
+
+Context (G_lex : graph (enum_type m' n')).
+Hypothesis G_lex_n0 : G_lex != graph0 _.
+Hypothesis G_lex_vtx : all (vertex_verification A b) (vertices G_lex).
+Hypothesis G_lex_edge : 
+  all (fun e=> all (inter_verification e) (successors G_lex e)) (vertices G_lex).
+Hypothesis G_lex_reg : all (reg_verification G_lex) (vertices G_lex).
+
+Local Notation to_feas_bas := (to_feas_bas G_lex_n0 G_lex_vtx).
+
+Lemma to_feas_bas_inj : {in vertices G_lex &, injective to_feas_bas}.
 Proof.
 move=> e e' eG e'G; rewrite /to_feas_bas.
 case: {-}_/idP=> // p; case: {-}_/idP=> // p'.
 move=> bas_I_eq; rewrite [e]surjective_pairing [e']surjective_pairing.
 apply/pair_equal_spec; split.
 + by move: bas_I_eq; do 3! move/(congr1 val).
-+ by rewrite !x_point_of_I; move/(congr1 val):bas_I_eq=> /= ->.
++ set vtx_e := (G_lex_lex_feas G_lex_vtx p).
+  set vtx_e' := (G_lex_lex_feas G_lex_vtx p').
+  rewrite (X_point_of_I vtx_e) (X_point_of_I vtx_e').
+  by move/(congr1 val): bas_I_eq=> /= ->.
 Qed.
 
-Lemma to_feas_bas_edges : {in vertices G &,
-  forall x y, edges G x y -> 
-  edges lex_graph (to_feas_bas x) (to_feas_bas y)}.
+Lemma G_lex_succ: {in (vertices G_lex), forall e,
+  to_feas_bas @` (successors G_lex e) = successors (lex_graph A b) (to_feas_bas e)}.
 Proof.
-move=> x y xG yG; rewrite edge_mk_graph ?inE // -in_succE => yx.
-rewrite splx_adj_neq /set_adjacence /=.
-move/forallP: enum_h=> /(_ [`xG]) /and5P [_ _ _ _].
-move/forallP=> /(_ [`yx]) /=; rewrite /inter_verification.
-by rewrite /to_feas_bas; case: {-}_/idP=> // p; case: {-}_/idP.
+move=> x xG; apply/eqP; rewrite eqEfcard; apply/andP; split.
++ apply/fsubsetP=> y' /imfsetP [/= y].
+  rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges G_lex_n0 G_lex_vtx G_lex_edge xG yG).
+  by rewrite -in_succE => /[swap] ->.
++ rewrite lex_graph_regular ?vtx_mk_graph ?inE // ?card_in_imfset /=.
+  * move/allP: G_lex_reg=> /(_ x xG). 
+    by rewrite /reg_verification=> /eqP ->.
+  * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
+    exact:to_feas_bas_inj.
+  * apply/Simplex.feasibleP. 
+    exists (Simplex.point_of_basis b (I0 G_lex_n0 G_lex_vtx)).
+    exact: Simplex.lex_feasible_basis_is_feasible.
 Qed.
 
-Lemma repr_lex_graph: gisof G lex_graph to_feas_bas.
+End RegGraph.
+
+Section LexCertif.
+
+Context (G_lex : graph (enum_type m' n')).
+Hypothesis G_lex_n0 : G_lex != graph0 _.
+Hypothesis G_lex_verif : high_enum_algo A b G_lex.
+
+Lemma G_lex_vtx : all (vertex_verification A b) (vertices G_lex).
+Proof. by case/andP: G_lex_verif. Qed.
+
+Lemma G_lex_edge : all 
+  (fun e=> all (inter_verification e) (successors G_lex e)) 
+  (vertices G_lex).
+Proof. 
+case/andP: G_lex_verif=> _ /allP struct_h.
+by apply/allP=> x xG; case/andP: (struct_h x xG).
+Qed.
+
+Lemma G_lex_reg : all (reg_verification G_lex) (vertices G_lex).
+Proof.
+case/andP: G_lex_verif=> _ /allP struct_h.
+by apply/allP=> x xG; case/andP: (struct_h x xG).
+Qed.
+
+Local Notation to_feas_bas := (to_feas_bas G_lex_n0 G_lex_vtx).
+
+Lemma repr_lex_graph: gisof G_lex (lex_graph A b) to_feas_bas.
 Proof.
 apply/sub_gisof=> //.
 - exact: to_feas_bas_inj.
 - by apply/fsubsetP=> x; rewrite vtx_mk_graph inE /=.
-- exact:to_feas_bas_edges. 
+- exact/to_feas_bas_edges/G_lex_edge. 
 - exact:lex_graph_connected.
-- move=> x xG; apply/eqP; rewrite eqEfcard; apply/andP; split.
-  + apply/fsubsetP=> y' /imfsetP [/= y].
-    rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges xG yG).
-    by rewrite -in_succE => /[swap] ->.
-  + rewrite lex_graph_regular ?vtx_mk_graph ?inE // ?card_in_imfset /=.
-    * move/forallP: enum_h=> /(_ [`xG]) /and5P [_ _ _ + _].
-      by rewrite /reg_verification=> /eqP ->.
-    * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
-      exact:to_feas_bas_inj.
-    * apply/Simplex.feasibleP. 
-      exists (Simplex.point_of_basis b I0).
-      exact: Simplex.lex_feasible_basis_is_feasible.
+- apply/G_lex_succ; [exact:G_lex_edge|exact:G_lex_reg].
 Qed.
+
+End LexCertif.
 
 End LexCorrectness.
 
@@ -165,7 +221,7 @@ Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 
 Hypothesis boundA : forall c, Simplex.bounded A b c.
 Hypothesis G_lex_verif : high_enum_algo A b G_lex.
-Hypothesis G_lex_prop0 : G_lex != graph0 _. 
+Hypothesis G_lex_n0 : G_lex != graph0 _. 
 
 (* Hypothesis G_vert_img : G_vert = ((@phi m' n') @/ G_lex). *)
 
@@ -176,7 +232,7 @@ Definition poly_of_syst C:= 'P(base_of_syst C).
 Local Notation P := (poly_of_syst (A,b)).
 
 Lemma feasA : Simplex.feasible A b.
-Proof. exact/feas_bas0/(I0 G_lex_verif G_lex_prop0). Qed.
+Proof. apply/feas_bas0/(I0 G_lex_n0 (G_lex_vtx G_lex_verif)). Qed.
 
 Lemma relA : rel_mat_Po (base_of_syst (A, b)) (A,b).
 Proof. by []. Qed.
@@ -185,7 +241,7 @@ Lemma high_img : poly_graph P =
   ((fun I => Simplex.point_of_basis b I) @/ (lex_graph A b)).
 Proof. by exact/(im_lex_graph_vert_graph boundA feasA relA). Qed.
 
-Lemma G_lex_repr : gisof G_lex (lex_graph A b) (to_feas_bas G_lex_verif G_lex_prop0).
+Lemma G_lex_repr : gisof G_lex (lex_graph A b) (to_feas_bas G_lex_n0 (G_lex_vtx G_lex_verif)).
 Proof. exact/repr_lex_graph. Qed.
 
 Lemma repr_poly_graph :  poly_graph P = ((@phi m' n') @/ G_lex).
@@ -193,7 +249,7 @@ Proof.
 apply/esym/(gisof_diagram _ G_lex_repr _ high_img); [|exact:erefl].
 move=> x xG_lex /=; rewrite Simplex.rel_points_of_basis.
 rewrite /to_feas_bas; case: {-}_/idP=> // ?.
-by rewrite -x_point_of_I.
+by rewrite -X_point_of_I.
 Qed.
 
 End ImgGraph.
