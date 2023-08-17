@@ -401,6 +401,26 @@ by rewrite Simplex.prebasis_card cards1 subn1.
 Qed.
 
 End MkNeigh.
+
+Section MkInj.
+
+Lemma neigh_reg_inj: injective neigh_reg.
+Proof.
+move=> i j reg_eq.
+have: neigh_reg i = neigh_reg j :> {set _} by rewrite reg_eq.
+case: (neigh_regE i)=> i' i'_nI ->.
+case: (neigh_regE j)=> j' j'_nI -> reg_eq_val.
+have ij': i' = j'.
+- move/setP/(_ j'): reg_eq_val.
+  by rewrite !inE (negPf j'_nI) !andbF !orbF eqxx eq_sym=> /eqP.
+move/setP/(_ (enum_val i)): reg_eq_val.
+rewrite ij' !inE eqxx ?enum_valP /= ?orbF ?andbT.
+have/negPf -> /=: (enum_val i != j') by
+  apply/contraT; rewrite negbK=> /eqP; move: j'_nI=> /[swap] <-; rewrite enum_valP.
+by move/esym/negbFE/eqP/enum_val_inj.
+Qed.
+
+End MkInj.
 Section MkSucc.
 
 Lemma splx_adj_witness (J : Simplex.lex_feasible_basis A b):
@@ -433,17 +453,13 @@ Qed.
 
 Definition neigh_reg_fset := [fset neigh_reg i | i in 'I_#|I|].
 
-Lemma neigh_reg_surj (J : Simplex.lex_feasible_basis A b): set_adjacence I J ->
-  exists i, J = neigh_reg i.
+Lemma neigh_reg_surj (J : Simplex.lex_feasible_basis A b): set_adjacence I J -> exists i, J = neigh_reg i.
 Proof.
 case/splx_adj_witness=> i' [j] [i'I j_nI J_eq].
-set i := (enum_rank_in i'I i').
+set i := (enum_rank_in i'I i'); exists i.
 have J_eq_val: J = j |: (I :\ enum_val i) :> {set _} by
   rewrite enum_rankK_in.
-rewrite (Simplex.edge_lex_ruleE j_nI J_eq_val).
-exists i; case: (neigh_regE i)=> k k_nI reg_eq.
-rewrite (Simplex.edge_lex_ruleE k_nI reg_eq).
-congr Simplex.lex_rule_fbasis; exact/eq_irrelevance.
+rewrite (Simplex.edge_lex_ruleE j_nI J_eq_val (reg_infeas_dir i)) //.
 Qed.
 
 
@@ -465,18 +481,7 @@ Proof. by move=> I J _ _; exists (conn_splx_epath I J). Qed.
 Lemma lex_graph_regular : regular lex_graph n.
 Proof.
 move=> I _; rewrite succ_reg card_imfset ?size_enum_ord ?Simplex.prebasis_card //.
-move=> i j reg_eq.
-have: neigh_reg i = neigh_reg j :> {set _} by rewrite reg_eq.
-case: (neigh_regE i)=> i' i'_nI ->.
-case: (neigh_regE j)=> j' j'_nI -> reg_eq_val.
-have ij': i' = j'.
-- move/setP/(_ j'): reg_eq_val.
-  by rewrite !inE (negPf j'_nI) !andbF !orbF eqxx eq_sym=> /eqP.
-move/setP/(_ (enum_val i)): reg_eq_val.
-rewrite ij' !inE eqxx ?enum_valP /= ?orbF ?andbT.
-have/negPf -> /=: (enum_val i != j') by
-  apply/contraT; rewrite negbK=> /eqP; move: j'_nI=> /[swap] <-; rewrite enum_valP.
-by move/esym/negbFE/eqP/enum_val_inj.
+exact: neigh_reg_inj.
 Qed.
 
 End EquivGraphLexi.
@@ -505,7 +510,6 @@ apply/fsetP=> x; apply/idP/idP.
   apply/imfsetP; exists [<(row i A)^T, b i 0>]; rewrite ?lfunE //=.
   exact/in_imfset.
 Qed.
-    
 
 Lemma fset_active_free (bas : Simplex.basis A) :
   free (befst @`fset_active bas).
