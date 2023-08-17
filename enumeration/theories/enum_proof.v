@@ -76,7 +76,8 @@ Lemma simplex_lex_opt x : x \in Simplex.lex_polyhedron A (Simplex.b_pert b) ->
 Proof.
 move: simplex_lex_reduced_cost.
 rewrite /Simplex.reduced_cost_of_basis.
-rewrite /simplex_lex_point /Simplex.point_of_basis /= inE.
+rewrite /Simplex.point_of_basis /= inE.
+set I := Simplex.set_of_prebasis _.
 set A_I := row_submx.row_submx A _.
 set A_I_inv := qinvmx _ _.
 move=> red_cost_ge0 /forallP x_inP.
@@ -443,6 +444,8 @@ Section Image.
  
 Section VertexImage.
 
+Section LexBasisToVertex.
+
 Definition fset_active (bas : {set 'I_m}) :=
   [fset [<(row i A)^T, b i 0>] | i : 'I_m in bas].
 
@@ -519,27 +522,51 @@ apply/idP/idP.
   by move: (bas_active [`ei_active]); rewrite in_hp /==> /eqP; rewrite row_vdot !mxE.
 Qed.
 
+Lemma lex_basis_to_vtx:
+  {subset 
+  [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x0)
+    | x0 in Simplex.lex_feasible_basis A b] <= vertex_set P}.
+Proof.
+move=> x.
+case/imfsetP=> /= bas _ ->; rewrite in_vertex_setP.
+  apply/face_active_free_fset; rewrite ?pt_proper0 //.
+  exists (fset_active bas); split; rewrite ?fset_active_sub ?fset_active_free //.
+  - exact: fset_active_feas.
+  - by rewrite fset_active_card_befst dim_pt subSS subn0.
+Qed.
+
+End LexBasisToVertex.
+Section VertexToLexBasis.
+
+Lemma vtx_to_lex_basis:
+  {subset vertex_set P <=
+  [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x0)
+    | x0 in Simplex.lex_feasible_basis A b]
+  }.
+Proof.
+move=> x.
+move/[dup]/vertex_set_subset; rewrite feasE=> x_feas. 
+rewrite in_vertex_setP=> /face_argmin /(_ (pt_proper0 _)).
+case=> c _ x_opt_c.
+move/compact_pointed: compactE; rewrite pointedE=> A_pointed.
+move: (Simplex.build_lex_feasible_basis A_pointed x_feas)=> bas0.
+apply/imfsetP; exists (simplex_lex_basis c bas0)=> //=.
+suff: simplex_lex_point c bas0 \in argmin P c.
+  - by rewrite -x_opt_c in_pt=> /eqP <-.
+apply/(argmin_mem (x:=x)); rewrite ?simplex_opt ?feasE ?simplex_feas //.
+by rewrite -x_opt_c in_pt.
+Qed.
+
+End VertexToLexBasis.
+
 Lemma vertex_img_set :
   vertex_set P =
   [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x) |
     x : Simplex.lex_feasible_basis A b].
 Proof.
 apply/fsetP=> x; apply/idP/idP.
-+ move/[dup]/vertex_set_subset; rewrite feasE=> x_feas. 
-  rewrite in_vertex_setP=> /face_argmin /(_ (pt_proper0 _)).
-  case=> c _ x_opt_c.
-  move/compact_pointed: compactE; rewrite pointedE=> A_pointed.
-  move: (Simplex.build_lex_feasible_basis A_pointed x_feas)=> bas0.
-  apply/imfsetP; exists (simplex_lex_basis c bas0)=> //=.
-  suff: simplex_lex_point c bas0 \in argmin P c.
-    - by rewrite -x_opt_c in_pt=> /eqP <-.
-  apply/(argmin_mem (x:=x)); rewrite ?simplex_opt ?feasE ?simplex_feas //.
-  by rewrite -x_opt_c in_pt.
-+ case/imfsetP=> /= bas _ ->; rewrite in_vertex_setP.
-  apply/face_active_free_fset; rewrite ?pt_proper0 //.
-  exists (fset_active bas); split; rewrite ?fset_active_sub ?fset_active_free //.
-  - exact: fset_active_feas.
-  - by rewrite fset_active_card_befst dim_pt subSS subn0.
++ exact:vtx_to_lex_basis.
++ exact:lex_basis_to_vtx.
 Qed.
 
 Lemma lexbas_vtx (bas : Simplex.lex_feasible_basis A b) :
