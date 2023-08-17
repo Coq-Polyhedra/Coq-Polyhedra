@@ -288,29 +288,6 @@ Definition high_enum_algo :=
   all vertex_verification (vertices G) &&
   all struct_verification (vertices G).
 
-Lemma high_enum_algoE:
-  high_enum_algo =
-  [forall e : vertices G,
-    [&& card_verification (fsval e),
-        feas_verification (fsval e),
-        bas_verification (fsval e),
-        reg_verification (fsval e) &
-        [forall e' : successors G (fsval e), inter_verification (fsval e) (fsval e')]
-    ]
-  ].
-Proof.
-apply/idP/idP.
-- case/andP=> /allP vtx_verif /allP str_verif; apply/forallP=> x.
-  move: (vtx_verif _ (fsvalP x)) (str_verif _ (fsvalP x)).
-  case/and3P=> -> -> -> /andP [->] /allP int_verif.
-  apply/and5P; split=> //; apply/forallP=> y.
-  exact:(int_verif _ (fsvalP y)).
-- move/forallP=> h; apply/andP; split; apply/allP=> x xG.
-  + case/and5P: (h [`xG])=> /= ??? _ _; exact/and3P.
-  + case/and5P: (h [`xG])=> /= _ _ _ ? /forallP int_verif.
-    apply/andP; split=> //; apply/allP=> y yGx.
-    exact:(int_verif [`yGx]).
-Qed.
 End Def.
 
 Section RelLexGraph.

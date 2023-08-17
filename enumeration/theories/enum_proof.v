@@ -566,7 +566,7 @@ apply/idP/idP.
   by move: (bas_active [`ei_active]); rewrite in_hp /==> /eqP; rewrite row_vdot !mxE.
 Qed.
 
-Lemma vertex_quotient_fset :
+Lemma vertex_img_set :
   vertex_set P =
   [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x) |
     x : Simplex.lex_feasible_basis A b].
@@ -591,7 +591,7 @@ Qed.
 
 Lemma lexbas_vtx (bas : Simplex.lex_feasible_basis A b) :
   Simplex.point_of_basis b bas \in vertex_set P.
-Proof. by rewrite vertex_quotient_fset; apply/imfsetP; exists bas. Qed.
+Proof. by rewrite vertex_img_set; apply/imfsetP; exists bas. Qed.
 
 End VertexImage.
 
@@ -991,7 +991,7 @@ Lemma adj_IJ x y: adj P x y -> exists I J : Simplex.lex_feasible_basis A b,
   Simplex.point_of_basis b J = y].
 Proof.
 move=> edge_xy; have:= adj_vtxl edge_xy.
-rewrite vertex_quotient_fset=> /imfsetP [/= K _ /esym bas_K_x].
+rewrite vertex_img_set=> /imfsetP [/= K _ /esym bas_K_x].
 exact/(adj_I_to_J _ bas_K_x).
 Qed.
 
@@ -1005,7 +1005,7 @@ Lemma im_lex_graph_vert_graph :
   poly_graph P = ((Simplex.point_of_basis b) @/ lex_graph).
 Proof.
 apply/gisof_idE/gisofE; split => //=; rewrite !vtx_mk_graph.
-- rewrite vertex_quotient_fset /=; apply/fsetP=> x.
+- rewrite vertex_img_set /=; apply/fsetP=> x.
   rewrite !inE /=; apply/idP/idP=> /imfsetP [x' /= _ ->]; apply/in_imfset=> //.
   exact/in_imfset.
 - move=> x y x_vtx y_vtx; apply/idP/idP.
