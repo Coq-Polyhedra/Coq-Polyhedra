@@ -2158,23 +2158,6 @@ Notation n := (n'.+1).
 Context (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
 Context (I : lex_feasible_basis A b) (i : 'I_#|I|).
 Let b' := b_pert b.
-
-(* Lemma rank_lexfeas_basis_edge:
-  \rank (row_submx A (I :\ (enum_val i))) = n.-1.
-Proof.
-apply/eqP.
-rewrite -subn1 eqn_leq.
-apply/andP; split.
-+ rewrite -(prebasis_card_D1 (enum_valP i)).
-  exact: rank_leq_row.
-  + rewrite leq_subLR.
-    move: (rank_leq_row (row (enum_val i) A)); rewrite -(leq_add2r (\rank (row_submx A (I :\ (enum_val i))))).
-    apply: leq_trans.
-    move: (mxrank_basis I).
-    rewrite (row_submx_spanD1 A (enum_valP i)) => {1}<-.
-    exact: mxrank_adds_leqif.
-Qed. *)
-
 Context (J : lex_feasible_basis A b) (j : 'I_m).
 Hypothesis j_n_I : j \notin I.
 Hypothesis J_eq : J = j |: (I :\ (enum_val i)) :> {set _}.
