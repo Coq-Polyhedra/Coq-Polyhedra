@@ -529,10 +529,10 @@ Lemma lex_basis_to_vtx:
 Proof.
 move=> x.
 case/imfsetP=> /= bas _ ->; rewrite in_vertex_setP.
-  apply/face_active_free_fset; rewrite ?pt_proper0 //.
-  exists (fset_active bas); split; rewrite ?fset_active_sub ?fset_active_free //.
-  - exact: fset_active_feas.
-  - by rewrite fset_active_card_befst dim_pt subSS subn0.
+apply/face_active_free_fset; rewrite ?pt_proper0 //.
+exists (fset_active bas); split; rewrite ?fset_active_sub ?fset_active_free //.
+- exact: fset_active_feas.
+- by rewrite fset_active_card_befst dim_pt subSS subn0.
 Qed.
 
 End LexBasisToVertex.
@@ -805,7 +805,7 @@ apply/poly_eqP=> z; apply/idP/idP.
 - exact: fset_active_edge_to_segm. 
 Qed.
 
-Lemma adj_xy: adj P x y.
+Lemma lex_basis_to_adj_vtx: adj P x y.
 Proof.
 rewrite /adj /= x_n_y /=.
 apply/face_active_free_fset; rewrite ?segm_prop0 //.
@@ -949,7 +949,7 @@ Lemma adj_I_to_J: exists P Q: Simplex.lex_feasible_basis A b,
   [/\ set_adjacence P Q, Simplex.point_of_basis b P = x
     & Simplex.point_of_basis b Q = y].
 Proof.
-have:=foobar=> /(_ _ _ _ _ I (exec_adj min_epsilon)).
+have:=path_biprop_edge=> /(_ _ _ _ _ I (exec_adj min_epsilon)).
 move=> /(_ set_adjacence) /(_ (fun K=> Simplex.point_of_basis b K = x)).
 move=> /(_ (fun K=> Simplex.point_of_basis b K = y)).
 case.
@@ -966,7 +966,7 @@ Qed.
 
 End EdgeSimplexExec. 
 
-Lemma adj_IJ x y: adj P x y -> exists I J : Simplex.lex_feasible_basis A b,
+Lemma vtx_to_adj_lex_basis x y: adj P x y -> exists I J : Simplex.lex_feasible_basis A b,
   [/\ set_adjacence I J, Simplex.point_of_basis b I = x & 
   Simplex.point_of_basis b J = y].
 Proof.
@@ -981,7 +981,7 @@ Definition poly_graph {k : nat} {K : realFieldType}
   (P : 'poly[K]_k):= 
   mk_graph (vertex_set P) (adj P).
 
-Lemma im_lex_graph_vert_graph :
+Lemma img_lex_graph_poly_graph :
   poly_graph P = ((Simplex.point_of_basis b) @/ lex_graph).
 Proof.
 apply/gisof_idE/gisofE; split => //=; rewrite !vtx_mk_graph.
@@ -990,13 +990,13 @@ apply/gisof_idE/gisofE; split => //=; rewrite !vtx_mk_graph.
   exact/in_imfset.
 - move=> x y x_vtx y_vtx; apply/idP/idP.
   + rewrite edge_mk_graph=> // /andP [?] /[dup] edge_xy.
-    move/adj_IJ=> [I] [J] [splx_adj_IJ splx_pt_Ix splx_pt_Jy].
+    move/vtx_to_adj_lex_basis=> [I] [J] [splx_adj_IJ splx_pt_Ix splx_pt_Jy].
     apply/edge_img_graph; split=> //.
     exists I, J; split=> //.
     rewrite edge_mk_graph ?splx_adj_neq //; exact/in_imfset.
   + case/edge_img_graph=> yx [I] [J] [splx_pt_Ix splx_pt_Jy].
     rewrite edge_mk_graph ?in_imfset // splx_adj_neq.
-    move/adj_xy; rewrite /Image.x /Image.y splx_pt_Ix splx_pt_Jy.
+    move/lex_basis_to_adj_vtx; rewrite /Image.x /Image.y splx_pt_Ix splx_pt_Jy.
     by rewrite eq_sym; move/(_ yx)=> ? //; rewrite edge_mk_graph // yx.
 Qed.
 

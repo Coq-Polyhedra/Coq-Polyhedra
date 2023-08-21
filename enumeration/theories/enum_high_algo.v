@@ -232,7 +232,7 @@ Proof. apply/feas_bas0/(I0 G_lex_n0 (G_lex_vtx G_lex_verif)). Qed.
 
 Lemma high_img : poly_graph P = 
   ((fun I => Simplex.point_of_basis b I) @/ (lex_graph A b)).
-Proof. by exact/(im_lex_graph_vert_graph boundA feasA). Qed.
+Proof. by exact/(img_lex_graph_poly_graph boundA feasA). Qed.
 
 Lemma G_lex_repr : gisof G_lex (lex_graph A b) (to_feas_bas G_lex_n0 (G_lex_vtx G_lex_verif)).
 Proof. exact/repr_lex_graph. Qed.
