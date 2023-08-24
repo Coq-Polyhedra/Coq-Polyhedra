@@ -12,134 +12,6 @@ Local Notation "a .[ i ]" := (PArray.get a i).
 
 Import Order.Theory.
 
-(* Module ImgGraphFormatComputation.
-
-Definition length_morph_check (morph morph' : array int) (gl gr : graph.graph):= 
-  (length gl =? length morph)%uint63 && (length gr =? length morph')%uint63.
-  
-Definition length_edge_inv_check (edge_inv : array (array (int * int))) (gr : graph.graph):= 
-  (length gr =? length edge_inv)%uint63 && 
-  (IFold.iall (fun i => ((length edge_inv.[i]) =? GraphUtils.nb_neighbours gr i)%uint63) (length edge_inv)).
-
-Definition length_format_check morph morph' edge_inv gl gr:=
-    length_morph_check morph morph' gl gr && length_edge_inv_check edge_inv gr.
-
-(* Definition length_label_check {T1 T2 : Type} (gl gr : graph.graph) (lbll : array T1) (lblr : array T2):=
-  (correct_label gl lbll) && (correct_label gr lblr). *)
-
-(* Definition global_length_check 
-  {T1 T2 : Type} gl gr 
-  (lbll : array T1) (lblr : array T2) 
-  morph morph' edge_inv:=
-  [&& length_morph_check gl gr morph morph',
-      length_edge_inv_check gr edge_inv &
-      length_label_check gl gr lbll lblr]. *)
-
-Definition valid_nei_check gl:= 
-  IFold.iall (fun i=>
-    PArrayUtils.all 
-      (fun j=> GraphUtils.mem_vertex gl j)
-    (neighbours gl i))
-  (length gl).
-
-(* Definition is_sort_check {T2 : Type} (lblr : array T2) 
-  (r_sort : T2 -> T2 -> bool):= 
-  PArrayUtils.is_sorted_rel r_sort lblr. *)
-
-Definition graph_img_format morph morph' edge_inv gl gr :=
-  length_format_check morph morph' edge_inv gl gr &&
-  valid_nei_check gl.
-
-End ImgGraphFormatComputation.
-
-Module IGFC := ImgGraphFormatComputation.
-
-Section ImgGraphFormatEquiv.
-
-Definition length_morph_check (morph morph' : array int) (gl gr : graph.graph) := 
-  (length gl == length morph)%O && (length gr == length morph')%O.
-  
-Definition length_edge_inv_check (edge_inv : array (array (int * int))) (gr : graph.graph):= 
-  (length gr == length edge_inv) && 
-  (iall (fun i => ((length edge_inv.[i]) == nb_neighbours gr i)%O) (length edge_inv)).
-
-Definition length_format_check morph morph' edge_inv gl gr :=
-    length_morph_check morph morph' gl gr && length_edge_inv_check edge_inv gr.
-
-  (* 
-Definition length_label_check {T1 T2 : Type} (gl gr : graph.graph) (lbll : array T1) (lblr : array T2):=
-  (correct_label gl lbll) && (correct_label gr lblr). *)
-
-(* Definition global_length_check 
-  {T1 T2 : Type} gl gr 
-  (lbll : array T1) (lblr : array T2) 
-  morph morph' edge_inv:=
-  [&& length_morph_check gl gr morph morph',
-      length_edge_inv_check gr edge_inv &
-      length_label_check gl gr lbll lblr]. *)
-
-Definition valid_nei_check gl:= 
-  iall (fun i=>
-    arr_all 
-      (fun j=> mem_vertex gl j)
-    (neighbours gl i))
-  (length gl).
-
-(* Definition is_sort_check {T2 : Type} (lblr : array T2) 
-  (r_sort : T2 -> T2 -> bool):= 
-  is_sorted_rel r_sort lblr. *)
-
-Definition graph_img_format morph morph' edge_inv gl gr :=
-  length_format_check morph morph' edge_inv gl gr && valid_nei_check gl.
-
-Section Proofs.
-
-Lemma graph_img_formatE morph morph' edge_inv gl gr :
-  IGFC.graph_img_format morph morph' edge_inv gl gr =
-  graph_img_format morph morph' edge_inv gl gr.
-Proof.
-repeat congr andb; rewrite ?eqEint //.
-- by rewrite iallE; apply/eq_all=> i; rewrite eqEint nb_neighboursE.
-- by rewrite /IGFC.valid_nei_check iallE; apply/eq_all=> i; rewrite arr_allE.
-Qed.
-
-End Proofs.
-
-End ImgGraphFormatEquiv.
-
-Section ImgGraphFormatProofs.
-
-Context (gl gr : graph.graph).
-Context (morph morph' : array int) (edge_inv : array (array (int * int))).
-
-Local Notation format_h := (graph_img_format morph morph' edge_inv gl gr).
-
-Lemma graph_img_format_length: format_h ->
-  (length gl = length morph) * (length gr = length morph') * (length gr = length edge_inv).
-Proof. by case/andP=> /andP [/andP [/eqP <- /eqP <-] /andP [/eqP <-]]. Qed.
-
-Lemma graph_img_format_edge_length: format_h ->
-  forall i, mem_vertex gr i -> length edge_inv.[i] = nb_neighbours gr i.
-Proof.
-move=> /[dup] form_h.
-case/andP=> /andP [_ /andP] [_ h] _ i i_gr.
-move/allP: h=> /(_ i); rewrite mem_irangeE le0x /=.
-by rewrite -(graph_img_format_length form_h)=> /(_ i_gr)/eqP.
-Qed.
-
-Lemma graph_img_format_valid_nei: format_h-> forall i,
-  mem_vertex gl i -> forall k, (k < nb_neighbours gl i)%O->
-  mem_vertex gl (neighbours gl i).[k].
-Proof.
-move=> /[dup] form_h.
-case/andP=> _ /allP h i i_gl k k_nei.
-move: (h i); rewrite mem_irangeE le0x /= => /(_ i_gl) /allP /(_ (neighbours gl i).[k]); apply.
-by apply map_f; rewrite mem_irangeE le0x.
-Qed.
-
-
-End ImgGraphFormatProofs. *)
-
 Module ImgGraphComputation.
 
 Definition vertex_morph_check morph (gl gr : graph.graph):=
@@ -150,11 +22,6 @@ Definition vertex_inv_check morph morph' (gl gr : graph.graph) :=
     (fun i=> (GraphUtils.mem_vertex gl morph'.[i]) && 
     (morph.[morph'.[i]] =? i)%uint63) 
   (length gr).
-
-(* Definition vertex_label_check {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2)
-  (lbll : array T1) (lblr : array T2)
-  (morph : array int) := 
-  IFold.iall (fun i => r_eq (f lbll.[i]) lblr.[morph.[i]]) (length morph). *)
 
 Definition img_vertex morph morph' gl gr :=
     vertex_morph_check morph gl gr && vertex_inv_check morph morph' gl gr.
@@ -208,11 +75,6 @@ Definition vertex_inv_check morph morph' (gl gr : graph.graph) :=
     (fun i=> (mem_vertex gl morph'.[i]) && 
     (morph.[morph'.[i]] == i)%O) 
   (length gr).
-
-(* Definition vertex_label_check {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2)
-  (lbll : array T1) (lblr : array T2)
-  (morph : array int) := 
-  iall (fun i => r_eq (f lbll.[i]) lblr.[morph.[i]]) (length morph). *)
 
 Definition img_vertex morph morph' gl gr :=
   vertex_morph_check morph gl gr && vertex_inv_check morph morph' gl gr.
@@ -286,8 +148,6 @@ End Proofs.
 End ImgGraphEquiv.
 
 Section ImageGraphStructure.
-
-(* Local Definition format_h morph morph' edge_inv gl gr := graph_img_format morph morph' edge_inv gl gr. *)
 
 Definition high_vtx_morph morph (Gl Gr : graph [choiceType of int]) := all (fun x=> morph.[x] \in vertices Gr) (vertices Gl).
 
@@ -431,9 +291,6 @@ Module ImgLabelGraphComputation.
 Definition img_label {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2) morph
   lbll lblr :=
   IFold.iall (fun i=> r_eq (f lbll.[i]) lblr.[morph.[i]]) (length lbll).
-
-(* Definition img_label_sort_check {T2 : Type} (r_sort : rel T2) lblr:=
-  PArrayUtils.is_sorted_rel r_sort lblr. *)
 
 Definition img_label_graph {T1 T2} (f : T1 -> T2) r_eq morph morph' edge_inv
   gll grl := 

@@ -256,13 +256,13 @@ Local Notation m := m'.+1.
 Local Notation n := n'.+1.
 
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
-Context (Y_pos Y_neg : 'M[rat]_(n,m)).
+Context (bound_pos bound_neg : 'M[rat]_(n,m)).
 
 Hypothesis feasA : Simplex.feasible A b. 
-Hypothesis bound_h : high_poly_bounded A Y_pos Y_neg.
+Hypothesis bound_h : high_poly_bounded A bound_pos bound_neg.
 
 Definition max_bound_i (i : 'I_n):= 
-  (Order.max '[-(row i Y_pos)^T, b] '[-(row i Y_neg)^T,b]).
+  (Order.max '[-(row i bound_pos)^T, b] '[-(row i bound_neg)^T,b]).
 Definition max_bound := \big[Order.max/0%R]_(i < n) max_bound_i i.
 
 Lemma max_boundP (i : 'I_n):
@@ -311,14 +311,14 @@ Local Notation n := n'.+1.
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 Context (x0 : 'cV[rat]_n) (s : seq 'cV[rat]_n).
 
-Local Definition base_AB := base_of_syst (A, b).
+Local Definition P := poly_of_syst (A, b).
 
 Hypothesis full_h : 
-  [/\ x0 \in (vertex_set 'P(base_AB)), 
-    {subset s <= (vertex_set 'P(base_AB))} &
+  [/\ x0 \in (vertex_set P), 
+    {subset s <= (vertex_set P)} &
     \dim (span [seq x - x0 | x <- s]) = n].
 
-Lemma high_dim_fullP: \pdim 'P(base_AB) = n.+1.
+Lemma high_dim_fullP: \pdim P = n.+1.
 Proof.
 apply/anti_leq/andP; split; first exact:adim_leSn.
 case: full_h=> x0_vtx s_vtx {1}<-.

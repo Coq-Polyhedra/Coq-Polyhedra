@@ -60,8 +60,8 @@ Module FormatComputation.
 
 Definition poly_format (Po : Com.polyType):=
   [&& (0 <? Com.m Po)%uint63, (0 <? Com.n Po)%uint63,
-      (length Po.2 =?  Com.m Po)%uint63 &
-      PArrayUtils.all (fun x=> (length x =? Com.n Po)%uint63) Po.1].
+      PC.pre_length_computation Po.2 (Com.m Po) &
+      PC.pre_mx_computation Po.1 (Com.m Po) (Com.n Po)]. 
 
 Definition basis_format (Po : Com.polyType) (x : array Uint63.int):=
   PC.pre_arr_set_computation (fun a b=> (a <? b)%uint63)
@@ -98,8 +98,8 @@ Section FormatEquiv.
 
 Definition poly_format (Po : Com.polyType):=
   [&& (0 < Com.m Po)%O, (0 < Com.n Po)%O,
-      (length Po.2 ==  Com.m Po) &
-      arr_all (fun x=> (length x == Com.n Po)) Po.1].
+    pre_length_computation Po.2 (Com.m Po) &
+    pre_mx_computation Po.1 (Com.m Po) (Com.n Po)].
 
 Definition basis_format (Po : Com.polyType) (x : array Uint63.int):=
   pre_arr_set_computation (fun a b=> (a < b)%O)
@@ -129,9 +129,7 @@ Definition inv_format (Po : Com.polyType) (a : array (array bigQ)):=
   pre_mx_computation a (Com.n Po) (Com.n Po).
 
 Lemma poly_formatE Po: FC.poly_format Po = poly_format Po.
-Proof. 
-rewrite /FC.poly_format -!ltEint !eqEint arr_allE; repeat congr andb.
-by apply/eq_all=> i; rewrite eqEint.
+Proof. by rewrite /FC.poly_format -!ltEint pre_length_computationE pre_mx_computationE.
 Qed.
 
 Lemma lex_graph_formatE Po g l:
@@ -275,9 +273,11 @@ Definition basI_test (i : Uint63.int) := GraphUtils.neighbour_all
       (fun i j=> (i <? j)%uint63) (Com.bas lbl i) (Com.bas lbl j)) =? Uint63.pred (Com.n Po))%uint63)
     G i.
 
+Definition struct_test i :=
+    regularity_test i && basI_test i.
 
 Definition struct_consistent :=
-  (Com.compute_test G (fun i => regularity_test i && basI_test i)).
+  Com.compute_test G struct_test.
 
 Definition enum_algo := vertex_consistent && struct_consistent.
 
@@ -322,9 +322,12 @@ Definition basI_test (i : Uint63.int) := neighbour_all
     ((array_inter 
       (fun i j=> (i < j)%O) (Com.bas lbl i) (Com.bas lbl j)) == Uint63.pred (Com.n Po)))
     G i.
+
+Definition struct_test i :=
+  regularity_test i && basI_test i.
   
 Definition struct_consistent :=
-  (compute_test G (fun i => regularity_test i && basI_test i)).
+  (compute_test G struct_test).
 
 Definition enum_algo := vertex_consistent && struct_consistent.
 

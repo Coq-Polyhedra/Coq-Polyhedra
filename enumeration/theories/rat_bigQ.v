@@ -534,7 +534,7 @@ Definition BQlex_order (x y : array bigQ) :=
   lex_array_rel BigQ.compare x y.
 
 Definition BQltx_order (x y : array bigQ) :=
-  ltx_array_rel x y BigQ.compare.
+  ltx_array_rel BigQ.compare x y.
 
 Definition eq_array_bigQ (a b : array bigQ) :=
   eq_array_rel (BigQ.eqb) a b.
