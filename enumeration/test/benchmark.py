@@ -29,7 +29,7 @@ def command_call(command, prefix=""):
 
 # --------------------------------------------------------------------
 def format_time_output(st):
-  findit = re.search(r"\n(\d+,\d+)s.+, (\d+)", st)
+  findit = re.search(r"(\d+,\d+)s.+, (\d+)", st)
   time = findit.group(1).replace(",", ".")
   memory = findit.group(2)
   return time, memory
