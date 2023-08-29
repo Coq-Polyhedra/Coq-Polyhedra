@@ -39,7 +39,8 @@ def clean_coq(**kwargs):
   command_call("dune clean")
 
 def theories(**kwargs):
-  time, _ = format_time_output(command_call("time dune build " + os.path.join("..","theories"),TIME_MEM_PREFIX))
+  parallel = kwargs["parallel"]
+  time, _ = format_time_output(command_call(f"time dune build -j {PARALLEL_DFLT if parallel is None else parallel}" + os.path.join("..","theories"),TIME_MEM_PREFIX))
   return time
 
 # --------------------------------------------------------------------
