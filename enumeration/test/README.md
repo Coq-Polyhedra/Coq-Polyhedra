@@ -4,6 +4,7 @@
 
 - `zsh`
 - [`lrs`](http://cgm.cs.mcgill.ca/%7Eavis/C/lrs.html) installed
+- Python libraries: [`networkx`](https://networkx.org/), [`tqdm`](https://tqdm.github.io/) and [`sympy`](https://www.sympy.org/en/index.html)
 - `Coq 8.16.0`
 - `coq-bignums`, version `9.0.0+coq8.16`
 - Pin these versions of [MathComp](https://github.com/Coq-Polyhedra/mathcomp), of [finmap](https://github.com/Coq-Polyhedra/finmap), and of [binreader](https://github.com/Coq-Polyhedra/coq-binreader)
