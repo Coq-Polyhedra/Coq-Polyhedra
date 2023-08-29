@@ -25,12 +25,7 @@ def main(name):
     tgtdir = os.path.join(srcdir, 'coq')
     bindir = os.path.join(srcdir,'bin')
 
-    if os.path.exists(tgtdir):
-        print(f"remove {os.path.join(name,'coq')} first")
-        print(f"{name} coq folder ignored")
-        return
-
-    os.mkdir(tgtdir)
+    os.makedirs(tgtdir, exist_ok = True)
 
     def writer(stream):
         def output(str=''): 

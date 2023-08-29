@@ -288,9 +288,8 @@ End Z2Int.
 
 Section BigQRat.
 
-
 Definition bigQ2rat_def (bq : bigQ) :=
-  let q := Qreduction.Qred [bq]%bigQ in
+  let q := Qreduction.Qred (BigQ.to_Q bq) in
   ((Z2int (QArith_base.Qnum q))%:Q / (Z2int (Zpos (QArith_base.Qden q)))%:Q)%R.
 
 Definition rat_bigQ (b : bigQ) (r : rat) := bigQ2rat_def b = r.
@@ -340,7 +339,7 @@ by move: (BinInt.Z.gcd_nonneg n (Zpos d)) => + _ => /[swap] <-.
 Qed.
 
 Lemma BigQ_red_den_nonzero q :
-  match BigQ.red q with BigQ.Qz _ => True | BigQ.Qq _ d => [d]%bigN <> Z0 end.
+  match BigQ.red q with BigQ.Qz _ => True | BigQ.Qq _ d => (BigN.to_Z d) <> Z0 end.
 Proof.
 case: q => [//|n d] /=.
 rewrite /BigQ.norm.
@@ -358,13 +357,13 @@ Qed.
 
 Lemma ratBigQ_red x y : rat_bigQ y x ->
   match BigQ.red y with
-  | BigQ.Qz n => numq x = Z2int [n]%bigZ /\ denq x = 1%R
-  | BigQ.Qq n d => numq x = Z2int [n]%bigZ /\ denq x = Z2int [d]%bigN
+  | BigQ.Qz n => numq x = Z2int (BigZ.to_Z n) /\ denq x = 1%R
+  | BigQ.Qq n d => numq x = Z2int (BigZ.to_Z n) /\ denq x = Z2int (BigN.to_Z d)
   end.
 Proof.
 case: (ratP x) => nx dx nx_dx_coprime {x}.
 rewrite /rat_bigQ /bigQ2rat_def -BigQ.strong_spec_red.
-have ry_red : Qreduction.Qred [BigQ.red y]%bigQ = [BigQ.red y]%bigQ.
+have ry_red : Qreduction.Qred (BigQ.to_Q (BigQ.red y)) = (BigQ.to_Q (BigQ.red y)).
 { by rewrite BigQ.strong_spec_red Qcanon.Qred_involutive. }
 have ry_dneq0 := BigQ_red_den_nonzero y.
 case: (BigQ.red y) ry_dneq0 ry_red => [ny _ _|ny dy dy_neq0].
@@ -382,7 +381,7 @@ rewrite !Num.Theory.gtr0_sg //; last exact/ssrnat.ltP/Pos2Nat.is_pos.
 rewrite !GRing.mul1r => /andP[/eqP <-].
 rewrite ifF; [|exact/eqP/eqP/Num.Theory.lt0r_neq0/ssrnat.ltP/Pos2Nat.is_pos].
 rewrite -!abszE !absz_nat => /eqP[<-]; split=> [//|].
-rewrite -[LHS]/(Z2int (Zpos (BinInt.Z.to_pos [dy]%bigN))) BinInt.Z2Pos.id //.
+rewrite -[LHS]/(Z2int (Zpos (BinInt.Z.to_pos (BigN.to_Z dy)))) BinInt.Z2Pos.id //.
 exact: BigQ.N_to_Z_pos.
 Qed.
 
@@ -443,8 +442,8 @@ move=> x X <- y Y <-; rewrite /bigQ2rat_def.
 rewrite /BigQ.eqb BigQ.spec_eq_bool.
 apply/idP/idP.
 - by move/QArith_base.Qeq_bool_iff/Qreduction.Qred_complete=> ->.
-- move/eqP; case: [x]%bigQ=> xn xd.
-  case: [y]%bigQ=> yn yd /=; rewrite !Z2int_Qred /=.
+- move/eqP; case: (BigQ.to_Q x)=> xn xd.
+  case: (BigQ.to_Q y)=> yn yd /=; rewrite !Z2int_Qred /=.
   move/eqP; rewrite GRing.eqr_div.
   + move/eqP=> h; apply/QArith_base.Qeq_bool_iff.
     rewrite /QArith_base.Qeq /=.

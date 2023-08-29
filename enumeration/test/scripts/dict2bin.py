@@ -50,13 +50,17 @@ def dict2bin(name,contents):
     bindir = os.path.join(srcdir, 'bin')
 
     os.makedirs(bindir, exist_ok = True)
+    res = {}
     for key, descr in tqdm.tqdm(DESCRIPTORS.items(), desc="Serializing certificates : "):
         if key not in contents:
             print(f'Ignoring {key}', file = sys.stderr)
             continue
-        with open(os.path.join(bindir, f'{key}.bin'), 'w+b') as stream:
+        tgtbin = os.path.join(bindir, f'{key}.bin')
+        with open(tgtbin, 'w+b') as stream:
             descr.descriptor(stream)
             descr.pickle(contents[key], stream)
+        res[f"Size of {key}.bin"] = os.path.getsize(tgtbin)
+    return res
 
 def main(name):
     dict2bin(name,json2dict(name))

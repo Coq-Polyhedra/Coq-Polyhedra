@@ -258,7 +258,7 @@ def lrs2dict(name, hirsch=False):
     edge_inv = get_edge_inv(G_lex,G_vtx,morph)
     et = time.time()
     print(f"{et - st:.2f}s")
-    print(f"Computation of the certficates of boundedness : ", end="", flush=True)
+    print(f"Computation of the certificates of boundedness : ", end="", flush=True)
     st = time.time()
     bound_pos, bound_neg = get_farkas_cert(A,len(A),len(A[0]))
     et = time.time()
