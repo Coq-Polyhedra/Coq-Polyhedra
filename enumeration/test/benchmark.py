@@ -29,10 +29,10 @@ def command_call(command, prefix=""):
 
 # --------------------------------------------------------------------
 def format_time_output(st):
-  findit = re.search(r"(\d+,\d+)s.+, (\d+)", st)
-  time = findit.group(1).replace(",", ".")
-  memory = findit.group(2)
-  return time, memory
+  findit = re.search(r"(?P<time>\d+)[,.](?P<mtime>\d+)s.+, (?P<memory>\d+)", st)
+  time, mtime = findit.group("time"), findit.group("mtime")
+  memory = findit.group("memory")
+  return f"{time}.{mtime}", memory
 
 # --------------------------------------------------------------------
 def clean_coq(**kwargs):
