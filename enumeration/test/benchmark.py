@@ -15,7 +15,7 @@ CWD = os.getcwd()
 TIME_MEM_PREFIX = r'TIMEFMT="%E : real time, %M : max memory" && '
 HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
-DEF_GEN = {"cube" : (3,18), "cross" : (3,9), "cyclic" : (3,14), "permutohedron" : (3,9)}
+DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,14), "permutohedron" : (3,8)}
 PARALLEL_DFLT = 10
 
 # --------------------------------------------------------------------
@@ -85,9 +85,7 @@ def certificates(**kwargs):
   text = kwargs["text"]
   for name in polytopes(**kwargs):
     res.append({"polytope" : name})
-    hirsch = False
-    if name in HIRSCH_CEX:
-      hirsch = True
+    hirsch = name in HIRSCH_CEX
     st = time.time()
     dict = lrs2dict.lrs2dict(name,hirsch)
     et = time.time()
