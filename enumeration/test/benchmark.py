@@ -28,11 +28,13 @@ def command_call(command, prefix=""):
   return output.stderr
 
 # --------------------------------------------------------------------
-def format_time_output(st):
+def format_time_output(st,megabytes):
   findit = re.search(r"(?P<time>\d+)[,.](?P<mtime>\d+)s.+, (?P<memory>\d+)", st)
   time, mtime = findit.group("time"), findit.group("mtime")
-  memory = findit.group("memory")
-  return f"{time}.{mtime}", memory
+  memory = float(findit.group("memory"))
+  if megabytes:
+    memory /= 1000
+  return f"{time}.{mtime}", str(memory)
 
 # --------------------------------------------------------------------
 def clean_coq(**kwargs):
@@ -40,7 +42,7 @@ def clean_coq(**kwargs):
 
 def theories(**kwargs):
   parallel = kwargs["parallel"]
-  time, _ = format_time_output(command_call(f"time dune build -j {PARALLEL_DFLT if parallel is None else parallel} " + os.path.join("..","theories"),TIME_MEM_PREFIX))
+  time, _ = format_time_output(command_call(f"time dune build -j {PARALLEL_DFLT if parallel is None else parallel} " + os.path.join("..","theories"),TIME_MEM_PREFIX),kwargs["megabytes"])
   return time
 
 # --------------------------------------------------------------------
@@ -74,7 +76,7 @@ def lrs(**kwargs):
     res.append({"polytope" : name})
     inefile = core.resource(name,"lrs",name+".ine")
     extfile = core.resource(name,"lrs",name+".ext")
-    time, memory = format_time_output(command_call(f"time lrs {inefile} {extfile}",TIME_MEM_PREFIX))
+    time, memory = format_time_output(command_call(f"time lrs {inefile} {extfile}",TIME_MEM_PREFIX), kwargs["megabytes"])
     res[-1]["time"], res[-1]["memory"] = time, memory
   return res
 
@@ -119,7 +121,7 @@ def compilation(**kwargs):
           print(file)
           rel_path = os.path.join("data",name,"coq",file+"o")
           st = command_call("time dune build " + rel_path,TIME_MEM_PREFIX)
-          time, memory = format_time_output(st)
+          time, memory = format_time_output(st, kwargs["megabytes"])
           res[-1][file + " time"] = time
           res[-1][file + " memory"] = memory
           times.append(float(time))
@@ -129,7 +131,7 @@ def compilation(**kwargs):
     else:
       rel_path = os.path.join("data",name,"coq")
       st = command_call(f"time dune build -j {parallel} " + rel_path, TIME_MEM_PREFIX)
-      time, memory = format_time_output(st)
+      time, memory = format_time_output(st, kwargs["megabytes"])
       res[-1]["total time"] = time
       res[-1]["max memory"] = memory
   return res
@@ -153,7 +155,7 @@ def job(job):
             print(file)
             rel_path = os.path.join("data",name,f"coq_{job}",file+"o")
             st = command_call("time dune build " + rel_path,TIME_MEM_PREFIX)
-            time, memory = format_time_output(st)
+            time, memory = format_time_output(st, kwargs["megabytes"])
             res[-1][file + " time"] = time
             res[-1][file + " memory"] = memory
             times.append(float(time))
@@ -163,7 +165,7 @@ def job(job):
       else:
         rel_path = os.path.join("data",name,f"coq_{job}")
         st = command_call(f"time dune build -j {parallel} " + rel_path, TIME_MEM_PREFIX)
-        time, memory = format_time_output(st)
+        time, memory = format_time_output(st, kwargs["megabytes"])
         res[-1]["total time"] = time
         res[-1]["max memory"] = memory
     return res
@@ -274,6 +276,7 @@ def optparser():
   parser.add_argument("-c", "--compute", dest="compute", help=r"vm_compute is the reduction strategy used by default, this option allows to perform using compute instead.", action="store_const", const="compute", default="vm_compute")
   parser.add_argument("-t", "--text", dest="text", help=r"Certificates are generated as binary files by default. This option generates plain text .v files instead.", action="store_true")
   parser.add_argument("-j", "--jobs", dest="parallel", help="The compilation of Coq files by dune is done sequentially. This option calls dune on the folder instead. It is possible to add the number of task that can be simultaneously done.", nargs="?", const=PARALLEL_DFLT, default=None)
+  parser.add_argument("-b", "--megabytes", dest="megabytes", help="Depending on the OS, the memory evaluated by the commands is either in kilobytes or in megabytes. This option divides by 1000 the correpsonding outputs, to deal with megabytes.", action="store_true")
 
   return parser
 
@@ -285,6 +288,7 @@ def main():
   compute = args.compute
   text = args.text
   parallel = args.parallel
+  megabytes = args.megabytes
   if pref[0] == "hirsch":
     prefix, nmin, nmax = "hirsch", None, None
   elif len(pref)==3:
@@ -292,7 +296,7 @@ def main():
   else:
     print('Error : -p option needs either "hirsch" of three parameters to work.')
     exit(1)
-  kwargs = {"prefix" : prefix, "nmin": nmin, "nmax" : nmax, "compute" : compute, "text" : text, "parallel" : parallel}
+  kwargs = {"prefix" : prefix, "nmin": nmin, "nmax" : nmax, "compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes}
   if kind in TASK:
     one_task(kind,**kwargs)
   if kind in ADDITIONAL:
