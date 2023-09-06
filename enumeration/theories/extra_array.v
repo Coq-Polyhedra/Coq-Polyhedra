@@ -155,6 +155,10 @@ Definition array_mul_row_mx {T : Type} addf mulf x0
   (v : array T) (M : array (array T)):=
   map (fun c=> array_dot addf mulf x0 v c) M.
 
+Definition array_mul_mx_col {T : Type} addf mulf x0
+  (M : array (array T)) (v : array T):=
+  map (fun r => array_dot addf mulf x0 r v) M.
+
 Definition array_mulmx {T : Type} addf mulf x0
   (M N : array (array T)):=
   map (fun v=> array_mul_row_mx addf mulf x0 v N) M.

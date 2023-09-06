@@ -488,6 +488,9 @@ Definition bigQ_dot (x y : array bigQ) : bigQ :=
 Definition bigQ_mul_row_mx (a : array bigQ) (x : array (array bigQ)) :=
   PArrayUtils.array_mul_row_mx BigQ.add BigQ.mul 0%bigQ a x.
 
+Definition bigQ_mul_mx_col (x : array (array bigQ)) (a : array bigQ):=
+  PArrayUtils.array_mul_mx_col BigQ.add BigQ.mul 0%bigQ x a.
+
 Definition bigQ_mulmx (m n : array (array bigQ)):=
   PArrayUtils.array_mulmx BigQ.add BigQ.mul 0%bigQ m n.
 

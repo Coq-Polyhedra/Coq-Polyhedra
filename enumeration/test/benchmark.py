@@ -8,6 +8,7 @@ import re
 import time
 import math
 from scripts import core, lrs2dict, dict2bin, bin2coq, coqjobs, genlrs, dict2text
+from scripts.rank1 import lrs2dict_r1, dict2bin_r1
 import csv
 import shutil
 
@@ -31,9 +32,9 @@ def command_call(command, prefix=""):
 def format_time_output(st,megabytes):
   findit = re.search(r"(?P<time>\d+)[,.](?P<mtime>\d+)s.+, (?P<memory>\d+)", st)
   time, mtime = findit.group("time"), findit.group("mtime")
-  memory = float(findit.group("memory"))
+  memory = findit.group("memory")
   if megabytes:
-    memory /= 1000
+    memory = int(memory/1000)
   return f"{time}.{mtime}", str(memory)
 
 # --------------------------------------------------------------------
@@ -85,24 +86,30 @@ def certificates(**kwargs):
   res = []
   compute = kwargs["compute"]
   text = kwargs["text"]
+  rank1 = kwargs["rank1"]
+  lrs_dict = lrs2dict.lrs2dict if not rank1 else lrs2dict_r1.lrs2dict
+  dict_bin = dict2bin.dict2bin if not rank1 else dict2bin_r1.dict2bin
   for name in polytopes(**kwargs):
     res.append({"polytope" : name})
     hirsch = name in HIRSCH_CEX
     st = time.time()
-    dict = lrs2dict.lrs2dict(name,hirsch)
+    dict = lrs_dict(name,hirsch)
     et = time.time()
     res[-1]["time"] = f"{et - st:.2f}"
     if text:
       res2 = dict2text.dict2text(name,dict,compute)
     else:
-      res2 = dict2bin.dict2bin(name,dict)
+      res2 = dict_bin(name,dict)
       bin2coq.main(name)
-    coqjobs.main(name,"Validation",compute)
-    if name in ["poly20dim21", "poly23dim24"]:
-      coqjobs.main(name,"Hirsch", compute)
-      coqjobs.main(name,"Exact", compute)
+    if rank1:
+      coqjobs.main(name,"Rank1",compute)
     else:
-      coqjobs.main(name,"Diameter", compute)
+      coqjobs.main(name,"Validation",compute)
+      if name in ["poly20dim21", "poly23dim24"]:
+        coqjobs.main(name,"Hirsch", compute)
+        coqjobs.main(name,"Exact", compute)
+      else:
+        coqjobs.main(name,"Diameter", compute)
     res[-1] = {**res[-1], **res2}
   return res
 
@@ -224,10 +231,10 @@ def sort_res(res):
   return sorted(res, key=key)
 
 
-def bench2csv(kind,res,compute,text,parallel):
+def bench2csv(kind,res,compute,text,parallel,rank1):
   taskdir = os.path.join(BENCH_DIR,kind)
   os.makedirs(taskdir,exist_ok=True)
-  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + ("text_" if text else "") + (f"parallel_{parallel}_" if parallel is not None else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
+  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + ("text_" if text else "") + (f"parallel_{parallel}_" if parallel is not None else "") + (f"rank1_" if rank1 is not None else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
   taskfile = os.path.join(taskdir, file_name)
   with open(taskfile, "w", newline='') as stream:
     output = writer(stream)
@@ -243,7 +250,7 @@ def bench2csv(kind,res,compute,text,parallel):
         csvwriter.writerows(res)
 
 def one_task(kind,**kwargs):
-  bench2csv(kind,TASK[kind](**kwargs),kwargs["compute"],kwargs["text"],kwargs["parallel"])
+  bench2csv(kind,TASK[kind](**kwargs),kwargs["compute"],kwargs["text"],kwargs["parallel"],kwargs["rank1"])
 
 def all_tasks(*args,**kwargs):
   gen(**kwargs)
@@ -260,7 +267,8 @@ TASK = {
     "validation" : job("Validation"),
     "diameter" : job("Diameter"),
     "hirsch" : job("Hirsch"),
-    "exact" : job("Exact")
+    "exact" : job("Exact"),
+    "rank1" : job("Rank1")
   }
 
 ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "clean_benchmarks" : clean_benchmarks,  "all" : all_tasks, "gen" : gen}
@@ -277,6 +285,7 @@ def optparser():
   parser.add_argument("-t", "--text", dest="text", help=r"Certificates are generated as binary files by default. This option generates plain text .v files instead.", action="store_true")
   parser.add_argument("-j", "--jobs", dest="parallel", help="The compilation of Coq files by dune is done sequentially. This option calls dune on the folder instead. It is possible to add the number of task that can be simultaneously done.", nargs="?", const=PARALLEL_DFLT, default=None)
   parser.add_argument("-b", "--megabytes", dest="megabytes", help="Depending on the OS, the memory evaluated by the commands is either in kilobytes or in megabytes. This option divides by 1000 the correpsonding outputs, to deal with megabytes.", action="store_true")
+  parser.add_argument("--rank1", dest="rank1", help="Instead of using initial graph certification algorithm, this option generates certificate and executes program relative to the rank 1 update improvement. Not compatible with -t", action="store_true")
 
   return parser
 
@@ -289,6 +298,7 @@ def main():
   text = args.text
   parallel = args.parallel
   megabytes = args.megabytes
+  rank1 = args.rank1
   if pref[0] == "hirsch":
     prefix, nmin, nmax = "hirsch", None, None
   elif len(pref)==3:
@@ -296,7 +306,7 @@ def main():
   else:
     print('Error : -p option needs either "hirsch" of three parameters to work.')
     exit(1)
-  kwargs = {"prefix" : prefix, "nmin": nmin, "nmax" : nmax, "compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes}
+  kwargs = {"prefix" : prefix, "nmin": nmin, "nmax" : nmax, "compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes, "rank1" : rank1}
   if kind in TASK:
     one_task(kind,**kwargs)
   if kind in ADDITIONAL:
