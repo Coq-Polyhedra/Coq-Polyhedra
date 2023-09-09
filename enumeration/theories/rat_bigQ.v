@@ -503,7 +503,7 @@ Definition BQltx_order (x y : array bigQ) :=
 Definition eq_array_bigQ (a b : array bigQ) :=
   PArrayUtils.eq_array_rel (BigQ.eqb) a b.
 
-Definition bigQ_scal_rV (lambda : bigQ) (x : array bigQ):=
+Definition bigQ_scal_arr (lambda : bigQ) (x : array bigQ):=
   PArrayUtils.map (fun v=> BigQ.mul lambda v) x.
 
 Definition bigQ_add_rV (x y : array bigQ):=
@@ -516,7 +516,7 @@ end.
 
 Definition weighted_lines (v : array bigQ) (A : array (array bigQ)):=
   PArrayUtils.fold_pair
-    (fun v_i A_i acc => bigQ_add_rV acc (bigQ_scal_rV v_i A_i))
+    (fun v_i A_i acc => bigQ_add_rV acc (bigQ_scal_arr v_i A_i))
   v A (make (length A.[0%uint63]) 0%bigQ).
 
 End BigQUtils.
@@ -541,7 +541,7 @@ Definition BQltx_order (x y : array bigQ) :=
 Definition eq_array_bigQ (a b : array bigQ) :=
   eq_array_rel (BigQ.eqb) a b.
 
-Definition bigQ_scal_rV (lambda : bigQ) (x : array bigQ):=
+Definition bigQ_scal_arr (lambda : bigQ) (x : array bigQ):=
   arr_map (fun v=> BigQ.mul lambda v) x.
 
 Definition bigQ_add_rV (x y : array bigQ):=
@@ -549,7 +549,7 @@ Definition bigQ_add_rV (x y : array bigQ):=
 
 Definition weighted_lines (v : array bigQ) (A : array (array bigQ)):=
   arr_fold_pair
-    (fun v_i A_i acc => bigQ_add_rV acc (bigQ_scal_rV v_i A_i))
+    (fun v_i A_i acc => bigQ_add_rV acc (bigQ_scal_arr v_i A_i))
     v A (make (length A.[0%uint63]) 0%bigQ).
 
 Section Equiv.
@@ -579,8 +579,8 @@ Lemma eq_array_bigQE (a b : array bigQ):
 Proof. exact: eq_array_relE. Qed.
 
 Lemma bigQ_scal_rVE (lambda : bigQ) (x : array bigQ):
-  BigQUtils.bigQ_scal_rV lambda x = bigQ_scal_rV lambda x.
-Proof. by rewrite /BigQUtils.bigQ_scal_rV arr_mapE. Qed.
+  BigQUtils.bigQ_scal_arr lambda x = bigQ_scal_arr lambda x.
+Proof. by rewrite /BigQUtils.bigQ_scal_arr arr_mapE. Qed.
 
 Lemma bigQ_add_rVE (x y : array bigQ):
   BigQUtils.bigQ_add_rV x y = bigQ_add_rV x y.
@@ -714,7 +714,7 @@ Definition rat_scal_rV (lambda : rat) (X : array rat):=
 
 Lemma BQR_array_scal:
   (rat_bigQ =~> rel_array rat_bigQ =~> rel_array rat_bigQ)
-  bigQ_scal_rV rat_scal_rV.
+  bigQ_scal_arr rat_scal_rV.
 Proof.
 move=> l L lL x X xX; apply/rel_array_map; [|exact:xX].
 exact:rat_bigQ_mul.
@@ -1003,7 +1003,7 @@ Qed.
 
 Lemma rel_rV_bqr_scal (n : nat):
   (rat_bigQ =~> @rel_rV_bqr n =~> @rel_rV_bqr n)
-  bigQ_scal_rV (fun L X=> (L *: X)%R).
+  bigQ_scal_arr (fun L X=> (L *: X)%R).
 Proof.
 move=> l L lL; apply/rel_comp_func; [exact/BQR_array_scal/lL|].
 exact/rel_rV_rat_scal.

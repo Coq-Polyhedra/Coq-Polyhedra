@@ -9,6 +9,9 @@ import time
 import math
 from scripts import core, lrs2dict, dict2bin, bin2coq, coqjobs, genlrs, dict2text
 from scripts.rank1 import lrs2dict_r1, dict2bin_r1
+from scripts.rank1 import lrs2dict_r1_matrix, dict2bin_r1_matrix
+from scripts.rank1 import lrs2dict_r1_vector, dict2bin_r1_vector
+from scripts.rank1 import lrs2dict_r1_lazy, dict2bin_r1_lazy
 import csv
 import shutil
 
@@ -18,7 +21,9 @@ HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
 DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,14), "permutohedron" : (3,8)}
 PARALLEL_DFLT = 10
-
+RANK1_LIST = ["rank1", "rank1_matrix", "rank1_vector", "rank1_lazy"]
+RANK1_LRS_DICT = {"rank1" : lrs2dict_r1.lrs2dict, "rank1_matrix" : lrs2dict_r1_matrix.lrs2dict, "rank1_vector" : lrs2dict_r1_vector.lrs2dict, "rank1_lazy" : lrs2dict_r1_lazy.lrs2dict}
+RANK1_DICT_BIN = {"rank1" : dict2bin_r1.dict2bin, "rank1_matrix" : dict2bin_r1_matrix.dict2bin, "rank1_vector" : dict2bin_r1_vector.dict2bin, "rank1_lazy" : dict2bin_r1_lazy.dict2bin}
 # --------------------------------------------------------------------
 
 def command_call(command, prefix=""):
@@ -87,8 +92,8 @@ def certificates(**kwargs):
   compute = kwargs["compute"]
   text = kwargs["text"]
   rank1 = kwargs["rank1"]
-  lrs_dict = lrs2dict.lrs2dict if not rank1 else lrs2dict_r1.lrs2dict
-  dict_bin = dict2bin.dict2bin if not rank1 else dict2bin_r1.dict2bin
+  lrs_dict = RANK1_LRS_DICT.get(rank1,lrs2dict.lrs2dict)
+  dict_bin = RANK1_DICT_BIN.get(rank1,dict2bin.dict2bin)
   for name in polytopes(**kwargs):
     res.append({"polytope" : name})
     hirsch = name in HIRSCH_CEX
@@ -102,7 +107,7 @@ def certificates(**kwargs):
       res2 = dict_bin(name,dict)
       bin2coq.main(name)
     if rank1:
-      coqjobs.main(name,"Rank1",compute)
+      coqjobs.main(name,rank1,compute)
     else:
       coqjobs.main(name,"Validation",compute)
       if name in ["poly20dim21", "poly23dim24"]:
@@ -268,7 +273,10 @@ TASK = {
     "diameter" : job("Diameter"),
     "hirsch" : job("Hirsch"),
     "exact" : job("Exact"),
-    "rank1" : job("Rank1")
+    "rank1" : job("rank1"),
+    "rank1_matrix" : job("rank1_matrix"),
+    "rank1_vector" : job("rank1_vector"),
+    "rank1_lazy" : job("rank1_lazy")
   }
 
 ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "clean_benchmarks" : clean_benchmarks,  "all" : all_tasks, "gen" : gen}
@@ -285,7 +293,7 @@ def optparser():
   parser.add_argument("-t", "--text", dest="text", help=r"Certificates are generated as binary files by default. This option generates plain text .v files instead.", action="store_true")
   parser.add_argument("-j", "--jobs", dest="parallel", help="The compilation of Coq files by dune is done sequentially. This option calls dune on the folder instead. It is possible to add the number of task that can be simultaneously done.", nargs="?", const=PARALLEL_DFLT, default=None)
   parser.add_argument("-b", "--megabytes", dest="megabytes", help="Depending on the OS, the memory evaluated by the commands is either in kilobytes or in megabytes. This option divides by 1000 the correpsonding outputs, to deal with megabytes.", action="store_true")
-  parser.add_argument("--rank1", dest="rank1", help="Instead of using initial graph certification algorithm, this option generates certificate and executes program relative to the rank 1 update improvement. Not compatible with -t", action="store_true")
+  parser.add_argument("-r", "--rank1", dest="rank1", help="Instead of using initial graph certification algorithm, this option generates certificate and executes program relative to the rank 1 update improvement. Not compatible with -t", choices=RANK1_LIST)
 
   return parser
 

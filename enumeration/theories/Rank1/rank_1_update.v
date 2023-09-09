@@ -186,7 +186,7 @@ Definition initial
   let M := M.[0 <- BigQUtils.bigQ_mul_mx_col A x] in
   let '(B,M) :=
     IFold.ifold (fun i '(B,M)=>
-      let M := M.[Uint63.succ I.[i] <- BigQUtils.bigQ_scal_rV (-1)%bigQ (BigQUtils.bigQ_mul_mx_col A inv.[i])] in
+      let M := M.[Uint63.succ I.[i] <- BigQUtils.bigQ_scal_arr (-1)%bigQ (BigQUtils.bigQ_mul_mx_col A inv.[i])] in
       let B := B.[I.[i] <- copy inv.[i]] in
     (B,M)) (length I) (B,M)
   in

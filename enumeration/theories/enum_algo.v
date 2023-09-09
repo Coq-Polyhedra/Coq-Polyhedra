@@ -487,7 +487,7 @@ Definition inverse_line_i (lbl : BQvert_mapping)
   (map_ : array Uint63.int) (origin : Uint63.int) 
   (inv : array (array bigQ)) n i:=
   let: rV_i:= 
-    BigQUtils.bigQ_add_rV (lbl.[map_.[i]]) (BigQUtils.bigQ_scal_rV (-1)%bigQ lbl.[origin]) in
+    BigQUtils.bigQ_add_rV (lbl.[map_.[i]]) (BigQUtils.bigQ_scal_arr (-1)%bigQ lbl.[origin]) in
   BigQUtils.eq_array_bigQ (BigQUtils.bigQ_mul_row_mx rV_i inv) (BigQUtils.delta_line n i 1%bigQ).
 
 Definition dim_full_test (lbl : BQvert_mapping)
@@ -513,7 +513,7 @@ Definition inverse_line_i (lbl : BQvert_mapping)
   (map_ : array Uint63.int) (origin : Uint63.int) 
   (inv : array (array bigQ)) n i:=
   let: rV_i:= 
-    bigQ_add_rV (lbl.[map_.[i]]) (bigQ_scal_rV (-1)%bigQ lbl.[origin]) in
+    bigQ_add_rV (lbl.[map_.[i]]) (bigQ_scal_arr (-1)%bigQ lbl.[origin]) in
   eq_array_bigQ (bigQ_mul_row_mx rV_i inv) (BigQUtils.delta_line n i 1%bigQ).
 
 (* Definition inv_format_test (inv : array (array bigQ))
