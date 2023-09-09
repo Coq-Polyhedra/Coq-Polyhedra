@@ -21,9 +21,9 @@ HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
 DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,14), "permutohedron" : (3,8)}
 PARALLEL_DFLT = 10
-RANK1_LIST = ["rank1", "rank1_matrix", "rank1_vector", "rank1_lazy"]
-RANK1_LRS_DICT = {"rank1" : lrs2dict_r1.lrs2dict, "rank1_matrix" : lrs2dict_r1_matrix.lrs2dict, "rank1_vector" : lrs2dict_r1_vector.lrs2dict, "rank1_lazy" : lrs2dict_r1_lazy.lrs2dict}
-RANK1_DICT_BIN = {"rank1" : dict2bin_r1.dict2bin, "rank1_matrix" : dict2bin_r1_matrix.dict2bin, "rank1_vector" : dict2bin_r1_vector.dict2bin, "rank1_lazy" : dict2bin_r1_lazy.dict2bin}
+RANK1_LIST = ["rank1", "rank1_pivot", "rank1_matrix", "rank1_vector", "rank1_lazy"]
+RANK1_LRS_DICT = {"rank1" : lrs2dict_r1.lrs2dict, "rank1_pivot" : lrs2dict_r1.lrs2dict, "rank1_matrix" : lrs2dict_r1_matrix.lrs2dict, "rank1_vector" : lrs2dict_r1_vector.lrs2dict, "rank1_lazy" : lrs2dict_r1_lazy.lrs2dict}
+RANK1_DICT_BIN = {"rank1" : dict2bin_r1.dict2bin, "rank1_pivot" : dict2bin_r1.dict2bin, "rank1_matrix" : dict2bin_r1_matrix.dict2bin, "rank1_vector" : dict2bin_r1_vector.dict2bin, "rank1_lazy" : dict2bin_r1_lazy.dict2bin}
 # --------------------------------------------------------------------
 
 def command_call(command, prefix=""):
@@ -274,6 +274,7 @@ TASK = {
     "hirsch" : job("Hirsch"),
     "exact" : job("Exact"),
     "rank1" : job("rank1"),
+    "rank1_pivot" : job("rank1_pivot"),
     "rank1_matrix" : job("rank1_matrix"),
     "rank1_vector" : job("rank1_vector"),
     "rank1_lazy" : job("rank1_lazy")
