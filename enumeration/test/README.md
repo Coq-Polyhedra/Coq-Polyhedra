@@ -26,7 +26,7 @@ The usage of `benchmark.py` is given by :
 
   will generate polytopes given by `{name}` for every parameter between `{min}` and `{max}`, both included.
 
-  Example : `benchmark.py cube 3 10`
+  Example : `benchmark.py gen -p cube 3 10`
   Available names :
     - `cube`, the hypercube
     - `cross`, the cross polytope
