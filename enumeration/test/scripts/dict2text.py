@@ -94,7 +94,7 @@ TEXT = dict(
   bound_neg = array2text(array2text(bigQ2text,"0",""),default_bigQ_arr,bigQ_scope),
   origin = int632text,
   start = int632text,
-  map_dim = array2text(array2text(int632text,"0",""),default_int_arr,int63_scope),
+  map_dim = array2text(int632text,"0",int63_scope),
   inv_dim = array2text(array2text(bigQ2text,"0",""),default_bigQ_arr,bigQ_scope)
 )
 # --------------------------------------------------------------------
