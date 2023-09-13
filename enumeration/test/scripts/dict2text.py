@@ -115,7 +115,7 @@ def dict2text(name, contents, computation):
       stream.write(IMPORT)
       output(f"Definition {key} : {TYPE[key]} := Eval {computation} in")
       output(TEXT[key](value) + ".")
-    res[f"Size of {key}.v"] = os.path.getsize(tgtfile)
+    res[f"Size of {key}.v"] = float(os.path.getsize(tgtfile)/1000000)
   with open(os.path.join(coqdir, "dune"), "w") as stream:
         stream.write(DUNE.format(name = name.upper()))
   return res

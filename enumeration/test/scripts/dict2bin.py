@@ -59,7 +59,7 @@ def dict2bin(name,contents):
         with open(tgtbin, 'w+b') as stream:
             descr.descriptor(stream)
             descr.pickle(contents[key], stream)
-        res[f"Size of {key}.bin"] = os.path.getsize(tgtbin)
+        res[f"Size of {key}.bin"] = float(os.path.getsize(tgtbin)/1000000)
     return res
 
 def main(name):
