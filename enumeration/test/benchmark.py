@@ -48,6 +48,13 @@ def theories(**kwargs):
 # --------------------------------------------------------------------
 def polytopes(**kwargs):
   datas = os.listdir(core.resource())
+  def key(name):
+    pref_match = re.search(f"([^_]+)_(\d+)", name)
+    if pref_match is not None:
+      return (pref_match.group(1), int(pref_match.group(2)))
+    else:
+      return (name,0)
+  datas = sorted(datas, key=key)
   prefix = kwargs["prefix"]
   if prefix == "hirsch":
     for name in datas:
