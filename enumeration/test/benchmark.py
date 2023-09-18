@@ -16,6 +16,7 @@ TIME_MEM_PREFIX = r'TIMEFMT="%E : real time, %M : max memory" && '
 HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
 DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,14), "permutohedron" : (3,8)}
+LOW_GEN = {"cube" : (3,14), "cross" : (3,7), "cyclic" : (3,12), "permutohedron" : (3,7)}
 PARALLEL_DFLT = 10
 
 # --------------------------------------------------------------------
@@ -203,13 +204,14 @@ def clean_benchmarks(**kwargs):
 # --------------------------------------------------------------------
 def gen(**kwargs):
   prefix = kwargs["prefix"]
+  text = kwargs["text"]
   if prefix != "hirsch":
     if prefix != "":
       nmin, nmax = kwargs["nmin"], kwargs["nmax"]
       print(prefix)
       polytopes = {prefix : (nmin, nmax)}
     else:
-      polytopes = DEF_GEN
+      polytopes = LOW_GEN if text else DEF_GEN
     for poly, (n, N) in polytopes.items():
       for k in range(n, N+1):
         if poly == "cyclic":
