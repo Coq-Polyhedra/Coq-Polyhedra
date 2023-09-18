@@ -123,7 +123,8 @@ def compilation(**kwargs):
     if parallel is None:
       times = []
       max_memory = -math.inf
-      for file in os.listdir(coqdir):
+      files = sorted(os.listdir(coqdir))
+      for file in files:
         if file.endswith(".v"):
           print(file)
           rel_path = os.path.join("data",name,"coq",file+"o")
@@ -156,6 +157,7 @@ def job(job):
         times = []
         max_memory = -math.inf
         datas = list(os.listdir(jobdir))
+        datas.sort()
         datas.sort(key=f"{job}.v".__eq__)
         for file in datas:
           if file.endswith(".v"):
