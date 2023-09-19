@@ -195,21 +195,14 @@ def clean_benchmarks(**kwargs):
 
 # --------------------------------------------------------------------
 def gen(**kwargs):
-  prefix = kwargs["prefix"]
   text = kwargs["text"]
-  if prefix != "hirsch":
-    if prefix != "":
-      nmin, nmax = kwargs["nmin"], kwargs["nmax"]
-      print(prefix)
-      polytopes = {prefix : (nmin, nmax)}
-    else:
-      polytopes = LOW_GEN if text else DEF_GEN
-    for poly, (n, N) in polytopes.items():
-      for k in range(n, N+1):
-        if poly == "cyclic":
-          genlrs.generate_lrs(poly, k, 2*k)
-        else:
-          genlrs.generate_lrs(poly, k)
+  polytopes = LOW_GEN if text else DEF_GEN
+  for poly, (n, N) in polytopes.items():
+    for k in range(n, N+1):
+      if poly == "cyclic":
+        genlrs.generate_lrs(poly, k, 2*k)
+      else:
+        genlrs.generate_lrs(poly, k)
 # --------------------------------------------------------------------
 def writer(stream):
   def output(st):
