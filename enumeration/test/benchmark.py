@@ -63,7 +63,7 @@ def polytopes(**kwargs):
   datas = sorted(datas, key=key)
   text = kwargs["text"]
   for name in datas:
-    if not text or name!="poly23dim24":
+    if not text or name not in HIRSCH_CEX:
       if not name.startswith("."):
         print(name)
         yield name
