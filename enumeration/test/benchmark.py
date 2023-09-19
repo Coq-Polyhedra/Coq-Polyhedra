@@ -20,6 +20,11 @@ LOW_GEN = {"cube" : (3,14), "cross" : (3,7), "cyclic" : (3,12), "permutohedron" 
 PARALLEL_DFLT = 10
 
 # --------------------------------------------------------------------
+def chunks(lst, n):
+    """Yield successive n-sized chunks from lst."""
+    for i in range(0, len(lst), n):
+        yield lst[i:i + n]
+# --------------------------------------------------------------------
 
 def command_call(command, prefix=""):
   output = sp.run(prefix + command,
@@ -56,22 +61,9 @@ def polytopes(**kwargs):
     else:
       return (name,0)
   datas = sorted(datas, key=key)
-  prefix = kwargs["prefix"]
-  if prefix == "hirsch":
-    for name in datas:
-      if name in ["poly20dim21", "poly23dim24"]:
-        print(name)
-        yield name
-  elif prefix != "":
-    nmin = kwargs["nmin"]
-    nmax = kwargs["nmax"]
-    for name in datas:
-      pref_match = re.match(f"{prefix}_(\d+)", name)
-      if pref_match is not None and nmin <= int(pref_match.group(1)) <= nmax:
-        print(name)
-        yield(name) 
-  else:
-    for name in datas:
+  text = kwargs["text"]
+  for name in datas:
+    if not text or name!="poly23dim24":
       if not name.startswith("."):
         print(name)
         yield name
@@ -283,7 +275,6 @@ def optparser():
   parser.add_argument(dest="kind", help="The kind of execution required", 
                       choices=list(TASK.keys()) + list(ADDITIONAL.keys()))
   
-  parser.add_argument("-p", "--prefix", dest="prefix", nargs="*", help=r"Specifies the subset on which perform the benchmarks. PREFIX is either 'hirsch' or (cube|cross|cyclic|permutohedron). Only the latter needs MIN and MAX.", default=["","0","0"])
   parser.add_argument("-c", "--compute", dest="compute", help=r"vm_compute is the reduction strategy used by default, this option allows to perform using compute instead.", action="store_const", const="compute", default="vm_compute")
   parser.add_argument("-t", "--text", dest="text", help=r"Certificates are generated as binary files by default. This option generates plain text .v files instead.", action="store_true")
   parser.add_argument("-j", "--jobs", dest="parallel", help="The compilation of Coq files by dune is done sequentially. This option calls dune on the folder instead. It is possible to add the number of task that can be simultaneously done.", nargs="?", const=PARALLEL_DFLT, default=None)
@@ -295,19 +286,11 @@ def optparser():
 def main():
   args = optparser().parse_args()
   kind = args.kind
-  pref = args.prefix
   compute = args.compute
   text = args.text
   parallel = args.parallel
   megabytes = args.megabytes
-  if pref[0] == "hirsch":
-    prefix, nmin, nmax = "hirsch", None, None
-  elif len(pref)==3:
-    prefix, nmin, nmax = pref[0], int(pref[1]), int(pref[2])
-  else:
-    print('Error : -p option needs either "hirsch" of three parameters to work.')
-    exit(1)
-  kwargs = {"prefix" : prefix, "nmin": nmin, "nmax" : nmax, "compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes}
+  kwargs = {"compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes}
   if kind in TASK:
     one_task(kind,**kwargs)
   if kind in ADDITIONAL:
