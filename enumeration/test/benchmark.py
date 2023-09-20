@@ -15,7 +15,7 @@ CWD = os.getcwd()
 TIME_MEM_PREFIX = r'TIMEFMT="%E : real time, %M : max memory" && '
 HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
-DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,13), "permutohedron" : (3,8)}
+DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,13), "permutohedron" : (3,7)}
 LOW_GEN = {"cube" : (3,14), "cross" : (3,7), "cyclic" : (3,12), "permutohedron" : (3,7)}
 PARALLEL_DFLT = 10
 
