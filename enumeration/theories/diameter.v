@@ -17,7 +17,6 @@ Section Queue.
 
 Context {T : Type}.
 
-
 Record queue := Queue { front : seq T; back : seq T; }.
 
 Implicit Types (q : queue) (x : T) (xs : seq T).
@@ -251,27 +250,71 @@ Section Def.
 
 Context {T : choiceType} (G : graph T).
 
-Definition is_shortest (p : epath G) :=
+Definition is_shortest (p : gpath G) :=
+  forall p' : gpath G, (src p = src p') -> dst p = dst p' ->
+  size_path p <= size_path p'.
+
+Definition is_shortest_epath (p : epath G) :=
   [forall p' : epath G, (src p == src p') ==> (dst p == dst p') ==> 
   (size_path p <= size_path p')].
 
 Lemma is_shortestP (p : epath G): reflect
-  (forall p' : epath G, src p = src p' -> dst p = dst p' -> size_path p <= size_path p')
-  (is_shortest p).
+  (is_shortest p)
+  (is_shortest_epath p).
 Proof.
 apply/(iffP idP).
-- move=> + p' src_p dst_p; move/forallP=> /(_ p') /implyP.
-  by rewrite src_p dst_p; move=> /(_ (eq_refl _)) /implyP /(_ (eq_refl _)).
-- move=> h; apply/forallP=> p'; apply/implyP=> /eqP src_p.
-  apply/implyP=> /eqP dst_p; exact/h.
+- move=> h p' /eqP src_eq /eqP dst_eq.
+  move/forallP: h=> /(_ (@gpath_epath _ _ p')).
+  rewrite gpath_epath_src gpath_epath_dst src_eq dst_eq.
+  move/leq_trans; apply; exact:size_gpath_epath.
+- move=> h; apply/forallP=> p'; apply/implyP=> /eqP src_eq.
+  by apply/implyP=> /eqP dst_eq; apply: h.
 Qed.
 
-Definition diameter := \max_(p : epath G | is_shortest p) size_path p.
+Definition eccentricity x:=
+  \max_(p : epath G | is_shortest_epath p && (src p == x)) size_path p.
 
-Lemma diameterP: forall p : epath G, is_shortest p -> size_path p <= diameter.
+Definition diameter := \max_(p : epath G | is_shortest_epath p) size_path p.
+
+Lemma eccentricity_epathP x: forall p : epath G, 
+  src p = x -> is_shortest_epath p ->
+  size_path p <= eccentricity x.
+Proof.
+move=> p src_p is_shtt_p.
+by apply/(bigmax_sup p)=> //; rewrite is_shtt_p src_p eqxx.
+Qed.
+
+Lemma eccentricityP x: forall p : gpath G, src p = x ->
+  is_shortest p -> size_path p <= eccentricity x.
+Proof.
+move=> p src_p is_shtt_p.
+set p' := (@gpath_epath _ _ p).
+apply/leq_trans; first apply/(is_shtt_p p');
+  [exact:gpath_epath_src|exact:gpath_epath_dst|].
+apply/eccentricity_epathP; rewrite ?gpath_epath_src //. 
+apply/is_shortestP=> p'' src_p'' dst_p''.
+apply/leq_trans; [exact:size_gpath_epath|apply:is_shtt_p].
+- by rewrite -gpath_epath_src. 
+- by rewrite -gpath_epath_dst.
+Qed.
+
+
+Lemma diameter_epathP: forall p : epath G, is_shortest_epath p -> size_path p <= diameter.
 Proof.
 move=> p is_shtt_p; rewrite /diameter.
 exact/(bigmax_sup p).
+Qed.
+
+Lemma diameterP: forall p : gpath G, is_shortest p -> size_path p <= diameter.
+Proof.
+move=> p is_shtt_p.
+set p' := (@gpath_epath _ _ p).
+apply/leq_trans; first apply/(is_shtt_p p');
+  [exact:gpath_epath_src|exact:gpath_epath_dst|].
+apply/diameter_epathP/is_shortestP=> p'' src_p'' dst_p''.
+apply/leq_trans; [exact:size_gpath_epath|apply:is_shtt_p].
+- by rewrite -gpath_epath_src. 
+- by rewrite -gpath_epath_dst.
 Qed.
 
 End Def.
@@ -362,36 +405,6 @@ Definition HBFS (y : T) succ :=
 Definition Hdiameter_BFS succ := \max_(i <- vertices G) HBFS i succ.
 
 End HBFS.
-
-(* Section BFSPaths.
-
-Context {T : choiceType} (G : graph T).
-
-Local Definition dataType := epath G.
-Local Definition collectType := {fset epath G}.
-
-Local Definition updt (p : epath G) (y : T):=
-  if @idP (edges G (dst p) y) is ReflectT hG then 
-  if @idPn (y \in src p :: walk p) is ReflectT hY then 
-  rcons_epath hG hY else p else p.
-
-Local Definition coll (curr: @state _ dataType collectType) (new : epath G) : collectType :=
-  if dst new \in curr.(visited) then curr.(collect) else new |` curr.(collect).
-
-Local Definition init_collect (y : vertices G) := [fset (nil_path (fsvalP y))].
-
-Definition BFS_step_allpath y := BFS_step y (fun _=> updt) coll (successors G).
-
-Definition BFS_iter_allpath (y : vertices G) :=
-  BFS_iter G (fsval y) (nil_path (fsvalP y)) (init_collect y) (fun _=> updt) coll (successors G).
-
-Definition BFS_allpath_ (y : vertices G) := 
-  BFS_ G (fsval y) (nil_path (fsvalP y)) (init_collect y) (fun _ => updt) coll (successors G). 
-
-Definition BFS_allpath (y : vertices G) := 
-  BFS G (fsval y) (nil_path (fsvalP y)) (init_collect y) (fun _ => updt) coll (successors G).
-
-End BFSPaths. *)
 
 End HighDiameter.
 
@@ -606,18 +619,18 @@ Hypothesis xG : x \in vertices G.
 Section Utils.
 
 Definition supp_shortest (p : epath G) (S : {fset T}):=
-  [&& (src p == x), (dst p \in S) & is_shortest p].
+  [&& (src p == x), (dst p \in S) & is_shortest_epath p].
 
 Definition target_shortest (p : epath G) (y : T):=
-  [&& (src p == x), (dst p == y) & is_shortest p].
+  [&& (src p == x), (dst p == y) & is_shortest_epath p].
 
 Lemma supp_shortestP (p : epath G) S: reflect
   ([/\ src p = x, dst p \in S & is_shortest p])
   (supp_shortest p S).
 Proof.
 apply/(iffP idP).
-- by case/and3P=> /eqP -> -> ->.
-- by case=> src_p dst_p is_sht; apply/and3P; rewrite src_p dst_p is_sht eq_refl.
+- by case/and3P=> /eqP -> -> /is_shortestP.
+- by case=> src_p dst_p /is_shortestP is_sht; apply/and3P; rewrite src_p dst_p is_sht.
 Qed.
 
 Lemma target_shortestP (p : epath G) y: reflect
@@ -625,13 +638,13 @@ Lemma target_shortestP (p : epath G) y: reflect
   (target_shortest p y).
 Proof.
 apply/(iffP idP).
-- by case/and3P=> /eqP -> /eqP -> ->.
-- by case=> src_p dst_p is_sht; apply/and3P; rewrite src_p dst_p is_sht.
+- by case/and3P=> /eqP -> /eqP -> /is_shortestP.
+- by case=> src_p dst_p /is_shortestP is_sht; apply/and3P; rewrite src_p dst_p is_sht.
 Qed.
 
 Lemma supp_shortest1 p: supp_shortest p [fset x] -> p = nil_path xG.
 Proof.
-case/supp_shortestP=> src_p /fset1P dst_p /is_shortestP is_sht.
+case/supp_shortestP=> src_p /fset1P dst_p is_sht.
 apply/epath_inj/gpath_inj=> /=; split=> //.
 move: (is_sht (nil_path xG))=> /= /(_ src_p dst_p).
 by rewrite /size_path /= leqn0 size_eq0 => /eqP.
@@ -643,9 +656,11 @@ Proof.
 move=> src_p dst_p.
 pose P := fun p' : epath G => (src p' == x) && (dst p' == z).
 have P0: P p by apply/andP; split; exact/eqP.
-case/(arg_minnP (@size_path _ G)): P0=> p' /andP [/eqP src_p' /eqP dst_p'] min_p'.
-exists p'; apply/target_shortestP; split=> //; apply/is_shortestP=> p''.
-rewrite src_p' dst_p' => src_p'' dst_p''; apply/min_p'.
+case/(arg_minnP (fun p : epath G => size_path p)): P0=> p' /andP [/eqP src_p' /eqP dst_p'] min_p'.
+exists p'; apply/target_shortestP; split=> // p''.
+rewrite src_p' dst_p' => src_p'' dst_p''. 
+apply/leq_trans; [|exact:size_gpath_epath].
+apply/min_p'.
 by rewrite /P -src_p'' -dst_p'' !eq_refl.
 Qed.
 
@@ -653,10 +668,10 @@ Lemma target_shortest_by_size (p : epath G) (z : T) (n : nat):
   (forall p', target_shortest p' z -> size_path p' = n) ->
   src p = x -> dst p = z -> size_path p = n -> target_shortest p z.
 Proof.
-move=> size_prop src_p dst_p size_p; apply/target_shortestP; split=> //.
-apply/is_shortestP=> p'; rewrite src_p dst_p size_p => src_p' dst_p'.
+move=> size_prop src_p dst_p size_p; apply/target_shortestP; split=> //p'. 
+rewrite src_p dst_p size_p => src_p' dst_p'.
 case: (target_shortest_witness src_p dst_p)=> p_min /[dup] /size_prop <-.
-by case/target_shortestP=> ?? /is_shortestP; apply; rewrite -?src_p' -?dst_p'.
+by case/target_shortestP=> ??; apply; rewrite -?src_p' -?dst_p'.
 Qed.
 
 (* Lemma target_supp_shortest p y: target_shortest p y S -> supp_shortest p S.
@@ -821,8 +836,7 @@ split; first split.
   by move/Queue.mem_queue0.
 - move=> y' k'; case=> [[-> ->]|/Queue.mem_queue0] //.
   exists (nil_path xG)=> /=; split=> //; last move=> z; rewrite ?inE //.
-  apply/target_shortestP; split=> //; apply/is_shortestP.
-  by move=> ? _ _; rewrite /size_path /= leq0n.
+  by apply/target_shortestP.
 - by move=> rs /= <- /=; exists [:: (x,0)], [::].
 Qed.
 
@@ -971,7 +985,7 @@ Lemma Hmark_fold_minimal (s : Hstate) y k z:
   forall p : epath G, target_shortest p z -> size_path p = k.+1.
 Proof.
 case=> -[_ x_vis _] edge_syk vis_syk path_syk sort_syk.
-move=> yGz z_visF p /target_shortestP [src_p dst_p /is_shortestP min_p].
+move=> yGz z_visF p /target_shortestP [src_p dst_p min_p].
 apply/anti_leq/andP; split.
 - case: (path_syk y k (or_introl (erefl _)))=> p' [].
   case/target_shortestP=> src_p' dst_p' _ supp_p' size_p'.
@@ -990,7 +1004,7 @@ apply/anti_leq/andP; split.
   move: (edge_syk _ _ fp_in_vis dst_fp edge_fp_in).
   case.
   + move=> fp_in_eq; case: (path_syk y k (or_introl (erefl _)))=> p'.
-    case=> /target_shortestP [src_p' dst_p' /is_shortestP] + _ <-.
+    case=> /target_shortestP [src_p' dst_p'] + _ <-.
     by apply; rewrite ?src_p' ?src_in_fp ?src_p ?dst_p' ?dst_in_fp ?fp_in_eq.
   + case=> k'; case: (Queue.rq_witness s.(queue))=> rs rq_rs fp_memq.
     have k'_eq: k' \in [fset k; k.+1].
@@ -1000,7 +1014,7 @@ apply/anti_leq/andP; split.
         [move: l_all|move: r_all]; move=> /allP/[apply]/eqP /= ->; 
         rewrite !inE eq_refl ?orbT.
     case: (path_syk _ _ (or_intror fp_memq))=> p'.
-    case=> /target_shortestP [src_p' dst_p' /is_shortestP min_p'] _.
+    case=> /target_shortestP [src_p' dst_p' min_p'] _.
     move: k'_eq; rewrite !inE; case/orP=> /eqP ->.
     * by move=> <-; apply/min_p'; rewrite ?src_p' ?src_in_fp ?src_p ?dst_p' ?dst_in_fp.
     * move=> size_p'; apply/ltnW; rewrite -size_p'.
@@ -1285,7 +1299,7 @@ Section Diameter.
 
 Lemma BFSP x: x \in vertices G -> 
   HBFS G x succ = 
-  \max_(p : epath G | is_shortest p && (src p == x)) size_path p.
+  \max_(p : epath G | is_shortest_epath p && (src p == x)) size_path p.
 Proof.
 move=> xG; move: (HBFS_iterP xG).
 rewrite /HBFS /param_BFS /param_BFS_ /HBFS_iter.
@@ -1318,9 +1332,6 @@ Definition high_BFS {T : choiceType} (G : graph T) x:=
 
 Definition high_diameter_BFS {T : choiceType} (G : graph T):=
   Hdiameter_BFS G (successors G).
-
-Definition eccentricity {T : choiceType} (G : graph T) x:=
-  \max_(p : epath G | is_shortest p && (src p == x)) size_path p.
 
 Lemma high_BFSE {T : choiceType} (G : graph T) x:
   x \in vertices G -> 
@@ -1440,68 +1451,4 @@ Qed.
 
 End RelGraphR.
 End RelGraph.
-
-(* Section FinalLemma.
-
-Context {T : choiceType} (g : graph.graph) (G : high_graph.graph T) (f : int -> T).
-Hypothesis gG : gisof (to_graph_struct g) G f.
-
-Lemma succ_gGP x: x \in vertices G -> succ gG x =i successors G x.
-Proof.
-move=> xG; rewrite /succ.
-case: {-}_/idP=> //= p; case/andP: (xchooseP (foo gG p)).
-move: (xchoose (foo gG p))=> x' x'_g /eqP <- z.
-apply/idP/idP.
-+ case/mapP=> k; rewrite mem_filter=> /andP [k_g k_nei] ->.
-  rewrite in_succE; rewrite -(gisof_edge gG) ?to_graph_vtx //.
-  rewrite to_graph_edge ?to_graph_vtx //.
-  by rewrite mem_edgeP // mem_filter k_g /=.
-+ rewrite in_succE=> /[dup] /edge_vtxr.
-  rewrite -(gisof_vtx gG)=> /imfsetP [/= k].
-  rewrite to_graph_vtx=> gk ->; rewrite -(gisof_edge gG) ?to_graph_vtx //.
-  rewrite to_graph_edge ?to_graph_vtx // mem_edgeP //.
-  exact/map_f.
-Qed.
-
-Lemma compute_BFSP (x : int) : mem_vertex g x ->
-  low_BFS g x = \max_(p : epath G | (is_shortest p) && (src p == f x)) size_path p :> nat.
-Proof.
-move=> xg.
-rewrite (repr_graph_BFS gG) //. 
-move/fsetP: (gisof_vtx gG)=> /(_ (f x)); rewrite in_imfset ?to_graph_vtx //.
-move/esym=> lblx_G.
-rewrite (BFSP _ lblx_G) //; exact: succ_gGP.
-Qed.
-
-Lemma compute_diameterP : low_diameter g =
-  high_diameter G :> nat.
-Proof.
-have := (@high_diameterE _ G (succ gG) _) => ->; [exact: succ_gGP|exact: repr_graph_diameter].
-Qed.
-
-End FinalLemma. *)
-
-
-(* Section DiameterEnough.
-
-Context {T : choiceType} (G : graph T).
-Context (succ : T -> seq T).
-Hypothesis succ_h : forall x, x \in vertices G -> succ x =i successors G x.
-
-Lemma diameter_enough n' n m' m x: 
-  n' = n -> m' <= m -> 
-  x \in vertices G ->
-  HBFS G x succ > m - n -> 
-  high_diameter G > m' - n'.
-Proof.
-move=> n_eq m_sup xG.
-move:(leq_sub2r n' m_sup); rewrite n_eq.
-move/leq_ltn_trans=> /[apply].
-move/leq_trans; apply.
-rewrite (BFSP succ_h) //; apply/bigmax_leqP=> p /andP [sht_p _].
-exact/leq_bigmax_cond.
-Qed.
-
-
-End DiameterEnough. *)
 

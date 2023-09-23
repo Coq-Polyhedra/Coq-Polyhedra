@@ -241,20 +241,20 @@ Record epath := EPath {
   _ : uniq (src p :: walk p)
 }.
 
-Definition is_path (p : epath) (x y : T) := src p = x /\ dst p = y.
-Definition has_path (x y : T) := exists p : epath, is_path p x y.
-Definition size_path (p : epath) := size (walk p).
-Definition is_npath (n : nat) (p : epath) (x y : T) :=
+Definition is_path (p : gpath) (x y : T) := src p = x /\ dst p = y.
+Definition has_path (x y : T) := exists p : gpath, is_path p x y.
+Definition size_path (p : gpath) := size (walk p).
+Definition is_npath (n : nat) (p : gpath) (x y : T) :=
   is_path p x y /\ size_path p = n.
-Definition has_npath (n : nat) (x y : T) := exists p : epath, is_npath n p x y.
+Definition has_npath (n : nat) (x y : T) := exists p : gpath, is_npath n p x y.
 Definition connected := {in (vertices G) &, forall x y : T, has_path x y}.
 
-Lemma mem_src (p : epath) : src p \in vertices G. Proof. by case: p => -[]. Qed.
-Lemma path_walk (p : epath) : path (edges G) (src p) (walk p). Proof. by case: p => -[]. Qed.
-Lemma last_dst (p : epath) : last (src p) (walk p) = (dst p). Proof. by case: p => -[????? /= /eqP]. Qed.
+Lemma mem_src (p : gpath) : src p \in vertices G. Proof. by case: p. Qed.
+Lemma path_walk (p : gpath) : path (edges G) (src p) (walk p). Proof. by case: p. Qed.
+Lemma last_dst (p : gpath) : last (src p) (walk p) = (dst p). Proof. by case: p => ????? /= /eqP. Qed.
 Lemma uniq_walk (p : epath) : uniq (src p :: walk p). Proof. by case: p. Qed.
 
-Lemma mem_walk (p : epath) : forall x, x \in walk p -> x \in vertices G.
+Lemma mem_walk (p : gpath) : forall x, x \in walk p -> x \in vertices G.
 Proof.
 move: (path_walk p); elim: (walk p) (src p) (mem_src p)=> //= h t IH.
 move=> s s_vtx /andP [/edge_vtxr h_vtx] /(IH _ h_vtx) IH2.
@@ -265,13 +265,13 @@ Lemma size_path_le (p : epath) : size_path p <= #|` vertices G|.
 Proof. by apply/uniq_leq_size; [by case/andP:(@uniq_walk p)|exact:mem_walk]. Qed.
 
 
-Lemma mem_dst (p : epath) : dst p \in vertices G.
+Lemma mem_dst (p : gpath) : dst p \in vertices G.
 Proof. 
 rewrite -last_dst; case E: (walk p)=> [|h t]; rewrite ?mem_src //.
 by apply/(@mem_walk p); rewrite E /= mem_last.
 Qed.
 
-Lemma edge_dst (p : epath): size_path p > 0 -> 
+Lemma edge_dst (p : gpath): size_path p > 0 -> 
   edges G (last (src p) (behead (belast (src p) (walk p)))) (dst p).
 Proof.
 rewrite /size_path.
@@ -406,19 +406,43 @@ Canonical epath_finType := FinType epath epath_finMixin.
 
 End FinType.
 
+Section Gpath2Epath.
+Context {p : gpath}.
+Program Definition gpath_epath := @EPath (@GPath (src p) (dst p) (shorten (src p) (walk p)) _ _ _) _.
+Next Obligation. by case: p. Defined.
+Next Obligation. by case: p=> ??? /= _ + _; case/shortenP. Defined.
+Next Obligation. by case: p=> ??? /= _; case/shortenP. Defined.
+Next Obligation. by case:p=> ??? /= _; case/shortenP. Defined.
+
+Lemma gpath_epath_src : src gpath_epath = src p.
+Proof. by []. Qed.
+Lemma gpath_epath_dst : dst gpath_epath = dst p.
+Proof. by []. Qed.
+Lemma size_gpath_epath : size_path gpath_epath <= size_path p.
+Proof.
+rewrite /size_path /=.
+case/shortenP: (path_walk p)=> p' _ /= /andP [_].
+move/uniq_leq_size=> h sub_p'; apply: h=> x xp'.
+by move/sub_all: sub_p'=> /(_ p' (allss p')) /allP /(_ x xp').
+Qed.
+
+End Gpath2Epath.
+
+Lemma has_epath x y: has_path x y -> exists p : epath, is_path p x y.
+Proof.
+case=> p' [??]; exists (@gpath_epath p').
+by split; rewrite ?gpath_epath_src ?gpath_epath_dst.
+Qed.
+
 Section NilPath.
 Context {x : T}.
 Hypothesis xG : x \in vertices G.
 Program Definition nil_path := @EPath (@GPath x x [::] _ _ _) _.
 End NilPath.
 
-Lemma size_path0 (p : epath) : size_path p = 0 <-> src p = dst p.
+Lemma size_path0 (p : gpath) : size_path p = 0 -> src p = dst p.
 Proof.
-split.
-- by move/size0nil; case: p=> -[/= ??? _ _ + _]; move/[swap]; move=> -> /= /eqP.
-- move=> h; apply/eqP; rewrite size_eq0; apply/eqP; move: h.
-  case: p=> -[/= ?? s _ _ /eqP <- /andP [+ _]].
-  by move/[swap] => ->; case: s=> //= ??; rewrite mem_last.
+by move/size0nil; case: p => /= ??? _ _; move/[swap] => -> /= /eqP.
 Qed.
 
 Lemma has_npath0 x : x \in vertices G -> has_npath 0 x x.
@@ -427,8 +451,8 @@ Proof. by move=> xG; exists (nil_path xG). Qed.
 Lemma has_npath0P (x y : T) : has_npath 0 x y <-> x = y /\ y \in vertices G.
 Proof.
 split=> [|[->]]; last exact/has_npath0.
-case=> -[p /= ?] [[<- <-]] /size_path0 <-; split=> //.
-exact: mem_src.
+case=> p [] [<- <-] /size_path0 ->; split=> //.
+exact: mem_dst.
 Qed.
 
 Lemma has_pathP (x y : T): has_path x y <-> exists n, has_npath n x y.
@@ -441,100 +465,68 @@ Qed.
 Lemma has_pathxx x : x \in vertices G -> has_path x x.
 Proof. move=> xG; apply/has_pathP; exists 0; exact: (has_npath0 xG). Qed.
 
-Lemma epath_vtx (p : epath) : dst p \in vertices G.
-Proof.
-case: p=> -[x y s /= +++ _]; elim: s x y => /= [|a l IH].
-- by move=> x y ? _ /eqP <-.
-- move=> x y xG /andP [edge_a]; apply/IH.
-  exact: (edge_vtxr edge_a).
-Qed.
-
 Lemma has_path_vtx (x y : T): has_path x y -> y \in vertices G.
-Proof. case=> p [_ <-]; exact: epath_vtx. Qed.
+Proof. case=> p [_ <-]; exact: mem_dst. Qed.
 
 Lemma has_npath_vtx n x y: has_npath n x y -> y \in vertices G.
-Proof. case=> p [[_ <-]] _; exact: epath_vtx. Qed.
+Proof. case=> p [[_ <-]] _; exact: mem_dst. Qed.
 
 Section EdgePath.
 Context {x y : T}.
 Hypothesis xGy : edges G x y.
-Hypothesis xny : x != y.
 
 Program Definition edge_path := @EPath (@GPath x y [:: y] _ _ _) _.
 Next Obligation. exact: (edge_vtxl xGy). Defined.
 Next Obligation. by rewrite xGy. Defined.
-Next Obligation. by rewrite inE xny. Defined.
+Next Obligation. by rewrite inE (edges_neq xGy). Defined.
 End EdgePath.
 
 Lemma has_path_edge x y : edges G x y -> has_path x y.
-Proof.
-move=> xGy; case/boolP: (x == y).
-- move/eqP => ->; exact/has_pathxx/(edge_vtxr xGy).
-- by move=> xny; exists (edge_path xGy xny).
-Qed.
+Proof. by move=> xGy; exists (edge_path xGy). Qed.
 
 Section TransPath.
-Context {p p' : epath}.
+Context {p p' : gpath}.
 Hypothesis junction : (dst p) = (src p').
 
-(*TODO : créer un lemme d'existence d'un chemin sans cycle : gpath => epath*)
-(*TODO : partir d'un gpath qui convient*)
-
-Program Definition trans_path :=
-  @EPath (@GPath (src p) (dst p') (shorten (src p) ((walk p) ++ (walk p'))) _ _ _) _.
-Next Obligation. by case: p=> -[]. Defined.
-Next Obligation.
-have: path (edges G) (src p) (walk p ++ walk p') by rewrite cat_path last_dst junction !path_walk.
-by case/shortenP.
+Program Definition trans_gpath :=
+  @GPath (src p) (dst p') ((walk p) ++ (walk p')) _ _ _.
+Next Obligation. by case: p. Defined.
+Next Obligation. 
+by rewrite cat_path last_dst junction !path_walk.
 Defined.
 Next Obligation.
-have: last (src p) (walk p ++ walk p') = dst p' by rewrite last_cat last_dst junction last_dst.
-have: path (edges G) (src p) (walk p ++ walk p') by rewrite cat_path last_dst junction !path_walk.
-by case/shortenP=> ? _ _ _ ->.
-Defined.
-Next Obligation.
-have: path (edges G) (src p) (walk p ++ walk p') by rewrite cat_path last_dst junction !path_walk.
-by case/shortenP.
+by rewrite last_cat last_dst junction last_dst.
 Defined.
 
-Lemma src_trans_path : src trans_path = src p.
+Lemma src_trans_path : src trans_gpath = src p.
 Proof. by []. Qed.
 
-Lemma dst_trans_path : dst trans_path = dst p'.
+Lemma dst_trans_path : dst trans_gpath = dst p'.
 Proof. by []. Qed.
 
 Lemma all_trans_path (P : pred T) :
   all P (src p :: walk p) -> all P (walk p') ->
-  all P (src trans_path :: walk trans_path).
+  all P (src trans_gpath :: walk trans_gpath).
 Proof.
 rewrite /=; case/andP=> -> /=.
-have: path (edges G) (src p) (walk p ++ walk p')
-  by rewrite cat_path last_dst junction !path_walk.
-case/shortenP=> w _ _ sub_w /allP all_p /allP all_p'.
-apply/allP=> z /sub_w; rewrite /= mem_cat.
-by case/orP=> [/all_p |/all_p'].
+move/allP=> allp /allP allp'.
+by apply/allP=> x; rewrite mem_cat=> /orP [/allp|/allp'].
 Qed.
-
 End TransPath.
 
 Lemma has_path_trans x y z : has_path x y -> has_path y z -> has_path x z.
-Proof. by case => [p [? +]] [p' [+ ?]]; move=> <- /esym junc_y; exists (trans_path junc_y); split. Qed.
+Proof. by case => [p [? +]] [p' [+ ?]]; move=> <- /esym junc_y; exists (trans_gpath junc_y); split. Qed.
 
 Section BelastPath.
-Context (p : epath).
+Context (p : gpath).
 Let bwalk := (behead (belast (src p) (walk p))).
 
 Program Definition belast_path :=
-  @EPath (@GPath (src p) (last (src p) bwalk) bwalk _ _ _) _.
+  @GPath (src p) (last (src p) bwalk) bwalk _ _ _.
 Next Obligation. exact: mem_src. Defined.
 Next Obligation.
   move: (path_walk p); rewrite /bwalk. elim/last_ind: (walk p)=> //= l a _.
   by rewrite belast_rcons /= rcons_path=> /andP [].
-Defined.
-Next Obligation.
-  move: (uniq_walk p); rewrite /= /bwalk; elim/last_ind: (walk p) => // l a _.
-  rewrite belast_rcons /= rcons_uniq mem_rcons inE negb_or -!andbA.
-  by case/and4P => _ -> _ ->.
 Defined.
 
 Lemma dst_blpath : dst belast_path = last (src p) (bwalk).
@@ -570,63 +562,99 @@ Qed.
 
 Section ConsPath.
 
-Context {x y : T} {p' : epath}.
+Context {x y : T} {p' : gpath}.
 Hypothesis xGy : edges G x y.
-Hypothesis xny : x != y.
 Hypothesis junction: y = src p'.
 
-Definition cons_path := @trans_path (edge_path xGy xny) p' junction.
+Definition cons_path := @trans_gpath (edge_path xGy) p' junction.
 End ConsPath.
 
-Section RConsPath.
+Section RConsGPath.
 
-Context {y : T} {p : epath}.
+Context {y : T} {p : gpath}.
 Hypothesis pGy : edges G (dst p) y.
-Hypothesis y_new : y \notin (src p) :: (walk p).
 
-Program Definition rcons_epath := 
-  @EPath (@GPath (src p) y (rcons (walk p) y) _ _ _) _.
+Program Definition rcons_gpath := 
+  @GPath (src p) y (rcons (walk p) y) _ _ _.
 Next Obligation. exact: mem_src. Qed.
 Next Obligation. by rewrite rcons_path path_walk last_dst. Qed.
 Next Obligation. by rewrite last_rcons. Qed.
+End RConsGPath.
+
+Section RConsEPath.
+
+Context {y : T} {p : epath}.
+Hypothesis pGy : edges G (dst p) y.
+Hypothesis y_not_p : y \notin (src p :: walk p).
+
+Program Definition rcons_epath := 
+  @EPath (rcons_gpath pGy) _.
 Next Obligation.
-move: y_new; rewrite mem_rcons !inE !negb_or eq_sym.
-case/andP=> -> y_n_walk /=; case/andP: (uniq_walk p)=> -> /=.
-by rewrite rcons_uniq y_n_walk /=.
+move: (uniq_walk p)=> /= /andP [src_walk u_walk].
+rewrite mem_rcons in_cons (negPf src_walk) orbF rcons_uniq u_walk andbT.
+move: y_not_p; rewrite inE negb_or=> /andP [+ ->].
+by rewrite eq_sym=> ->.
 Qed.
+End RConsEPath.
 
-End RConsPath.
+Section SubGPath.
 
-Section SubPath.
-
-Context {p : epath} {w : seq T}.
+Context {p : gpath} {w : seq T}.
 Hypothesis sub_w: prefix_seq w (walk p).
 
-Program Definition sub_epath:= @EPath (@GPath (src p) (last (src p) w) w _ _ _) _.
+Program Definition sub_gpath:= @GPath (src p) (last (src p) w) w _ _ _. 
 Next Obligation. by rewrite mem_src. Qed.
 Next Obligation. apply/(prefix_seq_path sub_w)/(path_walk). Qed.
+
+End SubGPath.
+
+Section SubEPath.
+Context {p : epath} {w : seq T}.
+Hypothesis sub_w: prefix_seq w (walk p).
+Program Definition sub_epath:= @EPath (sub_gpath sub_w) _.
 Next Obligation. by move: (uniq_walk p)=> /= /andP [/(prefix_seq_notin sub_w) -> /(prefix_seq_uniq sub_w) ->]. Qed.
+End SubEPath.
 
-End SubPath.
-
-Section InOutPath.
-Context {p : epath} (pr : pred T).
+Section InOutGPath.
+Context {p : gpath} (pr : pred T).
 Hypothesis src_in : pr (src p).
 Hypothesis dst_out : ~~ pr (dst p).
 
 Lemma last_out : ~~ pr (last (src p) (walk p)).
 Proof. by rewrite last_dst. Qed.
 
-Program Definition in_out_epath := @sub_epath p (xchoose (prefix_seq_in_out src_in last_out)) _.
+Program Definition in_out_gpath := @sub_gpath p (xchoose (prefix_seq_in_out src_in last_out)) _.
 Next Obligation. by case/and3P: (xchooseP (prefix_seq_in_out src_in last_out)). Qed.
 
-Lemma in_out_epath_in : all pr (belast (src p) (walk in_out_epath)).
+Lemma in_out_gpath_in : all pr (belast (src p) (walk in_out_gpath)).
 Proof. by case/and3P: (xchooseP (prefix_seq_in_out src_in last_out)). Qed.
+
+Lemma in_out_gpath_out : ~~ pr (dst in_out_gpath).
+Proof. by case/and3P: (xchooseP (prefix_seq_in_out src_in last_out)). Qed.
+
+End InOutGPath.
+
+Section InOutEPath.
+Context {p : epath} (pr : pred T).
+Hypothesis src_in : pr (src p).
+Hypothesis dst_out : ~~ pr (dst p).
+
+Program Definition in_out_epath := @EPath (in_out_gpath src_in dst_out) _.
+Next Obligation.
+case/and3P: (xchooseP (prefix_seq_in_out src_in (last_out dst_out)))=> pref_path _ _.
+move: (uniq_walk p)=> /= /andP [src_walk uniq_walk].
+apply/andP; split.
+- exact:(prefix_seq_notin pref_path).
+- exact:(prefix_seq_uniq pref_path).
+Qed.
+
+Lemma in_out_epath_in : all pr (belast (src p) (walk in_out_epath)).
+Proof. by case/and3P: (xchooseP (prefix_seq_in_out src_in (last_out dst_out))). Qed.
 
 Lemma in_out_epath_out : ~~ pr (dst in_out_epath).
-Proof. by case/and3P: (xchooseP (prefix_seq_in_out src_in last_out)). Qed.
+Proof. by case/and3P: (xchooseP (prefix_seq_in_out src_in (last_out dst_out))). Qed.
 
-End InOutPath.
+End InOutEPath.
 
 Section Ind.
 
