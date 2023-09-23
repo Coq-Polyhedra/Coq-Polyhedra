@@ -113,11 +113,12 @@ Definition to_feas_bas (e : enum_type m' n'):=
   if @idP (e \in vertices G_lex) is ReflectT h then
   lexbasis_I (G_lex_lex_feas h) else I0.
 
-Lemma to_feas_bas_edges : {in vertices G_lex &,
+Lemma to_feas_bas_edges :
   forall x y, edges G_lex x y -> 
-  edges (lex_graph A b) (to_feas_bas x) (to_feas_bas y)}.
+  edges (lex_graph A b) (to_feas_bas x) (to_feas_bas y).
 Proof.
-move=> x y xG yG; rewrite edge_mk_graph ?inE // -in_succE => yx.
+move=> x y /[dup] /edge_vtxlr [xG yG]. 
+rewrite edge_mk_graph ?inE // -in_succE => yx.
 rewrite splx_adj_neq /set_adjacence /=.
 move/allP: G_lex_edge=> /(_ x xG) /allP /(_ y yx); rewrite /inter_verification.
 by rewrite /to_feas_bas; case: {-}_/idP=> // p; case: {-}_/idP.
@@ -154,7 +155,7 @@ Lemma G_lex_succ: {in (vertices G_lex), forall e,
 Proof.
 move=> x xG; apply/eqP; rewrite eqEfcard; apply/andP; split.
 + apply/fsubsetP=> y' /imfsetP [/= y].
-  rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges G_lex_n0 G_lex_vtx G_lex_edge xG yG).
+  rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges G_lex_n0 G_lex_vtx G_lex_edge).
   by rewrite -in_succE => /[swap] ->.
 + rewrite lex_graph_regular ?vtx_mk_graph ?inE // ?card_in_imfset /=.
   * move/allP: G_lex_reg=> /(_ x xG). 
@@ -237,7 +238,7 @@ Proof. by exact/(img_lex_graph_poly_graph boundA feasA). Qed.
 Lemma G_lex_repr : gisof G_lex (lex_graph A b) (to_feas_bas G_lex_n0 (G_lex_vtx G_lex_verif)).
 Proof. exact/repr_lex_graph. Qed.
 
-Lemma repr_poly_graph :  poly_graph P = ((@phi m' n') @/ G_lex).
+Lemma repr_poly_graph : poly_graph P = ((@phi m' n') @/ G_lex).
 Proof.
 apply/esym/(gisof_diagram _ G_lex_repr _ high_img); [|exact:erefl].
 move=> x xG_lex /=; rewrite Simplex.rel_points_of_basis.

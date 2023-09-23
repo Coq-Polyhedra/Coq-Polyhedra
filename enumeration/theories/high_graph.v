@@ -817,7 +817,7 @@ Section SubGraphIso.
 Context {f : T1 -> T2}.
 Hypothesis f_inj : {in V1&, injective f}.
 Hypothesis f_leq : (f @` V1) `<=` V2.
-Hypothesis f_morph : {in V1&, forall x y, E1 x y -> E2 (f x) (f y)}.
+Hypothesis f_morph : forall x y, E1 x y -> E2 (f x) (f y).
 Hypothesis G2_connected : connected G2.
 Hypothesis G_succ : {in V1, forall x, f @` (successors G1 x) = successors G2 (f x)}.
 Hypothesis G1_neq0 : G1 != (graph0 T1).
