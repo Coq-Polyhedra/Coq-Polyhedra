@@ -161,7 +161,7 @@ def job(job):
             res[-1][file + " time"] = time
             res[-1][file + " memory"] = memory
             times.append(float(time))
-            max_memory = max(max_memory,int(memory))
+            max_memory = max(max_memory,float(memory))
         res[-1]["total time"] = str(math.fsum(times))
         res[-1]["max memory"] = str(max_memory)
       else:
