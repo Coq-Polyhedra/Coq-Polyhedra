@@ -40,10 +40,25 @@ exists (Simplex.point_of_basis b bas0).
 exact: unpt_pt_is_feas.
 Qed.
 
-Definition simplex_lex_basis := Simplex.phase2_res c bas0.
+Definition simplex_lex_exec := Simplex.phase2_exec c bas0.
+
+Definition set_adjacence := fun I I' : {set 'I_m} =>  #|I :&: I'| == n.-1.
+
+Lemma simplex_lex_exec_adj: 
+  path (fun I J : Simplex.lex_feasible_basis A b => set_adjacence I J) bas0 simplex_lex_exec.
+Proof. exact:Simplex.phase2_exec_adj. Qed.
+
+Lemma simplex_lex_exec_lexopt: 
+  path (fun I J : Simplex.lex_feasible_basis A b => (c^T *m Simplex.point_of_basis (Simplex.b_pert b) J) <lex (c^T *m Simplex.point_of_basis (Simplex.b_pert b) I)) bas0 simplex_lex_exec.
+Proof. exact:Simplex.phase2_exec_lexopt. Qed.
+
+Lemma simplex_lex_exec_opt:
+  path (fun I J : Simplex.lex_feasible_basis A b => '[c, Simplex.point_of_basis b J] <= '[c, Simplex.point_of_basis b I]) bas0 simplex_lex_exec.
+Proof. exact:Simplex.phase2_exec_opt. Qed.
+
+Definition simplex_lex_basis := last bas0 simplex_lex_exec.
 Definition simplex_lex_point := Simplex.point_of_basis b simplex_lex_basis.
 Definition simplex_lex_ppoint := Simplex.point_of_basis (Simplex.b_pert b) simplex_lex_basis.
-
 
 Lemma simplex_bas0 : Simplex.phase2 c bas0 = Simplex.Phase2_res_optimal_basis (Simplex.phase2_res c bas0).
 Proof.
@@ -62,7 +77,8 @@ Qed.
 Lemma simplex_lex_reduced_cost : (Simplex.reduced_cost_of_basis c simplex_lex_basis) >=m 0.
 Proof.
 rewrite /simplex_lex_basis; move: simplex_bas0.
-by case: (Simplex.phase2P c bas0 ) => // bas h [] <-.
+case: (Simplex.phase2P c bas0 ) => // bas h []. 
+by rewrite /Simplex.phase2_res /simplex_lex_exec => <-.
 Qed.
 
 Lemma simplex_lex_feas : simplex_lex_ppoint \in Simplex.lex_polyhedron A (Simplex.b_pert b).
@@ -109,11 +125,6 @@ suff ->: col 0 X = x by [].
 apply/matrixP=> i j; rewrite !mxE (ord1_eq0 j).
 by case: splitP=> // k _; rewrite (ord1_eq0 k).
 Qed.
-
-Definition simplex_lex_exec := Simplex.phase2_exec c bas0.
-
-Lemma last_simplex_lex_exec: last bas0 simplex_lex_exec = simplex_lex_basis.
-Proof. by []. Qed. 
 
 End Simplex.
 
@@ -240,21 +251,19 @@ Qed.
 
 Section EquivGraphLexi.
 
-Definition set_adjacence := fun I I' : {set 'I_m} =>  #|I :&: I'| == n.-1.
+Definition lex_graph := mk_graph [fset x | x : Simplex.lex_feasible_basis A b] (@set_adjacence n m).
 
-Definition lex_graph := mk_graph [fset x | x : Simplex.lex_feasible_basis A b] set_adjacence.
-
-Lemma splx_adj_sym I J: set_adjacence I J -> set_adjacence J I.
+Lemma splx_adj_sym I J: (@set_adjacence n m I J) -> (@set_adjacence n m J I).
 Proof. by rewrite /set_adjacence setIC. Qed.
 
-Lemma splx_adj_xx (I : Simplex.lex_feasible_basis A b): ~~ set_adjacence I I.
+Lemma splx_adj_xx (I : Simplex.lex_feasible_basis A b): ~~ (@set_adjacence n m I I).
 Proof.
 rewrite /set_adjacence setIid Simplex.prebasis_card.
 by elim: n'.
 Qed.
 
 Lemma splx_adj_neq (I J : Simplex.lex_feasible_basis A b):
-  (J != I) && set_adjacence I J = set_adjacence I J.
+  (J != I) && (@set_adjacence n m I J) = (@set_adjacence n m I J).
 Proof.
 rewrite andb_idl //.
 move=> adj_IJ; apply: contraT; rewrite negbK=> /eqP IJ.
@@ -301,7 +310,7 @@ have h_J: Simplex.point_of_basis (Simplex.b_pert b) J \in Simplex.lex_polyhedron
 by rewrite -{-2}[obj_conn]trmxK simplex_lex_opt.
 Qed.
 
-Lemma path_to_J: path (edges lex_graph) I (Simplex.phase2_exec obj_conn^T I).
+Lemma path_to_J: path (edges lex_graph) I (simplex_lex_exec obj_conn^T I).
 Proof.
 move: (Simplex.phase2_exec_adj (obj_conn^T) I).
 set f := (fun _ => _); suff eq_rel_edge: f =2 edges lex_graph by rewrite (eq_path eq_rel_edge).
@@ -312,10 +321,6 @@ Program Definition conn_splx_gpath := @GPath _ lex_graph I J (shorten I (Simplex
 Next Obligation. by rewrite vtx_mk_graph in_fsetE. Qed.
 Next Obligation. by case/shortenP: path_to_J. Qed.
 Next Obligation. by rewrite -opt_is_J /simplex_lex_basis /Simplex.phase2_res; case/shortenP : path_to_J. Qed.
-
-
-Program Definition conn_splx_epath := @EPath _ _ conn_splx_gpath _.
-Next Obligation. by case/shortenP: path_to_J. Qed.
 
 End SplxGraphConnected.
 
@@ -346,7 +351,7 @@ set j := Simplex.argmin_gap _ _ _; exists j=> //.
 exact/Simplex.lex_ent_var_not_in_basis.
 Qed.
 
-Lemma neigh_reg_adj : set_adjacence I neigh_reg.
+Lemma neigh_reg_adj : (@set_adjacence n m I neigh_reg).
 Proof.
 rewrite /set_adjacence; case: neigh_regE=> j j_n_I ->.
 rewrite setIUr setIDA setIid disjoint_setI0 1?disjoint_sym ?disjoints1 //.
@@ -378,7 +383,7 @@ End MkInj.
 Section MkSucc.
 
 Lemma splx_adj_witness (J : Simplex.lex_feasible_basis A b):
-  set_adjacence I J -> exists i j,
+  (@set_adjacence n m I J) -> exists i j,
   [/\ i \in I, j \notin I & (J  = j |: (I :\ i) :> {set _})].
 Proof.
 move/eqP=> adjIJ.
@@ -407,7 +412,7 @@ Qed.
 
 Definition neigh_reg_fset := [fset neigh_reg i | i in 'I_#|I|].
 
-Lemma neigh_reg_surj (J : Simplex.lex_feasible_basis A b): set_adjacence I J -> exists i, J = neigh_reg i.
+Lemma neigh_reg_surj (J : Simplex.lex_feasible_basis A b): (@set_adjacence n m I J) -> exists i, J = neigh_reg i.
 Proof.
 case/splx_adj_witness=> i' [j] [i'I j_nI J_eq].
 set i := (enum_rank_in i'I i'); exists i.
@@ -430,7 +435,7 @@ End MkSucc.
 End SplxGraphRegular.
 
 Lemma lex_graph_connected : connected lex_graph.
-Proof. by move=> I J _ _; exists (conn_splx_epath I J). Qed.
+Proof. by move=> I J _ _; exists (conn_splx_gpath I J). Qed.
 
 Lemma lex_graph_regular : regular lex_graph n.
 Proof.
@@ -594,7 +599,7 @@ Qed.
 Section EdgeActive.
 
 Context (I J : Simplex.lex_feasible_basis A b).
-Hypothesis edge_IJ: set_adjacence I J.
+Hypothesis edge_IJ: (@set_adjacence n m I J).
 Local Definition x := Simplex.point_of_basis b I.
 Local Definition y := Simplex.point_of_basis b J.
 Hypothesis x_n_y: x != y.
@@ -936,8 +941,8 @@ Lemma exec_adj_last: simplex_lex_point (obj_func min_epsilon) I = y.
 Proof.
 apply/eqP/contraT=> splx_pt_Iy.
 have splx_pt_Ix: simplex_lex_point (obj_func min_epsilon) I = x.
-- rewrite /simplex_lex_point -last_simplex_lex_exec.
-  move: (mem_last I (exec_adj min_epsilon)); rewrite inE.
+- move: (mem_last I (exec_adj min_epsilon)); rewrite inE.
+  rewrite /exec_adj /simplex_lex_point /simplex_lex_basis.
   case/orP=> [/eqP -> //|/exec_adj_xy]; rewrite !inE (negPf splx_pt_Iy) orbF.
   by move/eqP=> ->.
 have := (simplex_opt I)=> /(_ (obj_func min_epsilon) (P_compact _)).
@@ -946,18 +951,18 @@ by move/(_ isT); rewrite splx_pt_Ix leNgt obj_func_min_xy.
 Qed.
 
 Lemma adj_I_to_J: exists P Q: Simplex.lex_feasible_basis A b,
-  [/\ set_adjacence P Q, Simplex.point_of_basis b P = x
+  [/\ (@set_adjacence n m P Q), Simplex.point_of_basis b P = x
     & Simplex.point_of_basis b Q = y].
 Proof.
 have:=path_biprop_edge=> /(_ _ _ _ _ I (exec_adj min_epsilon)).
-move=> /(_ set_adjacence) /(_ (fun K=> Simplex.point_of_basis b K = x)).
+move=> /(_ (@set_adjacence n m)) /(_ (fun K=> Simplex.point_of_basis b K = x)).
 move=> /(_ (fun K=> Simplex.point_of_basis b K = y)).
 case.
 - exact/Simplex.phase2_exec_adj.
 - by move=> K /exec_adj_xy; rewrite !inE=> /orP [] /eqP ->; [left|right].
 - exact: bas_I_x.
 - exact: exec_adj_last.
-- move: exec_adj_last; rewrite /simplex_lex_point -last_simplex_lex_exec.
+- move: exec_adj_last; rewrite /simplex_lex_point /exec_adj /simplex_lex_basis.
   rewrite /exec_adj; case: (simplex_lex_exec _ _)=> //=.
   rewrite bas_I_x; apply/contra_eqT=> _.
   by case/andP: edge_xy.
@@ -967,7 +972,7 @@ Qed.
 End EdgeSimplexExec. 
 
 Lemma vtx_to_adj_lex_basis x y: adj P x y -> exists I J : Simplex.lex_feasible_basis A b,
-  [/\ set_adjacence I J, Simplex.point_of_basis b I = x & 
+  [/\ (@set_adjacence n m I J), Simplex.point_of_basis b I = x & 
   Simplex.point_of_basis b J = y].
 Proof.
 move=> edge_xy; have:= adj_vtxl edge_xy.
