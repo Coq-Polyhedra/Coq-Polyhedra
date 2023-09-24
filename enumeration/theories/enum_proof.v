@@ -312,15 +312,14 @@ Qed.
 
 Lemma path_to_J: path (edges lex_graph) I (simplex_lex_exec obj_conn^T I).
 Proof.
-move: (Simplex.phase2_exec_adj (obj_conn^T) I).
-set f := (fun _ => _); suff eq_rel_edge: f =2 edges lex_graph by rewrite (eq_path eq_rel_edge).
-by move=> x y; rewrite edge_mk_graph ?in_fsetE // splx_adj_neq.
+under eq_path => [x y] do rewrite edge_mk_graph ?inE // splx_adj_neq.
+exact:simplex_lex_exec_adj.
 Qed.
 
-Program Definition conn_splx_gpath := @GPath _ lex_graph I J (shorten I (Simplex.phase2_exec (obj_conn^T) I)) _ _ _.
+Program Definition conn_splx_gpath := @GPath _ lex_graph I J (simplex_lex_exec (obj_conn^T) I) _ _ _.
 Next Obligation. by rewrite vtx_mk_graph in_fsetE. Qed.
-Next Obligation. by case/shortenP: path_to_J. Qed.
-Next Obligation. by rewrite -opt_is_J /simplex_lex_basis /Simplex.phase2_res; case/shortenP : path_to_J. Qed.
+Next Obligation. exact:path_to_J. Qed.
+Next Obligation. exact/eqP/opt_is_J. Qed.
 
 End SplxGraphConnected.
 
@@ -926,9 +925,9 @@ Qed.
 Lemma exec_adj_xy J: J \in (exec_adj min_epsilon) -> 
   Simplex.point_of_basis b J \in [fset x; y]. 
 Proof.
-rewrite /exec_adj /simplex_lex_exec.
-move: (Simplex.phase2_exec_opt (obj_func min_epsilon) I).
-elim: (Simplex.phase2_exec _ _) J=> //= h t IH. 
+rewrite /exec_adj.
+move: (simplex_lex_exec_opt (obj_func min_epsilon) I).
+elim: (simplex_lex_exec _ _) J=> //= h t IH. 
 move=> J /andP [hI path_ht]; rewrite inE; case/orP.
 - move/eqP=> ->; move: hI; rewrite bas_I_x.
   exact/contra_leT/obj_func_min_out/lexbas_vtx.
@@ -958,7 +957,7 @@ have:=path_biprop_edge=> /(_ _ _ _ _ I (exec_adj min_epsilon)).
 move=> /(_ (@set_adjacence n m)) /(_ (fun K=> Simplex.point_of_basis b K = x)).
 move=> /(_ (fun K=> Simplex.point_of_basis b K = y)).
 case.
-- exact/Simplex.phase2_exec_adj.
+- exact/simplex_lex_exec_adj.
 - by move=> K /exec_adj_xy; rewrite !inE=> /orP [] /eqP ->; [left|right].
 - exact: bas_I_x.
 - exact: exec_adj_last.
