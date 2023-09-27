@@ -676,6 +676,19 @@ Qed.
 End Ind.
 End Connected.
 
+Section EPath0.
+Context {T : choiceType}.
+
+Lemma epath0 : #|[finType of (epath (graph0 T))]| = 0.
+Proof.
+rewrite cardE /=.
+apply/eqP; rewrite -all_pred0.
+apply/allP=> p /= _.
+by move: (mem_src p); rewrite vtx0 in_fset0.
+Qed.
+
+End EPath0.
+
 Section Regular.
 Context {T : choiceType} (G : graph T) (n : nat).
 

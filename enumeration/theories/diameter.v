@@ -305,16 +305,41 @@ move=> p is_shtt_p; rewrite /diameter.
 exact/(bigmax_sup p).
 Qed.
 
-Lemma diameterP: forall p : gpath G, is_shortest p -> size_path p <= diameter.
+Lemma diameter0:
+  G = graph0 T -> diameter = 0.
 Proof.
-move=> p is_shtt_p.
-set p' := (@gpath_epath _ _ p).
-apply/leq_trans; first apply/(is_shtt_p p');
-  [exact:gpath_epath_src|exact:gpath_epath_dst|].
-apply/diameter_epathP/is_shortestP=> p'' src_p'' dst_p''.
-apply/leq_trans; [exact:size_gpath_epath|apply:is_shtt_p].
-- by rewrite -gpath_epath_src. 
-- by rewrite -gpath_epath_dst.
+move=> G0; rewrite /diameter.
+case: (big_enumP is_shortest_epath)=> /= e <- _ [] _.
+set P := [pred _ | _].
+suff: #|P| = 0 by 
+  move=> -> /size0nil ->; rewrite big_nil.
+move: {e} P (max_card P) => /=.
+by rewrite G0 epath0=> P; rewrite leqn0=> /eqP.
+Qed.
+
+
+Lemma diameterP: G != graph0 T ->
+(exists2 p : gpath G, is_shortest p & size_path p = diameter) /\ 
+(forall p : gpath G, is_shortest p -> size_path p <= diameter).
+Proof.
+case/graph0Pn=> x xG.
+split.
++ move=> [:H]. 
+  rewrite /diameter (bigmax_eq_arg (nil_path xG)).
+  - abstract: H. 
+    apply/is_shortestP=> p' _ _; rewrite /size_path /=.
+    exact: leq0n.
+  - set p := arg_max _ _ _; exists p=> //.
+    apply/is_shortestP; rewrite /p.
+    by case: (arg_maxnP (fun p : epath G => size_path p) H).
++ move=> p is_shtt_p.
+  set p' := (@gpath_epath _ _ p).
+  apply/leq_trans; first apply/(is_shtt_p p');
+    [exact:gpath_epath_src|exact:gpath_epath_dst|].
+  apply/diameter_epathP/is_shortestP=> p'' src_p'' dst_p''.
+  apply/leq_trans; [exact:size_gpath_epath|apply:is_shtt_p].
+  - by rewrite -gpath_epath_src. 
+  - by rewrite -gpath_epath_dst.
 Qed.
 
 End Def.
