@@ -563,7 +563,7 @@ Local Notation n := (n'.+1).
 Context (Po : Com.polyType) (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 Hypothesis Po_Ab: rel_poly Po (A,b).
 
-Definition high_dim_full (V : array 'cV[rat]_n) 
+Definition dim_full_array (V : array 'cV[rat]_n) 
   (Origin : int)
   (Map : array int) (Inv : 'M[rat]_n) :=
   [&&
@@ -585,9 +585,9 @@ Hypothesis invInv: rel_mx_bqr_col inv Inv.
 
 Lemma dim_full_equivalence:
   dim_full_test v map_ origin inv Po = 
-  high_dim_full V origin map_ Inv.
+  dim_full_array V origin map_ Inv.
 Proof.
-rewrite /dim_full_test /high_dim_full /arr_all.
+rewrite /dim_full_test /dim_full_array /arr_all.
 congr andb; first by rewrite (rel_Po_r_n Po_Ab) [RHS]eq_sym.
 under eq_all=> x do rewrite (rel_array_length vV).
 rewrite (rel_array_length vV) !andbA.
@@ -622,40 +622,40 @@ Hypothesis GL_length : forall x, x \in vertices G = (x < length L)%O.
 Context (origin : Uint63.int) (map_ : array Uint63.int).
 Context (Inv : 'M[rat]_n).
 
+Definition high_dim_full (x0 : 'cV[rat]_n) (s : 'M[rat]_n) :=
+  [/\ x0 \in vertices G',
+    (forall i, col i s \in vertices G') &
+    let X := \matrix_(i < n) ((col i s)^T - (x0)^T) in X *m Inv == 1%:M
+  ].
+
 Lemma dim_full_vtx_final_graph: 
-  high_dim_full L origin map_ Inv ->
-  exists x0, exists s : seq 'cV[rat]_n,
-  [/\ x0 \in vertices G', {subset s <= vertices G'} &
-    \dim (span [seq x - x0 | x <- s]) = n].
+  dim_full_array L origin map_ Inv ->
+  exists x0, exists s, high_dim_full x0 s.
 Proof.
 case/and4P=> /eqP len_map /allP map_in origin_in /allP inv_eq.
-exists L.[origin], [seq L.[i] | i <- arr_to_seq map_].
-split.
-- by rewrite -(gisof_vtx GLG') /=; apply/in_imfset; rewrite GL_length.
-- move=> x /mapP [i i_map] ->.
-  rewrite -(gisof_vtx GLG') /=; apply/in_imfset; rewrite GL_length.
-  exact:map_in.
-- set s := [seq _ | _ <- _]. 
-  rewrite -[s]in_tupleE span_matrix_cV /=.
-  have size_s: n = seq.size s by rewrite !size_map size_irange subn0.
-  rewrite {11}size_s -mxrank_tr.
-  apply/anti_leq; rewrite rank_leq_row /= row_leq_rank.
-  apply/row_freeP; exists (castmx (erefl _, size_s) Inv).
-  apply/row_matrixP=> i; rewrite row_mul -tr_col.
-  set M := matrix_of_fun _ _.
-  have ->: col i M = tnth (in_tuple s) i
-    by apply/matrixP=> p q; rewrite /M !mxE ord1.
-  rewrite (tnth_nth L.[origin]) /= /s=> [:i_n].
-  rewrite (nth_map L.[origin]) ?(nth_map 0%uint63) 
-    ?size_map ?size_arr_to_seq ?size_irange ?subn0 -?len_map;
-    [ |abstract:i_n; by rewrite {10}size_s ltn_ord|exact:i_n|exact:i_n].
-  rewrite nth_irange ?subn0 -?len_map // addn0 trmx_sub.
-  move: (inv_eq (nat_to_int i)); rewrite mem_irangeE le0x /=. 
-  rewrite ltEint_nat -len_map nat_to_intK ?i_n; 
-    last (rewrite inE; apply/(ltn_trans i_n); rewrite len_map; exact/int_thresholdP).
-  move=> /(_ isT)/eqP.
-  move/(congr1 (castmx ((erefl _), size_s))); rewrite castmx_mul castmx_id.
-  by move=> ->; apply/matrixP=> p q; rewrite castmxE !mxE /=.
+exists L.[origin].
+set s_seq := [seq L.[i] | i <- arr_to_seq map_].
+have s_seq_n: seq.size s_seq == n by rewrite size_map size_arr_to_seq len_map.
+set s_tuple := Tuple s_seq_n.
+have s_tuple_tnth: forall i, tnth s_tuple i = L.[map_.[nat_to_int i]].
+- by move=> i; rewrite (tnth_nth 0) /= (nth_map (default map_)) ?nth_arr_to_seq // ?size_arr_to_seq -?len_map //.
+set s := (\matrix_(i < n) (tnth s_tuple i)^T)^T.
+exists s; move=> [:i_thre]; split.
+- rewrite -(gisof_vtx GLG') /= in_imfset //=.
+  by rewrite GL_length.
+- move=> i; rewrite /s -tr_row rowK trmxK s_tuple_tnth.
+  rewrite -(gisof_vtx GLG') /= in_imfset //=.
+  rewrite GL_length; apply/map_in/map_f.
+  rewrite /irange0 mem_irangeE le0x /=.
+  rewrite ltEint_nat -len_map nat_to_intK //.
+  by abstract: i_thre i; apply:(int_threshold_length (a:=map_)); rewrite -len_map.
+- move=> X; apply/eqP/row_matrixP=> i; rewrite row_mul.
+  rewrite rowK -tr_row rowK trmxK s_tuple_tnth.
+  have ->: row i 1%:M = \row_j (i == j)%:R by
+    move=> t; apply/matrixP=> p q; rewrite !mxE.
+  apply/eqP; move: (inv_eq (nat_to_int i)); rewrite nat_to_intK //.
+  apply; rewrite mem_irangeE le0x ltEint_nat -len_map /=.
+  by rewrite nat_to_intK.
 Qed.
 
 End DimFullFinalGraph.
@@ -679,10 +679,8 @@ Hypothesis glG : rel_vert_graph (g,l) G.
 
 Lemma dim_full_vtx_graph :
   dim_full_test l map_ origin inv Po ->
-  exists x0, exists s : seq 'cV[rat]_n,
-  [/\ x0 \in vertices G, {subset s <= vertices G} &
-    \dim (span [seq x - x0 | x <- s]) = n].
-Proof.
+  exists x0, exists s, high_dim_full G Inv x0 s.
+Proof.  
 case: glG=> -[G' L'] glGL GL'G.
 case: (glGL)=> /= len_gl [/= gG' lL'].
 rewrite (dim_full_equivalence Po_Ab lL' _ _ invInv).

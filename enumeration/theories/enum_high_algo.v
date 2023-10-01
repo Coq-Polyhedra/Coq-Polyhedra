@@ -310,23 +310,36 @@ Local Notation m := m'.+1.
 Local Notation n := n'.+1.
 
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
-Context (x0 : 'cV[rat]_n) (s : seq 'cV[rat]_n).
+Context (x0 : 'cV[rat]_n) (s inv : 'M[rat]_n).
 
 Local Definition P := poly_of_syst (A, b).
 
-Hypothesis full_h : 
-  [/\ x0 \in (vertex_set P), 
-    {subset s <= (vertex_set P)} &
-    \dim (span [seq x - x0 | x <- s]) = n].
+Hypothesis full_h : high_dim_full (poly_graph P) inv x0 s. 
 
 Lemma high_dim_fullP: \pdim P = n.+1.
 Proof.
 apply/anti_leq/andP; split; first exact:adim_leSn.
-case: full_h=> x0_vtx s_vtx {1}<-.
-apply/leq_trans; [|apply/(dim_sub_affine (x0:=x0) (X:=s))].
-- by rewrite adimN0_eq ?mk_affine_proper0 // dir_mk_affine.
-- exact/vertex_set_subset.
-- by move=> x /s_vtx; exact/vertex_set_subset.
+case: full_h=> x0_vtx s_vtx full_s.
+set s_seq := [seq col i s|i : 'I_n].
+apply/leq_trans; [|apply/(dim_sub_affine (x0:=x0) (X:=s_seq))].
+- rewrite adimN0_eq /= ?mk_affine_proper0 // dir_mk_affine.
+  set X := \matrix_i ((col i s)^T - x0^T).
+  set span_s := span _.
+  suff ->: \dim span_s = \rank X.
+  + rewrite ltnS row_leq_rank; apply/row_freeP.
+    exists inv; exact/eqP/full_s.
+  rewrite /span_s.
+  rewrite -[X in span X]in_tupleE span_matrix_cV.
+  rewrite -[LHS]mxrank_tr -(rank_castmx (m':=n)) ?size_map -?enumT ?size_enum_ord //.
+  move=> ?; congr mxrank; apply/matrixP=> p q.
+  rewrite castmxE !mxE (tnth_nth 0) /= (nth_map 0) ?size_map -?enumT ?size_enum_ord //. 
+  rewrite (nth_map 0) ?size_enum_ord // nth_ord_enum !mxE.
+  by rewrite cast_ord_id.
+- apply/vertex_set_subset; move: x0_vtx.
+  by rewrite vtx_mk_graph.
+- move=> x /mapP [i _ ->].
+  move: (s_vtx i); rewrite vtx_mk_graph.
+  exact:vertex_set_subset.
 Qed.
 
 End FullDim.
@@ -468,7 +481,7 @@ move/dim_full_vtx_graph=> /[apply] /[apply].
 case/(_ _ _ dim_h)=> /= x0 [s].
 rewrite high_img_h.
 rewrite -(repr_poly_graph high_bound_h high_enum_h high_graph_h).
-by rewrite vtx_mk_graph=> /high_dim_fullP.
+exact/high_dim_fullP.
 Qed.
 
 Lemma high_diameter_h:
