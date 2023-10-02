@@ -623,8 +623,8 @@ Context (origin : Uint63.int) (map_ : array Uint63.int).
 Context (Inv : 'M[rat]_n).
 
 Definition high_dim_full (x0 : 'cV[rat]_n) (s : 'M[rat]_n) :=
-  [/\ x0 \in vertices G',
-    (forall i, col i s \in vertices G') &
+  [&& x0 \in vertices G',
+    [forall i, col i s \in vertices G'] &
     let X := \matrix_(i < n) ((col i s)^T - (x0)^T) in X *m Inv == 1%:M
   ].
 
@@ -640,16 +640,17 @@ set s_tuple := Tuple s_seq_n.
 have s_tuple_tnth: forall i, tnth s_tuple i = L.[map_.[nat_to_int i]].
 - by move=> i; rewrite (tnth_nth 0) /= (nth_map (default map_)) ?nth_arr_to_seq // ?size_arr_to_seq -?len_map //.
 set s := (\matrix_(i < n) (tnth s_tuple i)^T)^T.
-exists s; move=> [:i_thre]; split.
+exists s; move=> [:i_thre]. 
+apply/and3P; split.
 - rewrite -(gisof_vtx GLG') /= in_imfset //=.
   by rewrite GL_length.
-- move=> i; rewrite /s -tr_row rowK trmxK s_tuple_tnth.
+- apply/forallP; move=> i; rewrite /s -tr_row rowK trmxK s_tuple_tnth.
   rewrite -(gisof_vtx GLG') /= in_imfset //=.
   rewrite GL_length; apply/map_in/map_f.
   rewrite /irange0 mem_irangeE le0x /=.
   rewrite ltEint_nat -len_map nat_to_intK //.
   by abstract: i_thre i; apply:(int_threshold_length (a:=map_)); rewrite -len_map.
-- move=> X; apply/eqP/row_matrixP=> i; rewrite row_mul.
+- apply/eqP/row_matrixP=> i; rewrite row_mul.
   rewrite rowK -tr_row rowK trmxK s_tuple_tnth.
   have ->: row i 1%:M = \row_j (i == j)%:R by
     move=> t; apply/matrixP=> p q; rewrite !mxE.

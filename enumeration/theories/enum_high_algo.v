@@ -319,7 +319,7 @@ Hypothesis full_h : high_dim_full (poly_graph P) inv x0 s.
 Lemma high_dim_fullP: \pdim P = n.+1.
 Proof.
 apply/anti_leq/andP; split; first exact:adim_leSn.
-case: full_h=> x0_vtx s_vtx full_s.
+case/and3P: full_h=> x0_vtx s_vtx full_s.
 set s_seq := [seq col i s|i : 'I_n].
 apply/leq_trans; [|apply/(dim_sub_affine (x0:=x0) (X:=s_seq))].
 - rewrite adimN0_eq /= ?mk_affine_proper0 // dir_mk_affine.
@@ -338,7 +338,7 @@ apply/leq_trans; [|apply/(dim_sub_affine (x0:=x0) (X:=s_seq))].
 - apply/vertex_set_subset; move: x0_vtx.
   by rewrite vtx_mk_graph.
 - move=> x /mapP [i _ ->].
-  move: (s_vtx i); rewrite vtx_mk_graph.
+  move/forallP: s_vtx=> /(_ i); rewrite vtx_mk_graph.
   exact:vertex_set_subset.
 Qed.
 
