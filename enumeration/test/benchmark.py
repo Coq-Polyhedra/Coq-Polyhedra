@@ -15,8 +15,11 @@ CWD = os.getcwd()
 TIME_MEM_PREFIX = r'TIMEFMT="%E : real time, %M : max memory" && '
 HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
-DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,13), "permutohedron" : (3,7)}
-LOW_GEN = {"cube" : (3,14), "cross" : (3,7), "cyclic" : (3,12), "permutohedron" : (3,7)}
+DEF_POLYTOPES = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,13), "permutohedron" : (3,7)}
+LOW_POLYTOPES = {"cube" : (3,14), "cross" : (3,7), "cyclic" : (3,12), "permutohedron" : (3,7)}
+CMPT_POLYTOPES = {"cube" : (3,10), "cross" : (3,4), "cyclic" : (3,6), "permutohedron" : (3,4)}
+POLYTOPES = {"default" : DEF_POLYTOPES, "low" : LOW_POLYTOPES, "compute" : CMPT_POLYTOPES}
+HIRSCH_CEX_PROFILE = {"default" : HIRSCH_CEX, "low" : ["poly20dim21"], "compute" : []}
 PARALLEL_DFLT = 10
 
 # --------------------------------------------------------------------
@@ -53,20 +56,16 @@ def theories(**kwargs):
 
 # --------------------------------------------------------------------
 def polytopes(**kwargs):
-  datas = os.listdir(core.resource())
-  def key(name):
-    pref_match = re.search(f"([^_]+)_(\d+)", name)
-    if pref_match is not None:
-      return (pref_match.group(1), int(pref_match.group(2)))
-    else:
-      return (name,0)
-  datas = sorted(datas, key=key)
-  text = kwargs["text"]
-  for name in datas:
-    if not text or name not in HIRSCH_CEX:
-      if not name.startswith("."):
-        print(name)
-        yield name
+  profile = kwargs["profile"]
+  poly_dict = POLYTOPES[profile]
+  for poly_name, (min,max) in poly_dict.items():
+    for i in range(min,max+1):
+      poly = poly_name + "_" + str(i) + (f"_{2*i}" if poly_name == "cyclic" else "")
+      yield poly
+      print(poly)
+  for hirsch_cex in HIRSCH_CEX_PROFILE[profile]:
+    yield hirsch_cex
+    print(hirsch_cex)
 
 # --------------------------------------------------------------------
 
@@ -98,6 +97,7 @@ def certificates(**kwargs):
       res2 = dict2bin.dict2bin(name,dict)
       bin2coq.main(name)
     coqjobs.main(name,"Validation",compute)
+    coqjobs.main(name,"Validation_Compute",compute)
     if name in ["poly20dim21", "poly23dim24"]:
       coqjobs.main(name,"Hirsch", compute)
       coqjobs.main(name,"Exact", compute)
@@ -195,8 +195,7 @@ def clean_benchmarks(**kwargs):
 
 # --------------------------------------------------------------------
 def gen(**kwargs):
-  text = kwargs["text"]
-  polytopes = LOW_GEN if text else DEF_GEN
+  polytopes = POLYTOPES[kwargs["profile"]]
   for poly, (n, N) in polytopes.items():
     for k in range(n, N+1):
       if poly == "cyclic":
@@ -259,7 +258,7 @@ TASK = {
     "exact" : job("Exact")
   }
 
-ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "clean_benchmarks" : clean_benchmarks,  "all" : all_tasks, "gen" : gen}
+ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "clean_benchmarks" : clean_benchmarks,  "all" : all_tasks, "gen" : gen, "validation_compute" : job("Validation_Compute")}
 
 def optparser():
   parser = argp.ArgumentParser(
@@ -272,6 +271,7 @@ def optparser():
   parser.add_argument("-t", "--text", dest="text", help=r"Certificates are generated as binary files by default. This option generates plain text .v files instead.", action="store_true")
   parser.add_argument("-j", "--jobs", dest="parallel", help="The compilation of Coq files by dune is done sequentially. This option calls dune on the folder instead. It is possible to add the number of task that can be simultaneously done.", nargs="?", const=PARALLEL_DFLT, default=None)
   parser.add_argument("-b", "--megabytes", dest="megabytes", help="Depending on the OS, the memory evaluated by the commands is either in kilobytes or in megabytes. This option divides by 1000 the correpsonding outputs, to deal with megabytes.", action="store_true")
+  parser.add_argument("-p", "--profile", dest="profile", help=r"To deal with a specific subset of polytopes", choices=list(POLYTOPES.keys()), default="default")
 
   return parser
 
@@ -282,8 +282,9 @@ def main():
   compute = args.compute
   text = args.text
   parallel = args.parallel
+  profile = args.profile
   megabytes = args.megabytes
-  kwargs = {"compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes}
+  kwargs = {"compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes, "profile" : profile}
   if kind in TASK:
     one_task(kind,**kwargs)
   if kind in ADDITIONAL:
