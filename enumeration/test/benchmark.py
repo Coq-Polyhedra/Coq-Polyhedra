@@ -61,11 +61,11 @@ def polytopes(**kwargs):
   for poly_name, (min,max) in poly_dict.items():
     for i in range(min,max+1):
       poly = poly_name + "_" + str(i) + (f"_{2*i}" if poly_name == "cyclic" else "")
-      yield poly
       print(poly)
+      yield poly
   for hirsch_cex in HIRSCH_CEX_PROFILE[profile]:
-    yield hirsch_cex
     print(hirsch_cex)
+    yield hirsch_cex
 
 # --------------------------------------------------------------------
 
@@ -237,8 +237,8 @@ def bench2csv(kind,res,compute,text,parallel):
         csvwriter.writeheader()
         csvwriter.writerows(res)
 
-def one_task(kind,**kwargs):
-  bench2csv(kind,TASK[kind](**kwargs),kwargs["compute"],kwargs["text"],kwargs["parallel"])
+def one_task(kind, functi, **kwargs):
+  bench2csv(kind,functi(**kwargs),kwargs["compute"],kwargs["text"],kwargs["parallel"])
 
 def all_tasks(*args,**kwargs):
   gen(**kwargs)
@@ -258,14 +258,16 @@ TASK = {
     "exact" : job("Exact")
   }
 
-ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "clean_benchmarks" : clean_benchmarks,  "all" : all_tasks, "gen" : gen, "validation_compute" : job("Validation_Compute")}
+SPECIFIC = {"validation_compute" : job("Validation_Compute")}
+
+ADDITIONAL = {"clean_coq" : clean_coq, "clean_data" : clean_data, "clean_benchmarks" : clean_benchmarks,  "all" : all_tasks, "gen" : gen}
 
 def optparser():
   parser = argp.ArgumentParser(
     description="Launch the selected benchmark")
 
   parser.add_argument(dest="kind", help="The kind of execution required", 
-                      choices=list(TASK.keys()) + list(ADDITIONAL.keys()))
+                      choices=list(TASK.keys()) + list(SPECIFIC.keys()) + list(ADDITIONAL.keys()))
   
   parser.add_argument("-c", "--compute", dest="compute", help=r"vm_compute is the reduction strategy used by default, this option allows to perform using compute instead.", action="store_const", const="compute", default="vm_compute")
   parser.add_argument("-t", "--text", dest="text", help=r"Certificates are generated as binary files by default. This option generates plain text .v files instead.", action="store_true")
@@ -286,7 +288,9 @@ def main():
   megabytes = args.megabytes
   kwargs = {"compute" : compute, "text" : text, "parallel" : parallel, "megabytes" : megabytes, "profile" : profile}
   if kind in TASK:
-    one_task(kind,**kwargs)
+    one_task(kind,TASK[kind],**kwargs)
+  if kind in SPECIFIC:
+    one_task(kind,SPECIFIC[kind],**kwargs)
   if kind in ADDITIONAL:
     ADDITIONAL[kind](**kwargs)
 
