@@ -57,7 +57,27 @@ def list_of_gmp_matrix(PM):
     res = []
     for j in range(q):
         res.append([bigq(fc.Fraction(PM[k,j].p, PM[k,j].q)) for k in range(p)])
-    return res    
+    return res
+
+def poly_scale(A,b):
+    gmp_A, gmp_b = to_gmp_matrix(A), to_gmp_matrix(b)
+    ca, cb = gmp_A.shape, gmp_b.shape
+    scale = [None for _ in range(ca[0])]
+    for i in range(ca[0]):
+        mult, div = gmp_b[i,0].element.denominator, gmp_b[i,0].element.numerator
+        for j in range(ca[1]):
+            mult = QQ.lcm(mult, gmp_A[i,j].element.denominator)
+            div = QQ.gcd(div, gmp_A[i,j].element.numerator)
+        scale[i] = (mult/div)
+    A, b = gmp_A.to_Matrix(), gmp_b.to_Matrix()
+    res_A, res_b = [], []
+    for i in range(ca[0]):
+        aux_A = []
+        for j in range(ca[1]):
+            aux_A.append(bigq(fc.Fraction(scale[i] * A[i,j])))
+        res_A.append(aux_A)
+        res_b.append(bigq(fc.Fraction(scale[i] *  b[i,0])))
+    return res_A, res_b      
 
 # Compute the initial basing point from which we compute our vertex certification
 # -------------------------------------------------------------------
@@ -199,6 +219,7 @@ def lrs2dict(name,hirsch=False):
 
     # Compute everything
     A,b = get_polyhedron_from_lrs(name)
+    A,b = poly_scale(A,b)
     bases, bas2vtx, bas2det = get_bases_from_lrs(name)
     idx = get_idx(bases, bas2det)
     x_I, inv, det = (get_initial_basing_point(A,b,bases[idx]))

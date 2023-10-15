@@ -9,6 +9,7 @@ import time
 import math
 from scripts import core, lrs2dict, dict2bin, bin2coq, coqjobs, genlrs, dict2text
 from scripts.rank1 import lrs2dict_r1, dict2bin_r1
+from scripts.rank1 import lrs2dict_r1_pivot, dict2bin_r1_pivot
 from scripts.rank1 import lrs2dict_r1_matrix, dict2bin_r1_matrix
 from scripts.rank1 import lrs2dict_r1_vector, dict2bin_r1_vector
 from scripts.rank1 import lrs2dict_r1_lazy, dict2bin_r1_lazy
@@ -22,8 +23,8 @@ BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
 DEF_GEN = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,14), "permutohedron" : (3,8)}
 PARALLEL_DFLT = 10
 RANK1_LIST = ["rank1", "rank1_pivot", "rank1_matrix", "rank1_vector", "rank1_lazy"]
-RANK1_LRS_DICT = {"rank1" : lrs2dict_r1.lrs2dict, "rank1_pivot" : lrs2dict_r1.lrs2dict, "rank1_matrix" : lrs2dict_r1_matrix.lrs2dict, "rank1_vector" : lrs2dict_r1_vector.lrs2dict, "rank1_lazy" : lrs2dict_r1_lazy.lrs2dict}
-RANK1_DICT_BIN = {"rank1" : dict2bin_r1.dict2bin, "rank1_pivot" : dict2bin_r1.dict2bin, "rank1_matrix" : dict2bin_r1_matrix.dict2bin, "rank1_vector" : dict2bin_r1_vector.dict2bin, "rank1_lazy" : dict2bin_r1_lazy.dict2bin}
+RANK1_LRS_DICT = {"rank1" : lrs2dict_r1.lrs2dict, "rank1_pivot" : lrs2dict_r1_pivot.lrs2dict, "rank1_matrix" : lrs2dict_r1_matrix.lrs2dict, "rank1_vector" : lrs2dict_r1_vector.lrs2dict, "rank1_lazy" : lrs2dict_r1_lazy.lrs2dict}
+RANK1_DICT_BIN = {"rank1" : dict2bin_r1.dict2bin, "rank1_pivot" : dict2bin_r1_pivot.dict2bin, "rank1_matrix" : dict2bin_r1_matrix.dict2bin, "rank1_vector" : dict2bin_r1_vector.dict2bin, "rank1_lazy" : dict2bin_r1_lazy.dict2bin}
 # --------------------------------------------------------------------
 
 def command_call(command, prefix=""):
