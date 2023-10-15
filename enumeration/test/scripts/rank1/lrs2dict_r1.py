@@ -65,12 +65,12 @@ def list_of_gmp_matrix(PM):
 def get_idx(bases, bas2det):
     min = math.inf
     idx = 0
-    for i in range(len(bases)):
-        bas = bases[i]
-        det = fc.Fraction(bas2det[frozenset(bas)])
-        if det < min:
-            min = det
-            idx = i
+    # for i in range(len(bases)):
+    #     bas = bases[i]
+    #     det = fc.Fraction(bas2det[frozenset(bas)])
+    #     if det < min:
+    #         min = det
+    #         idx = i
     return idx
 
 def get_initial_basing_point(A,b,base):
@@ -79,8 +79,8 @@ def get_initial_basing_point(A,b,base):
     gmp_A_I, gmp_b_I = to_gmp_matrix(A_I), to_gmp_matrix(b_I)
     x_I = gmp_A_I.lu_solve(gmp_b_I)
     inv = gmp_A_I.inv()
-    det = gmp_A_I.det()
-    return (list_of_gmp_matrix(det * x_I)[0], list_of_gmp_matrix(det * inv), int(det))
+    # det = gmp_A_I.det()
+    return (list_of_gmp_matrix(x_I)[0], list_of_gmp_matrix(inv))
 
 # Construct the graph of lex feasible bases + order of construction
 # -------------------------------------------------------------------
@@ -201,7 +201,7 @@ def lrs2dict(name,hirsch=False):
     A,b = get_polyhedron_from_lrs(name)
     bases, bas2vtx, bas2det = get_bases_from_lrs(name)
     idx = get_idx(bases, bas2det)
-    x_I, inv, det = (get_initial_basing_point(A,b,bases[idx]))
+    x_I, inv = (get_initial_basing_point(A,b,bases[idx]))
     m,n = len(A), len(A[0])
     graph_lex, order, pred = get_lex_graph(bases,idx,m,n)
     vtx = get_unsrt_vtx(bases, bas2vtx)
@@ -220,7 +220,7 @@ def lrs2dict(name,hirsch=False):
     tgtjson['idx'] = idx
     tgtjson['x_I'] = x_I
     tgtjson['inv'] = inv
-    tgtjson['det'] = det
+    # tgtjson['det'] = det
     tgtjson['order'] = order
     tgtjson['steps'] = len(order)
     tgtjson['pred'] = pred
