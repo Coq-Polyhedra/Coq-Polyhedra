@@ -62,7 +62,6 @@ Definition sat_lex (M : array (array bigQ)) (I : array int63):=
     ) (length cmp) (true, 0%uint63)).1. *)
 
 (* ------------------------------------------------------------------ *)
-
 Definition update
   (I : array Uint63.int) (r s : Uint63.int)
   (M : array (array bigQ)) :=
@@ -73,7 +72,7 @@ Definition update
   let M0r := M.[0].[r] in
   let M'0 :=
     PArrayUtils.mk_fun
-      (fun k => ((M.[0].[k] * Mrs - M0r * Ms.[k]) / Mrs)%bigQ)
+      (fun k => BigQ.red ((M.[0].[k] * Mrs - M0r * Ms.[k]) / Mrs)%bigQ)
       (length M.[0]) (default M.[0]) in
   let M' := M'.[0 <- M'0] in
   let M' := IFold.ifold (fun k 'M' =>
@@ -84,12 +83,12 @@ Definition update
         let Mlk := M.[Uint63.succ Ik].[l] in
         let Mls := M.[Uint63.succ Is].[l] in
         let Mrk := M.[Uint63.succ Ik].[r] in
-        let z := ((Mlk * Mrs - Mls * Mrk)/Mrs)%bigQ in
+        let z := BigQ.red ((Mlk * Mrs - Mls * Mrk)/Mrs)%bigQ in
         MIk.[l <- z]) (length M.[Uint63.succ Ik]) 
         (make (length M.[Uint63.succ Ik]) 0%bigQ)
     in
     let M' := M'.[Uint63.succ Ik <- M'Ik] in M') (length I) M' in
-  let M'r := PArrayUtils.mk_fun (fun l => (-Ms.[l]/Mrs)%bigQ) (length Ms) 0%bigQ in
+  let M'r := PArrayUtils.mk_fun (fun l => BigQ.red (-Ms.[l]/Mrs)%bigQ) (length Ms) 0%bigQ in
   let M' := M'.[Uint63.succ r <- M'r] in
   M'.
 
