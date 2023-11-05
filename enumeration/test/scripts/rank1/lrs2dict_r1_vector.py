@@ -103,16 +103,12 @@ def update(m, n, gmp_A, I, r, s, inv):
     Mrs = (Ar * inv[I[s]])[0,0]
     u = inv[I[s]]
     res[r] = u/Mrs
-    mult = u[0,0].element.denominator
-    for i in range(u.shape[0]):
-        mult = QQ.lcm(mult, u[i,0].element.denominator)
-    u = mult * u
-    v[s] = (Mrs.element -1)/(Mrs.element * mult)
+    v[s] = (Mrs.element -1)/(Mrs.element)
     for k in range(n):
         if k != s:
             Mrk = (Ar * inv[I[k]])[0,0]
             res[I[k]] = (Mrs * inv[I[k]] - Mrk * inv[I[s]])/Mrs
-            v[k] = Mrk.element / (Mrs.element * mult)
+            v[k] = Mrk.element / (Mrs.element)
     return list_of_gmp_matrix(u)[0],[bigq(QQ_red(elt)) for elt in v],res
         
 
