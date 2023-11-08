@@ -237,10 +237,10 @@ def sort_res(res):
   return sorted(res, key=key)
 
 
-def bench2csv(kind,res,compute,text,parallel,rank1):
+def bench2csv(kind,res,compute,text,parallel,rank1,megabytes):
   taskdir = os.path.join(BENCH_DIR,kind)
   os.makedirs(taskdir,exist_ok=True)
-  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + ("text_" if text else "") + (f"parallel_{parallel}_" if parallel is not None else "") + (f"{rank1}_" if rank1 is not None else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
+  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + ("text_" if text else "") + (f"parallel_{parallel}_" if parallel is not None else "") + (f"{rank1}_" if rank1 is not None else "") + ("mb_" if megabytes is not None else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
   taskfile = os.path.join(taskdir, file_name)
   with open(taskfile, "w", newline='') as stream:
     output = writer(stream)
@@ -256,7 +256,7 @@ def bench2csv(kind,res,compute,text,parallel,rank1):
         csvwriter.writerows(res)
 
 def one_task(kind,**kwargs):
-  bench2csv(kind,TASK[kind](**kwargs),kwargs["compute"],kwargs["text"],kwargs["parallel"],kwargs["rank1"])
+  bench2csv(kind,TASK[kind](**kwargs),kwargs["compute"],kwargs["text"],kwargs["parallel"],kwargs["rank1"],kwargs["megabytes"])
 
 def all_tasks(*args,**kwargs):
   gen(**kwargs)
