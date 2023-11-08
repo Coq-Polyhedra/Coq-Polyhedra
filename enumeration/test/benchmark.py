@@ -240,7 +240,7 @@ def sort_res(res):
 def bench2csv(kind,res,compute,text,parallel,rank1):
   taskdir = os.path.join(BENCH_DIR,kind)
   os.makedirs(taskdir,exist_ok=True)
-  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + ("text_" if text else "") + (f"parallel_{parallel}_" if parallel is not None else "") + (f"{rank1}" if rank1 is not None else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
+  file_name = f"{kind}_" + (f"{compute}_" if compute == "compute" else "") + ("text_" if text else "") + (f"parallel_{parallel}_" if parallel is not None else "") + (f"{rank1}_" if rank1 is not None else "") + time.strftime("%m-%d-%H-%M-%S") + (".log" if kind == "theories" else ".csv")
   taskfile = os.path.join(taskdir, file_name)
   with open(taskfile, "w", newline='') as stream:
     output = writer(stream)
