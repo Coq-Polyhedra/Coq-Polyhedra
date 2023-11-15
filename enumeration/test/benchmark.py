@@ -15,7 +15,7 @@ CWD = os.getcwd()
 TIME_MEM_PREFIX = r'TIMEFMT="%E : real time, %M : max memory" && '
 HIRSCH_CEX = ["poly20dim21","poly23dim24"]
 BENCH_DIR = os.path.join(os.getcwd(),"benchmarks")
-DEF_POLYTOPES = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,13), "permutohedron" : (3,7)}
+DEF_POLYTOPES = {"cube" : (3,18), "cross" : (3,8), "cyclic" : (3,14), "permutohedron" : (3,8)}
 LOW_POLYTOPES = {"cube" : (3,14), "cross" : (3,7), "cyclic" : (3,12), "permutohedron" : (3,7)}
 CMPT_POLYTOPES = {"cube" : (3,12), "cross" : (3,6), "cyclic" : (3,8), "permutohedron" : (3,6)}
 POLYTOPES = {"default" : DEF_POLYTOPES, "low" : LOW_POLYTOPES, "compute" : CMPT_POLYTOPES}
@@ -177,6 +177,7 @@ def job(job):
 def clean_data(**kwargs):
   for name in polytopes(**kwargs):
     if name not in HIRSCH_CEX:
+      if name in 
       shutil.rmtree(core.resource(name))
     else:
       for file in os.listdir(core.resource(name)):
