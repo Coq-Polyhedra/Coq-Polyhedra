@@ -38,17 +38,12 @@ def parse_args():
     return name, job, compil
 
 # --------------------------------------------------------------------
-def main(name, job, compil):
+def main(name, job):
 
     srcdir = os.path.join(os.path.dirname(__file__), '..', 'jobs', job)
     jobdir = core.resource(name, f'coq_{job}')
 
-    if os.path.exists(jobdir):
-        print(f'remove {jobdir} first', file=sys.stderr)
-        print(f"{name}_{job} coq folder ignored")
-        return
-
-    os.makedirs(jobdir)
+    os.makedirs(jobdir, exist_ok=True)
 
     for filename in os.listdir(srcdir):
         if os.path.splitext(filename)[1] != '.v':
@@ -56,8 +51,6 @@ def main(name, job, compil):
         with open(os.path.join(srcdir, filename)) as stream:
             contents = stream.read()
         contents = contents.replace('__DATA__', f'{name.upper()}_DATA')
-        contents = contents.replace('__COMPIL__', f'{COMPIL_TARGET[compil]}')
-        contents = contents.replace('__COMPILATOR__', f'{compil}')
         contents = contents.replace('__VALIDATION__', f'{name.upper()}_VALIDATION')
         contents = contents.replace('__NAME__', f'{name}')
         contents = contents.replace('__VALUE__', f'{21 if name == "poly20dim21" else 24}')

@@ -4,5 +4,5 @@ From __DATA__ Require Import Po G_lex lbl_lex.
 
 Lemma enum_algo_ok : enum_algo Po G_lex lbl_lex.
 Proof.
-by rewrite -enum_algoE; __COMPIL__ (erefl true).
+by rewrite -enum_algoE; vm_cast_no_check (erefl true).
 Qed.

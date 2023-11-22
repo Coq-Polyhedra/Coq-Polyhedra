@@ -19,7 +19,7 @@ def usage_and_exit():
     print(f'Usage: {sys.argv[0]} [NAME]')
     exit(1)
 
-def main(name):
+def bin2coq(name):
     
     srcdir = os.path.join(os.path.dirname(__file__), '..', 'data', name)
     tgtdir = os.path.join(srcdir, 'coq')

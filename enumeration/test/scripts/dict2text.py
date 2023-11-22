@@ -6,7 +6,7 @@ import os
 # --------------------------------------------------------------------
 DUNE = r'''
 (coq.theory
- (name {name}_DATA)
+ (name {name}_DATA_TEXT)
  (theories Polyhedra PolyhedraHirsch)
  (flags -w -ambiguous-paths
         -w -notation-overridden
@@ -99,9 +99,9 @@ TEXT = dict(
 )
 # --------------------------------------------------------------------
 
-def dict2text(name, contents, computation):
+def dict2text(name, contents):
   srcdir = os.path.join(os.path.dirname(__file__), '..', 'data', name)
-  coqdir = os.path.join(srcdir, "coq")
+  coqdir = os.path.join(srcdir, "coq_text")
 
   os.makedirs(coqdir, exist_ok = True)
   res = {}
@@ -113,7 +113,7 @@ def dict2text(name, contents, computation):
     with open(tgtfile, "w") as stream:
       output = printer(stream)
       stream.write(IMPORT)
-      output(f"Definition {key} : {TYPE[key]} := Eval {computation} in")
+      output(f"Definition {key} : {TYPE[key]} := Eval vm_compute in")
       output(TEXT[key](value) + ".")
     res[f"Size of {key}.v"] = float(os.path.getsize(tgtfile)/1000000)
   with open(os.path.join(coqdir, "dune"), "w") as stream:
