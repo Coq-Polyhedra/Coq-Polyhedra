@@ -23,11 +23,11 @@ Section Relations.
 Definition rel_basis (m' : nat) := 
   @rel_arr_set_r _ _ (@rel_int_ord m') (fun x y=> ltn (val x) (val y)).
 
-Definition rel_point (m' n' : nat):=
-  @rel_point_mx_col _ [realFieldType of rat] rat_bigQ n' (m'.+1).
+Definition rel_point (n' : nat):=
+  @rel_point_mx_col _ [realFieldType of rat] rat_bigQ n' (n'.+1).
 
 Definition rel_lex_vert (m' n' : nat):=
-  rel_couple (@rel_basis m') (@rel_point m' n').
+  rel_couple (@rel_basis m') (@rel_point n').
 
 Definition rel_lex_lbl_graph (m' n' : nat):=
   @rel_lbl_graph _ _ (@rel_lex_vert m' n').
@@ -64,21 +64,21 @@ Lemma spec_func_basis (m' : nat):
   spec_func (@rel_basis m') (@spec_basis m') (@precond_basis m').
 Proof. apply/spec_func_arr_to_set_r; [exact/rel_int_ord_lt|exact/spec_func_int_ord]. Qed.
 
-Definition spec_point (m' n' : nat):=
-  @arr_to_point_mx_col _ _ n' m'.+1 bigQ2rat_def.
+Definition spec_point (n' : nat):=
+  @arr_to_point_mx_col _ _ n' n'.+1 bigQ2rat_def.
 
-Definition precond_point (m' n' : nat) (a : array (array bigQ)):=
-  (precond_mx m'.+1 n' a /\ precond_array (fun x=> precond_array (fun _ => True) x) a).
+Definition precond_point (n' : nat) (a : array (array bigQ)):=
+  (precond_mx n'.+1 n' a /\ precond_array (fun x=> precond_array (fun _ => True) x) a).
 
 Lemma spec_func_point (m' n' : nat):
-  spec_func (@rel_point m' n') (@spec_point m' n') (@precond_point m' n').
+  spec_func (@rel_point n') (@spec_point n') (@precond_point n').
 Proof. by apply/spec_func_to_point_mx_col. Qed.
 
 Definition spec_lex_vert (m' n' : nat) x:=
-  (@spec_basis m' x.1, @spec_point m' n' x.2).
+  (@spec_basis m' x.1, @spec_point n' x.2).
 
 Definition precond_lex_vert (m' n' : nat) x:=
-  @precond_basis m' x.1 /\ @precond_point m' n' x.2.
+  @precond_basis m' x.1 /\ @precond_point n' x.2.
 
 Lemma spec_func_lex_vert (m' n' : nat):
   spec_func (@rel_lex_vert m' n') (@spec_lex_vert m' n')
@@ -222,7 +222,7 @@ split.
 - move:bas_format=> /=; apply:precond_array_setP=> x.
   by rewrite format_poly_mn ltEint_nat.
 - split=> //=; move: pt_format; apply/precond_mxP; rewrite ?format_poly_mn //.
-  rewrite succ_intE // /Com.m; exact:(length_lt_max Po.1).
+  rewrite succ_intE // /Com.n. exact:(length_lt_max Po.1.[0]).
 Qed.
 
 End LexGraph.
@@ -268,10 +268,12 @@ Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 Local Notation b_pert := (Simplex.b_pert b).
 
 Definition set_Im : choiceType := [choiceType of {set 'I_m}].
-Definition M_n := [choiceType of 'M[rat]_(n,1+m)].
+Definition M_n := [choiceType of 'M[rat]_(n,1+n)].
 Definition enum_type := [choiceType of (set_Im * M_n)%type].
- 
-Context (G : graph enum_type).
+
+Definition perturbed_point (e : enum_type) :=
+  colsub () e.2.
+(* Context (G : graph enum_type).
 
 Definition card_verification (e : enum_type) := #|e.1| == n.
 Definition feas_verification (e : enum_type) := e.2 \in Simplex.lex_polyhedron A b_pert.
@@ -284,7 +286,7 @@ Definition struct_verification (e : enum_type) := reg_verification e && all (int
 
 Definition high_enum_algo := 
   all vertex_verification (vertices G) &&
-  all struct_verification (vertices G).
+  all struct_verification (vertices G). *)
 
 End Def.
 
@@ -306,7 +308,7 @@ apply/rel_arr_set_r_spec=> x X Y xX xY; apply/val_inj.
 by rewrite xX xY.
 Qed.
 
-Lemma rel_point_spec: rel_spec (@rel_point m' n') eq.
+Lemma rel_point_spec: rel_spec (@rel_point n') eq.
 Proof. apply/rel_point_mx_col_spec/rat_bigQ_injr. Qed.
 
 Lemma rel_lex_vert_spec: rel_spec (@rel_lex_vert m' n') eq.
@@ -335,7 +337,7 @@ Hypothesis gl_G : rel_lex_graph (g, l) G.
 Lemma rel_lex_vert_m_max v V: @rel_lex_vert m' n' v V->
   (Com.m Po < max_length)%O.
 Proof.
-case=> _ /rel_point_mx_col_length; move: (rel_Po_r_m Po_Ab)=> -> Po_len.
+case=> ?. /rel_point_mx_col_length; move: (rel_Po_r_m Po_Ab)=> -> Po_len.
 apply/(@lt_le_trans _ _ (length v.2)); rewrite ?leEint ?leb_length //.
 by rewrite ltEint_nat Po_len leqnn.
 Qed.
