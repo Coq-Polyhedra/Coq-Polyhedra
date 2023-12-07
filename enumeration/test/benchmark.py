@@ -28,13 +28,18 @@ def chunks(lst, n):
         yield lst[i:i + n]
 
 def command_call(command, prefix=""):
-  output = sp.run(prefix + command,
+  try:
+    output = sp.run(prefix + command,
             shell=True, executable="/bin/zsh", check=True,
             capture_output=True, text=True)
-  print(output.stdout, output.stderr)
-  return output.stderr
+    print(output.stdout, output.stderr)
+    return output.stderr
+  except:
+    return None
 
 def format_time_output(st):
+  if st is None:
+    return None, None
   findit = re.search(r"(?P<time>\d+)[,.](?P<mtime>\d+)s.+, (?P<memory>\d+)", st)
   time, mtime = findit.group("time"), findit.group("mtime")
   memory = float(findit.group("memory"))
@@ -115,8 +120,8 @@ def compilation(text = False):
         time, memory = format_time_output(st)
         res[file + " time"] = time
         res[file + " memory"] = memory
-        times.append(float(time))
-        max_memory = max(max_memory,float(memory))
+        times.append(float(time if time is not None else 0.0))
+        max_memory = max(max_memory,float(memory if memory is not None else 0.0))
     res["total time"] = str(math.fsum(times))
     res["max memory"] = str(max_memory)
     return res
@@ -142,8 +147,8 @@ def job(job):
         time, memory = format_time_output(st)
         res[file + " time"] = time
         res[file + " memory"] = memory
-        times.append(float(time))
-        max_memory = max(max_memory,float(memory))
+        times.append(float(time if time is not None else 0.0))
+        max_memory = max(max_memory,float(memory if memory is not None else 0.0))
     res["total time"] = str(math.fsum(times))
     res["max memory"] = str(max_memory)
     return res
@@ -184,7 +189,7 @@ def create_arguments(args):
 def create(args):
   polytope,param = create_arguments(args)
   name = polytope_name(polytope,param)
-  benchmarks_path = os.path.join(DATA_DIR,name,f"benchmarks_{name}.json") 
+  benchmarks_path = os.path.join(DATA_DIR,name,f"benchmarks_{name}.json")
   if os.path.exists(benchmarks_path):
     with open(benchmarks_path) as stream:
       benchmarks = json.load(stream)
@@ -208,12 +213,16 @@ def clean(args):
         shutil.rmtree(dir_path)
       else:
         for subdir in os.listdir(dir_path):
-          if subdir != "lrs":
+          if os.path.isdir(os.path.join(dir_path,subdir)) and subdir != "lrs":
             shutil.rmtree(os.path.join(dir_path,subdir))
+          elif subdir.endswith(".json"):
+            os.remove(os.path.join(dir_path,subdir))
           else:
             path_ext = os.path.join(dir_path,subdir,dir+".ext")
             if os.path.exists(path_ext):
               os.remove(path_ext)
+  command_call("dune clean")
+  command_call("dune build " + os.path.join("..", "theories"))
         
 
 
