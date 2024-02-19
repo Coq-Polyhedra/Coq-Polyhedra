@@ -332,7 +332,7 @@ suff ->: \sum_(j0 < n.-1) (col' i A) j j0 * (row' i B) j0 h = \sum_(j0 < n | j0 
 have ->: \sum_(j0 < n.-1) (col' i A) j j0 * (row' i B) j0 h = \sum_(j0 < n.-1) (A j (lift i j0)) * (B (lift i j0) h).
   by apply: eq_bigr => k _; rewrite !mxE.
 rewrite -[RHS]big_filter.
-suff ->: [seq i0 <- index_enum (ordinal_finType n) | i0 != i] = map (lift i) [seq _ <- index_enum (ordinal_finType n.-1) | true]
+suff ->: [seq i0 <- index_enum 'I_n | i0 != i] = map (lift i) [seq _ <- index_enum 'I_n.-1 | true]
   by rewrite big_map big_filter.
 rewrite filter_predT /index_enum -!enumT.
 exact: predC1_enum.
@@ -549,7 +549,7 @@ End ExtraKer.
 Section SpanMatrix.
 
 Lemma vbasis_mat {k n : nat} {R : realFieldType} (S : k.-tuple 'rV[R]_n):
-  (\matrix_i tnth S i == 
+  (\matrix_i tnth S i ==
   \matrix_i tnth (vbasis <<S>>) i)%MS.
 Proof.
 apply/rV_eqP=> u; apply/idP/idP.
@@ -581,11 +581,11 @@ Lemma span_matrix_cV {n k : nat} {R : realFieldType} (S : k.-tuple 'cV[R]_n):
   \dim (span S) = \rank (\matrix_(i < n, j < k) tnth S j i 0).
 Proof.
 set A := matrix_of_fun _ _.
-have ->: A = (\matrix_i tnth (map_tuple trmx S) i)^T by 
+have ->: A = (\matrix_i tnth (map_tuple trmx S) i)^T by
   apply/matrixP=> i j; rewrite !mxE tnth_map !mxE.
 rewrite mxrank_tr -span_matrix_rV /=.
 set St := map _ _.
-have ->: St = [seq (linfun trmx) i | i <- S] by 
+have ->: St = [seq (linfun trmx) i | i <- S] by
   under eq_map=> x do rewrite lfunE /=.
 rewrite -limg_span limg_dim_eq //=.
 suff ->: lker (linfun trmx) = 0%VS by rewrite capv0.
