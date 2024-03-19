@@ -743,25 +743,140 @@ Notation "x >lex y" := (y <lex x) (only parsing, at level 0) : ring_scope.
 
 Section ExtraLexOrder.
 
-Variable n : nat.
-Implicit Types u v : 'rV[R]_n.
-
-Lemma lex_ord0 (u v : 'rV[R]_(1+n)) :
-  (u <=lex v) -> u 0 0 <= v 0 0.
+Lemma leqlex_seqP {n} (u v : 'rV[R]_n) s:
+  reflect
+  ((forall i, i \in s -> u 0 i = v 0 i) \/
+    (exists S1, exists S2, exists x, 
+    [/\ s = S1 ++ x :: S2, u 0 x < v 0 x & forall i, i \in S1 -> u 0 i = v 0 i]))
+  ((leqlex_seq u v s)).
 Proof.
-rewrite /leqlex.
-case: {2}(enum _) (erefl (enum 'I_(1+n))) => [| x0 ? Henum];
-  first by move/(congr1 size); rewrite size_enum_ord {1}add1n.
-have <-: x0 = 0.
-- apply/ord_inj.
-  move/(congr1 (head 0))/(congr1 (@nat_of_ord _)): Henum.
-  by rewrite -2!nth0 nth_enum_ord //.
-rewrite Henum /=; case: ifP => [|_]; first by move/ltW.
-- case: ifP => [|_]; last by done.
-  + by move/eqP ->; rewrite lexx.
+elim: s=> /= [|x l IH].
+  by apply:Bool.ReflectT; left.
+case: ltgtP.
+- move=> uvx; apply:Bool.ReflectT; right.
+  by exists [::]; exists l; exists x; split.
+- move=> vux; apply/Bool.ReflectF; case.
+  + move/(_ x (mem_head _ _)); move: vux=> /[swap] ->.
+    by rewrite ltxx.
+  + case=> S1 [S2] [x']; case: S1.
+    * by case; case=> <- _ /lt_trans /(_ vux); rewrite ltxx.
+    * move=> ??; case=> /=; case => <- _ _ /(_ x (mem_head _ _)).
+      by move: vux => /[swap] ->; rewrite ltxx.
+- move=> uvx; apply/(iffP idP).
+  + move/IH; case.
+    * by move=> IHl; left=> i; rewrite in_cons; case/orP=> [/eqP ->|/IHl].
+    * case=> S1 [S2] [x'] [-> ? S1_eq]; right.
+      exists (x :: S1), S2, x'; split=> //.
+      by move=> i; rewrite in_cons; case/orP=> [/eqP ->|/S1_eq].
+  + case=> h; apply/IH.
+    * by left; move=> i il; apply/h; rewrite in_cons il orbT.
+    * case: h=> S1 [S2] [x'].
+      case: S1.
+      - by case; case=> <- _; rewrite uvx ltxx.
+      - move=> a' l' [] [<- -> uvx' ixl']; right.
+        exists l', S2, x'; split=> // i il'.
+        by apply/ixl'; rewrite in_cons il' orbT.
 Qed.
 
-Lemma leqlex_seq_cons S1 S2 u v :
+Lemma enum_ord_split {n} i0 :
+  enum 'I_n = (filter (fun j => (j < i0)%O) (enum 'I_n)) ++ (i0:: filter (fun j => (i0 < j)%O) (enum 'I_n)).
+Proof.
+have sorted_enum: sorted <%O (enum 'I_n).
+- move/(congr1 (sorted <%O)): (val_enum_ord n).
+  by rewrite iota_ltn_sorted sorted_map.
+rewrite sorted_filter_lt ?sorted_filter_gt; try
+  by (move:sorted_enum; rewrite lt_sorted_uniq_le=> /andP []).
+have ->: (i0 = nth i0 (enum 'I_n) i0) by
+  apply/val_inj; rewrite nth_ord_enum.
+rewrite count_lt_nth // ?size_enum_ord ?ltn_ord //.
+rewrite count_le_nth // ?size_enum_ord ?ltn_ord //.
+rewrite -(drop_nth i0) ?size_enum_ord ?ltn_ord //.
+by rewrite cat_take_drop.
+Qed.
+
+Lemma enum_ord_splitP {n} i0 S1 S2:
+  enum 'I_n = S1 ++ i0 :: S2 ->
+  S1 = (filter (fun j => (j < i0)%O) (enum 'I_n)) /\
+  S2 = filter (fun j => (i0 < j)%O) (enum 'I_n).
+Proof.
+have sorted_enum: sorted <%O (enum 'I_n).
+- move/(congr1 (sorted <%O)): (val_enum_ord n).
+  by rewrite iota_ltn_sorted sorted_map.
+move=> enum_id.
+suff: size S1 = i0.
+- move: enum_id=> + size_S1; rewrite {1}(enum_ord_split i0).
+  move/eqP; rewrite eqseq_cat ?size_filter /=; first by
+    case/andP=> /eqP -> /eqP [] ->.
+  have ->: (i0 = nth i0 (enum 'I_n) i0) by
+    apply/val_inj; rewrite nth_ord_enum.
+  by rewrite count_lt_nth // size_enum_ord ltn_ord.
+- elim/last_ind: S1 i0 S2 enum_id=> [i0 S2|S1 a IH i0 S2].
+  + move=> /[dup] /(congr1 size) /=.
+    rewrite size_enum_ord=> nS.
+    move/(congr1 (head i0))=> /= /(congr1 val).
+    by rewrite -nth0 /= nth_enum_ord ?nS.
+  + rewrite cat_rcons size_rcons=> enum_id.
+    move: (IH a (i0 :: S2) enum_id)=> size_S1.
+    move: enum_id=> /[dup] /(congr1 size).
+    rewrite size_enum_ord size_cat //= => nS1S2.
+    move/(congr1 (fun x => nth a x a.+1)).
+    move/(congr1 val)=> /=; rewrite nth_enum_ord.
+    - rewrite -!size_S1 nth_cat leq_gtF ?leqnSn //.
+      by rewrite subSnn /=.
+    - by rewrite {2}nS1S2 size_S1 !addnS !ltnS leq_addr.
+Qed.
+
+Lemma leqlexP {n} (u v : 'rV[R]_n):
+  reflect
+  (u = v \/
+    (exists2 j, u 0 j < v 0 j & (forall i, (i < j)%O -> u 0 i = v 0 i))
+  )
+    (u <=lex v).
+Proof.
+apply/(iffP idP).
+- case/leqlex_seqP.
+  + by move=> h; left; apply/rowP; move=> i; apply/h; rewrite mem_enum.
+  + case=> S1 [S2] [j] [] /enum_ord_splitP [-> _ uxv uvi].
+    right; exists j=> // i ij; apply/uvi.
+    by rewrite mem_filter mem_enum ij.
+- case.
+  + move/rowP=> h; apply/leqlex_seqP; left=> i _; exact/h.
+  + case=> j uvj uvi; apply/leqlex_seqP; right.
+    exists (filter (fun i => (i < j)%O) (enum 'I_n)).
+    exists (filter (fun i => (i > j)%O) (enum 'I_n)).
+    exists j; split=> //; [exact:enum_ord_split|].
+    move=> i; rewrite mem_filter mem_enum inE andbT.
+    exact:uvi.
+Qed.
+
+Lemma ltrlexP {n} (u v : 'rV[R]_n):
+  reflect
+  (exists2 j, u 0 j < v 0 j & (forall i, (i < j)%O -> u 0 i = v 0 i))
+  (u <lex v).
+Proof.
+apply/(iffP idP).
+- case/andP=> uv /leqlexP.
+  by case=> // /eqP; rewrite (negPf uv).
+- move=> h; apply/andP; split.
+  + case: h=> j uvj _.
+    by apply/negP=> /eqP uv; move: uvj; rewrite uv ltxx.
+  + by apply/leqlexP; right.
+Qed.
+
+
+
+Lemma lex_ord0 {n} (u v : 'rV[R]_(1+n)) :
+  (u <=lex v) -> u 0 0 <= v 0 0.
+Proof.
+case/leqlexP=> [->|]; rewrite ?lexx //.
+case=> j; case/boolP : (j == ord0).
+- by move/eqP => -> /= /ltW.
+- move=> j0 _ /(_ ord0) -> //.
+  rewrite ltEord /= lt0n.
+  by move: j0; apply/contra=> /eqP h; apply/eqP/val_inj=> /=.
+Qed.
+
+Lemma leqlex_seq_cons {n} S1 S2 (u v : 'rV[R]_n) :
   (leqlex_seq u v S1) && (leqlex_seq u v S2) -> leqlex_seq u v (S1 ++ S2).
 Proof.
 elim: S1 => [| i S1' IH]; first by rewrite /=.
@@ -770,7 +885,7 @@ case: ifP => [| Hi]; first by done.
 case: ifP; done.
 Qed.
 
-Lemma leqlex_seq_lev S u v :
+Lemma leqlex_seq_lev {n} S (u v : 'rV[R]_n) :
   [forall i in S, u 0 i <= v 0 i] -> leqlex_seq u v S.
 Proof.
 elim: S => [| i S' IH H]; first by done.
@@ -783,13 +898,13 @@ apply/forallP => j; apply/implyP => Hj.
 by move/forallP/(_ j): H; rewrite in_cons Hj orbT.
 Qed.
 
-Lemma leqlex_seq_head i S u v :
+Lemma leqlex_seq_head {n} i S (u v : 'rV[R]_n) :
   (u 0 i < v 0 i) -> leqlex_seq u v (i :: S).
 Proof.
 by move => Hi; rewrite /=; rewrite ifT //.
 Qed.
 
-Lemma leqlex_seq_cons_head i S1 S2 u v :
+Lemma leqlex_seq_cons_head {n} i S1 S2 (u v : 'rV[R]_n) :
   [forall j in S1, u 0 j <= v 0 j] && (u 0 i < v 0 i) ->
     leqlex_seq u v (S1 ++ (i :: S2)).
 Proof.
@@ -797,42 +912,14 @@ move/andP => [/leqlex_seq_lev H /(leqlex_seq_head S2) H'].
 by apply: leqlex_seq_cons; apply/andP; split.
 Qed.
 
-Lemma enum_ord_split i0 :
-  enum 'I_n = (filter (fun j => (nat_of_ord j < nat_of_ord i0)%N) (enum 'I_n)) ++ (i0:: filter (fun j => (nat_of_ord i0 < nat_of_ord j < n)%N) (enum 'I_n)).
+Lemma lex_lev_strict {n} (u v : 'rV[R]_n) (i : 'I_n) :
+  [forall (j | (j < i)%O), u 0 j <= v 0 j] && (u 0 i < v 0 i) -> (u <lex v).
 Proof.
-apply: (inj_map (@ord_inj _)).
-rewrite !val_enum_ord map_cat map_cons.
-have ->: filter (fun j => (nat_of_ord i0 < nat_of_ord j < n)%N) (enum 'I_n) =
-filter (preim (@nat_of_ord n) (fun j => (nat_of_ord i0 < j < n)%N)) (enum 'I_n)
-  by apply: eq_filter => j; rewrite /=.
-have ->: filter (fun j => (nat_of_ord j < nat_of_ord i0)%N) (enum 'I_n) =
-filter (preim (@nat_of_ord n) (fun j => (j < nat_of_ord i0)%N)) (enum 'I_n)
-  by apply: eq_filter => j; rewrite /=.
-rewrite -2!filter_map !val_enum_ord.
-have Hi0 : (nat_of_ord i0 < n)%N by apply: ltn_ord.
-have ->: [seq j <- iota 0 n | (j < i0)%N] = iota 0 i0.
-- have /eq_filter -> : (fun j => (j < i0)%N) =1 (fun j => j \in iota 0 i0).
-  + by move => j; rewrite mem_iota leq0n /= add0n.
-  symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
-  rewrite -{2}[n](subnKC (ltnW Hi0)).
-  by rewrite iotaD add0n; apply: prefix_subseq.
-have ->: [seq j <- iota 0 n | (i0 < j < n )%N] = iota (i0.+1) (n - (i0.+1)).
-- have /eq_filter -> : (fun j => (i0 < j < n)%N) =1 (fun j => j \in iota (i0.+1) (n - (i0.+1))).
-  + by move => j; rewrite mem_iota subnKC //.
-  symmetry; apply/(subseq_uniqP (iota_uniq _ _)).
-  rewrite -{4}[n](subnKC Hi0).
-  by rewrite iotaD add0n; apply: suffix_subseq.
-rewrite -{1}[n](subnKC (ltnW Hi0)) iotaD add0n.
-apply/(congr1 (fun s => _ ++ s)).
-suff ->: (n - i0 = 1 + (n - i0.+1))%N
-  by rewrite iotaD addn1 /=.
-- by rewrite -subn_gt0 in Hi0; rewrite add1n subnS prednK.
-Qed.
+case/andP=> /forallP uvj uvi; apply/ltrlexP.
+Admitted.
 
-Lemma lex_lev_strict u v i :
-  [forall (j | (nat_of_ord j < nat_of_ord i)%N), u 0 j <= v 0 j] && (u 0 i < v 0 i) -> (u <lex v).
-Proof.
-move/andP => [H H'].
+
+(* move/andP => [H H'].
 rewrite /ltrlex; apply/andP; split.
 - move: H'. apply: contraL.
   by move/eqP/rowP/(_ i) ->; rewrite ltxx.
@@ -840,7 +927,7 @@ rewrite /ltrlex; apply/andP; split.
   apply: leqlex_seq_cons_head; apply/andP; split; last by done.
   apply/forallP => j; apply/implyP; rewrite mem_filter => /andP [Hj _].
   by move/forallP/(_ j)/implyP/(_ Hj): H.
-Qed.
+Qed. *)
 
 Lemma lex_lev u v :
   (forall j, u 0 j <= v 0 j) -> (u <=lex v).
@@ -879,10 +966,12 @@ by move=> j; rewrite in_cons; case/orP=> [/eqP ->|/j_lt_i' ->].
 Qed.
 
 Lemma lex_lev_strictP (u v : 'rV_n): reflect
-  (exists i, (forall j, (nat_of_ord j < nat_of_ord i)%N -> u 0 j = v 0 j) /\ u 0 i < v 0 i)
+  (exists i :'I_n, (forall j : 'I_n, (j < i)%O -> u 0 j = v 0 j) /\ u 0 i < v 0 i)
   (u <lex v).
 Proof.
 apply/(iffP idP).
+rewrite /ltrlex /leqlex; case/andP=> n_uv.
+
 - rewrite /ltrlex /leqlex; case/andP=> xy_n leqlex_xy.
   have [i [i_In uv_n_i]]: exists i, (i \in enum 'I_n) /\ (u 0 i != v 0 i).
   + move: xy_n; rewrite -subr_eq0; case/rV0Pn=> i.

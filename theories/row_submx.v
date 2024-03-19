@@ -8,7 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
-From mathcomp Require Import fingroup perm.
+From mathcomp Require Import fingroup perm fintype.
 Require Import extra_misc inner_product vector_order extra_matrix.
 
 Set Implicit Arguments.

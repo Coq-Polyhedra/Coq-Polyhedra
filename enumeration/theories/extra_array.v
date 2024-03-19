@@ -126,8 +126,7 @@ Definition eq_array_int (a b : array Uint63.int):=
   eq_array_rel eqb a b.
 
 Definition lex_array_rel_ {T : Type} (r : T -> T -> comparison) (a b : array T) :=
-  fold_pair 
-    (fun x y acc=> if acc is Eq then r x y else acc) a b Eq.
+  ILex.lex_func_rel_ (if (length a <? length b)%uint63 then length a else length b) r (fun i=> a.[i]) (fun i=> b.[i]).
 
 Definition lex_array_rel {T : Type} (r : T -> T -> comparison) (a b : array T):=
   (length a =? length b)%uint63 &&
@@ -576,49 +575,36 @@ End EqArray.
 Section LexArray.
 
 Definition lex_array_rel_ {T : Type} (r : T -> T -> comparison) (a b : array T) :=
-  arr_fold_pair (fun x y acc=> if acc is Eq then r x y else acc) a b Eq.
+  lex_func_rel_ (if (length a < length b)%O then length a else length b) r (fun i=> a.[i]) (fun i=> b.[i]).
 
 Lemma lex_array_rel_E {T : Type} (a b : array T) (r : T -> T -> comparison):
   PArrayUtils.lex_array_rel_ r a b = lex_array_rel_ r a b.
-Proof. by rewrite /PArrayUtils.lex_array_rel_ arr_fold_pairE. Qed.
+Proof. 
+by rewrite /PArrayUtils.lex_array_rel_ /lex_array_rel_ lex_func_rel_E.
+Qed.
+
+Lemma lex_array_rel_P {T : Type} (a b : array T) r:
+  lex_func_rel_prop 
+    (if (length a < length b)%O then length a else length b) 
+  r (fun i => a.[i]) (fun i => b.[i]) (lex_array_rel_ r a b).
+Proof. exact/lex_func_rel_P. Qed.
 
 Lemma lex_array_rel_Eq {T : Type} (a b : array T) (r : T -> T -> comparison):
   length a = length b -> lex_array_rel_ r a b = Eq ->
   forall i, (i < length a)%O -> r a.[i] b.[i] = Eq.
 Proof.
-move=> len_eq; rewrite /lex_array_rel_ /arr_fold_pair zip_arr_to_seq //.
-rewrite irange0_iota; move=> foldl_h i; rewrite ltEint_nat.
-move: (leqnn (int_to_nat (length a))) foldl_h i; move:{1 3 4}(int_to_nat (length a)).
-elim=> [|n IHn]; first by move=> _ _ ?.
-rewrite iotaS_rcons add0n !map_rcons foldl_rcons /=.
-move=> n_len; case E: (foldl _ _ _)=> // r_n_Eq i.
-move/ltnSE; rewrite leq_eqVlt; case/orP.
-- by move/eqP/(congr1 nat_to_int); rewrite int_to_natK => ->.
-- apply/IHn=> //; exact: ltnW.
+move=> ab r_Eq.
+move: (lex_array_rel_P a b r); rewrite r_Eq /= ab ltxx.
+exact.
 Qed.
-  
+
 Lemma lex_array_rel_Lt {T : Type} (a b : array T) (r : T -> T -> comparison):
   length a = length b -> lex_array_rel_ r a b = Lt ->
-  exists (j : int), [/\ (j < length a)%nat, r a.[j] b.[j] = Lt & (forall i, (i < j)%O -> r a.[i] b.[i] = Eq)].
+  exists (j : int), [/\ (j < length a)%O, r a.[j] b.[j] = Lt & (forall i, (i < j)%O -> r a.[i] b.[i] = Eq)].
 Proof.
-move=> len_eq; rewrite /lex_array_rel_ /arr_fold_pair zip_arr_to_seq //.
-rewrite irange0_iota; move: (leqnn (int_to_nat (length a))).
-move: {1 3 4}(int_to_nat (length a)).
-elim=> // n IHn; rewrite iotaS_rcons add0n !map_rcons foldl_rcons.
-move=> n_len; case E: (foldl _ _ _)=> //=.
-- move=> r_n_Lt; exists (nat_to_int n); split=> //.
-  + rewrite nat_to_intK // inE; exact/(ltn_trans n_len)/int_thresholdP.
-  + elim: n E n_len {IHn r_n_Lt}; first by (move=> _ _ ?; rewrite ltEint_nat).
-    move=> n IHn; rewrite iotaS_rcons add0n !map_rcons foldl_rcons.
-    case E: (foldl _ _ _)=> // r_n_Eq n_len i.
-    rewrite ltEint_nat nat_to_intK ?inE; first exact/(ltn_trans n_len)/int_thresholdP.
-    move/ltnSE; rewrite leq_eqVlt; case/orP.
-    * by move/eqP/(congr1 nat_to_int); rewrite int_to_natK => ->.
-    * move=> ?; apply/IHn=> //; rewrite ?ltEint_nat ?nat_to_intK // ?inE.
-      - exact/(ltn_trans _ n_len).
-      - apply/(leq_trans (ltnW n_len))/ltnW/int_thresholdP.
-- move=> _; case: (IHn (ltnW n_len) E)=> j [j_n r_j r_i].
-  exists j; split=> //; rewrite ltnS; exact: ltnW.
+move=> ab r_Lt.
+move: (lex_array_rel_P a b r); rewrite r_Lt ab ltxx /=.
+by case=> j [???]; exists j; split.
 Qed.
 
 Definition ltx_array_rel {T : Type} r (a b : array T):=
@@ -643,30 +629,20 @@ Lemma ltx_array_relP {T : Type} (a b : array T)
   (ltx_array_rel r a b).
 Proof.
 apply/(iffP idP).
-- case/andP=> /eqP len_eq.
-  case E: (lex_array_rel_ _ _ _)=> //= _.
-  case: (lex_array_rel_Lt len_eq E)=> j [j_len r_j r_i_eq].
-  split=> //; exists j; rewrite ltEint_nat; split=> //.
-- case=> len_eq [j] [j_len r_i_eq r_j].
-  rewrite /ltx_array_rel /lex_array_rel_ /arr_fold_pair len_eq.
-  apply/andP; split; first exact/eqP.
-  set S := zip _ _; rewrite -[S](cat_take_drop j). 
-  rewrite (drop_nth (default a, default b)) ?size_zip ?size_arr_to_seq -?len_eq ?minnn -?ltEint_nat //.
-  rewrite nth_zip ?size_arr_to_seq ?len_eq // !nth_arr_to_seq -?len_eq -?ltEint_nat //.
-  rewrite int_to_natK.
-  have take_lt: all (fun x=> if r x.1 x.2 is Eq then true else false) (take j S).
-  + apply/(all_nthP (default a, default b))=> i.
-    rewrite size_takel ?size_zip ?size_arr_to_seq -?len_eq ?minnn -?leEint_nat; first exact/ltW.
-    move=> ij; rewrite nth_take // nth_zip ?size_arr_to_seq ?len_eq //=.
-    rewrite !nth_arr_to_seq -?len_eq; try by (apply/(ltn_trans ij); rewrite -?ltEint_nat).
-    move: (r_i_eq (nat_to_int i)); rewrite ltEint_nat nat_to_intK ?inE ?ij; try by move=> ->.
-    apply/(ltn_trans ij)/(@ltn_trans (length a)); try exact/int_thresholdP.
-    by rewrite -ltEint_nat.
-  elim: (take j S) take_lt.
-  + move=> /= _; rewrite r_j.
-    by elim: (drop _ _).
-  + move=> h t IH /= /andP [] + /IH.
-    by case: (r h.1 h.2).
+- case/andP=> /eqP ab; case E: (lex_array_rel_ r a b)=> // _.
+  case: (lex_array_rel_Lt ab E)=> j [???].
+  by split=> //; exists j; split.
+- case=> ab [j [j_a r_j_Eq r_j_Lt]].
+  rewrite /ltx_array_rel; apply/andP; split.
+    exact/eqP.
+  move: (lex_array_rel_P a b r).
+  case: (lex_array_rel_ r a b)=> //=; rewrite -ab ltxx.
+  + by move=> /(_ j j_a); rewrite r_j_Lt.
+  + case=> j' [j'_a r_j'_Eq r_j'_Gt].
+    case: (ltgtP j j').
+    * by move/r_j'_Eq; rewrite r_j_Lt.
+    * by move/r_j_Eq; rewrite r_j'_Gt.
+    * by move: r_j_Lt=> /[swap] ->; rewrite r_j'_Gt.
 Qed.
 
 Definition lex_array_rel {T : Type} (r : T -> T -> comparison) (a b : array T):=
@@ -682,33 +658,19 @@ Lemma lex_arr_eqVlt {T : Type} (a b : array T) (r : T -> T -> comparison):
     ltx_array_rel r a b.
 Proof.
 apply/idP/idP.
-- rewrite /lex_array_rel.
-  case/andP=> /eqP len_eq.
-  case E: (lex_array_rel_ r a b)=> // _.
-  + move: (lex_array_rel_Eq len_eq E)=> all_eq.
-    apply/orP; left; apply/eq_array_relP; split=> //.
-    by move=> i /all_eq ->.
-  + move: (lex_array_rel_Lt len_eq E)=> [j] [j_len r_j_lt r_i_eq].
-    apply/orP; right; apply/ltx_array_relP; split=> //.
-    by exists j; split=> //; rewrite ltEint_nat.
-- case/orP; last first. 
-  + rewrite /ltx_array_rel /lex_array_rel.
-    by case: (lex_array_rel_ _ _ _)=> //=; rewrite andbF.
-  + case/eq_array_relP=> len_eq r_eq; rewrite /lex_array_rel.
-    apply/andP; split; first exact/eqP.
-    rewrite /lex_array_rel_ /arr_fold_pair.
-    set S:= zip _ _.
-    have all_S: all (fun x=> if r x.1 x.2 is Eq then true else false) S.
-    * apply/(all_nthP (default a, default b))=> i.
-      rewrite size_zip !size_arr_to_seq -len_eq minnn => i_len_a.
-      rewrite nth_zip ?size_arr_to_seq ?len_eq //=.
-      rewrite !nth_arr_to_seq -?len_eq //.
-      apply/r_eq; rewrite ltEint_nat nat_to_intK // inE.
-      exact/(ltn_trans i_len_a)/int_thresholdP.
-    elim/last_ind: S all_S=> //= t h IH.
-    rewrite all_rcons foldl_rcons => /andP [+ /IH].
-    case: (r h.1 h.2)=> // _.
-    by case: (foldl _ _ _).
+- case/andP=> /eqP ab; case E: (lex_array_rel_ r a b)=> // _.
+  + apply/orP; left; move: (lex_array_rel_P a b r); rewrite E /=.
+    rewrite -ab ltxx => r_Eq; apply/eq_array_relP; split=> //.
+    by move=> i /r_Eq ->.
+  + by apply/orP; right; rewrite /ltx_array_rel E ab eqxx.
+- case/orP.
+  + move/eq_array_relP=> [ab r_Eq]; rewrite /lex_array_rel.
+    rewrite ab eqxx /=.
+    move: (lex_array_rel_P a b r); case E: (lex_array_rel_)=> //=.
+    case=> j []; rewrite -ab ltxx=> /r_Eq + _.
+    by case: (r a.[j] b.[j]).
+  + rewrite /ltx_array_rel /lex_array_rel=> /andP [->] /=.
+    by case: (lex_array_rel_).
 Qed.
 
 Definition lt_array_int (a b : array int):=

@@ -255,9 +255,7 @@ Definition mask_eq (Po : Com.polyType) (m : array int63) (x : Com.U):=
   IFold.iall (fun i=> sat_eq (Com.m Po) m.[i] Po.1.[m.[i]] Po.2.[m.[i]] x) (length m). *)
 
 Definition cmp_sat (Po : Com.polyType) (x : array bigQ):=
-  IFold.ifold 
-    (fun i res=> res.[i <- (BigQ.compare (BigQUtils.bigQ_dot Po.1.[i] x) Po.2.[i])])
-  (length Po.1) (make (length Po.1) Lt).
+  ILex.lex_func_rel_
 
 Definition cmp_vect (Po : Com.polyType) (I : array int63) X:=
   let cmp := cmp_sat Po X.[0%uint63] in
@@ -291,13 +289,11 @@ Definition sat_test (i : int63) :=
   let I := Com.bas lbl i in
   let X := Com.point lbl i in
   let cmp := cmp_vect Po I X in
-  let '(_, res) := IFold.ifold 
-    (fun i '(k,acc)=> if acc is false then (k,false) else
-      if (I.[k] =? i)%uint63 then 
-        (Uint63.succ k,if cmp.[i] is Eq then true else false) else 
-        (k, if cmp.[i] is Gt then true else false)) 
-  (length cmp) (0%uint63, true)
-  in res.
+  let res := PArrayUtils.fold (fun k res =>
+    res.[k <- Eq]) I (make (Com.m Po) Lt) in
+  PArrayUtils.eq_array_rel (fun x y=>
+    match (x,y) with
+    |(Eq,Eq) |(Lt,Lt) |(Gt,Gt)=> true |_ => false end) cmp res.
 
 Definition card_bas_test (i : int63) := (length (Com.bas lbl i) =? (Com.n Po))%uint63.
 Definition vertex_test (i : int63) := (card_bas_test i) && (sat_test i).
@@ -376,13 +372,11 @@ Definition sat_test (i : int63) :=
   let I := Com.bas lbl i in
   let X := Com.point lbl i in
   let cmp := cmp_vect Po I X in
-  let '(_, res) := ifold 
-    (fun i '(k,acc)=> if acc is false then (k,false) else
-      if (I.[k] =? i)%uint63 then 
-        (Uint63.succ k,if cmp.[i] is Eq then true else false) else 
-        (k, if cmp.[i] is Gt then true else false)) 
-  (length cmp) (0%uint63, true)
-  in res.
+  let res := arr_fold (fun k res =>
+    res.[k <- Eq]) I (make (Com.m Po) Lt) in
+  eq_array_rel (fun x y=>
+    match (x,y) with
+    |(Eq,Eq) |(Lt,Lt) |(Gt,Gt)=> true |_ => false end) cmp res.
 
 Definition card_bas_test (i : int63) := (length (Com.bas lbl i) == (Com.n Po)).
 
@@ -408,6 +402,25 @@ Definition enum_algo := vertex_consistent && struct_consistent.
 End Def.
 Section Equiv.
 
+Lemma cmp_satE Po x: 
+  LCA.cmp_sat Po x = cmp_sat Po x.
+Proof.
+rewrite /LCA.cmp_sat /cmp_sat ifoldE.
+by apply/eq_foldl=> s t; rewrite bigQ_dotE.
+Qed.
+
+Lemma cmp_vectE Po I X: 
+  LCA.cmp_vect Po I X = cmp_vect Po I X.
+Proof.
+rewrite /LCA.cmp_vect /cmp_vect /= ifoldE.
+congr snd; rewrite cmp_satE; apply/eq_foldl. 
+case=> k res t; case: ifP=> [?|?].
+- congr pair; rewrite ifoldE; apply/eq_foldl=> x y.
+  by case: x.[y]=> //; rewrite bigQ_dotE.
+- congr pair; rewrite ifoldE; apply/eq_foldl=> x y.
+  by case: x.[y].
+Qed.
+
 Lemma vertex_consistentE Po g lbl:
   LCA.vertex_consistent Po g lbl = vertex_consistent Po g lbl.
 Proof.
@@ -416,25 +429,8 @@ rewrite /vertex_consistent /compute_test.
 apply/eq_all=> i; rewrite /LCA.vertex_test /vertex_test.
 rewrite /LCA.card_bas_test eqEint /card_bas_test.
 apply/andb_id2l=> _.
-rewrite /LCA.sat_test /sat_test ifoldE.
-set F := ifold _ _ _.
-set F' := ifold _ _ _.
-rewrite (surjective_pairing F) (surjective_pairing F') /F /F'.
-congr snd.
-suff ->: forall I x, LCA.cmp_vect Po I x = cmp_vect Po I x.
-  by apply/eq_foldl=> -[k []].
-rewrite /LCA.cmp_vect /cmp_vect=> I x. 
-rewrite ifoldE.
-have ->: LCA.cmp_sat Po x.[0] = cmp_sat Po x.[0].
-- rewrite /LCA.cmp_sat /cmp_sat ifoldE.
-  by apply/eq_foldl; move=> ??; rewrite bigQ_dotE.
-set G := ifold _ _ _.
-set G' := ifold _ _ _.
-rewrite (surjective_pairing G) (surjective_pairing G') /G /G'.
-congr snd; apply/eq_foldl=> //= -[k cmp j].
-case: ifP; rewrite ifoldE // => _.
-congr pair; apply/eq_foldl=> ??.
-by rewrite bigQ_dotE.
+rewrite /LCA.sat_test /sat_test eq_array_relE.
+by rewrite cmp_vectE arr_foldE.
 Qed.
 
 Lemma struct_consistentE Po g lbl:

@@ -645,3 +645,85 @@ by rewrite iotaS_rcons add0n map_rcons foldl_rcons IH /=.
 Qed.
 
 End Ifold.
+
+Module ILex.
+
+Definition lex_func_rel_ {T : Type} (s : int)
+ (r : T -> T -> comparison) (f g : int -> T):=
+ IFold.ifold (fun i acc =>
+  if acc is Eq then r (f i) (g i) else acc
+ ) s Eq.
+ 
+Definition lex_func_rel {T : Type} (s : int)
+  (r : T -> T -> comparison) (f g : int -> T):=
+  if lex_func_rel_ s r f g is Gt then false else true.
+
+Definition ltx_func_rel {T : Type} (s : int)
+  (r : T -> T -> comparison) (f g : int -> T):=
+  if lex_func_rel_ s r f g is Lt then true else false.
+
+End ILex.
+
+Section Ilex.
+
+Definition lex_func_rel_ {T : Type} (s : int)
+ (r : T -> T -> comparison) (f g : int -> T):=
+ ifold (fun i acc =>
+  if acc is Eq then r (f i) (g i) else acc
+ ) s Eq.
+ 
+Definition lex_func_rel {T : Type} (s : int)
+  (r : T -> T -> comparison) (f g : int -> T):=
+  if lex_func_rel_ s r f g is Gt then false else true.
+
+Definition ltx_func_rel {T : Type} (s : int)
+  (r : T -> T -> comparison) (f g : int -> T):=
+  if lex_func_rel_ s r f g is Lt then true else false.
+
+Lemma lex_func_rel_E {T : Type} s r (f g : int -> T) :
+  ILex.lex_func_rel_ s r f g = lex_func_rel_ s r f g.
+Proof.
+by rewrite /ILex.lex_func_rel_ ifoldE.
+Qed.
+
+Definition lex_func_rel_prop {T : Type} s r (f g : int -> T) c:=
+  match c with
+  |Eq => forall i, (i <? s)%uint63 -> r (f i) (g i) = Eq
+  |c => exists j, [/\ (j <? s)%uint63,
+                      (forall i, (i <? j)%uint63 -> r (f i) (g i) = Eq)
+                      & r (f j) (g j) = c]
+  end.
+
+Lemma lex_func_rel_P {T : Type} s r (f g : int -> T) :
+  lex_func_rel_prop s r f g (lex_func_rel_ s r f g).
+Proof.
+rewrite /lex_func_rel_ /ifold irange0_iota.
+move: (int_to_natK s) (int_thresholdP s).
+move: (int_to_nat s)=> S; elim: S s.
+  rewrite /= => ? s0 ? i; rewrite ltin -s0 nat_to_intK ?inE ?int_threshold0 //.
+move=> n IHn s sSn Sn_thre.
+have n_thre : n < int_threshold by apply/ltnW.
+rewrite iotaS_rcons add0n map_rcons foldl_rcons.
+move: IHn; set F := foldl _ _ _. case E: F=> /=.
+- case Er: (r _ _)=> /=.
+  + move=> IH i; rewrite ltin -sSn nat_to_intK ?inE //.
+    rewrite ltnS leq_eqVlt; case/orP.
+    * by move/eqP; rewrite -(nat_to_intK n_thre) => /int_to_nat_inj ->.
+    * rewrite -(nat_to_intK n_thre) -ltin; exact/IH.
+  + move=> IH; exists (nat_to_int n); split=> //.
+    * by rewrite -sSn ltin !nat_to_intK ?inE.
+    * by move=> i; apply/IH. 
+  + move=> IH; exists (nat_to_int n); split=> //.
+    * by rewrite -sSn ltin !nat_to_intK ?inE.
+    * by move=> i; apply/IH. 
+- move=> /(_ (nat_to_int n) erefl n_thre) [s'] [s'n s'Eq s'comp].
+  exists s'; split=> //.
+  move: s'n; rewrite !ltin; move/ltn_trans; apply.
+  by rewrite -sSn !nat_to_intK ?inE.
+- move=> /(_ (nat_to_int n) erefl n_thre) [s'] [s'n s'Eq s'comp].
+  exists s'; split=> //.
+  move: s'n; rewrite !ltin; move/ltn_trans; apply.
+  by rewrite -sSn !nat_to_intK ?inE.
+Qed.
+
+End Ilex.

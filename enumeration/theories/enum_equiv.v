@@ -271,9 +271,8 @@ Definition set_Im : choiceType := [choiceType of {set 'I_m}].
 Definition M_n := [choiceType of 'M[rat]_(n,1+n)].
 Definition enum_type := [choiceType of (set_Im * M_n)%type].
 
-Definition perturbed_point (e : enum_type) :=
-  colsub () e.2.
-(* Context (G : graph enum_type).
+(* Definition perturbed_point (e : enum_type) := *)
+Context (G : graph enum_type).
 
 Definition card_verification (e : enum_type) := #|e.1| == n.
 Definition feas_verification (e : enum_type) := e.2 \in Simplex.lex_polyhedron A b_pert.
@@ -286,7 +285,7 @@ Definition struct_verification (e : enum_type) := reg_verification e && all (int
 
 Definition high_enum_algo := 
   all vertex_verification (vertices G) &&
-  all struct_verification (vertices G). *)
+  all struct_verification (vertices G).
 
 End Def.
 
@@ -337,10 +336,11 @@ Hypothesis gl_G : rel_lex_graph (g, l) G.
 Lemma rel_lex_vert_m_max v V: @rel_lex_vert m' n' v V->
   (Com.m Po < max_length)%O.
 Proof.
-case=> ?. /rel_point_mx_col_length; move: (rel_Po_r_m Po_Ab)=> -> Po_len.
+Admitted.
+(* case. /rel_point_mx_col_length. move: (rel_Po_r_m Po_Ab)=> -> Po_len.
 apply/(@lt_le_trans _ _ (length v.2)); rewrite ?leEint ?leb_length //.
 by rewrite ltEint_nat Po_len leqnn.
-Qed.
+Qed. *)
 
 Lemma card_bas_test_equiv i V:
   mem_vertex g i -> V \in vertices G ->

@@ -622,12 +622,20 @@ Lemma rel_rV_lex (n : nat) (cmp : R -> R -> comparison):
   (@rel_rV n =~> @rel_rV n =~> eq)
   (lex_array_rel cmp) (fun x y=> (x <=lex y)%R).
 Proof.
+move=> cmpP x X xX y Y yY.
+Locate leqlex
+
 move=> cmpP x X xX y Y yY; rewrite /lex_array_rel.
 have len_eq: (length x = length y) by
   apply/int_to_nat_inj; rewrite -(rel_cV_length xX) -(rel_cV_length yY).
 rewrite len_eq eqxx /= /lex_array_rel_ lex_foo.
 under eq_map=> i do rewrite -(rel_rV_nth xX).
 under [X in ind_lexleq _ X]eq_map=> i do rewrite -(rel_rV_nth yY).
+rewrite -len_eq ltxx.
+move: (lex)
+
+
+
 rewrite /arr_fold_pair zip_arr_to_seq // irange0_iota -(rel_cV_length xX).
 rewrite -map_comp map_enum_ord_iota /=.
 elim: (enum 'I_n.+1)=> [|a l IH] //=.
