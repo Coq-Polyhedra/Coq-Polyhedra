@@ -929,21 +929,21 @@ rewrite /ltrlex; apply/andP; split.
   by move/forallP/(_ j)/implyP/(_ Hj): H.
 Qed. *)
 
-Lemma lex_lev u v :
+Lemma lex_lev {n} (u v : 'rV[R]_n) :
   (forall j, u 0 j <= v 0 j) -> (u <=lex v).
 Proof.
 move => u_lev_v.
 by apply: leqlex_seq_lev; apply/forall_inP.
 Qed.
 
-Lemma sum_lex {p : nat} (v w : 'I_p -> 'rV[R]_n) (P : pred 'I_p):
+Lemma sum_lex {p n : nat} (v w : 'I_p -> 'rV[R]_n) (P : pred 'I_p):
   (forall i, P i -> (v i) <=lex (w i)) -> (\sum_(i | P i) v i) <=lex \sum_(i | P i) w i.
 Proof.
 move=> ?; rewrite (@big_ind2 _ _ (leqlex (n:=n))) ?lex_refl //.
 exact/lex_add.
 Qed.
 
-Lemma lev_mul_lex {p: nat} (v : 'rV[R]_p) (M N : 'M[R]_(p,n)):
+Lemma lev_mul_lex {p n: nat} (v : 'rV[R]_p) (M N : 'M[R]_(p,n)):
   0 <=m (v^T) -> (forall i, (row i M) <=lex (row i N)) -> (v *m M) <=lex (v *m N).
 Proof.
 move/gev0P=> v_ge0 le_MN.
@@ -952,7 +952,7 @@ apply/lex_nnscalar; rewrite ?le_MN //.
 by move: (v_ge0 i); rewrite mxE.
 Qed.
 
-Lemma ltlex_seqP (x y : 'rV_n) l i: i \in l -> x 0 i != y 0 i -> leqlex_seq x y l -> 
+Lemma ltlex_seqP {n} (x y : 'rV_n) l i: i \in l -> x 0 i != y 0 i -> leqlex_seq x y l -> 
   (exists i l1 l2, [/\ l = l1 ++ i :: l2, (forall j, j \in l1 -> x 0 j = y 0 j) & x 0 i < y 0 i]).
 Proof.
 elim: l=> //= h t ih i_ht xy_n_i; case: ltrgtP=> //; first by (move=> ? _; exists h; exists [::]; exists t).
@@ -965,14 +965,13 @@ exists i'; exists (h :: l1); exists l2; split=> //.
 by move=> j; rewrite in_cons; case/orP=> [/eqP ->|/j_lt_i' ->].
 Qed.
 
-Lemma lex_lev_strictP (u v : 'rV_n): reflect
+Lemma lex_lev_strictP {n} (u v : 'rV_n): reflect
   (exists i :'I_n, (forall j : 'I_n, (j < i)%O -> u 0 j = v 0 j) /\ u 0 i < v 0 i)
   (u <lex v).
 Proof.
 apply/(iffP idP).
 rewrite /ltrlex /leqlex; case/andP=> n_uv.
-
-- rewrite /ltrlex /leqlex; case/andP=> xy_n leqlex_xy.
+- rewrite /ltrlex /leqlex. case/andP=> xy_n leqlex_xy.
   have [i [i_In uv_n_i]]: exists i, (i \in enum 'I_n) /\ (u 0 i != v 0 i).
   + move: xy_n; rewrite -subr_eq0; case/rV0Pn=> i.
     rewrite !mxE subr_eq0=> ?; exists i; split=> //.

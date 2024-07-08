@@ -255,7 +255,7 @@ Definition mask_eq (Po : Com.polyType) (m : array int63) (x : Com.U):=
   IFold.iall (fun i=> sat_eq (Com.m Po) m.[i] Po.1.[m.[i]] Po.2.[m.[i]] x) (length m). *)
 
 Definition cmp_sat (Po : Com.polyType) (x : array bigQ):=
-  ILex.lex_func_rel_
+  ILex.lex_func_rel.
 
 Definition cmp_vect (Po : Com.polyType) (I : array int63) X:=
   let cmp := cmp_sat Po X.[0%uint63] in
