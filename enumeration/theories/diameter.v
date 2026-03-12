@@ -1319,10 +1319,12 @@ Definition high_BFS {T : choiceType} (G : graph T) x:=
 Definition high_diameter_BFS {T : choiceType} (G : graph T):=
   Hdiameter_BFS G (successors G).
 
+Definition eccentricity {T : choiceType} (G : graph T) x:=
+  \max_(p : epath G | is_shortest p && (src p == x)) size_path p.
+
 Lemma high_BFSE {T : choiceType} (G : graph T) x:
   x \in vertices G -> 
-  high_BFS G x = 
-  \max_(p : epath G | is_shortest p && (src p == x)) size_path p.
+  high_BFS G x = eccentricity G x.  
 Proof. by move=> xG; rewrite /high_BFS BFSP. Qed.
 
 Lemma high_diameter_BFSE {T : choiceType} (G : graph T):
@@ -1412,6 +1414,18 @@ End RelStruct.
 Section RelGraphR.
 
 Context {t : Type} {T : choiceType} (r : t -> T -> Prop).
+
+Lemma rel_graph_eccentricity gl G:
+  rel_spec r eq->
+  @rel_graph_r _ _ r gl G -> 
+  forall i x, mem_vertex gl.1 i-> x \in vertices G->
+  r gl.2.[i] x-> 
+  nat_of_bin (BFS gl.1 i) = eccentricity G x.
+Proof.
+move=> r_eq; case=> G' /[dup] glG' [_ [gG' lL] G'G] i x ig xG ix.
+rewrite (rel_struct_BFS gG') // (gisof_high_BFSE G'G) -?(rel_struct_vtx gG') //.
+by rewrite -(rel_graph_r_spec r_eq glG' G'G ig xG ix) high_BFSE.
+Qed.
 
 Lemma rel_graph_diameter:
   (@rel_graph_r _ _ r =~> (fun x y=> nat_of_bin x = y))

@@ -1361,7 +1361,7 @@ Hypothesis P_x : P x.
 Hypothesis Q_last : Q (last x s).
 Hypothesis s_prop0 : s != [::].
 
-Lemma foobar : exists v w, [/\ v \in x :: s, w \in s, e v w, P v & Q w].
+Lemma path_biprop_edge : exists v w, [/\ v \in x :: s, w \in s, e v w, P v & Q w].
 Proof.
 elim: s x path_s PQ_s P_x Q_last s_prop0=> //= h t IH.
 move=> x' /andP [exh path_ht] P_Q P_x' Q_last' _.

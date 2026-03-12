@@ -76,7 +76,8 @@ Lemma simplex_lex_opt x : x \in Simplex.lex_polyhedron A (Simplex.b_pert b) ->
 Proof.
 move: simplex_lex_reduced_cost.
 rewrite /Simplex.reduced_cost_of_basis.
-rewrite /simplex_lex_point /Simplex.point_of_basis /= inE.
+rewrite /Simplex.point_of_basis /= inE.
+set I := Simplex.set_of_prebasis _.
 set A_I := row_submx.row_submx A _.
 set A_I_inv := qinvmx _ _.
 move=> red_cost_ge0 /forallP x_inP.
@@ -116,79 +117,32 @@ Proof. by []. Qed.
 
 End Simplex.
 
-Section QuotientGraph.
+Section ImageGraph.
 
 Context (R : realFieldType) (n' m' : nat).
 Local Notation m := (m'.+1).
 Local Notation n := (n'.+1).
-Context (base : base_t[R,n]).
 Context (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
+
+Definition base_of_syst (C : 'M[R]_(m,n) * 'cV[R]_m) := 
+  [fset [<(row i C.1)^T, C.2 i 0>] | i : 'I_m].
+Definition poly_of_syst C:= 'P(base_of_syst C).
+
+Local Notation P := (poly_of_syst (A,b)).
+
 Hypothesis P_compact: forall c, Simplex.bounded A b c.
 Hypothesis P_feasible: Simplex.feasible A b.
 
-Local Notation P := 'P(base).
-
-Definition rel_mat_Po (base : base_t[R,n]) (C : 'M[R]_(m,n) * 'cV[R]_m):=
-  [fset [<(row i C.1)^T, C.2 i ord0>] | i : 'I_m] = base.
-  
-Hypothesis r_Ab_base : rel_mat_Po base (A, b).
-(* Hypothesis A_inj : injective (fun i=> row i A). *)
-
-(* Hypothesis size_base : #|`base| = m.
-Definition A_ := (\matrix_(i < #|`base|%fset) ((fnth i).1)^T).
-Definition b_ := (\col_(i < #|`base|%fset) (fnth i).2).
-Definition base_tuple_ := [tuple (tnth [tuple of base] i) | i < #|`base|].
-Definition A := (castmx (size_base, erefl) A_).
-Definition b := (castmx (size_base, erefl) b_).
-Definition base_tuple := (tcast size_base base_tuple_).
-Hypothesis P_compact : compact 'P(base). *)
-
-(* Lemma size_base: #|` base| = m.
-Proof.
-Admitted.
-
-Lemma base_inj (i j : 'I_m): base`_i = base`_j -> i = j.
-Proof.
-suff: {in gtn (size base) &, injective (nth 0 base)} by
-  move=> h base_eq; apply/val_inj/h=> //=; rewrite inE size_base.
-exact/uniqP.
-Qed. *)
-
-
-(* Lemma row_A i : row i A = ((base`_i).1)^T.
-Proof.
-rewrite row_castmx castmx_id rowK.
-by rewrite /fnth (tnth_nth 0).
-Qed. *)
-
-(* Lemma row_b i : row i b = ((base`_i).2)%:M.
-Proof.
-rewrite row_castmx castmx_id /b_.
-apply/matrixP=> p q.
-rewrite !mxE (ord1_eq0 p) (ord1_eq0 q) eqxx mulr1n.
-by rewrite /fnth (tnth_nth 0).
-Qed. *)
-
-
-(* Lemma b_i i : b i 0 = (base`_i).2.
-Proof. by move/matrixP: (row_b i)=> /(_ 0 0); rewrite !mxE eqxx mulr1n. Qed. *)
-
-(* Lemma base_nth (i : 'I_m) : base`_i = base_tuple`_i.
-Proof. by rewrite -tnth_nth tcastE tnth_mktuple (tnth_nth 0) /=. Qed. *)
-
-Lemma feasE x : x \in P = (x \in Simplex.polyhedron A b).
+Lemma feasE x : (x \in P) = (x \in Simplex.polyhedron A b).
 Proof.
 apply/idP/idP.
 - move/in_poly_of_baseP=> x_poly; rewrite inE.
-  apply/forallP=> /= i; rewrite -row_vdot.
-  move/fsetP: r_Ab_base=> /(_ [<(row i A)^T, b i 0>]).
-  rewrite in_imfset //= => /esym /x_poly.
-  by rewrite in_hs /=.
+  apply/forallP=> /= i; rewrite -row_vdot -in_hs.
+  by apply/x_poly/imfsetP; exists i.
 - rewrite inE; move/forallP=> /= x_poly.
   apply/in_poly_of_baseP=> e.
-  move/fsetP: r_Ab_base=> /(_ e) /[swap] ->.
   case/imfsetP=> /= i _ ->; rewrite in_hs /=.
-  rewrite row_vdot; apply: x_poly.
+  rewrite row_vdot; exact: x_poly.
 Qed.
 
 Lemma boundedE c : bounded P c = Simplex.bounded A b c.
@@ -286,16 +240,30 @@ Qed.
 
 Section EquivGraphLexi.
 
-Definition set_adjacence := fun I I' : {set 'I_m} =>  #| I :&: I' | == n.-1.
+Definition set_adjacence := fun I I' : {set 'I_m} =>  #|I :&: I'| == n.-1.
 
 Definition lex_graph := mk_graph [fset x | x : Simplex.lex_feasible_basis A b] set_adjacence.
 
 Lemma splx_adj_sym I J: set_adjacence I J -> set_adjacence J I.
 Proof. by rewrite /set_adjacence setIC. Qed.
 
+Lemma splx_adj_xx (I : Simplex.lex_feasible_basis A b): ~~ set_adjacence I I.
+Proof.
+rewrite /set_adjacence setIid Simplex.prebasis_card.
+by elim: n'.
+Qed.
+
+Lemma splx_adj_neq (I J : Simplex.lex_feasible_basis A b):
+  (J != I) && set_adjacence I J = set_adjacence I J.
+Proof.
+rewrite andb_idl //.
+move=> adj_IJ; apply: contraT; rewrite negbK=> /eqP IJ.
+by move: adj_IJ; rewrite IJ (negPf (splx_adj_xx I)).
+Qed.
+
 Section SplxGraphConnected.
 
-Context (I J: Simplex.lex_feasible_basis A b).
+Context (I J : Simplex.lex_feasible_basis A b).
 Definition obj_conn := \sum_(i < #|J|) (row i (row_submx A J)).
 
 Lemma obj_connE: 
@@ -337,7 +305,7 @@ Lemma path_to_J: path (edges lex_graph) I (Simplex.phase2_exec obj_conn^T I).
 Proof.
 move: (Simplex.phase2_exec_adj (obj_conn^T) I).
 set f := (fun _ => _); suff eq_rel_edge: f =2 edges lex_graph by rewrite (eq_path eq_rel_edge).
-by move=> x y; rewrite edge_mk_graph ?in_fsetE.
+by move=> x y; rewrite edge_mk_graph ?in_fsetE // splx_adj_neq.
 Qed.
 
 Program Definition conn_splx_gpath := @GPath _ lex_graph I J (shorten I (Simplex.phase2_exec (obj_conn^T) I)) _ _ _.
@@ -357,57 +325,16 @@ Context (I : Simplex.lex_feasible_basis A b).
 Section MkNeigh.
 
 Context (i : 'I_#|I|).
-Definition obj_reg :=
-  (\sum_(j < #|I| | (enum_val j) != (enum_val i)) row j (row_submx A I)) -
-  row i (row_submx A I).
-
-Lemma red_cost_reg :
-  (Simplex.reduced_cost_of_basis (obj_reg^T) I) = const_mx 1%:R - 2%:R *: (delta_mx i 0).
-Proof.
-rewrite /Simplex.reduced_cost_of_basis -trmx_mul.
-rewrite /obj_reg mulmxBl mulmx_suml -row_mul qmulmxV ?row1; last exact/Simplex.basis_is_basis.
-apply/matrixP=> p q; rewrite (ord1_eq0 q) !mxE eqxx andbT /=.
-rewrite summxE.
-under eq_bigr=> j ?.
-- rewrite -row_mul qmulmxV; last exact/Simplex.basis_is_basis.
-  rewrite row1 mxE eqxx /=.
-over.
-case/boolP: (p == i)=> /= [/eqP p_i | /negPf p_n_i].
-- rewrite mulr1 -mulrnBl !mulr1n opprD addNKr.
-  apply/subr0_eq/eqP; rewrite opprK -addrA addNr addr0.
-  have h: forall j, enum_val j != enum_val i -> (p == j) = false by 
-    move=> j; apply/contra_neqF=> /eqP/(congr1 enum_val) <-; rewrite p_i.
-  under eq_bigr=> j j_n_i do rewrite (h _ j_n_i).
-  by rewrite sumr_const /= mul0rn.
-- rewrite mulr0n mulr0 !subr0.
-  rewrite (bigD1_ord p) /=; last first.
-  + apply/contraT; rewrite negbK=> /eqP h; move: p_n_i.
-    by move/enum_val_inj: h=> ->; rewrite eqxx.
-  rewrite eqxx /=; apply/eqP; rewrite -subr_eq0 addrC mulr1n addKr.
-  under eq_bigr=> j ? do rewrite eq_liftF.
-  by rewrite sumr_const mul0rn.
-Qed.
-
-Lemma pick_reg : 
-  [pick i0 | Simplex.reduced_cost_of_basis obj_reg^T I i0 0 < 0 ] = Some i.
-Proof.
-rewrite red_cost_reg.
-have pick_h: forall x, (1%:R - 2%:R * (x == i)%:R < 0) = (x == i) by
-  move=> ? x; case: (_ == _); rewrite /= ?mulr0n ?mulr0 ?subr0 ?ltr10 ?mulr1n ?mulr1 ?subr_lt0 ?ltr1n.
-under eq_pick=> j do rewrite !mxE eqxx andbT pick_h.
-case: pickP=> /=; last by (move/(_  i); rewrite eqxx).
-by move=> ? /eqP ->.
-Qed.
 
 Lemma reg_infeas_dir : ~~ Simplex.feasible_dir A (Simplex.direction i).
 Proof.
-rewrite /Simplex.feasible_dir /=; apply/contraT; rewrite negbK.
-move/(Simplex.unbounded_cert_on_basis (b:=b) (c:=obj_reg^T)).
-move: pick_reg; case: pickP=> // j /[swap]; case=> -> ->.
-rewrite unpt_pt_is_feas.
-move: P_compact=> /(_ (obj_reg^T)).
-move/Simplex.boundedP_lower_bound=> /(_ (feas_bas0 I)) [K] h /(_ K isT isT).
-by case=> x [x_poly]; rewrite ltNge h.
+apply/contraT; rewrite negbK.
+move/Simplex.feasibleP: P_feasible=> [x_0].
+move/Simplex.unbounded_certificate=> /[apply] /(_ (- (Simplex.direction i))).
+rewrite vdotNl oppr_lt0 vnorm_gt0 Simplex.direction_neq0.
+move: P_compact=> /(_ (- (Simplex.direction i))) /(Simplex.boundedP_lower_bound _ P_feasible).
+case=> K=> + /(_ K isT) [x [x_P x_K]].
+by move=> /(_ x x_P); rewrite leNgt x_K.
 Qed.
 
 Definition neigh_reg := Simplex.lex_rule_fbasis reg_infeas_dir.
@@ -428,6 +355,26 @@ by rewrite Simplex.prebasis_card cards1 subn1.
 Qed.
 
 End MkNeigh.
+
+Section MkInj.
+
+Lemma neigh_reg_inj: injective neigh_reg.
+Proof.
+move=> i j reg_eq.
+have: neigh_reg i = neigh_reg j :> {set _} by rewrite reg_eq.
+case: (neigh_regE i)=> i' i'_nI ->.
+case: (neigh_regE j)=> j' j'_nI -> reg_eq_val.
+have ij': i' = j'.
+- move/setP/(_ j'): reg_eq_val.
+  by rewrite !inE (negPf j'_nI) !andbF !orbF eqxx eq_sym=> /eqP.
+move/setP/(_ (enum_val i)): reg_eq_val.
+rewrite ij' !inE eqxx ?enum_valP /= ?orbF ?andbT.
+have/negPf -> /=: (enum_val i != j') by
+  apply/contraT; rewrite negbK=> /eqP; move: j'_nI=> /[swap] <-; rewrite enum_valP.
+by move/esym/negbFE/eqP/enum_val_inj.
+Qed.
+
+End MkInj.
 Section MkSucc.
 
 Lemma splx_adj_witness (J : Simplex.lex_feasible_basis A b):
@@ -460,17 +407,13 @@ Qed.
 
 Definition neigh_reg_fset := [fset neigh_reg i | i in 'I_#|I|].
 
-Lemma neigh_reg_surj (J : Simplex.lex_feasible_basis A b): set_adjacence I J ->
-  exists i, J = neigh_reg i.
+Lemma neigh_reg_surj (J : Simplex.lex_feasible_basis A b): set_adjacence I J -> exists i, J = neigh_reg i.
 Proof.
 case/splx_adj_witness=> i' [j] [i'I j_nI J_eq].
-set i := (enum_rank_in i'I i').
+set i := (enum_rank_in i'I i'); exists i.
 have J_eq_val: J = j |: (I :\ enum_val i) :> {set _} by
   rewrite enum_rankK_in.
-rewrite (Simplex.edge_lex_ruleE j_nI J_eq_val).
-exists i; case: (neigh_regE i)=> k k_nI reg_eq.
-rewrite (Simplex.edge_lex_ruleE k_nI reg_eq).
-congr Simplex.lex_rule_fbasis; exact/eq_irrelevance.
+rewrite (Simplex.edge_lex_ruleE j_nI J_eq_val (reg_infeas_dir i)) //.
 Qed.
 
 
@@ -478,7 +421,7 @@ Lemma succ_reg :
   successors lex_graph I = neigh_reg_fset.
 Proof.
 apply/fsetP=> J; rewrite ?succ_mk_graph ?in_fsetE !inE //=.
-apply/idP/idP.
+apply/idP/idP; rewrite splx_adj_neq.
 - case/neigh_reg_surj=> i ->; exact/in_imfset.
 - case/imfsetP=> /= i _ ->; exact/neigh_reg_adj.
 Qed.
@@ -492,34 +435,25 @@ Proof. by move=> I J _ _; exists (conn_splx_epath I J). Qed.
 Lemma lex_graph_regular : regular lex_graph n.
 Proof.
 move=> I _; rewrite succ_reg card_imfset ?size_enum_ord ?Simplex.prebasis_card //.
-move=> i j reg_eq.
-have: neigh_reg i = neigh_reg j :> {set _} by rewrite reg_eq.
-case: (neigh_regE i)=> i' i'_nI ->.
-case: (neigh_regE j)=> j' j'_nI -> reg_eq_val.
-have ij': i' = j'.
-- move/setP/(_ j'): reg_eq_val.
-  by rewrite !inE (negPf j'_nI) !andbF !orbF eqxx eq_sym=> /eqP.
-move/setP/(_ (enum_val i)): reg_eq_val.
-rewrite ij' !inE eqxx ?enum_valP /= ?orbF ?andbT.
-have/negPf -> /=: (enum_val i != j') by
-  apply/contraT; rewrite negbK=> /eqP; move: j'_nI=> /[swap] <-; rewrite enum_valP.
-by move/esym/negbFE/eqP/enum_val_inj.
+exact: neigh_reg_inj.
 Qed.
 
 End EquivGraphLexi.
 
-Section Quotient.
+Section Image.
  
-Section VertexQuotient.
+Section VertexImage.
+
+Section LexBasisToVertex.
 
 Definition fset_active (bas : {set 'I_m}) :=
   [fset [<(row i A)^T, b i 0>] | i : 'I_m in bas].
 
 Lemma fset_active_sub (bas : Simplex.prebasis m n) :
-  (fset_active bas `<=` base)%fset.
+  (fset_active bas `<=` base_of_syst (A,b))%fset.
 Proof.
 apply/fsubsetP=> e /imfsetP /= [i i_bas ->].
-by rewrite -r_Ab_base in_imfset.
+by rewrite in_imfset.
 Qed.
 
 Lemma fset_active_befst (bas : Simplex.basis A) :
@@ -532,7 +466,6 @@ apply/fsetP=> x; apply/idP/idP.
   apply/imfsetP; exists [<(row i A)^T, b i 0>]; rewrite ?lfunE //=.
   exact/in_imfset.
 Qed.
-    
 
 Lemma fset_active_free (bas : Simplex.basis A) :
   free (befst @`fset_active bas).
@@ -570,7 +503,7 @@ Qed.
 
 Lemma fset_active_feas (bas : Simplex.lex_feasible_basis A b) :
   [pt Simplex.point_of_basis b bas]%:PH =
-  'P^=(base; fset_active bas).
+  'P^=(base_of_syst (A,b); fset_active bas).
 Proof.
 apply/poly_eqP=> x.
 rewrite in_pt in_polyEq feasE /=.
@@ -589,39 +522,63 @@ apply/idP/idP.
   by move: (bas_active [`ei_active]); rewrite in_hp /==> /eqP; rewrite row_vdot !mxE.
 Qed.
 
-Lemma vertex_quotient_fset :
+Lemma lex_basis_to_vtx:
+  {subset 
+  [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x0)
+    | x0 in Simplex.lex_feasible_basis A b] <= vertex_set P}.
+Proof.
+move=> x.
+case/imfsetP=> /= bas _ ->; rewrite in_vertex_setP.
+apply/face_active_free_fset; rewrite ?pt_proper0 //.
+exists (fset_active bas); split; rewrite ?fset_active_sub ?fset_active_free //.
+- exact: fset_active_feas.
+- by rewrite fset_active_card_befst dim_pt subSS subn0.
+Qed.
+
+End LexBasisToVertex.
+Section VertexToLexBasis.
+
+Lemma vtx_to_lex_basis:
+  {subset vertex_set P <=
+  [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x0)
+    | x0 in Simplex.lex_feasible_basis A b]
+  }.
+Proof.
+move=> x.
+move/[dup]/vertex_set_subset; rewrite feasE=> x_feas. 
+rewrite in_vertex_setP=> /face_argmin /(_ (pt_proper0 _)).
+case=> c _ x_opt_c.
+move/compact_pointed: compactE; rewrite pointedE=> A_pointed.
+move: (Simplex.build_lex_feasible_basis A_pointed x_feas)=> bas0.
+apply/imfsetP; exists (simplex_lex_basis c bas0)=> //=.
+suff: simplex_lex_point c bas0 \in argmin P c.
+  - by rewrite -x_opt_c in_pt=> /eqP <-.
+apply/(argmin_mem (x:=x)); rewrite ?simplex_opt ?feasE ?simplex_feas //.
+by rewrite -x_opt_c in_pt.
+Qed.
+
+End VertexToLexBasis.
+
+Lemma vertex_img_set :
   vertex_set P =
   [fset Simplex.point_of_basis b (Simplex.basis_of_feasible_basis x) |
     x : Simplex.lex_feasible_basis A b].
 Proof.
 apply/fsetP=> x; apply/idP/idP.
-+ move/[dup]/vertex_set_subset; rewrite feasE=> x_feas. 
-  rewrite in_vertex_setP=> /face_argmin /(_ (pt_proper0 _)).
-  case=> c _ x_opt_c.
-  move/compact_pointed: compactE; rewrite pointedE=> A_pointed.
-  move: (Simplex.build_lex_feasible_basis A_pointed x_feas)=> bas0.
-  apply/imfsetP; exists (simplex_lex_basis c bas0)=> //=.
-  suff: simplex_lex_point c bas0 \in argmin P c.
-    - by rewrite -x_opt_c in_pt=> /eqP <-.
-  apply/(argmin_mem (x:=x)); rewrite ?simplex_opt ?feasE ?simplex_feas //.
-  by rewrite -x_opt_c in_pt.
-+ case/imfsetP=> /= bas _ ->; rewrite in_vertex_setP.
-  apply/face_active_free_fset; rewrite ?pt_proper0 //.
-  exists (fset_active bas); split; rewrite ?fset_active_sub ?fset_active_free //.
-  - exact: fset_active_feas.
-  - by rewrite fset_active_card_befst dim_pt subSS subn0.
++ exact:vtx_to_lex_basis.
++ exact:lex_basis_to_vtx.
 Qed.
 
 Lemma lexbas_vtx (bas : Simplex.lex_feasible_basis A b) :
   Simplex.point_of_basis b bas \in vertex_set P.
-Proof. by rewrite vertex_quotient_fset; apply/imfsetP; exists bas. Qed.
+Proof. by rewrite vertex_img_set; apply/imfsetP; exists bas. Qed.
 
-End VertexQuotient.
+End VertexImage.
 
-Section EdgesQuotient.
+Section EdgesImage.
 
 Lemma fset_active_edge_sub_base (I J: Simplex.prebasis m n) :
-  (fset_active I `&` fset_active J `<=` base)%fset.
+  (fset_active I `&` fset_active J `<=` base_of_syst (A,b))%fset.
 Proof. exact/(fsubset_trans (fsubsetIl _ _))/fset_active_sub. Qed.
 
 Definition fset_active_edge_free (I J : Simplex.basis A) :
@@ -771,7 +728,7 @@ Qed.
  
   
 Lemma fset_active_edge_to_lambda z:
-  z \in 'P^=(base; fset_active I `&` fset_active J) -> 
+  z \in 'P^=(base_of_syst (A,b); fset_active I `&` fset_active J) -> 
   exists lambda, z = lambda *: x + (1 - lambda) *: y.
 Proof.
 case/in_polyEqP=> eq_IJ z_feas.
@@ -803,7 +760,7 @@ Qed.
 
 
 Lemma fset_active_edge_to_segm z:
-  z \in 'P^=(base; fset_active I `&` fset_active J) -> 
+  z \in 'P^=(base_of_syst(A,b); fset_active I `&` fset_active J) -> 
   z \in [segm x & y].
 Proof.
 move=> /[dup] /fset_active_edge_to_lambda [lambda ->].
@@ -827,7 +784,7 @@ Qed.
 
 Lemma fset_active_edge_feas:
   [segm x & y] =
-  'P^=(base; fset_active I `&` fset_active J).
+  'P^=(base_of_syst (A,b); fset_active I `&` fset_active J).
 Proof.
 apply/poly_eqP=> z; apply/idP/idP.
 - case/in_segmP=> mu /andP [mu0 mu1] ->.
@@ -848,7 +805,7 @@ apply/poly_eqP=> z; apply/idP/idP.
 - exact: fset_active_edge_to_segm. 
 Qed.
 
-Lemma adj_xy: adj P x y.
+Lemma lex_basis_to_adj_vtx: adj P x y.
 Proof.
 rewrite /adj /= x_n_y /=.
 apply/face_active_free_fset; rewrite ?segm_prop0 //.
@@ -992,7 +949,7 @@ Lemma adj_I_to_J: exists P Q: Simplex.lex_feasible_basis A b,
   [/\ set_adjacence P Q, Simplex.point_of_basis b P = x
     & Simplex.point_of_basis b Q = y].
 Proof.
-have:=foobar=> /(_ _ _ _ _ I (exec_adj min_epsilon)).
+have:=path_biprop_edge=> /(_ _ _ _ _ I (exec_adj min_epsilon)).
 move=> /(_ set_adjacence) /(_ (fun K=> Simplex.point_of_basis b K = x)).
 move=> /(_ (fun K=> Simplex.point_of_basis b K = y)).
 case.
@@ -1009,39 +966,40 @@ Qed.
 
 End EdgeSimplexExec. 
 
-Lemma adj_IJ x y: adj P x y -> exists I J : Simplex.lex_feasible_basis A b,
+Lemma vtx_to_adj_lex_basis x y: adj P x y -> exists I J : Simplex.lex_feasible_basis A b,
   [/\ set_adjacence I J, Simplex.point_of_basis b I = x & 
   Simplex.point_of_basis b J = y].
 Proof.
 move=> edge_xy; have:= adj_vtxl edge_xy.
-rewrite vertex_quotient_fset=> /imfsetP [/= K _ /esym bas_K_x].
+rewrite vertex_img_set=> /imfsetP [/= K _ /esym bas_K_x].
 exact/(adj_I_to_J _ bas_K_x).
 Qed.
 
-End EdgesQuotient.
+End EdgesImage.
 
 Definition poly_graph {k : nat} {K : realFieldType}
   (P : 'poly[K]_k):= 
   mk_graph (vertex_set P) (adj P).
 
-Lemma im_lex_graph_vert_graph :
+Lemma img_lex_graph_poly_graph :
   poly_graph P = ((Simplex.point_of_basis b) @/ lex_graph).
 Proof.
 apply/gisof_idE/gisofE; split => //=; rewrite !vtx_mk_graph.
-- rewrite vertex_quotient_fset /=; apply/fsetP=> x.
+- rewrite vertex_img_set /=; apply/fsetP=> x.
   rewrite !inE /=; apply/idP/idP=> /imfsetP [x' /= _ ->]; apply/in_imfset=> //.
   exact/in_imfset.
 - move=> x y x_vtx y_vtx; apply/idP/idP.
-  + rewrite edge_mk_graph=> // /[dup] edge_xy.
-    move/adj_IJ=> [I] [J] [splx_adj_IJ splx_pt_Ix splx_pt_Jy].
-    apply/edge_quot_graph; exists I, J; split=> //; first by case/andP: edge_xy.
-    rewrite edge_mk_graph //; exact/in_imfset.
-  + case/edge_quot_graph=> I [J] [splx_pt_Ix splx_pt_Jy x_n_y].
-    rewrite edge_mk_graph ?in_imfset //.
-    move/adj_xy; rewrite /Quotient.x /Quotient.y splx_pt_Ix splx_pt_Jy.
-    by move/(_ x_n_y)=> ?; rewrite edge_mk_graph.
+  + rewrite edge_mk_graph=> // /andP [?] /[dup] edge_xy.
+    move/vtx_to_adj_lex_basis=> [I] [J] [splx_adj_IJ splx_pt_Ix splx_pt_Jy].
+    apply/edge_img_graph; split=> //.
+    exists I, J; split=> //.
+    rewrite edge_mk_graph ?splx_adj_neq //; exact/in_imfset.
+  + case/edge_img_graph=> yx [I] [J] [splx_pt_Ix splx_pt_Jy].
+    rewrite edge_mk_graph ?in_imfset // splx_adj_neq.
+    move/lex_basis_to_adj_vtx; rewrite /Image.x /Image.y splx_pt_Ix splx_pt_Jy.
+    by rewrite eq_sym; move/(_ yx)=> ? //; rewrite edge_mk_graph // yx.
 Qed.
 
-End Quotient.
+End Image.
 
-End QuotientGraph.
+End ImageGraph.

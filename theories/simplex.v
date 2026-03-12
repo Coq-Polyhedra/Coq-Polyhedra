@@ -2158,82 +2158,48 @@ Notation n := (n'.+1).
 Context (A : 'M[R]_(m,n)) (b : 'cV[R]_m).
 Context (I : lex_feasible_basis A b) (i : 'I_#|I|).
 Let b' := b_pert b.
-
-Lemma rank_lexfeas_basis_edge k: k \in I ->
-  \rank (row_submx A (I :\ k)) = n.-1.
-Proof.
-move=> kI; apply/anti_leq.
-have ->: n.-1 = #|I :\ k| by rewrite prebasis_card_D1 // subn1.
-rewrite rank_leq_row row_leq_rank /= row_free_free_submx.
-have free_I: free [seq row i0 A | i0 in I] by
-  rewrite -row_free_free_submx; exact/basis_is_basis.
-apply: (free_subset (T:= [seq row i0 A | i0 in I])) => //.
-- move=> x /imageP [x']; rewrite inE; case/andP=> _ x'I ->.
-  exact/image_f.
-- apply/(subseq_uniq (s2:=[seq row i0 A | i0 in I])); rewrite ?free_uniq //.
-  apply/map_subseq; rewrite !/(enum _) subseq_filter filter_subseq andbT.
-  rewrite all_filter /=; apply/allP=> j _ /=; apply/implyP.
-  by rewrite inE; case/andP.
-Qed.
-
-Lemma subset_active_ineq (J : {set _}) x:
-  J \subset active_lex_ineq A b' x ->
-  row_submx A J *m x = row_submx b' J.
-Proof.
-move=> J_active; rewrite -row_submx_mul; apply/row_submx_row_matrixP.
-by move=> j /(subsetP J_active); rewrite inE=> /eqP.
-Qed.
-
-Lemma lexfeas_edge_direction_plus x y:
-  I :\ (enum_val i) \subset active_lex_ineq A b' x ->
-  I :\ (enum_val i) \subset active_lex_ineq A b' y ->
-  exists lambda, y == x + (direction i) *m lambda.
-Proof.
-move=> x_activeIi y_activeIi.
-move/corank1_kermx: (rank_lexfeas_basis_edge (enum_valP i))=> /(_ (ltn0Sn _)) rank_ker.
-have xy_AIi: (x - y)^T *m (row_submx A (I :\ enum_val i))^T = 0 by
-  rewrite -trmx_mul mulmxDr mulmxN -trmx0 !subset_active_ineq // addrN.
-have dir_AIi:
-  ((direction i) *m (const_mx (n:=1+m) 1))^T *m (row_submx A (I :\ enum_val i))^T = 0.
-- by rewrite trmx_mul -mulmxA -trmx_mul mulmx_direction trmx0 mulmx0.
-move: (rank1_ker rank_ker xy_AIi dir_AIi).
-have /negPf dir_n0: (direction i *m (const_mx (n:=1 + m) 1))^T != 0.
-- rewrite trmx_mul trmx_const; apply/rowV0Pn.
-  exists (direction i)^T; rewrite ?trmx_eq0 ?direction_neq0 //.
-  apply/(eq_row_sub ord0); rewrite row_mul row_const.
-  by apply/matrixP=> p q; rewrite mxE big_ord1 mxE mul1r (ord1_eq0 p).
-case; first by (move/eqP; rewrite dir_n0).
-case=> mu /(congr1 trmx).
-rewrite 2!trmx_mul trmx_const trmx_mul !trmxK -mulmxA.
-set lambda := (_^T *m _^T) => xy_eq.
-by exists (- lambda); rewrite mulmxN -xy_eq opprB addrCA addrN addr0.
-Qed.
-
-Lemma lexfeas_edge_point x:
-  I :\ (enum_val i) \subset active_lex_ineq A b' x ->
-  exists lambda, x == (point_of_basis b' I) + (direction i) *m lambda.
-Proof.
-move=> ?; apply/lexfeas_edge_direction_plus=> //.
-by apply/subsetP=> j; rewrite inE -active_ineq_pert_exact; case/andP.
-Qed.
-
-Lemma lexfeas_edge_basis j (J : lex_feasible_basis A b):
-  J = j |: (I :\ (enum_val i)) :> {set _} ->
-  exists lambda, point_of_basis b' J == point_of_basis b' I + (direction i) *m lambda.
-Proof.
-move=> J_eq; apply/lexfeas_edge_point/subsetP=> k kIi.
-by rewrite -active_ineq_pert_exact J_eq inE kIi orbT.
-Qed.
-
-Section LambdaEq.
 Context (J : lex_feasible_basis A b) (j : 'I_m).
 Hypothesis j_n_I : j \notin I.
 Hypothesis J_eq : J = j |: (I :\ (enum_val i)) :> {set _}.
-Definition lambda_J := xchoose (lexfeas_edge_basis J_eq).
+Hypothesis infeas_dir : ~~ (feasible_dir A (direction i)).
 
-Lemma xJ_eq : point_of_basis b' J = 
-  point_of_basis b' I + (direction i) *m lambda_J.
-Proof. by move/eqP: (xchooseP (lexfeas_edge_basis J_eq)). Qed.
+Lemma j_dir: (A *m (direction i)) j 0 != 0.
+Proof.
+apply/contraT; rewrite negbK=> A_dir_j.
+move: (basis_trmx_row_free J)=> A_J_free.
+suff: (direction i)^T *m (row_submx A J)^T = 0 by move/eqP; rewrite mulmx_free_eq0 // trmx_eq0 (negPf (direction_neq0 i)).
+rewrite -trmx_mul; apply/eqP; rewrite trmx_eq0.
+apply/eqP; rewrite J_eq; apply/row_matrixP=> k.
+rewrite row_mul row_submx_row; move: (enum_valP k).
+rewrite row0 inE; case/orP.
+- rewrite inE=> /eqP ->.
+  apply/matrixP=> p q; rewrite [RHS]mxE -(eqP A_dir_j).
+  by rewrite -row_vdot -matrix_vdot tr_row !col_id.
+- move=> kIi; move: (mulmx_direction i).
+  set k' := enum_rank_in kIi (enum_val k).
+  move/row_matrixP=> /(_ k'); rewrite row_mul row_submx_row.
+  by rewrite enum_rankK_in // row0.
+Qed.
+
+Lemma adj_same_point_of_basis:
+  point_of_basis b' J = 
+  point_of_basis b' I + (direction i) *m (gap A b' (direction i) (point_of_basis b' I) j).
+Proof.
+apply/esym/basis_subset_active_ineq_eq.
+apply/subsetP=> k; rewrite J_eq inE.
+case/orP.
+- rewrite !inE; move/eqP=> ->.
+  rewrite row_mul mulmxDr [X in _ + X]mulmxA -[in X in _ + X]row_mul.
+  rewrite /gap -scalemxAr mulmx_row_cV_rV scalerA mulVf; last exact/j_dir.
+  by rewrite row_mul scale1r addrCA subrr addr0.
+- move=> /[dup] kIi; rewrite !inE; case/andP=> k_i kI; rewrite row_mul mulmxDr.
+  move: (kI); rewrite (active_ineq_pert_exact I) inE row_mul=> /eqP ->.
+  apply/eqP/subr0_eq; rewrite addrAC subrr add0r mulmxA.
+  set k' := enum_rank_in kIi k.
+  move/(congr1 (row k')): (mulmx_direction i). 
+  rewrite row_mul row_submx_row enum_rankK_in // => ->.
+  by rewrite row0 mul0mx.
+Qed.
 
 Lemma xI_gtlex_j : ((row j A) *m (point_of_basis b' I)) >lex (row j b').
 Proof.
@@ -2241,7 +2207,7 @@ rewrite -row_mul lex_polyhedron_gtP -?active_ineq_pert_exact //.
 exact: feasible_basis_is_feasible.
 Qed.
 
-Lemma xJ_gt_i:
+Lemma xJ_gtlex_i:
   ((row (enum_val i) A) *m (point_of_basis b' J)) >lex (row (enum_val i) b').
 Proof.
 rewrite -row_mul lex_polyhedron_gtP; last exact: feasible_basis_is_feasible.
@@ -2250,71 +2216,45 @@ apply/contraT; rewrite negbK=> /eqP.
 by move: j_n_I=> /[swap] <-; rewrite enum_valP.
 Qed.
 
-Lemma lambdaJ_gt0: lambda_J >lex 0.
+Lemma Ajd_lt0: (A *m (direction i)) j 0 < 0.
 Proof.
-move: xJ_gt_i; rewrite xJ_eq mulmxDr.
+have: j \in J by rewrite J_eq !inE eqxx.
+rewrite active_ineq_pert_exact inE adj_same_point_of_basis.
+rewrite row_mul mulmxDr [X in _ + X]mulmxA=> /eqP b'_j_eq.
+move: xI_gtlex_j.
+rewrite -b'_j_eq lex_gtr_addl [row j A *m _]mx11_scalar -row_mul mxE.
+rewrite mul_scalar_mx. apply/contraTT.
+rewrite -leNgt lex_ltrNge negbK=> ?.
+apply/lex0_nnscalar=> //; apply:lex_ltrW.
+move: xJ_gtlex_i; rewrite adj_same_point_of_basis mulmxDr.
 move/row_matrixP: (row_submx_point_of_basis b' I)=> /(_ i).
 rewrite row_mul !row_submx_row=> ->.
 by rewrite lex_ltr_addl mulmxA row_direction mul1mx.
 Qed.
 
-Lemma Ajd_lt0: (A *m (direction i)) j 0 < 0.
-Proof.
-have: j \in J by rewrite J_eq !inE eqxx.
-rewrite active_ineq_pert_exact inE xJ_eq.
-rewrite row_mul mulmxDr [X in _ + X]mulmxA=> /eqP b'_j_eq.
-move: xI_gtlex_j.
-rewrite -b'_j_eq lex_gtr_addl [row j A *m _]mx11_scalar -row_mul mxE.
-rewrite mul_scalar_mx; apply/contraTT.
-rewrite -leNgt lex_ltrNge negbK=> ?.
-apply/lex0_nnscalar=> //; exact/lex_ltrW/lambdaJ_gt0.
-Qed.
-
-Lemma lambda_J_eq :
-  lambda_J = gap A b' (direction i) (point_of_basis b' I) j.
-Proof.
-have: j \in J by rewrite J_eq !inE eqxx.
-rewrite active_ineq_pert_exact inE xJ_eq.
-rewrite row_mul mulmxDr [X in _ + X]mulmxA.
-rewrite [_ *m direction _]mx11_scalar -!row_mul mxE.
-rewrite mul_scalar_mx eq_sym addrC -subr_eq.
-set l := (_ *m (direction _)) _ _.
-move/eqP/(congr1 (fun x => l^-1 *: x)); rewrite scalerA mulVr ?scale1r.
-  exact/esym.
-exact/unitf_lt0/Ajd_lt0.
-Qed.
-
-Lemma infeas_dir_edge : ~~ feasible_dir A (direction i).
-Proof. by apply/forallPn; exists j; rewrite -ltNge [X in _ < X]mxE Ajd_lt0. Qed.
-
-Lemma edge_lex_ruleE : J = (lex_rule_fbasis infeas_dir_edge).
+Lemma edge_lex_ruleE : J = (lex_rule_fbasis infeas_dir).
 Proof.
 apply/eqP/(eq_pert_point_imp_eq_bas (b:=b)).
-rewrite xJ_eq lex_rule_point_of_basis.
-congr (_ + _); congr (_ *m _); rewrite lambda_J_eq.
+rewrite adj_same_point_of_basis lex_rule_point_of_basis.
+congr (_ + _); congr (_ *m _).
 apply/lex_antisym; rewrite argmin_gapP ?inE ?Ajd_lt0 // andbT.
 set k := argmin_gap _ _ _.
 case/boolP: (k == j); first by (move/eqP=> ->; exact/lex_refl).
 move=> k_n_j.
 have: k \notin J. 
 - rewrite J_eq !inE (negPf k_n_j).
-  by rewrite (negPf (lex_ent_var_not_in_basis infeas_dir_edge)) andbF.
+  by rewrite (negPf (lex_ent_var_not_in_basis infeas_dir)) andbF.
 rewrite active_ineq_pert_exact -lex_polyhedron_gtP;
   last exact:feasible_basis_is_feasible.
-rewrite xJ_eq row_mul mulmxDr; move/lex_ltrW.
+rewrite adj_same_point_of_basis row_mul mulmxDr; move/lex_ltrW.
 rewrite lex_subr_addr [X in _ <=lex X]mulmxA.
 rewrite [_ *m direction _]mx11_scalar -!row_mul mxE mul_scalar_mx.
 set l := (A *m direction _) _ _.
 have l_lt0 : l < 0 by
-  case: (argmin_gapP b' (point_of_basis b' I) infeas_dir_edge); rewrite inE.
+  case: (argmin_gapP b' (point_of_basis b' I) infeas_dir); rewrite inE.
 rewrite (lex_negscalar (a:=l^-1)) ?invr_lt0 // scalerA mulVr ?scale1r ?lambda_J_eq //.
 exact/unitf_lt0/l_lt0.
 Qed.
-
-
-End LambdaEq.
-
-
 
 End ExtraEdge.
 

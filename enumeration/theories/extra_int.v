@@ -541,6 +541,9 @@ Fixpoint ifold_ {T : Type} (n : nat) (f : int -> T -> T) (i M : int) (x : T) :=
 Definition ifold {T : Type} (f : int -> T -> T) (i : int) (x : T) :=
   (ifold_ Uint63.size f 0 i x).2.
 
+  Definition ifoldx {T : Type} (f : int -> T -> T) (i M : int) (x : T):=
+    (ifold_ Uint63.size f i M x).2.
+
 Definition iall (f : int -> bool) (i : int):=
   (ifold (fun i acc=> acc && f i) i true).
 

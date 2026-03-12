@@ -1011,8 +1011,11 @@ End PolyRel.
 
 Section RelGraphStructure.
 
-Definition precond_struct (g : graph.graph) := forall i, mem_vertex g i -> 
-  (lti_sorted (neighbours g i) /\ forall j, (j < nb_neighbours g i)%O -> mem_vertex g (neighbours g i).[j]).
+Definition precond_struct (g : graph.graph) := 
+  forall i, mem_vertex g i -> 
+  (lti_sorted (neighbours g i) /\ 
+    forall j, (j < nb_neighbours g i)%O -> 
+      mem_vertex g (neighbours g i).[j] /\ (neighbours g i).[j] != i).
 
 Definition rel_structure g (G : graph [choiceType of Uint63.int]):=
   [/\   
@@ -1021,15 +1024,20 @@ Definition rel_structure g (G : graph [choiceType of Uint63.int]):=
     (forall i j, mem_vertex g i -> mem_edge g i j = edges G i j)
   ].
 
-Lemma rel_struct_valid_nei g G : rel_structure g G -> forall i, mem_vertex g i ->
+Lemma rel_struct_valid_nei g G : rel_structure g G -> 
+  forall i,mem_vertex g i ->
   forall j, (j < nb_neighbours g i)%O -> mem_vertex g (neighbours g i).[j].
-Proof. by case=> + _ _ i ig; move=> /(_ i ig) []. Qed.
+Proof. 
+case=> + _ _ i ig j j_nei. 
+by move=> /(_ i ig) [_ /(_ j j_nei)] []. 
+Qed.
 
 Lemma rel_struct_uniq_nei g G: rel_structure g G -> forall i, mem_vertex g i ->
   uniq (arr_to_seq (neighbours g i)).
 Proof. by move=> gG i ig; case: gG=> /(_ _ ig) [/lti_sorted_uniq]. Qed.
 
-Lemma rel_struct_nei_mem g G: rel_structure g G -> forall i, mem_vertex g i ->
+Lemma rel_struct_nei_mem g G: rel_structure g G -> 
+  forall i, mem_vertex g i ->
   [seq j <- arr_to_seq (neighbours g i) | mem_vertex g j] =
   arr_to_seq (neighbours g i).
 Proof.
@@ -1063,8 +1071,9 @@ rewrite in_succE -(rel_struct_edge gG) // inE /=.
 rewrite mem_edgeP // mem_filter.
 apply/andb_idl=> /(nthP (default (neighbours g i))) [k].
 rewrite size_arr_to_seq=> k_nei <-; rewrite nth_arr_to_seq //.
-case: gG=> /(_ _ ig) [_ /(_ (nat_to_int k))] + _ _; apply.
-rewrite ltEint_nat nat_to_intK //; exact/int_threshold_length/k_nei.
+case: gG=> /(_ _ ig) [_ /(_ (nat_to_int k))] + _ _. 
+rewrite ltEint_nat nat_to_intK; first apply/int_threshold_length/k_nei.
+by case/(_ k_nei).
 Qed.
 
 Lemma rel_struct_nb_nei g G:
@@ -1433,14 +1442,15 @@ move=> j ig; apply/idP/idP.
 - move: Pg=> /(_ i ig) [_ h].
   rewrite mem_edgeP // mem_filter => /andP [jg nei_j].
   rewrite edge_mk_graph ?mem_edgeP ?mem_filter 
-    ?jg ?nei_j ?inE ?mem_irangeE ?le0x //.
+    ?jg ?nei_j ?inE ?mem_irangeE ?le0x //= andbT.
+  by move: nei_j=> /mem_arr_to_seq [i'] /h [_ + <-].
 - move=> /[dup] /edge_vtxr; rewrite !vtx_mk_graph !inE !mem_irangeE !le0x /=.
-  by move=> jg; rewrite edge_mk_graph // ?inE ?mem_irangeE ?le0x.
+  move=> jg; rewrite edge_mk_graph ?inE ?mem_irangeE ?le0x //.
+  by case/andP.
 Qed.
 
 Definition lbl_graph_to_high_lbl {t T: Type} (f : t -> T) gl:=
   (graph_to_high gl.1, arr_map f gl.2).
-
 
 Lemma spec_func_lbl_graph {t : Type} {T : choiceType}
   (r : t -> T -> Prop) (f : t -> T) (P : t -> Prop):
@@ -1455,7 +1465,7 @@ Qed.
 
 Definition high_lbl_to_final {T : choiceType} 
   (GL : high_graph.graph [choiceType of Uint63.int] * array T):=
-  (fun x=> GL.2.[x]) @° GL.1.
+  (fun x=> GL.2.[x]) @/ GL.1.
 
 Definition precond_high_to_final {T : choiceType} 
   (GL : high_graph.graph [choiceType of Uint63.int] *
@@ -1472,8 +1482,11 @@ move=> GL [GL_len L_st] [:L_inj]; apply/gisofE; split.
   by move=> x y; rewrite !GL_len=> ??; apply/L_st; rewrite ?mem_irangeE ?le0x.
 - by rewrite vtx_img_graph.
 - move=> x y xG yG; apply/idP/idP.
-  + by move=> Gxy; apply/edge_img_graph; exists x,y; split.
-  + case/edge_img_graph=> x' [y'] [++] /[dup] /edge_vtxlr [x'G y'G].
+  + move=> Gxy; apply/edge_img_graph; split.
+    * move: (edges_neq Gxy); apply: contra_neq.
+      by move/L_st=> -> //; rewrite mem_irangeE le0x -!GL_len.
+    * by exists x,y; split.
+  + case/edge_img_graph=> _ [x'] [y'] [++] /[dup] /edge_vtxlr [x'G y'G].
     by move/L_inj=> -> // /L_inj ->.
 Qed.
 
@@ -1516,7 +1529,7 @@ Module PrecondComputation.
 Definition pre_struct_computation (g : graph.graph) :=
   IFold.iall (fun i=> 
     PArrayUtils.is_lti_sorted (GraphUtils.neighbours g i) &&
-    PArrayUtils.all (fun j=> GraphUtils.mem_vertex g j) (GraphUtils.neighbours g i)) 
+    PArrayUtils.all (fun j=> GraphUtils.mem_vertex g j && ~~(j =? i)%uint63) (GraphUtils.neighbours g i)) 
   (length g).
 
 Definition pre_lbl_graph_computation {T : Type} 
@@ -1557,7 +1570,7 @@ Section PrecondEquiv.
 Definition pre_struct_computation (g : graph.graph) :=
   iall (fun i=> 
     is_lti_sorted (neighbours g i) &&
-    arr_all (fun j=> mem_vertex g j) (neighbours g i)) 
+    arr_all (fun j=> mem_vertex g j && (j != i)) (neighbours g i)) 
   (length g).
 
 Definition pre_lbl_graph_computation {T : Type} 
@@ -1596,6 +1609,8 @@ Lemma pre_struct_computationE g:
 Proof.
 rewrite /PC.pre_struct_computation iallE; apply/eq_all=> i.
 rewrite is_lti_sortedE arr_allE; congr andb.
+apply: eq_all=> j; congr andb.
+by rewrite eqEint.
 Qed.
 
 Lemma pre_lbl_graph_computationE {T : Type} g (l : array T):
@@ -1653,8 +1668,8 @@ case/andP=> nei_st nei_vtx; split.
 - by rewrite -lti_sortedP.
 - move=> j j_nei; move: nei_vtx.
   move/allP=> /(_ (neighbours g i).[j]).
-  rewrite /arr_to_seq map_f ?mem_irangeE ?le0x ?j_nei //.
-  exact.
+  rewrite /arr_to_seq map_f ?mem_irangeE ?le0x ?j_nei // => /(_ isT).
+  by case/andP.
 Qed.
 
 Lemma precond_lbl_graphP {T : Type} g (l : array T): 

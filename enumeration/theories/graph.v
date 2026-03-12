@@ -195,18 +195,18 @@ End LabeledGraph.
 
 
 
-(* Lemma quot_graph_morf_correct: forall i, mem_vertex gl i ->
+(* Lemma img_graph_morf_correct: forall i, mem_vertex gl i ->
   mem_vertex gr morph.[i].
 Proof.
 case/and5P: quot_h=> _ + _ _ _; rewrite /vertex_morf_check. 
 move/all_arr.
-by rewrite -quot_graph_length.
+by rewrite -img_graph_length.
 Qed. *)
 
 
 
 
-(* Lemma quot_graph_morf_complete: forall j, mem_vertex gr j ->
+(* Lemma img_graph_morf_complete: forall j, mem_vertex gr j ->
   exists2 i, mem_vertex gl i & (j = morph.[i]). 
 Proof.
 move=> j j_gr.
@@ -216,7 +216,7 @@ case/andP: len_h=> /andP [_ /eqP] <- _; rewrite ltEint.
 by case/(_ j_gr)/andP=> ? /eqP ?; exists morph'.[j].
 Qed.
 
-Lemma quot_graph_nei_correct: forall i, mem_vertex gl i ->
+Lemma img_graph_nei_correct: forall i, mem_vertex gl i ->
   forall j, (j < length (neighbours gl i))%O -> mem_vertex gl (neighbours gl i).[j].
 Proof.
 move=> i igl j j_nei.
@@ -225,7 +225,7 @@ move/(_ i); rewrite mem_irangeE le0x -len_gl /= ltEint.
 by case/(_ igl)/and3P=> _ _ /all_arr /(_ j j_nei).
 Qed.
 
-Lemma quot_graph_edge_morf i j: mem_vertex gr i -> mem_vertex gr j ->
+Lemma img_graph_edge_morf i j: mem_vertex gr i -> mem_vertex gr j ->
   reflect 
   ((i != j) /\ (exists i', exists j', [/\ mem_vertex gl i', mem_vertex gl j', morph.[i'] = i, morph.[j'] = j & mem_edge gl i' j']))
   (mem_edge gr i j).
@@ -236,15 +236,15 @@ apply/(iffP idP).
 - move=> /[dup] ij_gr /(neighboursP igr jgr) [k k_nei j_eq].
   split.
   + apply/eqP=> ij; move: ij_gr; rewrite ij.
-    case: (quot_graph_morf_complete jgr)=> j' j'gl ->.
+    case: (img_graph_morf_complete jgr)=> j' j'gl ->.
     move/allP: edge_h=> /(_ j'); rewrite -len_gl mem_irangeE le0x /= ltEint.
     by case/(_ j'gl)/and3P=> _ /negPf ->.
   + move: (t_h i); rewrite mem_irangeE le0x /= ltEint.
     move/(_ igr)/allP=> /(_ k); rewrite mem_irangeE le0x k_nei.
     move/(_ isT); case: (t.[i].[k])=> i' k' /and4P [i'gl k'nei /eqP i'_eq /eqP nei'_eq].
     exists i', ((neighbours gl i').[k']); split=> //; rewrite -?j_eq //.
-    * apply/quot_graph_nei_correct=> //.
-    * apply/neighboursP=> //; last exists k'=> //; exact/quot_graph_nei_correct.
+    * apply/img_graph_nei_correct=> //.
+    * apply/neighboursP=> //; last exists k'=> //; exact/img_graph_nei_correct.
 - case=> i_n_j -[i'] [j'] [i'gl j'gl i_eq j_eq ij'_gl].
   rewrite -i_eq -j_eq; move/allP: edge_h; rewrite -len_gl.
   move/(_ i'); rewrite mem_irangeE le0x /= ltEint.
@@ -278,7 +278,7 @@ Definition is_lbl_quot (gl gr : graph) (morph morph' : array int)
   (t : array (array (int * int))) {T1 T2 : Type} (lbll : array T1)
   (lblr : array T2) (r_lbl : T1 -> T2 -> bool) 
   (r_sort : T2 -> T2 -> bool) := 
-  [&& ImgGraph.quot_graph gl gr morph morph' t, 
+  [&& ImgGraph.img_graph gl gr morph morph' t, 
       is_label_check gl gr lbll lblr,
       is_vert_check morph lbll lblr r_lbl & 
       is_sort_check lblr r_sort].
@@ -301,7 +301,7 @@ Definition is_sort_check:=
   is_sorted_rel lblr r_sort.
 
 Definition is_lbl_quot:= 
-  [&& quot_graph gl gr morph morph' t, 
+  [&& img_graph gl gr morph morph' t, 
       is_label_check,
       is_vert_check& 
       is_sort_check].
@@ -310,7 +310,7 @@ Definition vert_check := forall i, (i < length morph)%O -> r_lbl lbll.[i] lblr.[
 Definition label_check := ((length gl = length lbll) * (length gr = length lblr))%type.
 Definition sort_check := rel_sorted lblr r_sort.
 Definition lbl_quot :=
-  [/\ quot_graph gl gr morph morph' t, label_check, 
+  [/\ img_graph gl gr morph morph' t, label_check, 
   vert_check & sort_check].
 
 Section Equiv.
@@ -319,7 +319,7 @@ Lemma is_lbl_quotE:
   LabelQuotientUtils.is_lbl_quot gl gr morph morph' t lbll lblr r_lbl r_sort =
   is_lbl_quot.
 Proof.
-rewrite /LabelQuotientUtils.is_lbl_quot quot_graphE.
+rewrite /LabelQuotientUtils.is_lbl_quot img_graphE.
 rewrite /LabelQuotientUtils.is_vert_check iallE.
 by rewrite /LabelQuotientUtils.is_sort_check is_sorted_relE.
 Qed.
@@ -330,7 +330,7 @@ Section Proofs.
 
 Hypothesis lbl_quot_h : lbl_quot.
 
-Lemma lbl_quot_quot: quot_graph gl gr morph morph' t.
+Lemma lbl_quot_quot: img_graph gl gr morph morph' t.
 Proof. by case: lbl_quot_h. Qed.
 
 Lemma lbl_quot_vert: vert_check.

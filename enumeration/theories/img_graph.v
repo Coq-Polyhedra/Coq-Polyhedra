@@ -12,134 +12,6 @@ Local Notation "a .[ i ]" := (PArray.get a i).
 
 Import Order.Theory.
 
-(* Module ImgGraphFormatComputation.
-
-Definition length_morph_check (morph morph' : array int) (gl gr : graph.graph):= 
-  (length gl =? length morph)%uint63 && (length gr =? length morph')%uint63.
-  
-Definition length_edge_inv_check (edge_inv : array (array (int * int))) (gr : graph.graph):= 
-  (length gr =? length edge_inv)%uint63 && 
-  (IFold.iall (fun i => ((length edge_inv.[i]) =? GraphUtils.nb_neighbours gr i)%uint63) (length edge_inv)).
-
-Definition length_format_check morph morph' edge_inv gl gr:=
-    length_morph_check morph morph' gl gr && length_edge_inv_check edge_inv gr.
-
-(* Definition length_label_check {T1 T2 : Type} (gl gr : graph.graph) (lbll : array T1) (lblr : array T2):=
-  (correct_label gl lbll) && (correct_label gr lblr). *)
-
-(* Definition global_length_check 
-  {T1 T2 : Type} gl gr 
-  (lbll : array T1) (lblr : array T2) 
-  morph morph' edge_inv:=
-  [&& length_morph_check gl gr morph morph',
-      length_edge_inv_check gr edge_inv &
-      length_label_check gl gr lbll lblr]. *)
-
-Definition valid_nei_check gl:= 
-  IFold.iall (fun i=>
-    PArrayUtils.all 
-      (fun j=> GraphUtils.mem_vertex gl j)
-    (neighbours gl i))
-  (length gl).
-
-(* Definition is_sort_check {T2 : Type} (lblr : array T2) 
-  (r_sort : T2 -> T2 -> bool):= 
-  PArrayUtils.is_sorted_rel r_sort lblr. *)
-
-Definition img_graph_format morph morph' edge_inv gl gr :=
-  length_format_check morph morph' edge_inv gl gr &&
-  valid_nei_check gl.
-
-End ImgGraphFormatComputation.
-
-Module IGFC := ImgGraphFormatComputation.
-
-Section ImgGraphFormatEquiv.
-
-Definition length_morph_check (morph morph' : array int) (gl gr : graph.graph) := 
-  (length gl == length morph)%O && (length gr == length morph')%O.
-  
-Definition length_edge_inv_check (edge_inv : array (array (int * int))) (gr : graph.graph):= 
-  (length gr == length edge_inv) && 
-  (iall (fun i => ((length edge_inv.[i]) == nb_neighbours gr i)%O) (length edge_inv)).
-
-Definition length_format_check morph morph' edge_inv gl gr :=
-    length_morph_check morph morph' gl gr && length_edge_inv_check edge_inv gr.
-
-  (* 
-Definition length_label_check {T1 T2 : Type} (gl gr : graph.graph) (lbll : array T1) (lblr : array T2):=
-  (correct_label gl lbll) && (correct_label gr lblr). *)
-
-(* Definition global_length_check 
-  {T1 T2 : Type} gl gr 
-  (lbll : array T1) (lblr : array T2) 
-  morph morph' edge_inv:=
-  [&& length_morph_check gl gr morph morph',
-      length_edge_inv_check gr edge_inv &
-      length_label_check gl gr lbll lblr]. *)
-
-Definition valid_nei_check gl:= 
-  iall (fun i=>
-    arr_all 
-      (fun j=> mem_vertex gl j)
-    (neighbours gl i))
-  (length gl).
-
-(* Definition is_sort_check {T2 : Type} (lblr : array T2) 
-  (r_sort : T2 -> T2 -> bool):= 
-  is_sorted_rel r_sort lblr. *)
-
-Definition img_graph_format morph morph' edge_inv gl gr :=
-  length_format_check morph morph' edge_inv gl gr && valid_nei_check gl.
-
-Section Proofs.
-
-Lemma img_graph_formatE morph morph' edge_inv gl gr :
-  IGFC.img_graph_format morph morph' edge_inv gl gr =
-  img_graph_format morph morph' edge_inv gl gr.
-Proof.
-repeat congr andb; rewrite ?eqEint //.
-- by rewrite iallE; apply/eq_all=> i; rewrite eqEint nb_neighboursE.
-- by rewrite /IGFC.valid_nei_check iallE; apply/eq_all=> i; rewrite arr_allE.
-Qed.
-
-End Proofs.
-
-End ImgGraphFormatEquiv.
-
-Section ImgGraphFormatProofs.
-
-Context (gl gr : graph.graph).
-Context (morph morph' : array int) (edge_inv : array (array (int * int))).
-
-Local Notation format_h := (img_graph_format morph morph' edge_inv gl gr).
-
-Lemma img_graph_format_length: format_h ->
-  (length gl = length morph) * (length gr = length morph') * (length gr = length edge_inv).
-Proof. by case/andP=> /andP [/andP [/eqP <- /eqP <-] /andP [/eqP <-]]. Qed.
-
-Lemma img_graph_format_edge_length: format_h ->
-  forall i, mem_vertex gr i -> length edge_inv.[i] = nb_neighbours gr i.
-Proof.
-move=> /[dup] form_h.
-case/andP=> /andP [_ /andP] [_ h] _ i i_gr.
-move/allP: h=> /(_ i); rewrite mem_irangeE le0x /=.
-by rewrite -(img_graph_format_length form_h)=> /(_ i_gr)/eqP.
-Qed.
-
-Lemma img_graph_format_valid_nei: format_h-> forall i,
-  mem_vertex gl i -> forall k, (k < nb_neighbours gl i)%O->
-  mem_vertex gl (neighbours gl i).[k].
-Proof.
-move=> /[dup] form_h.
-case/andP=> _ /allP h i i_gl k k_nei.
-move: (h i); rewrite mem_irangeE le0x /= => /(_ i_gl) /allP /(_ (neighbours gl i).[k]); apply.
-by apply map_f; rewrite mem_irangeE le0x.
-Qed.
-
-
-End ImgGraphFormatProofs. *)
-
 Module ImgGraphComputation.
 
 Definition vertex_morph_check morph (gl gr : graph.graph):=
@@ -150,11 +22,6 @@ Definition vertex_inv_check morph morph' (gl gr : graph.graph) :=
     (fun i=> (GraphUtils.mem_vertex gl morph'.[i]) && 
     (morph.[morph'.[i]] =? i)%uint63) 
   (length gr).
-
-(* Definition vertex_label_check {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2)
-  (lbll : array T1) (lblr : array T2)
-  (morph : array int) := 
-  IFold.iall (fun i => r_eq (f lbll.[i]) lblr.[morph.[i]]) (length morph). *)
 
 Definition img_vertex morph morph' gl gr :=
     vertex_morph_check morph gl gr && vertex_inv_check morph morph' gl gr.
@@ -190,7 +57,7 @@ Definition edge_inv_check morph edge_inv gl gr :=
 Definition img_edge morph edge_inv gl gr :=
   [&& nei_check morph gl gr, no_loop_check morph gl gr & edge_inv_check morph edge_inv gl gr].
 
-Definition img_graph morph morph' edge_inv gl gr :=
+Definition graph_img morph morph' edge_inv gl gr :=
   img_vertex morph morph' gl gr &&
   img_edge morph edge_inv gl gr.
 
@@ -208,11 +75,6 @@ Definition vertex_inv_check morph morph' (gl gr : graph.graph) :=
     (fun i=> (mem_vertex gl morph'.[i]) && 
     (morph.[morph'.[i]] == i)%O) 
   (length gr).
-
-(* Definition vertex_label_check {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2)
-  (lbll : array T1) (lblr : array T2)
-  (morph : array int) := 
-  iall (fun i => r_eq (f lbll.[i]) lblr.[morph.[i]]) (length morph). *)
 
 Definition img_vertex morph morph' gl gr :=
   vertex_morph_check morph gl gr && vertex_inv_check morph morph' gl gr.
@@ -248,7 +110,7 @@ Definition edge_inv_check morph edge_inv  gl gr:=
 Definition img_edge morph edge_inv gl gr :=
   [&& nei_check morph gl gr, no_loop_check morph gl gr & edge_inv_check morph edge_inv gl gr].
 
-Definition img_graph morph morph' edge_inv gl gr:=
+Definition graph_img morph morph' edge_inv gl gr:=
     img_vertex morph morph' gl gr &&
     img_edge morph edge_inv gl gr.
 
@@ -277,17 +139,15 @@ repeat congr andb.
   by rewrite !mem_vertexE !eqEint !mem_edgeE.
 Qed.
 
-Lemma img_graphE morph morph' edge_inv gl gr:
-  IGC.img_graph morph morph' edge_inv gl gr =
-  img_graph morph morph' edge_inv gl gr.
-Proof. by rewrite /IGC.img_graph img_vertexE img_edgeE. Qed.
+Lemma graph_imgE morph morph' edge_inv gl gr:
+  IGC.graph_img morph morph' edge_inv gl gr =
+  graph_img morph morph' edge_inv gl gr.
+Proof. by rewrite /IGC.graph_img img_vertexE img_edgeE. Qed.
 
 End Proofs.
 End ImgGraphEquiv.
 
 Section ImageGraphStructure.
-
-(* Local Definition format_h morph morph' edge_inv gl gr := img_graph_format morph morph' edge_inv gl gr. *)
 
 Definition high_vtx_morph morph (Gl Gr : graph [choiceType of int]) := all (fun x=> morph.[x] \in vertices Gr) (vertices Gl).
 
@@ -392,23 +252,23 @@ move=> ??; repeat congr andb;
   [exact:nei_check_struct|exact:no_loop_check_struct|exact:edge_inv_check_struct].
 Qed.
 
-Definition high_img_graph morph morph' edge_inv Gl gr Gr:=
+Definition high_graph_img morph morph' edge_inv Gl gr Gr:=
     high_img_vtx morph morph' Gl Gr && high_img_edge morph edge_inv Gl gr Gr.
 
-Lemma img_graph_struct morph morph' edge_inv gl Gl gr Gr:
+Lemma graph_img_struct morph morph' edge_inv gl Gl gr Gr:
   rel_structure gl Gl -> rel_structure gr Gr -> 
-  (img_graph morph morph' edge_inv gl gr) =
-  (high_img_graph morph morph' edge_inv Gl gr Gr).
+  (graph_img morph morph' edge_inv gl gr) =
+  (high_graph_img morph morph' edge_inv Gl gr Gr).
 Proof. by move=> glGl grGr; congr andb; [exact:vtx_check_struct|exact:edge_check_struct]. Qed.
 
-Lemma high_img_graphP morph morph' edge_inv Gl gr Gr:
+Lemma high_graph_imgP morph morph' edge_inv Gl gr Gr:
   rel_structure gr Gr ->
-  high_img_graph morph morph' edge_inv Gl gr Gr ->
+  high_graph_img morph morph' edge_inv Gl gr Gr ->
   Gr = (fun i=> morph.[i]) @/ Gl.
 Proof.
 move=> grGr.
 case/andP=> vtx_h edge_h; apply/graphE.
-rewrite vtx_quot_graph (high_img_vtxP vtx_h); split=> // i j.
+rewrite vtx_img_graph (high_img_vtxP vtx_h); split=> // i j.
 apply/idP/idP.
 - case/and3P: edge_h=> _ no_loop_h /allP/(_ i) h /[dup] /edge_vtxlr [iGr jGr] /[dup] ijGr. 
   rewrite -(rel_struct_edge grGr) ?(rel_struct_vtx grGr) //.
@@ -416,13 +276,12 @@ apply/idP/idP.
   move=> /(_ iGr jGr) [k k_nei j_eq].
   move/allP: (h iGr)=> /(_ k); rewrite mem_irangeE le0x /=.
   move/(_ k_nei); case: (edge_inv.[i].[k])=> a b /and3P [/eqP a_i /eqP b_k a_b].
-  apply/edge_quot_graph; exists a, b; split=> //; rewrite -?j_eq //.
-  rewrite -b_k -a_i; apply/negP=> /eqP morph_eq.
-  move/allP: no_loop_h=> /(_ _ (edge_vtxl a_b)).
-  by case/andP=> _; rewrite {2}morph_eq a_i b_k j_eq ijGr.
-- case/edge_quot_graph=> a [b] [i_eq j_eq i_n_j abGl].
+  apply/edge_img_graph; split.
+  * by move: (edges_neq ijGr); rewrite eq_sym.
+  * exists a, b; split=> //; rewrite -?j_eq //.
+- case/edge_img_graph=> ij [a] [b] [i_eq j_eq abGl].
   case/and3P: edge_h=> /allP /(_ _ (edge_vtxl abGl)) /allP /(_ b).
-  by rewrite in_succE => /(_ abGl); rewrite i_eq j_eq i_n_j.
+  by rewrite in_succE => /(_ abGl); rewrite i_eq j_eq eq_sym ij.
 Qed.
 
 End ImageGraphStructure.
@@ -433,12 +292,9 @@ Definition img_label {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2) morph
   lbll lblr :=
   IFold.iall (fun i=> r_eq (f lbll.[i]) lblr.[morph.[i]]) (length lbll).
 
-(* Definition img_label_sort_check {T2 : Type} (r_sort : rel T2) lblr:=
-  PArrayUtils.is_sorted_rel r_sort lblr. *)
-
 Definition img_label_graph {T1 T2} (f : T1 -> T2) r_eq morph morph' edge_inv
   gll grl := 
-  IGC.img_graph morph morph' edge_inv gll.1 grl.1 && img_label f r_eq morph gll.2 grl.2. 
+  IGC.graph_img morph morph' edge_inv gll.1 grl.1 && img_label f r_eq morph gll.2 grl.2. 
 
 End ImgLabelGraphComputation.
 
@@ -456,7 +312,7 @@ Definition img_label {T1 T2 : Type} (f : T1 -> T2) (r_eq : rel T2) morph
 
 Definition img_label_graph {T1 T2} (f : T1 -> T2) r_eq morph morph' edge_inv
   gll grl := 
-  img_graph morph morph' edge_inv gll.1 grl.1 && img_label f r_eq morph gll.2 grl.2. 
+  graph_img morph morph' edge_inv gll.1 grl.1 && img_label f r_eq morph gll.2 grl.2. 
 
 Lemma img_labelE {T1 T2 : Type} (f : T1 -> T2) r_eq morph lbll lblr:
   ILGC.img_label f r_eq morph lbll lblr =
@@ -466,7 +322,7 @@ Proof. by rewrite /ILGC.img_label iallE. Qed.
 Lemma img_label_graphE {T1 T2 : Type} (f : T1 -> T2) r_eq morph morph' edge_inv gll grl:
   ILGC.img_label_graph f r_eq morph morph' edge_inv gll grl =
   img_label_graph f r_eq morph morph' edge_inv gll grl.
-Proof. by congr andb; rewrite ?img_graphE ?img_labelE. Qed.
+Proof. by congr andb; rewrite ?graph_imgE ?img_labelE. Qed.
 
 End ImgLabelGraphEquiv.
 
@@ -478,7 +334,7 @@ Context (morph morph' : array int) (edge_inv : array (array (int * int))).
 
 Definition high_img_label Gl lbll lblr := all (fun x=> r_eq (f lbll.[x]) lblr.[morph.[x]]) (vertices Gl).
 Definition high_img_label_graph Gll gr Grl :=
-  high_img_graph morph morph' edge_inv Gll.1 gr Grl.1 && high_img_label Gll.1 Gll.2 Grl.2.
+  high_graph_img morph morph' edge_inv Gll.1 gr Grl.1 && high_img_label Gll.1 Gll.2 Grl.2.
 End Def.
 
 Section RelLabelGraph.
@@ -496,7 +352,7 @@ Lemma rel_label_graph_img gl Gl gr Gr ll Ll lr Lr:
   high_img_label_graph F eq_T2 morph morph' edge_inv (Gl,Ll) gr (Gr,Lr).
 Proof.
 move=> fF eq_tT2 [/= len_gll [ /=glGl llLl]] [/= len_grl [ /= grGr lrLr]].
-rewrite /img_label_graph /high_img_label_graph /= (img_graph_struct _ _ _ glGl grGr).
+rewrite /img_label_graph /high_img_label_graph /= (graph_img_struct _ _ _ glGl grGr).
 apply/andb_id2l=> /andP [mor_vtx mor_edge]; rewrite /img_label /high_img_label.
 rewrite -len_gll; rewrite (rel_struct_all _ glGl); apply/eq_in_all=> i iGl.
 apply/eq_tT2.
@@ -518,10 +374,10 @@ Lemma rel_final_graph_img gl (ll : array T1) Gl gr (lr : array T2) Gr g:
   high_img_label_graph f (@eq_op _) morph morph' edge_inv (gl, ll) g (gr, lr) ->
   Gr = f @/ Gl.
 Proof.
-move=> ggr glGl grGr /andP [] /= /(high_img_graphP ggr)=> gr_eq.
+move=> ggr glGl grGr /andP [] /= /(high_graph_imgP ggr)=> gr_eq.
 move: grGr; rewrite gr_eq=> final_g /allP h.
 apply/graphE; split.
-- rewrite -(gisof_vtx final_g) !vtx_quot_graph /= -(gisof_vtx glGl) /=.
+- rewrite -(gisof_vtx final_g) !vtx_img_graph /= -(gisof_vtx glGl) /=.
   apply/fsetP=> z; apply/idP/idP.
   + case/imfsetP=> ? /imfsetP [/= i igl -> ->].
     by move/eqP: (h _ igl)=> <-; apply/in_imfset/in_imfset.
@@ -532,29 +388,31 @@ apply/graphE; split.
   + move=> /[dup] /edge_vtxlr [xGr yGr].
     move: (xGr) (yGr); rewrite -(gisof_vtx final_g) /=.
     case/imfsetP=> /= ? ++ /imfsetP [?] /=.
-    rewrite vtx_quot_graph=> /imfsetP /= [i igl ->] ->.
+    rewrite vtx_img_graph=> /imfsetP /= [i igl ->] ->.
     case/imfsetP=> j /= jgl -> ->.
-    rewrite -(gisof_edge final_g) /= ?(vtx_quot_graph); 
+    rewrite -(gisof_edge final_g) /= ?(vtx_img_graph); 
       [|by apply/imfsetP; exists i|by apply/imfsetP; exists j].
-    case/edge_quot_graph=> i' [j'] [<- <- ij' /[dup]].
-    case/edge_vtxlr=> i'gl j'gl ij'gl.
+    case/edge_img_graph=> morph_neq [i'] [j'] [ii' jj' /[dup]].
+    case/edge_vtxlr=> i'gl j'gl ij'gl; rewrite -ii' -jj'.
     move: (h _ i'gl) (h _ j'gl)=> /eqP <- /eqP <-.
-    apply/edge_quot_graph; exists ll.[i'], ll.[j'].
-    split=> //; last by rewrite -(gisof_edge glGl).
-    apply/negP=> /eqP; rewrite (eqP (h _ i'gl)) (eqP (h _ j'gl)).
-    move/(gisof_inj final_g)=> /=; rewrite vtx_quot_graph.
-    rewrite (in_imfset _ _ i'gl) (in_imfset _ _ j'gl)=> /(_ isT isT).
-    by move/eqP; rewrite (negPf ij').
-  + case/edge_quot_graph=> x' [y'] [<- <- f_xy'] /[dup].
-    case/edge_vtxlr; rewrite -(gisof_vtx glGl) /=.
+    apply/edge_img_graph; split.
+    * apply/negP=> /eqP; rewrite (eqP (h _ i'gl)) (eqP (h _ j'gl)).
+      move/(gisof_inj final_g)=> /=; rewrite vtx_img_graph.
+      rewrite (in_imfset _ _ i'gl) (in_imfset _ _ j'gl)=> /(_ isT isT).
+      by move/eqP; rewrite ii' jj' (negPf morph_neq).
+    * exists ll.[i'], ll.[j'].
+      split=> //; last by rewrite -(gisof_edge glGl).
+  + case/edge_img_graph=> yx [x'] [y'] [xx' yy'] /[dup].
+    case/edge_vtxlr; rewrite -xx' -yy' -(gisof_vtx glGl) /=.
     case/imfsetP=> /= i igl x'_eq /imfsetP [/= j jgl y'_eq].
     rewrite x'_eq y'_eq -(gisof_edge glGl) //= => ijgl.
     rewrite (eqP (h _ igl)) (eqP (h _ jgl)).
-    rewrite -(gisof_edge final_g) ?vtx_quot_graph ?(in_imfset _ _ igl) ?(in_imfset _ _ jgl) //.
-    apply/edge_quot_graph; exists i,j; split=> //.
-    apply/negP=> /eqP /(congr1 (fun x=> lr.[x])).
-    rewrite -(eqP (h _ igl)) -(eqP (h _ jgl)) -x'_eq -y'_eq.
-    by move/eqP; rewrite (negPf f_xy').
+    rewrite -(gisof_edge final_g) ?vtx_img_graph ?(in_imfset _ _ igl) ?(in_imfset _ _ jgl) //.
+    apply/edge_img_graph; split. 
+    * apply/negP=> /eqP /(congr1 (fun x=> lr.[x])).
+      rewrite -(eqP (h _ igl)) -(eqP (h _ jgl)) -x'_eq -y'_eq.
+      by move/eqP; rewrite xx' yy' (negPf yx).
+    * by exists i,j; split.
 Qed.
  
 End RelFinalGraph.
@@ -628,30 +486,30 @@ Qed.
 
 Context (gl gr : graph.graph) (morf morf' : array int) (t : array (array (int * int))).
 
-Hypothesis quot_h : graph.quot_graph gl gr morf morf' t.
+Hypothesis quot_h : graph.img_graph gl gr morf morf' t.
 
 Lemma to_graph_quot :
   (to_graph_struct gr) = ((fun i => morf.[i]) @/ (to_graph_struct gl)).
 Proof.
 apply/gisof_idE/gisofE; split=> //.
-- apply/fsetP=> x; rewrite vtx_quot_graph !inE /= to_graph_vtx.
+- apply/fsetP=> x; rewrite vtx_img_graph !inE /= to_graph_vtx.
   apply/idP/idP.
-  + case/(quot_graph_morf_complete quot_h)=> x' x'gl ->.
+  + case/(img_graph_morf_complete quot_h)=> x' x'gl ->.
     by apply/in_imfset=> /=; rewrite to_graph_vtx.
   + case/imfsetP=> /= x'; rewrite to_graph_vtx=> x'gl ->.
-    exact/(quot_graph_morf_correct quot_h).
+    exact/(img_graph_morf_correct quot_h).
 - move=> x y; rewrite !to_graph_vtx=> xgr ygr.
   rewrite to_graph_edge ?to_graph_vtx //.
   apply/idP/idP.
-  + case/(quot_graph_edge_morf quot_h xgr ygr)=> /[swap].
+  + case/(img_graph_edge_morf quot_h xgr ygr)=> /[swap].
     case=> x' [y'] [x'gl y'gl <- <- gl_xy'] ?. 
-    apply/edge_quot_graph; exists x'; exists y'; split=> //=.
+    apply/edge_img_graph; exists x'; exists y'; split=> //=.
     by rewrite to_graph_edge ?to_graph_vtx.
-  + case/edge_quot_graph=> x' [y'] [x_eq y_eq ?].
+  + case/edge_img_graph=> x' [y'] [x_eq y_eq ?].
     move=> /[dup] /[dup] /edge_vtxl + /edge_vtxr.
     rewrite !to_graph_vtx=> x'gl y'gl.
     rewrite to_graph_edge ?to_graph_vtx // => gl_xy'.
-    apply/(quot_graph_edge_morf quot_h xgr ygr); split=> //.
+    apply/(img_graph_edge_morf quot_h xgr ygr); split=> //.
     by exists x', y'; split.
 Qed.
 
@@ -737,9 +595,9 @@ split=> //.
   by rewrite (label_equiv_length lbl_equiv2).
 - rewrite /vert_check=> i ig1.
   apply/r1212'_h; try apply/vert_lbl12=> //.
-  + by rewrite -lbl12 (quot_graph_length quot_g1g2).
-  + move: (quot_graph_morf_correct quot_g1g2); rewrite -lbl12.
-    by apply; rewrite /mem_vertex (quot_graph_length quot_g1g2). 
+  + by rewrite -lbl12 (img_graph_length quot_g1g2).
+  + move: (img_graph_morf_correct quot_g1g2); rewrite -lbl12.
+    by apply; rewrite /mem_vertex (img_graph_length quot_g1g2). 
 - by rewrite /sort_check -(label_equiv_sort lbl_equiv2 r2_h).
 Qed.
 
@@ -955,12 +813,12 @@ Hypothesis r_sort_trans : transitive r_sort.
 Lemma repr_quot_inj: 
   {in vertices ([eta get morf] @/ to_graph_struct g1) &, injective (get lbl2)}.
 Proof.
-move=> i j; rewrite vtx_quot_graph.
+move=> i j; rewrite vtx_img_graph.
 case/imfsetP => /= [x'] + -> /imfsetP /= [y'] + ->.
 rewrite !to_graph_vtx => x'g1 y'g1.
 move: (lbl_quot_sort g1g2)=> /(sorted_rel_inj r_sort_irr r_sort_trans).
 apply; rewrite ltEint -(lbl_quot_label g1g2);
-  exact: (quot_graph_morf_correct (lbl_quot_quot g1g2)).
+  exact: (img_graph_morf_correct (lbl_quot_quot g1g2)).
 Qed.
 
 Lemma repr_quot_vtx:
@@ -968,17 +826,17 @@ Lemma repr_quot_vtx:
   vertices (F @/ G1).
 Proof.
 apply/fsetP=> x; apply/idP/idP.
-- case/imfsetP=> /= x'; rewrite vtx_quot_graph.
+- case/imfsetP=> /= x'; rewrite vtx_img_graph.
   case/imfsetP=> /= x''; rewrite to_graph_vtx.
-  move=> x''g1 -> ->; rewrite vtx_quot_graph.
+  move=> x''g1 -> ->; rewrite vtx_img_graph.
   apply/imfsetP=> /=; exists lbl1.[x'']; rewrite ?(lbl_quot_vert g1g2).
   + by rewrite (repr_vtx g1G1); apply/existsP; exists x''; rewrite eqxx x''g1.
   + case: g1g2=> quot_h _ vert_h _; apply/eqP; rewrite eq_sym. 
-    by apply: vert_h; rewrite -(quot_graph_length quot_h). 
-- rewrite !vtx_quot_graph; case/imfsetP=> /= x'.
+    by apply: vert_h; rewrite -(img_graph_length quot_h). 
+- rewrite !vtx_img_graph; case/imfsetP=> /= x'.
   rewrite (repr_vtx g1G1); case/existsP=> x'' /andP [x''g1 /eqP <-] ->.
   move:(lbl_quot_vert g1g2)=> /(_ x'').
-  rewrite -(quot_graph_length (lbl_quot_quot g1g2))=> /(_ x''g1)/eqP ->.
+  rewrite -(img_graph_length (lbl_quot_quot g1g2))=> /(_ x''g1)/eqP ->.
   apply/in_imfset=> /=.
   by apply/in_imfset=> /=; rewrite to_graph_vtx.
 Qed.
@@ -991,34 +849,34 @@ Lemma repr_quot_edge:
 Proof.
 move=> x y xG1 yG1.
 apply/idP/idP.
-- case/edge_quot_graph=> /= x' [y'].
+- case/edge_img_graph=> /= x' [y'].
   case=> x_eq y_eq x_n_y /[dup] /[dup] /edge_vtxl + /edge_vtxr.
   rewrite !to_graph_vtx => x'g1 y'g1; rewrite to_graph_edge ?to_graph_vtx //.
-  move=> g1_xy'; apply/edge_quot_graph; exists lbl1.[x'], lbl1.[y'].
+  move=> g1_xy'; apply/edge_img_graph; exists lbl1.[x'], lbl1.[y'].
   rewrite (repr_edge g1G1). 
   move:(lbl_quot_vert g1g2)=> vert_g1g2. 
   move: (vert_g1g2 x') (vert_g1g2 y').
-  rewrite -(quot_graph_length (lbl_quot_quot g1g2))=> /(_ x'g1)/eqP ->.
+  rewrite -(img_graph_length (lbl_quot_quot g1g2))=> /(_ x'g1)/eqP ->.
   move/(_ y'g1)/eqP=> ->; rewrite x_eq y_eq.
   split=> //.
   + move: x_n_y; apply: contra_neq=> /repr_quot_inj.
-    apply; rewrite vtx_quot_graph; apply/imfsetP=> /=.
+    apply; rewrite vtx_img_graph; apply/imfsetP=> /=.
     * by exists x'; rewrite ?to_graph_vtx ?x_eq.
     * by exists y'; rewrite ?to_graph_vtx ?y_eq.
   + by apply/existsP; exists x'; apply/existsP; exists y'; apply/and5P; split.
-- case/edge_quot_graph=> x' [y'] [Fx' Fy' lbl2_xy].
+- case/edge_img_graph=> x' [y'] [Fx' Fy' lbl2_xy].
   rewrite (repr_edge g1G1)=> /existsP [x''] /existsP [y''].
   case/and5P=> x''g1 y''g1 /eqP lbl1x'' /eqP lbl1y'' g1_xy''.
-  apply/edge_quot_graph; exists x'', y''; split.
+  apply/edge_img_graph; exists x'', y''; split.
   + move: Fx'; rewrite -lbl1x''. 
     move:(lbl_quot_vert g1g2)=> /(_ x'').
-    rewrite -(quot_graph_length (lbl_quot_quot g1g2))=> /(_ x''g1)/eqP ->.
-    move/(repr_quot_inj _ xG1); apply; rewrite vtx_quot_graph.
+    rewrite -(img_graph_length (lbl_quot_quot g1g2))=> /(_ x''g1)/eqP ->.
+    move/(repr_quot_inj _ xG1); apply; rewrite vtx_img_graph.
     by apply/in_imfset; rewrite to_graph_vtx.
   + move: Fy'; rewrite -lbl1y''. 
     move:(lbl_quot_vert g1g2)=> /(_ y'').
-    rewrite -(quot_graph_length (lbl_quot_quot g1g2))=> /(_ y''g1)/eqP ->.
-    move/(repr_quot_inj _ yG1); apply; rewrite vtx_quot_graph.
+    rewrite -(img_graph_length (lbl_quot_quot g1g2))=> /(_ y''g1)/eqP ->.
+    move/(repr_quot_inj _ yG1); apply; rewrite vtx_img_graph.
     by apply/in_imfset; rewrite to_graph_vtx.
   + by move: lbl2_xy; apply/contra_neq=> ->.
   + by rewrite to_graph_edge ?to_graph_vtx.

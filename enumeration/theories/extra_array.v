@@ -155,6 +155,10 @@ Definition array_mul_row_mx {T : Type} addf mulf x0
   (v : array T) (M : array (array T)):=
   map (fun c=> array_dot addf mulf x0 v c) M.
 
+Definition array_mul_mx_col {T : Type} addf mulf x0
+  (M : array (array T)) (v : array T):=
+  map (fun r => array_dot addf mulf x0 r v) M.
+
 Definition array_mulmx {T : Type} addf mulf x0
   (M N : array (array T)):=
   map (fun v=> array_mul_row_mx addf mulf x0 v N) M.
@@ -173,6 +177,16 @@ Proof. by rewrite size_map size_irange0. Qed.
 Lemma nth_arr_to_seq {T : Type} (a : array T) n:
   (n < length a)%nat -> nth (default a) (arr_to_seq a) n = a.[nat_to_int n].
 Proof. by move=> n_len; rewrite (nth_map 0%uint63) ?size_irange0 // nth_irange0. Qed.
+
+Lemma mem_arr_to_seq {T : eqType} (a : array T) x:
+  x \in arr_to_seq a ->
+  exists2 i, (i < length a)%O & a.[i] = x.
+Proof.
+case/(nthP (default a))=> i; rewrite size_arr_to_seq=> i_len nth_i.
+exists (nat_to_int i).
+- rewrite ltEint_nat nat_to_intK //; apply/int_threshold_length/i_len.
+- by move:nth_i; rewrite nth_arr_to_seq.
+Qed.
 
 Definition arr_fold {T S : Type} (f : T -> S -> S) (a : array T) (x : S):=
   foldl (fun s t=> f t s) x (arr_to_seq a).
@@ -611,12 +625,12 @@ move=> n_len; case E: (foldl _ _ _)=> //=.
   exists j; split=> //; rewrite ltnS; exact: ltnW.
 Qed.
 
-Definition ltx_array_rel {T : Type} (a b : array T) r:=
+Definition ltx_array_rel {T : Type} r (a b : array T):=
   (length a == length b) && 
   if lex_array_rel_ r a b is Lt then true else false.
   
 Lemma ltx_array_relE {T : Type} (a b : array T) r:
-  PArrayUtils.ltx_array_rel r a b = ltx_array_rel a b r.
+  PArrayUtils.ltx_array_rel r a b = ltx_array_rel r a b.
 Proof. by rewrite /PArrayUtils.ltx_array_rel eqEint lex_array_rel_E. Qed.
 
 Definition ltx_array_rel_prop {T : Type} (a b : array T)
@@ -630,7 +644,7 @@ Lemma ltx_array_relP {T : Type} (a b : array T)
   (r : T -> T -> comparison):
   reflect
   (ltx_array_rel_prop a b r)
-  (ltx_array_rel a b r).
+  (ltx_array_rel r a b).
 Proof.
 apply/(iffP idP).
 - case/andP=> /eqP len_eq.
@@ -669,7 +683,7 @@ Proof. by rewrite /PArrayUtils.lex_array_rel eqEint lex_array_rel_E. Qed.
 Lemma lex_arr_eqVlt {T : Type} (a b : array T) (r : T -> T -> comparison):
   lex_array_rel r a b = 
     (eq_array_rel (fun x y => if r x y is Eq then true else false) a b) || 
-    ltx_array_rel a b r.
+    ltx_array_rel r a b.
 Proof.
 apply/idP/idP.
 - rewrite /lex_array_rel.
@@ -702,7 +716,7 @@ apply/idP/idP.
 Qed.
 
 Definition lt_array_int (a b : array int):=
-  ltx_array_rel a b Uint63.compare.
+  ltx_array_rel Uint63.compare a b.
   
 Lemma lt_array_intE (a b : array int):
   PArrayUtils.lt_array_int a b = lt_array_int a b.
