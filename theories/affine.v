@@ -694,13 +694,6 @@ Next Obligation.
 by move => V1 V2 V3; apply/affine_eqP => x; rewrite !in_affineI andbA.
 Qed.
 
-Next Obligation.
-apply/affine_leP/eqP => [|<-].
-+ move=> le_xy; apply/affine_eqP=> c; rewrite in_affineI.
-  by apply: andb_idr; apply: le_xy.
-+ by move => c; rewrite in_affineI => /andP[].
-Qed.
-
 Canonical affine_MeetSemilatticeType :=
   Eval hnf in MeetSemilatticeType 'affine[R]_n affine_meetMixin.
 
