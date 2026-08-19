@@ -24,3 +24,5 @@ theories/poly_base.v
 theories/lrel.v
 theories/affine.v
 theories/fsetmin.v
+enumeration/theories/high_graph.v
+
