@@ -1,0 +1,36 @@
+opam-version: "2.0"
+version: "dev"
+
+synopsis: "A formalization of convex polyhedra in Coq"
+description: """
+Coq-Polyhedra is a Mathematical Components-based formalization of convex
+polyhedra.  This package installs the contents of the theories directory under
+the logical Coq namespace Polyhedra.
+"""
+
+maintainer: [
+  "Xavier Allamigeon <xavier.allamigeon@inria.fr>"
+]
+authors: [
+  "Xavier Allamigeon"
+  "Ricardo D. Katz"
+  "Pierre-Yves Strub"
+]
+license: "CECILL-B"
+homepage: "https://github.com/Coq-Polyhedra/Coq-Polyhedra"
+bug-reports: "https://github.com/Coq-Polyhedra/Coq-Polyhedra/issues"
+dev-repo: "git+https://github.com/Coq-Polyhedra/Coq-Polyhedra.git#coq-8.20"
+
+depends: [
+  "coq" {>= "8.20" & < "8.21"}
+  "coq-mathcomp-algebra"
+  "coq-mathcomp-finmap"
+  "coq-mathcomp-bigenough"
+]
+
+build: [
+  ["coq_makefile" "-f" "_CoqProject" "-o" "Makefile.coq"]
+  [make "-f" "Makefile.coq" "-j%{jobs}%"]
+]
+
+install: [make "-f" "Makefile.coq" "install"]
