@@ -20,6 +20,7 @@ jobs:
               opam pin add -y -n coq-mathcomp-fingroup https://github.com/Coq-Polyhedra/mathcomp.git#master
               opam pin add -y -n coq-mathcomp-algebra https://github.com/Coq-Polyhedra/mathcomp.git#master
               opam pin add -y -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git#master
+              opam pin add -y -n coq-mathcomp-bigenough https://github.com/math-comp/bigenough.git#1.0.3
               opam install -y -j 2 coq-mathcomp-algebra coq-mathcomp-finmap coq-mathcomp-bigenough
             endGroup
             startGroup "Build Coq-Polyhedra"
