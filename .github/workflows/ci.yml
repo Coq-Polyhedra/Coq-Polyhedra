@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches: [master, coq-8.20]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: coq-community/docker-coq-action@v1
+        with:
+          coq_version: '8.20.1'
+          ocaml_version: '4.14.2-flambda'
+          custom_script: |
+            startGroup "Install the MathComp forks"
+              opam pin add -y -n coq-mathcomp-ssreflect https://github.com/Coq-Polyhedra/mathcomp.git#master
+              opam pin add -y -n coq-mathcomp-fingroup https://github.com/Coq-Polyhedra/mathcomp.git#master
+              opam pin add -y -n coq-mathcomp-algebra https://github.com/Coq-Polyhedra/mathcomp.git#master
+              opam pin add -y -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git#master
+              opam install -y -j 2 coq-mathcomp-algebra coq-mathcomp-finmap coq-mathcomp-bigenough
+            endGroup
+            startGroup "Build Coq-Polyhedra"
+              sudo chown -R coq:coq .
+              opam pin add -y -n coq-polyhedra .
+              opam install -y -j 2 coq-polyhedra
+            endGroup
