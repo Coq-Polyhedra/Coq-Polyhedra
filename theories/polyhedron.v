@@ -15,7 +15,6 @@ Import Order.Theory.
 
 Require Import extra_misc extra_matrix inner_product row_submx vector_order barycenter lrel hpolyhedron affine.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -739,10 +738,10 @@ Lemma subset_argmin {P Q} {c} :
 Proof.
 move => bounded_Q /andP [? ?]; apply/le_anti.
 rewrite {-2}/argmin; case: {-}_/idP => [bounded_P | unbounded_P]; apply/andP; split.
-- rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
+- rewrite argmin_polyI (subset_opt_value bounded_P bounded_Q _); first by apply/andP.
   by apply/leI2; [done | exact: lexx].
 - rewrite lexI -(rwP andP); split; first by done.
-  rewrite (subset_opt_value bounded_P bounded_Q _); last by apply/andP.
+  rewrite (subset_opt_value bounded_P bounded_Q _); first by apply/andP.
   exact: argmin_opt_value.
 - by apply: le0x.
 - move/negP: unbounded_P; apply/contraR.
@@ -1173,8 +1172,8 @@ apply/poly_eqP=> c; rewrite !in_polyEq; apply/andP/idP.
   - by move=> xb; move/in_poly_of_baseP: cPb; apply.
 + move/in_poly_of_baseP => /= h; split.
   - apply/forallP=> /= -[b bI]; rewrite -affE hpE in_polyI 2?{1}h {h} //= in_baseEq.
-    * by rewrite in_oppbase bI orbT.
     * by rewrite (fsubset_incl bI).
+    * by rewrite in_oppbase bI orbT.
   - by apply/in_poly_of_baseP=> /= b bb; rewrite h // in_baseEq bb.
 Qed.
 
@@ -1523,7 +1522,7 @@ Lemma combine_mulmxE (w : {fsfun 'cV[R]_n ~> _}) (V : {fset 'cV[R]_n}) :
   (finsupp w `<=` V)%fset -> combine w = mat_fset V *m vect_fset V w.
 Proof.
 move=> le_wV; rewrite (combinewE le_wV) mulmx_sum_col.
-rewrite (reindex (@frank _ _)) /=; last first.
+rewrite (reindex (@frank _ _)) /=.
 + by apply/onW_bij/bij_frank.
 apply: eq_bigr=> x _; rewrite !mxE val_fnthK; congr (_ *: _).
 by rewrite -tr_row rowK trmxK val_fnthK.
@@ -1558,7 +1557,7 @@ apply: (iffP (in_map_polyP _ _ _)) => /= [[c ->]|[w le_wV ->]].
 + exists (vect_fset V w); first by rewrite (combine_mulmxE le_wV).
   rewrite in_polyI in_orthant in_hp /= -(rwP andP); split.
   - by apply/gev0P=> i; rewrite mxE ge0_fconvex.
-  - rewrite vdotC vdotr_const_mx1 (reindex (@frank _ _)) /=; last first.
+  - rewrite vdotC vdotr_const_mx1 (reindex (@frank _ _)) /=.
     * by apply/onW_bij/bij_frank.
     rewrite -[X in _==X](wgt1_fconvex w) (weightwE le_wV).
     by apply/eqP/eq_bigr=> i _; rewrite mxE val_fnthK.
@@ -1776,7 +1775,7 @@ move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
 - rewrite in_hp !(combinebE le_wb) vdot_sumDl => in_comb_hp.
   apply/in_polyEqP; split; last done.
   move => e e_in_supp; move: in_comb_hp; apply: contraTT.
-  rewrite notin_hp; last first.
+  rewrite notin_hp.
   + move: x x_in_P; apply/poly_leP/poly_of_base_subset_hs.
     exact: (fsubsetP le_wb).
   + move => notin_hp; rewrite eq_sym; apply/ltr_neq.
@@ -1786,7 +1785,7 @@ move => x_in_P; apply: (iffP idP) => [/in_polyEqP [in_hps _] |].
       by rewrite in_hs /=.
     * have e_in_base : e \in base by apply/(fsubsetP le_wb).
       exists [` e_in_base]%fset.
-      rewrite vdotZl ltr_pM2l; first done.
+      rewrite vdotZl ltr_pM2l; last done.
       by rewrite gt0_fconic.
 Qed.
 

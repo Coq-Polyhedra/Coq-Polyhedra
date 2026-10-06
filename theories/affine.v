@@ -13,7 +13,6 @@ Require Import extra_misc inner_product lrel.
 
 Import Order.Theory.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -926,7 +925,7 @@ rewrite /adim; case: ifPn => // V_neq0.
 have V'_neq0: V' != [affine0].
 - move: V_neq0; apply/contra_neq => V'_eq0.
   by rewrite V'_eq0 lex0 in sub; move/eqP: sub.
-rewrite ifF ?ltnS; last by apply/negbTE.
+rewrite ifF ?ltnS; first by apply/negbTE.
 by apply/dimvS/dirS.
 Qed.
 
@@ -941,7 +940,7 @@ rewrite {1}/adim; case: ifP.
   have V'_neq0: V' != [affine0].
     rewrite -!lt0x in V_neq0 *.
     by apply/lt_le_trans: V_sub_V'.
-  rewrite /adim ifF; last by apply/negbTE.
+  rewrite /adim ifF; first by apply/negbTE.
   move/succn_inj => adim_dir_eq.
   suff: dir V = dir V'.
   - case/affineN0: V_neq0 => x x_in.
@@ -954,7 +953,7 @@ Lemma sub_geq_adim V V' :
 Proof. (* RK *)
 move => V_sub_V' adimV_gte_adimV'; apply/eqP/contraT => V_neq_V'.
 by move/leqifP: (adim_leqif_eq V_sub_V'); rewrite ifF;
-  [rewrite ltnNge adimV_gte_adimV' | apply/negbTE].
+  [apply/negbTE | rewrite ltnNge adimV_gte_adimV'].
 Qed.
 
 Lemma sub_eq_adim V V' :
@@ -975,7 +974,7 @@ Qed.
 
 Lemma adim_line Ω d : adim [line d & Ω] = (d != 0).+1.
 Proof.
-rewrite /adim ifF; last by apply/negbTE/mk_affineN0.
+rewrite /adim ifF; first by apply/negbTE/mk_affineN0.
 by rewrite dir_mk_affine dim_vline.
 Qed.
 
@@ -1096,10 +1095,10 @@ Qed.
 Lemma adimT : (adim affineT = n.+1)%N.
 Proof. (* RK *)
 rewrite /adim ifF.
-- by rewrite dir_affineT dimvf /dim /= muln1.
 - apply/(contraFF _ (erefl false)).
   move/eqP/affine_eqP => aff_eq.
   by move: (aff_eq 0); rewrite in_affine0 in_affineT.
+- by rewrite dir_affineT dimvf /dim /= muln1.
 Qed.
 
 Lemma adimTP V : adim V = n.+1%N -> V = affineT.
@@ -1113,7 +1112,7 @@ Lemma adim_hp e :
   [hp e] `>` [affine0] -> adim [hp e] = ((e.1 == 0%R) + n)%N.
 Proof. (* RK *)
 move => hp_neq0.
-rewrite /adim ifF; last by apply/negbTE; move/andP: hp_neq0 => [? _].
+rewrite /adim ifF; first by apply/negbTE; move/andP: hp_neq0 => [? _].
 case: (boolP (e.1 == 0)) => [/eqP e1_eq0 | e1_neq0].
 - suff ->: [hp e] = affineT
     by rewrite dir_affineT dimvf /dim /= muln1 add1n.

@@ -15,7 +15,6 @@ Require Import extra_misc.
 Import Order.
 Import Order.Theory.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -70,7 +69,7 @@ Qed.
 
 Local Lemma meetKU (y x : T) : join x (meet x y) = x.
 Proof.
-rewrite /join (bigD1 x) /=; last first.
+rewrite /join (bigD1 x) /=.
 + by rewrite !le_def /= -meetA [meet y x]meetC meetA !meetxx !eqxx.
 rewrite (rwP eqP) -le_def; elim/big_ind: _.
 + by rewrite lex1.
@@ -100,7 +99,7 @@ Qed.
 Local Lemma joinA : associative join.
 Proof.
 move=> y x z; pose P t := [&& x <= t, y <= t & z <= t].
-rewrite [X in X = _]/join (eq_bigl P); last first.
+rewrite [X in X = _]/join (eq_bigl P).
 + by move=> t; rewrite ge_joinP andbCA.
 apply/esym; rewrite [X in X = _]/join [in LHS](eq_bigl P) //.
 + by move=> t; rewrite ge_joinP -andbA andbCA.
@@ -310,7 +309,7 @@ Lemma rank_morph_bij (f : L -> G) x :
   omorphism f -> bijective f -> rank (f x) = rank x.
 Proof.
 move=> morph_f bij_f; rewrite (rwP eqP) eqn_leq.
-rewrite rank_morph // ?andbT; last by apply/bij_inj.
+rewrite rank_morph // ?andbT; first by apply/bij_inj.
 case: bij_f => g fK gK; pose morph_g := can_omorphism fK gK morph_f.
 by apply: (leq_trans (rank_morph (f x) morph_g (can_inj gK))); rewrite fK.
 Qed.
@@ -536,12 +535,12 @@ Qed.
 Lemma graded_intv_rank (x y : '[< a; b >]) :
   x <= y -> ((vrank x).+1 < vrank y)%N -> exists z : '[< a; b >], x < z < y.
 Proof.
-rewrite /vrank -subSn ?intv_rankL // ltn_subLR; last first.
+rewrite /vrank -subSn ?intv_rankL // ltn_subLR.
 + by rewrite (leq_trans (intv_rankL x)).
 rewrite subnKC ?intv_rankL // => /graded_rank h /h [z rg_z].
 exists (insubd (\bot : '[< a; b >]) z).
 rewrite -!lt_val /insubd insubT //= intervalE.
-rewrite (le_trans (intervalPL (valP x))) //=; last by apply: ltW; case/andP: rg_z.
+rewrite (le_trans (intervalPL (valP x))) //=; first by apply: ltW; case/andP: rg_z.
 by rewrite (le_trans _ (intervalPR (valP y))) //= ltW //; case/andP: rg_z.
 Qed.
 

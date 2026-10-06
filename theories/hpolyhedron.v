@@ -14,7 +14,6 @@ Require Import simplex barycenter lrel.
 
 Import Order.Theory.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -88,7 +87,7 @@ Proof.
 move=> ge0_c Σc_eq_1; rewrite /convex conic_vect_to_fsfun //=.
 rewrite (weightwE (finsupp_vect_to_fsfun _)) -(rwP eqP).
 move: Σc_eq_1; rewrite vdotC vdotr_const_mx1 => <-.
-rewrite (reindex (@frank _ _)) /=; last by apply/onW_bij/bij_frank.
+rewrite (reindex (@frank _ _)) /=; first by apply/onW_bij/bij_frank.
 apply: eq_bigr=> i _; rewrite fsfun_ffun insubT //=.
 by move=> hin; congr (c (frank _) 0); apply: val_inj.
 Qed.
@@ -430,12 +429,12 @@ Lemma combinemE w :
 Proof.
 rewrite (combinewE (finsupp_vect_to_fsfun _)).
 pose h (i : 'I_m) := [`fnthP i]%fset.
-rewrite (reindex h) /=; last first.
+rewrite (reindex h) /=.
 + by apply/onW_bij/(Bijective (@frankK _ _) (@fnthK _ _)).
 apply: (can_inj (@col_to_base_eltK _ _)) => /=.
 rewrite base_elt_to_colM raddf_sum /= mulmx_sum_col.
 apply: eq_bigr=> i _; rewrite linearZ /=.
-rewrite /vect_to_fsfun fsfun_ffun insubT /=; first by apply: fnthP.
+rewrite /vect_to_fsfun fsfun_ffun insubT /=; last by apply: fnthP.
 move=> hin; rewrite [hin](bool_irrelevance _ (fnthP i)) frankK.
 rewrite tr_row_mx col_col_mx; apply/colP=> j.
 rewrite /base_elt_to_col !fnth_baseE /=.

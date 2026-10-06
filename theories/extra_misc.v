@@ -16,7 +16,6 @@ Import Order.Theory.
 
 Local Open Scope ring_scope.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -908,13 +907,13 @@ Lemma dim_add_line  (U : {vspace vT}) (v : vT) :
   v \notin U -> (\dim (U + <[ v ]>) = (\dim U).+1)%N.
 Proof.
 move => v_notin; rewrite dimv_disjoint_sum ?dim_vline -1?addn1.
-- have -> //=: (v != 0).
-  by move: v_notin; apply: contraNneq => ->; rewrite mem0v.
 - apply/eqP; rewrite -subv0; apply/subvP => x /memv_capP [x_in /vlineP [μ x_eq]].
   rewrite {}x_eq in x_in *.
   suff -> : μ = 0 by rewrite scale0r memv0.
   move: v_notin; apply: contraNeq => μ_neq0.
   by move/(memvZ μ^-1) : x_in; rewrite scalerA mulVf // scale1r.
+- have -> //=: (v != 0).
+  by move: v_notin; apply: contraNneq => ->; rewrite mem0v.
 Qed.
 
 Lemma dim_leqn (R : realFieldType) (n : nat) (U : {vspace 'cV[R]_n}) : (\dim U <= n)%nat.
@@ -1087,14 +1086,14 @@ move=> base_hB max_hB sub_B span_B hnE2 x [|b0 b1'] b2.
     rewrite B_eq -cat_cons cat_free.
     case/and3P => _ _ /directv_addP /eqP.
     rewrite -subv0; move/subvP=> /(_ y).
-    rewrite (_ : y \in _) => [/(_ isT)|].
-    * rewrite memv0=> /eqP y0.
-      move: (@free_not0 _ _ y _ free_hB).
-      rewrite B_eq -cat_cons mem_cat y_hb1' y0 eqxx; exact.
+    rewrite (_ : y \in _) => [|/(_ isT)].
     * rewrite memv_cap memv_span //= span_cons.
       suff ->: (<<b2>> = <<S2>>)%VS by rewrite -span_cons memv_span.
       apply/eqP; rewrite eqEsubv span_b2 sub_span //.
       exact: mem_subseq.
+    * rewrite memv0=> /eqP y0.
+      move: (@free_not0 _ _ y _ free_hB).
+      rewrite B_eq -cat_cons mem_cat y_hb1' y0 eqxx; exact.
 Qed.
 
 
@@ -1110,8 +1109,8 @@ case=> [|hB tB].
   apply/IH; rewrite ?sub0seq //.
   + apply/andP; rewrite nil_free; split=> //.
     rewrite (span_basis span_b) eqEsubv [X in _ && X]sub_span ?andbT.
-    * by rewrite -(span_basis span_b) span_nil sub0v.
     * by move=> x; rewrite in_cons=> ->; rewrite orbT.
+    * by rewrite -(span_basis span_b) span_nil sub0v.
   + move=> x b1 b2; case: b1=> //.
 - move=> + + /[dup] /(_ hB [::] tB erefl) [E1] [E2] [E_eq _ sub_tB hBnE2 span_tB].
   rewrite E_eq; case: E1 E_eq => /= [|E1h E1t].
@@ -1130,11 +1129,11 @@ case=> [|hB tB].
     rewrite -tE_eq; apply/IH; rewrite tE_eq.
     * apply/andP; move/basis_free: (base_B)=> ->; split=> //.
       rewrite (span_basis base_B) eqEsubv [X in _ && X]sub_span ?andbT.
+      - by move=> x xH; rewrite in_cons xH orbT.
       - rewrite -(span_basis base_B); apply/span_subvP.
         move=> x x_B; apply/memv_span; rewrite mem_cat.
         apply/orP; right; move: x x_B; apply/mem_subseq=> /=.
         by rewrite eqxx.
-      - by move=> x xH; rewrite in_cons xH orbT.
     * by rewrite -[X in subseq X _]cat0s cat_subseq ?sub0seq //= eqxx.
     * exact: (max_basis_cons_cat (v:=E1h)).
 Qed.
@@ -1501,9 +1500,9 @@ move=> le_le'.
 elim: s s'=> [|h t IH] [] //= h' t' /succn_inj len_tt' r_nth.
 move: (IH _ len_tt').
 case: t t' len_tt' r_nth {IH}=> [|a l] [] //= a' l' _ r_nth ->.
+- by move=> k; rewrite -ltnS=> /r_nth /=.
 - move: (r_nth 0%nat (ltn0Sn _)) (r_nth 1%nat)=> /=; rewrite ltnS ltn0Sn.
   by move/le_le'=> + /(_ isT); move=> /[apply] ->.
-- by move=> k; rewrite -ltnS=> /r_nth /=.
 Qed.
 
 Lemma uniq_map_inj {T T': eqType} (s : seq T) (f : T -> T'):
@@ -1703,7 +1702,7 @@ Lemma map_in_undup' {T T' : eqType} (s : seq T) (f : T -> T'):
   undup' [seq f x | x <- s] = [seq f x | x <- undup' s].
 Proof.
 elim: s=> //= h t IH inj_f; congr cons.
-rewrite IH; last (move=> ?? /(mem_body h) + /(mem_body h); exact: inj_f).
+rewrite IH; first (move=> ?? /(mem_body h) + /(mem_body h); exact: inj_f).
 have /=: {in undup' (h :: t) &, injective f} by
   move=> ??; rewrite !mem_undup'; exact: inj_f.
 elim: (undup' t)=> //= a l.

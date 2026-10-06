@@ -19,7 +19,6 @@ From mathcomp Require Import bigop ssralg ssrnum zmodp matrix vector fingroup pe
 Require Import extra_matrix.
 Import Order.Theory.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -270,10 +269,10 @@ Lemma limg_orthv_fun V : limg (orth_fun V) = V.
 Proof.
 have h: (orth_fun V @: V = V)%VS.
 - apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
-  + by rewrite (limg_dim_eq (direct_orthvP _)).
   + apply/subvP => x /memv_imgP [y _ ->].
     rewrite lfunE /=; apply/memv_suml => i _.
     apply/memvZ/vbasis_mem/mem_nth; by rewrite size_tuple.
+  + by rewrite (limg_dim_eq (direct_orthvP _)).
 - apply/subv_anti; apply/andP; split.
   + apply/subvP => x /memv_imgP [y _ ->].
     rewrite lfunE /=; apply/memv_suml => i _.
@@ -300,10 +299,10 @@ Qed.
 Lemma orthK : involutive orthv.
 Proof.
 move => V; symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
-- rewrite 2!dim_orthv subKn //.
-  by move: (dimvS (subvf V)); rewrite dimvf /dim /= muln1.
 - apply/subvP => x x_in_V; apply/orthvP => y /orthvP/(_ _ x_in_V).
   by rewrite vdotC.
+- rewrite 2!dim_orthv subKn //.
+  by move: (dimvS (subvf V)); rewrite dimvf /dim /= muln1.
 Qed.
 
 Lemma orthS : {mono orthv : V W /~ (V <= W)%VS }.

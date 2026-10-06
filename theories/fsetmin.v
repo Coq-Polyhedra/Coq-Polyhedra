@@ -5,7 +5,6 @@ From mathcomp Require Import boot order algebra finmap.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Unset SsrOldRewriteGoalsOrder.
 
 (* -------------------------------------------------------------------- *)
 Import Order.Theory Order.TTheory Num.Theory.

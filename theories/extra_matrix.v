@@ -10,7 +10,6 @@
 From mathcomp Require Import boot order ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
 Require Import extra_misc.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -374,7 +373,7 @@ Proof.
 apply: (castmx_inj (em := emn) (en := (erefl m))).
 rewrite castmx_mul castmx_id.
 rewrite -[X in X *m _](castmx_id (erefl _, erefl _)) -castmx_mul.
-rewrite mulmxV; last exact: qinvmx_unitmx.
+rewrite mulmxV; first exact: qinvmx_unitmx.
 apply/matrixP => i j.
 - rewrite 2!castmxE /= 2!cast_ord_id esymK 2!mxE.
   do 2![apply: congr1]; apply/eqP/eqP => [-> | <-];
@@ -384,7 +383,7 @@ Qed.
 Lemma qmulVmx : qinvmx *m M = 1%:M.
 Proof.
 rewrite -[X in _ *m X](castmx_id (erefl _, erefl _)) -mulmx_cast.
-by rewrite mulVmx; last exact: qinvmx_unitmx.
+by rewrite mulVmx; first exact: qinvmx_unitmx.
 Qed.
 
 Lemma qmulKmx (p: nat) (x: 'M_(n,p)) : qinvmx *m (M *m x) = x.
