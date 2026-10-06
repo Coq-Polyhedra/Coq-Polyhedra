@@ -8,6 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 Require Import Recdef.
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp.
 From mathcomp Require Import matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product extra_matrix.
@@ -35,38 +36,22 @@ Context (R : realFieldType) (n : nat).
 Record pointedPoly : predArgType :=
   Pointed { pointed_poly :> 'poly[R]_n; _ : pointed pointed_poly }.
 
-Canonical pointedPoly_subType :=
-  Eval hnf in [subType for pointed_poly].
-Definition pointedPoly_eqMixin :=
-  Eval hnf in [eqMixin of pointedPoly by <:].
-Canonical pointedPoly_eqType :=
-  Eval hnf in EqType pointedPoly pointedPoly_eqMixin.
-Definition pointedPoly_choiceMixin :=
-  Eval hnf in [choiceMixin of pointedPoly by <:].
-Canonical pointedPoly_choiceType :=
-  Eval hnf in ChoiceType pointedPoly pointedPoly_choiceMixin.
+HB.instance Definition _ := [isSub for pointed_poly].
+HB.instance Definition _ := [Equality of pointedPoly by <:].
+HB.instance Definition _ := [Choice of pointedPoly by <:].
 
-Definition pointedPoly_of of phant R := pointedPoly.
-Identity Coercion type_pointedPoly_of : pointedPoly_of >-> pointedPoly.
 End PointedType.
 
-Bind Scope ring_scope with pointedPoly_of.
 Bind Scope ring_scope with pointedPoly.
 
 Reserved Notation "''pointed[' R ]_ n"
   (at level 8, n at level 2, format "''pointed[' R ]_ n").
 
-Notation "''pointed[' R ]_ n" := (@pointedPoly_of _ n (Phant R)).
+Notation "''pointed[' R ]_ n" := (@pointedPoly R n).
 
 Section PointedTheory.
 Context {R : realFieldType} (n : nat).
 
-Canonical pointedPoly_of_subType :=
-  Eval hnf in [subType of 'pointed[R]_n].
-Canonical pointedPoly_of_eqType :=
-  Eval hnf in [eqType of 'pointed[R]_n].
-Canonical pointedPoly_of_choiceType :=
-  Eval hnf in [choiceType of 'pointed[R]_n].
 
 Lemma pointed_slice (P : 'pointed[R]_n) e : pointed (slice e P).
 Proof. by apply/(pointedS _ (valP P))/le_slice. Qed.
@@ -82,38 +67,22 @@ Context (R : realFieldType) (n : nat).
 Record compactPoly : predArgType :=
   mkCompact { compact_poly :> 'pointed[R]_n; _ : compact compact_poly }.
 
-Canonical compactPoly_subType :=
-  Eval hnf in [subType for compact_poly].
-Definition compactPoly_eqMixin :=
-  Eval hnf in [eqMixin of compactPoly by <:].
-Canonical compactPoly_eqType :=
-  Eval hnf in EqType compactPoly compactPoly_eqMixin.
-Definition compactPoly_choiceMixin :=
-  Eval hnf in [choiceMixin of compactPoly by <:].
-Canonical compactPoly_choiceType :=
-  Eval hnf in ChoiceType compactPoly compactPoly_choiceMixin.
+HB.instance Definition _ := [isSub for compact_poly].
+HB.instance Definition _ := [Equality of compactPoly by <:].
+HB.instance Definition _ := [Choice of compactPoly by <:].
 
-Definition compactPoly_of of phant R := compactPoly.
-Identity Coercion type_compactPoly_of : compactPoly_of >-> compactPoly.
 End CompactType.
 
-Bind Scope ring_scope with compactPoly_of.
 Bind Scope ring_scope with compactPoly.
 
 Reserved Notation "''compact[' R ]_ n"
   (at level 8, n at level 2, format "''compact[' R ]_ n").
 
-Notation "''compact[' R ]_ n" := (@compactPoly_of _ n (Phant R)).
+Notation "''compact[' R ]_ n" := (@compactPoly R n).
 
 Section CompactTheory.
 Context {R : realFieldType} (n : nat).
 
-Canonical compactPoly_of_subType :=
-  Eval hnf in [subType of 'compact[R]_n].
-Canonical compactPoly_of_eqType :=
-  Eval hnf in [eqType of 'compact[R]_n].
-Canonical compactPoly_of_choiceType :=
-  Eval hnf in [choiceType of 'compact[R]_n].
 
 End CompactTheory.
 
@@ -135,13 +104,8 @@ Context (R : realFieldType) (n : nat).
 
 Implicit Types P Q : 'poly[R]_n.
 
-Definition pointedPoly_porderMixin :=
-  [porderMixin of @pointedPoly R n by <:].
-Canonical pointedPoly_porderType :=
-  Eval hnf in POrderType ring_display (@pointedPoly R n) pointedPoly_porderMixin.
-
-Definition pointedPoly_of_porderType :=
-  Eval hnf in [porderType of 'pointed[R]_n].
+HB.instance Definition _ :=
+  Order.SubChoice_isSubPOrder.Build _ _ _ ring_display (@pointedPoly R n).
 End PolyPO.
 
 (* -------------------------------------------------------------------- *)
@@ -169,15 +133,9 @@ Qed.
 
 Inductive poly_base :=
   PolyBase { pval :> 'poly[R]_n ; _ : [pval has \base base]}.
-Canonical poly_base_subType := [subType for pval].
-Definition poly_base_eqMixin :=
-  Eval hnf in [eqMixin of poly_base by <:].
-Canonical poly_base_eqType :=
-  Eval hnf in EqType poly_base poly_base_eqMixin.
-Definition poly_base_choiceMixin :=
-  Eval hnf in [choiceMixin of poly_base by <:].
-Canonical poly_base_choiceType :=
-  Eval hnf in ChoiceType poly_base poly_base_choiceMixin.
+HB.instance Definition _ := [isSub for pval].
+HB.instance Definition _ := [Equality of poly_base by <:].
+HB.instance Definition _ := [Choice of poly_base by <:].
 
 (*
 Definition poly_base_porderMixin := [porderMixin of poly_base by <:].
@@ -276,12 +234,8 @@ case: {-}_/idP => [P_prop0 /=| /negP h _].
   by rewrite /=; apply/val_inj => /=; move/eqP: h ->.
 Qed.
 
-Definition poly_base_countMixin := CanCountMixin set_of_poly_baseK.
-Canonical poly_base_countType := Eval hnf in CountType {poly base} poly_base_countMixin.
-Definition poly_base_finMixin := CanFinMixin set_of_poly_baseK.
-Canonical poly_base_finType := Eval hnf in FinType {poly base} poly_base_finMixin.
-Canonical poly_base_subFinType := [subFinType of {poly base}].
-
+HB.instance Definition _ := CanIsCountable set_of_poly_baseK.
+HB.instance Definition _ : isFinite {poly base} := CanIsFinite set_of_poly_baseK.
 Lemma poly_of_baseP :
   ['P(base) has \base base].
 Proof.
@@ -371,9 +325,8 @@ move => P; rewrite /of_poly; symmetry; apply/eqP.
 exact: (xchooseP (poly_has_base _)).
 Qed.
 
-Definition base_quot_class := QuotClass of_polyK.
-
-Canonical base_quot := QuotType 'poly[R]_n base_quot_class.
+#[export]
+HB.instance Definition _ := isQuotient.Build _ 'poly[R]_n of_polyK.
 
 Definition repr_base (P : 'poly[R]_n) := (tag (repr P)).
 Definition repr_poly_base (P : 'poly[R]_n) : {poly (repr_base P)} := tagged (repr P).
@@ -385,13 +338,9 @@ Qed.
 (*Canonical poly_base_repr_baseP (P : 'poly[R]_n) := PolyBase (repr_baseP P).*)
 
 End BaseQuotient.
-Module Import Exports.
-Canonical base_quot.
-(*Canonical poly_base_repr_baseP.*)
-End Exports.
 End BaseQuotient.
 
-Export BaseQuotient.Exports.
+HB.export BaseQuotient.
 
 Notation "\repr_base P" := (BaseQuotient.repr_base P) (at level 40).
 Notation "\repr P" := (BaseQuotient.repr_poly_base P) (at level 40).
@@ -636,12 +585,8 @@ End Face.
 Section FaceSetOrder.
 Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
 
-Definition face_set_porderMixin :=
-  Eval hnf in [porderMixin of face_set P by <:].
-Canonical face_set_porderType :=
-  Eval hnf in POrderType ring_display (face_set P) face_set_porderMixin.
-Canonical face_set_finPOrderType :=
-  Eval hnf in [finPOrderType of face_set P].
+HB.instance Definition _ :=
+  Order.SubChoice_isSubPOrder.Build _ _ _ ring_display (face_set P).
 End FaceSetOrder.
 
 (* -------------------------------------------------------------------- *)
@@ -660,7 +605,6 @@ Definition lteEfaces := (leEfaces, ltEfaces).
 End FacesSetOrderTheory.
 
 (* -------------------------------------------------------------------- *)
-Import MeetBTFinMixin.Exports.
 
 Section FacesLattice.
 Context (R : realFieldType) (n : nat) (P : 'poly[R]_n).
@@ -707,27 +651,8 @@ Proof. by apply: le0x. Qed.
 Lemma fpI1 (F : face_set P) : F <= fp1.
 Proof. by apply/face_subset/valP. Qed.
 
-Definition polyFaces_latticeMixin :=
-   MeetBTFinMixin fp_le_def fpIC fpIA fpII fp0I fpI1.
-
-Canonical face_set_bPOrderType := Eval hnf in BPOrderType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_tPOrderType := Eval hnf in TPOrderType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_meetSemilatticeType :=
-  Eval hnf in MeetSemilatticeType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_bMeetSemilatticeType := [bMeetSemilatticeType of (face_set P)].
-Canonical face_set_tMeetSemilatticeType := [tMeetSemilatticeType of (face_set P)].
-Canonical face_set_tbMeetSemilatticeType := [tbMeetSemilatticeType of (face_set P)].
-Canonical face_set_joinSemilatticeType :=
-  Eval hnf in JoinSemilatticeType (face_set P) polyFaces_latticeMixin.
-Canonical face_set_bJoinSemilatticeType := [bJoinSemilatticeType of (face_set P)].
-Canonical face_set_tJoinSemilatticeType := [tJoinSemilatticeType of (face_set P)].
-Canonical face_set_tbJoinSemilatticeType := [tbJoinSemilatticeType of (face_set P)].
-Canonical face_set_latticeType := [latticeType of (face_set P)].
-Canonical face_set_blatticeType := [bLatticeType of (face_set P)].
-Canonical face_set_tlatticeType := [tLatticeType of (face_set P)].
-Canonical face_set_tblatticeType := [tbLatticeType of (face_set P)].
-Canonical face_set_finLatticeType := [finLatticeType of (face_set P)].
-Canonical face_set_finTBLatticeType := [finTBLatticeType of (face_set P)].
+HB.instance Definition _ :=
+  FinPOrder_isMeetBTLattice.Build _ (face_set P) fp_le_def fpIC fpIA fpII fp0I fpI1.
 End FacesLattice.
 
 Section Active.
@@ -1013,8 +938,7 @@ move/coord_span ->.
 apply/poly_leP => x x_in_P; rewrite inE in_hp; apply/eqP.
 rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : lrel[R]_n => x.1)) //.
 rewrite (big_morph (id1 := 0) (op1 := +%R) (fun x : lrel[R]_n => x.2)) //=.
-rewrite vdot_sumDl; under eq_big do [| rewrite /= vdotZl].
-apply/eq_bigr => i _; apply: congr1.
+rewrite vdot_sumDl; apply/eq_bigr => i _; rewrite vdotZl; apply: congr1.
 apply/eqP; rewrite -in_hp.
 move: x x_in_P; apply/(eq_subr affE)/poly_leP/poly_base_subset_hp.
 by rewrite mem_nth ?size_tuple.
@@ -1809,10 +1733,8 @@ rewrite leEfaces => /(graded (valP _) (valP _)) h /h => [[F] F_in F_lt].
 by exists ([` F_in]%fset); rewrite !ltEfaces.
 Qed.
 
-Definition face_set_gradedFinLatticeMixin P :=
-  GradedFinLatticeMixin (dimfs0 P) (@homo_dim P) (@dim_graded P).
-Canonical face_set_gradedFinLatticeType P :=
-  Eval hnf in GradedFinLatticeType (face_set P) (face_set_gradedFinLatticeMixin P).
+HB.instance Definition _ P :=
+  FinTBLattice_isGraded.Build _ (face_set P) (dimfs0 P) (@homo_dim P) (@dim_graded P).
 
 Lemma atom_faceP (P : 'pointed[R]_n) (F : face_set P) :
   reflect
@@ -1867,7 +1789,7 @@ rewrite leEfaces [val F]conv_vertex_set; last first.
 + by apply/(subset_compact (valP P))/(lex1 F).
 apply: conv_subset => /= c cF.
 have: c \in fsval [` h _ cF]%fset by rewrite in_pt.
-apply: poly_leP; rewrite -leEfaces join_sup //.
+apply: poly_leP; rewrite -leEfaces joins_sup //.
 by apply/imsetP; exists [` cF]%fset => //; apply: val_inj.
 Qed.
 
@@ -1936,7 +1858,7 @@ Proof.
 case: P F; case.
 elim/non_redundant_baseW => base non_redundant P_pointed P_compact /=.
 set P := Pointed P_pointed => F.
-set L := [gradedFinLatticeType of face_set P].
+set L := (face_set P : gradedFinLatticeType _).
 case/altP: (F =P 0)%O => [-> | F_neq0]; last first.
 apply/coatomisticP.
 case/altP: (F =P 1)%O => [-> | F_neq_P].
@@ -2148,20 +2070,33 @@ Qed.
 Lemma face_set_segm (v v' : 'cV[R]_n) :
   face_set [segm v & v'] = [fset [poly0]; [pt v]%:PH; [pt v']%:PH; [segm v & v']]%fset.
 Proof.
+(* Membership in the 4-element set is proved with views: an unrestricted *)
+(* `rewrite inE` on 'poly elements is extremely slow (see the port notes). *)
+have m1 (a b c d : 'poly[R]_n) : a \in [fset a; b; c; d]%fset.
+  by apply/fsetUP; left; apply/fsetUP; left; apply/fset1UP; left.
+have m2 (a b c d : 'poly[R]_n) : b \in [fset a; b; c; d]%fset.
+  by apply/fsetUP; left; apply/fsetUP; left; apply/fset1UP; right; apply/fset1P.
+have m3 (a b c d : 'poly[R]_n) : c \in [fset a; b; c; d]%fset.
+  by apply/fsetUP; left; apply/fsetUP; right; apply/fset1P.
+have m4 (a b c d : 'poly[R]_n) : d \in [fset a; b; c; d]%fset.
+  by apply/fsetUP; right; apply/fset1P.
 set S := conv _.
 apply/eqP; rewrite eqEfsubset; apply/andP; split; last first.
-- apply/fsubsetP => F; rewrite !inE -!orbA; move/or4P.
-  case; move/eqP ->;
-    by rewrite ?poly0_face_set ?face_set_self -?in_vertex_setP ?vertex_set_segm ?inE ?eq_refl ?orbT.
-- apply/fsubsetP => F F_face; rewrite !inE -!orbA.
+- apply/fsubsetP => F.
+  case/fsetUP => [/fsetUP[/fset1UP[->|/fset1P ->]|/fset1P ->]|/fset1P ->].
+  + exact: poly0_face_set.
+  + by rewrite -in_vertex_setP vertex_set_segm; apply/fset1UP; left.
+  + by rewrite -in_vertex_setP vertex_set_segm; apply/fset1UP; right; apply/fset1P.
+  + exact: face_set_self.
+- apply/fsubsetP => F F_face.
   case: {2}(\pdim F) (erefl (\pdim F)).
-  + by move/dim_eq0 ->; rewrite eq_refl.
+  + by move/dim_eq0 ->; apply: m1.
   + case. move/(face_dim1 F_face) => [x ->].
-    by rewrite vertex_set_segm !inE => /orP; case => /eqP ->; rewrite eq_refl /= ?orbT.
+    by rewrite vertex_set_segm => /fset1UP[|/fset1P] ->; [apply: m2 | apply: m3].
   + case. move => dimF2.
     have /(face_dim_geq F_face) ->: (\pdim F >= \pdim S)%N.
     * by rewrite dimF2 dim_segm; apply/(leq_ltn_trans (leq_b1 _)).
-    * by rewrite eq_refl !orbT.
+    * by apply: m4.
   + move => k dimF_eq; move: (face_dim_leqif_eq F_face).1; rewrite dim_segm dimF_eq ltnS.
     by move/leq_trans/(_ (leq_b1 _)); rewrite -ltn_predRL /= ltn0.
 Qed.
@@ -2248,7 +2183,7 @@ apply/fsubset_fsubsetP => i; rewrite inE.
 move/orP; case => [| i_in_base];
   first by rewrite in_fset1 => /eqP -> _; rewrite inE in_fset1 eq_refl.
 apply/contraTT; rewrite inE negb_or => /andP [_].
-rewrite in_active // => /poly_lePn => [[x] x_in_F x_notin_hp].
+rewrite [in X in X -> _]in_active // => /poly_lePn => [[x] x_in_F x_notin_hp].
 case: (boolP (x \in [hs -e0])) => [x_in | /hsN_subset x_in].
 - move: (vf_L_other_pt F_in_L dimF_gt1) => [w w_in_F w_notin].
   move: (hp_itv x_in w_notin) => [α α01].
@@ -2519,7 +2454,7 @@ pose g y := xchoose (f_surj' y); exists g.
 Qed.
 
 (*
-Lemma fin_joinE (disp : unit) (L : finLatticeType disp) (x y : L) :
+Lemma fin_joinE (disp : Order.disp_t) (L : finLatticeType disp) (x y : L) :
   (x `|` y = \meet_(z : L | (z >= x) && (z >= y)) z)%O.
 Proof.
 apply/le_anti/andP; split.
@@ -2527,7 +2462,7 @@ apply/le_anti/andP; split.
 - by apply/meets_inf; rewrite leUl leUr.
 Qed.*)
 
-Lemma inj_mono (disp : unit)  (L L' : latticeType disp) (f : L -> L') :
+Lemma inj_mono (disp : Order.disp_t)  (L L' : latticeType disp) (f : L -> L') :
   injective f -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> {mono f : x y / x <= y}%O.
 Proof.
 move => f_inj f_meet x y.
@@ -2540,7 +2475,7 @@ Lemma bij_on_bij (I J : Type) (f : I -> J) (P : pred J) :
 Proof.
 by move => [g fgK gfK]; exists g => ??; [ apply/fgK | apply/gfK ].*)
 
-Lemma bij_omorphism (disp : unit) (L L' : finLatticeType disp) (f : L -> L') :
+Lemma bij_omorphism (disp : Order.disp_t) (L L' : finLatticeType disp) (f : L -> L') :
   bijective f -> {morph f : x y / (x `&` y)%O >-> (x `&` y)%O} -> omorphism f.
 Proof.
 case => g fgK gfK f_meet; split => //.
@@ -2552,7 +2487,7 @@ Qed.
 
 Lemma vertex_figure (P : 'compact[R]_n) (x : face_set P) : atom x ->
   exists Q : 'compact[R]_n,
-  exists f : {omorphism '[< x; 1 >] -> face_set Q}%O, bijective f.
+  exists f : {lmorphism '[< x; 1%O >] -> face_set Q}, bijective f.
 Proof.
 move => x_atom.
 pose v := vtx_of_atom x_atom.
@@ -2578,11 +2513,11 @@ Context (R : realFieldType) (n : nat) (P : 'compact[R]_n).
 
 Lemma closed_by_interval_r (x : face_set P) :
    exists Q : 'compact[R]_n,
-   exists2 f : {omorphism '[< x; 1 >] -> face_set Q},
+   exists2 f : {lmorphism '[< x; 1%O >] -> face_set Q},
      bijective f & \pdim P = (\pdim Q + rank x)%N.
 Proof.
 elim/rank_ind: x => /= x; case: (x =P 0) => [-> _|/eqP nz_x ih].
-+ pose h := omorph_full_intv_val [tbLatticeType of face_set P].
++ pose h := omorph_full_intv_val (face_set P : tbLatticeType _).
   exists P, (TBOMorphism h); first by apply: bij_full_intv_val.
   by rewrite rank0 addn0.
 case: (graded_rankS (x := x)); first by rewrite rank_gt0 lt0x.
@@ -2590,8 +2525,8 @@ move=> y lt_y_x /esym rkxE; case: (ih y _); first by rewrite rkxE.
 move=> Q [f bij_f rkPE]; set I := '[< f x%:I; 1 >].
 case: (@vertex_figure R n Q (f x%:I)).
 + rewrite atomE.
-  set L := [gradedFinLatticeType of '[<y;1>]].
-  rewrite (@rank_morph_bij _ _ L) //; last by case: {+}f.
+  set L := ('[<y;1>] : gradedFinLatticeType _).
+  rewrite (@rank_morph_bij _ _ L) //; last by apply: lmorphismP.
   by rewrite intv_rankE /= rkxE subSn // subnn.
 move=> T [g bij_g]; exists T.
 set h : _ -> face_set Q := fun (z : '[<x; 1>]) => f (z%:I_[< <~ y ; >]).
@@ -2600,10 +2535,10 @@ have hcodom z : h z \in interval (f x%:I) 1.
   by rewrite leEsub /= (intervalPL (valP z)).
 pose k (z : '[<x; 1>]) : face_set T := g (Interval (hcodom z)).
 have morph_k: omorphism k; first apply/omorphismP=> z1 z2.
-+ rewrite -omorphI; congr (g _); apply: val_inj => /=.
-  by rewrite /h omorphI /= -omorphI; congr (f _); apply/val_inj.
-+ rewrite -omorphU; congr (g _); apply: val_inj => /=.
-  by rewrite /h omorphU /= -omorphU; congr (f _); apply/val_inj.
++ rewrite -(omorphI g); congr (g _); apply: val_inj => /=.
+  by rewrite /h widdenLI (omorphI f) /= -(omorphI f); congr (f _); apply/val_inj.
++ rewrite -(omorphU g); congr (g _); apply: val_inj => /=.
+  by rewrite /h widdenLU (omorphU f) /= -(omorphU f); congr (f _); apply/val_inj.
 + have bij_k: bijective k.
   apply: bij_comp => //; case: (bij_f) => fI fK Kf.
   set hI := fun (z : '[<f x%:I; 1>]) => fI (val z).
@@ -2627,7 +2562,7 @@ Qed.
 
 Lemma closed_by_interval (x y : face_set P) : (x <= y)%O ->
    exists Q : 'compact[R]_n,
-   exists2 f : {omorphism '[< x; y >] -> face_set Q},
+   exists2 f : {lmorphism '[< x; y >] -> face_set Q},
      bijective f & rank y = (\pdim Q + rank x)%N.
 Proof.
 case: (closed_by_interval_r x) => Q [f bij_f dimPE] le_xy.
@@ -2663,7 +2598,7 @@ have morph_g: omorphism g.
   by apply: val_inj => /=; rewrite widdenRI omorphI.
 exists (Compact cI), (OMorphism morph_g) => //=.
 pose J : 'pointed[R]_n := Pointed (compact_pointed cI).
-pose JL := [gradedFinLatticeType of face_set J].
+pose JL := (face_set J : gradedFinLatticeType _).
 have ->: \pdim (fsval I) = rank (g 1 : JL).
 + set og := bij_omorphism_tbomorphism bij_g morph_g.
   by have /= -> := omorph1 (TBOMorphism og).
@@ -2673,7 +2608,7 @@ Qed.
 End ClosednessByInterval.
 
 (* -------------------------------------------------------------------- *)
-Global Instance expose_lexx (disp : unit) (L : porderType disp) (x : L) :
+Global Instance expose_lexx (disp : Order.disp_t) (L : porderType disp) (x : L) :
   expose (x <= x)%O := Expose (lexx x).
 
 (* -------------------------------------------------------------------- *)
@@ -2691,10 +2626,13 @@ Proof.
 move=> rkyE le_xy; case: (closed_by_interval le_xy)=> [Q] [f bij_f].
 rewrite {}rkyE -addn2 addnC => /addIn /esym.
 case/dim2P => [|/= z1 [z2] QE ne_z]; first by case: {+}Q.
+(* Views rather than inE: rewriting with inE on 'poly elements is slow.  *)
 have hz1: [pt z1]%:PH \in face_set Q.
-+ by rewrite QE face_set_segm !inE eqxx !(orbT, orTb).
++ rewrite QE face_set_segm.
+  by apply/fsetUP; left; apply/fsetUP; left; apply/fset1UP; right; apply/fset1P.
 have hz2: [pt z2]%:PH \in face_set Q.
-+ by rewrite QE face_set_segm !inE eqxx !(orbT, orTb).
++ rewrite QE face_set_segm.
+  by apply/fsetUP; left; apply/fsetUP; right; apply/fset1P.
 case: (bij_f) => /= fI fK Kf.
 pose y1 := fI [` hz1]%fset; pose y2 := fI [` hz2]%fset.
 exists (val y1), (val y2); split; first move=> z.
@@ -2706,31 +2644,29 @@ exists (val y1), (val y2); split; first move=> z.
   rewrite -(mem_map (f := val \o f)); last first.
   * by apply/inj_comp; [apply/val_inj | apply/(can_inj fK)].
   have /= := valP (f z); rewrite [in X in _ \in X -> _]QE.
-  rewrite face_set_segm ![in X in X -> _]inE -!orbA.
-  rewrite mem_seq4 -[X in _ -> X](rwP or4P) => /or4P[] /eqP->.
+  rewrite face_set_segm mem_seq4 -[X in _ -> X](rwP or4P).
+  case/fsetUP => [/fsetUP[/fset1UP[|/fset1P]|/fset1P]|/fset1P] ->.
   * constructor 1; have ->: x%:I_[<x; y>] = 0 by apply: val_inj.
-    case: {+}f bij_f => /= g morph_g bij_g.
-    set h := bij_omorphism_tbomorphism bij_g morph_g.
+    set h := bij_omorphism_tbomorphism bij_f (lmorphismP f).
     by have /= -> := (omorph0 (TBOMorphism h)).
   * by constructor 3; rewrite Kf.
   * by constructor 4; rewrite Kf.
   * constructor 2; have ->: y%:I_[<x; y>] = 1 by apply: val_inj.
-    case: {+}f bij_f => /= g morph_g bij_g.
-    set h := bij_omorphism_tbomorphism bij_g morph_g.
+    set h := bij_omorphism_tbomorphism bij_f (lmorphismP f).
     by have /= -> := (omorph1 (TBOMorphism h)); rewrite -QE.
 + have: rank y1 = (rank x%:I_[<x; y>]).+1; last first.
   * rewrite {1 2}/rank /= /vrank /= subnn -[in X in _ -> X]addn1 => <-.
     rewrite subnKC //; apply/le_homo_rank/(intervalPL (valP y1)).
   rewrite (_ : x%:I = 0) ?rank0 /y1; last by apply: val_inj.
   (rewrite rank_morph_bij; last by exists f); last first.
-  * by apply: (inv_is_omorphism fK Kf); case: {+}(f).
+  * by apply: (inv_is_omorphism fK Kf); apply: lmorphismP.
   by rewrite /rank /= dim_pt.
 + have: rank y2 = (rank x%:I_[<x; y>]).+1; last first.
   * rewrite {1 2}/rank /= /vrank /= subnn -[in X in _ -> X]addn1 => <-.
     rewrite subnKC //; apply/le_homo_rank/(intervalPL (valP y2)).
   rewrite (_ : x%:I = 0) ?rank0 /y1; last by apply: val_inj.
   (rewrite rank_morph_bij; last by exists f); last first.
-  * by apply: (inv_is_omorphism fK Kf); case: {+}(f).
+  * by apply: (inv_is_omorphism fK Kf); apply: lmorphismP.
   by rewrite /rank /= dim_pt.
 + by apply: (valP y1).
 + by apply: (valP y2).
@@ -3094,7 +3030,6 @@ move: (x_feas (fsval i))=> /(_ (sub_IJ _ (fsvalP i))).
 by rewrite in_hp=> /eqP ->.
 Qed.
 
-
 Lemma in_polyEq_span (base I: base_t[R,n]) x :
   reflect (x \in 'P(base) /\ (forall e, e \in <<I>>%VS -> x \in [hp e])) 
   (x \in 'P^=(base; I)).
@@ -3147,7 +3082,7 @@ apply/(iffP idP).
     by apply: (@fsubset_incl _ _ I).
   + apply/le_anti/andP; split.
     * apply/polyEq_antimono/fsubsetP=> e.
-      by case/imfsetP=> /= e' _ ->.
+      by case/imfsetP=> /= e' _ ->; apply: fsvalP.
     * apply/poly_leP=> z /in_polyEq_span [z_base z_span].
       apply/in_polyEq_span; split=> // e.
       rewrite span_IJ; exact: z_span.
@@ -3181,7 +3116,6 @@ move/face_set_of_face: Q_face=> ->; rewrite !inE -in_vertex_setP x_vtx /=.
 by apply/poly_leP=> z; rewrite in_pt=> /eqP ->.
 Qed.
 
-
 End Extra.
 
 Section Facets.
@@ -3212,7 +3146,6 @@ case=> i [i_base] _ ->; apply/imfsetP=> /=.
 by exists [`i_base]%fset.
 Qed.
 
-
 Lemma facets_le {base : base_t[R,n]}:
   (#|` facets 'P(base) | <= #|` base|)%nat.
 Proof.
@@ -3229,7 +3162,6 @@ apply/(leq_trans (n:=#|` mk_non_redundant_base base|)).
   move/MkNonRedundantBase.mk_nonredundant_base_subset.
   by rewrite cats0.
 Qed.
-
 
 End Facets.
 
