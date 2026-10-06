@@ -14,12 +14,24 @@
 
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 From Bignums Require Import BigQ.
-From Coq Require Import Uint63 PArray PArith PeanoNat.
+From Stdlib Require Import Uint63 PArith PeanoNat.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc inner_product vector_order.
 Require Import extra_array extra_int refinement.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
 Import Order.Theory.
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -166,7 +178,7 @@ rewrite /Z2int; case Ex: x; case Ey: y=> //.
 { split=>_; [by rewrite /BinInt.Z.le|].
   apply: (@le_trans _ _ 0%R); [apply Num.Theory.oppr_le0|apply ltW].
   exact/ssrnat.ltP/Pos2Nat.is_pos. }
-rewrite Num.Theory.ler_opp2; split.
+rewrite Num.Theory.lerN2; split.
 { rewrite /BinInt.Z.le /BinInt.Z.compare /Num.Def.ler /= => /ssrnat.leP.
   by rewrite -Pos.compare_antisym -Pos2Nat.inj_le -Pos.compare_le_iff. }
 rewrite /BinInt.Z.le /BinInt.Z.compare /Num.Def.ler /=.
@@ -421,9 +433,9 @@ rewrite /BigQ.lt.
 case: (BigQ.to_Q p) => np dp {p}.
 case: (BigQ.to_Q q) => nq dq {q}.
 rewrite !Z2int_Qred.
-rewrite Num.Theory.ltr_pdivr_mulr ?ltr0z /=;
+rewrite Num.Theory.ltr_pdivrMr ?ltr0z /=;
   last exact/ssrnat.ltP/Pos2Nat.is_pos.
-rewrite GRing.mulrAC Num.Theory.ltr_pdivl_mulr ?ltr0z; 
+rewrite GRing.mulrAC Num.Theory.ltr_pdivlMr ?ltr0z; 
   last exact/ssrnat.ltP/Pos2Nat.is_pos.
 rewrite !nat_of_pos_Z_to_pos.
 rewrite !gez0_abs /=; try apply/ltnW/ssrnat.ltP/Pos2Nat.is_pos.
@@ -650,11 +662,11 @@ End BQR.
 
 Section RelArrayBQR.
 
-Definition rat_dot := @array_dot [realFieldType of rat] +%R *%R 0%R.
+Definition rat_dot := @array_dot (rat : realFieldType) +%R *%R 0%R.
 Definition rat_mul_row_mx :=
-  @array_mul_row_mx [realFieldType of rat] +%R *%R 0%R.
+  @array_mul_row_mx (rat : realFieldType) +%R *%R 0%R.
 Definition rat_mulmx :=
-  @array_mulmx [realFieldType of rat] +%R *%R 0%R.
+  @array_mulmx (rat : realFieldType) +%R *%R 0%R.
 
 Lemma BQR_array_dot: 
   (rel_array rat_bigQ =~> rel_array rat_bigQ =~> rat_bigQ)
@@ -749,8 +761,8 @@ apply: (rel_array_fold_pair_in (r':=r')); [exact:len_eq| |exact:vV|exact:aA| ].
   have:= (BQR_array_add _ zZ avAV); rewrite length_arr_map (len_z i); last
     by rewrite -len_eq.
   move=> /(_ (erefl _))=> rel_res; split=> //.
-  by move=> k k_len; rewrite length_arr_mk_fun; [exact/len_z|rewrite leEint leb_length].
-- split; first by (move=> i i_len; rewrite length_make leb_length len_ai).
+  by move=> k k_len; rewrite length_arr_mk_fun; [exact/len_z|rewrite leEint; exact: leb_length].
+- split; first by (move=> i i_len; rewrite length_make leb_length (len_ai i)).
   move: (rel_array_r aA); rewrite (rel_array_length aA).
   move=> /(_ _ len_A_gt0)=> /rel_array_length -> /=.
   apply/(rel_array_make (length A.[0%uint63]) rat_bigQ0).
@@ -768,8 +780,8 @@ Section RatVector.
 
 Context {n : nat}.
 
-Local Notation rel_cV_rat := (@rel_cV [realFieldType of rat] n).
-Local Notation rel_rV_rat := (@rel_rV [realFieldType of rat] n).
+Local Notation rel_cV_rat := (@rel_cV (rat : realFieldType) n).
+Local Notation rel_rV_rat := (@rel_rV (rat : realFieldType) n).
 
 Lemma rel_cV_rat_eq:
   (rel_cV_rat =~> rel_cV_rat =~> eq) (eq_array_rel (@eq_op _)) (@eq_op _).
@@ -826,12 +838,12 @@ End RatVector.
 Section RatMatrix.
 Context {m n : nat}.
 
-Local Notation rel_mx_rat_col := (@rel_mx_col [realFieldType of rat] m n).
-Local Notation rel_mx_rat_row := (@rel_mx_row [realFieldType of rat] m n).
+Local Notation rel_mx_rat_col := (@rel_mx_col (rat : realFieldType) m n).
+Local Notation rel_mx_rat_row := (@rel_mx_row (rat : realFieldType) m n).
 
 Lemma rel_rV_rat_mul_col:
-  (@rel_rV [realFieldType of rat] m =~> rel_mx_rat_col =~> 
-    @rel_rV [realFieldType of rat] n)
+  (@rel_rV (rat : realFieldType) m =~> rel_mx_rat_col =~> 
+    @rel_rV (rat : realFieldType) n)
     (fun x y=> arr_map (fun col=> rat_dot x col) y)
     (fun X Y=> (X *m Y)%R).
 Proof.
@@ -843,7 +855,7 @@ by apply/rel_mx_col_map=> //; apply/rel_cV_rat_dot.
 Qed.
 
 Lemma rel_rV_rat_weighted_lines:
-  (@rel_rV [realFieldType of rat] m =~> rel_mx_rat_row =~> @rel_rV [realFieldType of rat] n)
+  (@rel_rV (rat : realFieldType) m =~> rel_mx_rat_row =~> @rel_rV (rat : realFieldType) n)
   rat_weighted_lines (fun V A=> (V *m A)%R).
 Proof.
 move=> v V vV a A aA; rewrite /rat_weighted_lines mulmx_sum_row.

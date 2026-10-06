@@ -1,10 +1,22 @@
 From mathcomp Require Import all_ssreflect finmap.
-From Coq Require Import PArray Uint63.
+From Stdlib Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 Require Import PArith.BinPos PArith.BinPosDef.
 Require Import NArith.BinNat NArith.BinNatDef.
 From Polyhedra Require Import extra_misc.
 Require Import extra_array extra_int graph high_graph refinement.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -271,7 +283,7 @@ Definition diameter := \max_(p : epath G | is_shortest p) size_path p.
 Lemma diameterP: forall p : epath G, is_shortest p -> size_path p <= diameter.
 Proof.
 move=> p is_shtt_p; rewrite /diameter.
-exact/(bigmax_sup p).
+exact: (leq_bigmax_cond _ is_shtt_p).
 Qed.
 
 End Def.
@@ -397,7 +409,7 @@ End HighDiameter.
 
 Section RelStruct.
 
-Context (g : graph.graph) (G : high_graph.graph [choiceType of Uint63.int]).
+Context (g : graph.graph) (G : high_graph.graph (Uint63.int : choiceType)).
 Hypothesis gG : rel_structure g G.
 
 Section RelDef.
@@ -1022,18 +1034,18 @@ move=> /[dup] inv_syk [[coll_s x_vis_s vis_vtx_s] edge_syk vis_syk path_syk sort
   case: (path_syk y k (or_introl (erefl _)))=> py [/target_shortestP [src_py dst_py min_py] supp_py size_py].
   move: (mem_dst py); rewrite dst_py=> y_vtx.
   apply/anti_leq/andP; split; rewrite ?geq_max; first (apply/andP; split).
-  + apply/bigmax_leqP=> p /supp_shortestP [? dst_p ?]; apply/(bigmax_sup p)=> //.
+  + apply/bigmax_leqP=> p /supp_shortestP [? dst_p ?]; apply: (leq_bigmax_cond p).
     by apply/supp_shortestP; split=> //; rewrite !inE dst_p.
   + move: (mem_head a l); rewrite -E mem_filter => /andP [a_visF a_succ].
     move: (Hmark_fold_minimal inv_syk a_succ a_visF).
     have:= (join_epath_supp supp_py _ a_visF); rewrite -in_succE -succG ?dst_py // a_succ.
     case/(_ isT); rewrite src_py => src_join dst_join walk_join.
     case: (target_shortest_witness src_join dst_join)=> pa /[dup] target_pa /target_shortestP [src_pa dst_pa min_pa].
-    move/(_ _ target_pa)=> <-; apply/(bigmax_sup pa)=> //; apply/supp_shortestP; split=> //.
+    move/(_ _ target_pa)=> <-; apply: (leq_bigmax_cond pa); apply/supp_shortestP; split=> //.
     by rewrite dst_pa !inE /= mem_filter a_succ a_visF orbT.
   + apply/bigmax_leqP=> p /supp_shortestP [src_p + min_p]; rewrite !inE /= mem_filter.
     case/orP.
-    * move=> dst_p; rewrite leq_max; apply/orP; left; apply/(bigmax_sup p)=> //.
+    * move=> dst_p; rewrite leq_max; apply/orP; left; apply: (leq_bigmax_cond p).
       by apply/supp_shortestP; split.
     * case/andP=> dst_p_visF dst_p_succ; rewrite leq_max; apply/orP; right.
       rewrite leq_eqVlt; apply/orP; left.
@@ -1299,8 +1311,9 @@ Lemma HdiameterE : diameter G = Hdiameter_BFS G succ.
 Proof.
 rewrite /diameter /Hdiameter_BFS big_seq_fsetE /=.
 apply/le_anti/andP; split.
-- apply/bigmax_leqP=> p sht_p; apply/(bigmax_sup [`mem_src p])=> //.
-  rewrite BFSP ?fsvalP //; apply/(bigmax_sup p)=> //=.
+- apply/bigmax_leqP=> p sht_p.
+  apply: (leq_trans _ (leq_bigmax_cond [`mem_src p] _)); last by [].
+  rewrite BFSP ?fsvalP //; apply: (leq_bigmax_cond p).
   by rewrite sht_p eq_refl.
 - apply/bigmax_leqP=> x _; rewrite BFSP ?fsvalP //.
   apply/bigmax_leqP=> p /andP [sht_p] _.
@@ -1337,7 +1350,7 @@ Lemma high_BFS_diameter_le {T : choiceType} (G : graph T) x:
 Proof.
 move=> xG; rewrite -high_diameter_BFSE /high_BFS /high_diameter_BFS.
 rewrite /Hdiameter_BFS big_seq_fsetE /=.
-exact/(bigmax_sup [`xG]).
+by apply: (leq_bigmax_cond [`xG]).
 Qed.
 
 End HighBFS.

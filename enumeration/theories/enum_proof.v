@@ -5,6 +5,9 @@ From Polyhedra Require Import simplex fsetmin.
 Require Import enum_algo graph high_graph.
 
 Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -753,9 +756,8 @@ case=> lambda /(congr1 trmx); rewrite trmxK trmx_mul trmxK.
 rewrite mulmx_sum_col big_ord1 col_id mxE.
 move/(congr1 (@GRing.opp _))/eqP; rewrite opprB subr_eq.
 move/eqP=> ->; exists (1 - lambda 0 0).
-rewrite !scalerBl !scalerBr !scale1r addrC -[in RHS]addrA. 
-congr (_ + _); rewrite opprB opprD opprK; congr (_ + _).
-by rewrite addrC -addrA addNr addr0.
+rewrite !scalerBl !scalerBr !scale1r opprB subKr.
+by rewrite addrC addrA addrAC.
 Qed.
     
 
@@ -773,13 +775,13 @@ case: (x_eq_base)=> i Aix Aiy; case: (y_eq_base)=> j Ajy Ajx.
 rewrite subr_ge0 lerBlDl lerDr; apply/andP; split.
 - move: (h i); rewrite 2!mxE [X in _ + X]mxE.
   move: Aix; rewrite -row_mul mxE=> ->; rewrite -lerBlDl.
-  rewrite -{1}[b i 0]mul1r -mulrBl -subr_ge0 -mulrBr.
+  rewrite -{1}[b i 0]mul1r -mulrBl -[in X in X -> _]subr_ge0 -mulrBr.
   rewrite pmulr_lge0 ?subr_ge0 // subr_gt0; move: Aiy.
   by rewrite -row_mul mxE.
 - move: (h j); rewrite 2!mxE [X in _ + X]mxE.
   move: Ajy; rewrite -row_mul mxE=> ->; rewrite -lerBlDr.
   rewrite -{1}[b j 0]mul1r -mulrBl opprB addrCA addrN addr0.
-  rewrite -subr_ge0 -mulrBr pmulr_lge0 //; move: Ajx.
+  rewrite -[in X in X -> _]subr_ge0 -mulrBr pmulr_lge0 //; move: Ajx.
   by rewrite -row_mul mxE subr_gt0.
 Qed.
 

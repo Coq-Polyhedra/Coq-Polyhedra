@@ -402,11 +402,11 @@ End Core.
 
 Module Import Exports.
 Coercion affine_pred_sort : type >-> pred_sort.
+HB.reexport.
 End Exports.
 End Core.
 
 Export Core.Exports.
-HB.export Core.
 Notation "''affine[' R ]_ n" := (@Core.type R n).
 Notation "''affine[' R ]"    := 'affine[R]_(_).
 Notation "''affine_' n"      := 'affine[_]_n.
@@ -684,9 +684,12 @@ Proof. exact: eq_sym. Qed.
 HB.instance Definition _ := Order.POrder_Meet_isSemilattice.Build polyh_display
   'affine[R]_n affineIC affineIA affine_leEmeet.
 End AffineOrder.
+
+Module Exports. HB.reexport. End Exports.
 End AffineOrder.
 
-HB.export AffineOrder.
+Export AffineOrder.Exports.
+
 
 Notation "'[' 'affine0' ']'" := affine0.
 

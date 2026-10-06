@@ -69,7 +69,7 @@ Proof.
     by rewrite !mxE mulrDl -mulrA.
 Qed.
 
-(*HB.instance Definition _ u := GRing.isAdditive.Build _ _ _ (vdotr_is_linear u).*)
+(*HB.instance Definition _ u := GRing.isZmodMorphism.Build _ _ _ (vdotr_is_linear u).*)
 HB.instance Definition _ u := GRing.isLinear.Build _ _ _ _ _ (vdotr_is_linear u).
 
 Lemma vdot0l u : '[0,u] = 0.

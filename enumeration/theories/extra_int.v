@@ -1,9 +1,14 @@
 (* -------------------------------------------------------------------- *)
-From Coq      Require Import Uint63 BinNat.
+From Stdlib   Require Import Uint63 BinNat.
+From Stdlib   Require Znat Zdiv Zpower Zorder Pnat.
+From HB       Require Import structures.
 From mathcomp Require Import all_ssreflect.
 From Polyhedra Require Import extra_misc.
 
 (* -------------------------------------------------------------------- *)
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -11,6 +16,11 @@ Unset SsrOldRewriteGoalsOrder.
 
 (* -------------------------------------------------------------------- *)
 Import Order.Theory.
+
+(* MathComp 1.x notations for bottom and top, still used throughout.     *)
+(* TODO: replace by \bot / \top and remove (see also xorder.v).        *)
+Notation "0" := Order.bottom : order_scope.
+Notation "1" := Order.top : order_scope.
 
 (* -------------------------------------------------------------------- *)
 Coercion int_to_nat (x : int) : nat :=
@@ -98,14 +108,7 @@ Proof. by move=> ???? /(congr1 int_to_nat); rewrite !nat_to_intK. Qed.
 
 (* -------------------------------------------------------------------- *)
 
-Definition int_eqMixin := CanEqMixin int_to_natK.
-Canonical  int_eqType  := EqType int int_eqMixin.
-
-Definition int_choiceMixin := CanChoiceMixin int_to_natK.
-Canonical  int_choiceType  := ChoiceType int int_choiceMixin.
-
-Definition int_countMixin := CanCountMixin int_to_natK.
-Canonical  int_countType  := CountType int int_countMixin.
+HB.instance Definition _ := Countable.copy int (can_type int_to_natK).
 
 (* -------------------------------------------------------------------- *)
 Definition enum_int63 := map nat_to_int (iota 0 int_threshold).
@@ -123,24 +126,28 @@ move=> x; rewrite count_uniq_mem; last apply/eqP; rewrite ?eqb1.
   by rewrite int_to_natK.
 Qed.
 
-Definition int63_finMixin := FinMixin enum_int63P.
-Canonical  int63_finType  := FinType int int63_finMixin.
+HB.instance Definition _ := isFinite.Build int enum_int63P.
 
 (* ---------------------------------------------------------------------- *)
 
 Definition imin (i j : int) := if (i <? j)%uint63 then i else j.
 Definition imax (i j : int) := if (i <? j)%uint63 then j else i.
 
-Program Definition int63_orderMixin :=
-  @LeOrderMixin _ leb ltb imin imax _ _ _ _ _ _.
+Fact int_lt_def (x y : int) : ltb x y = (y != x) && leb x y.
+Proof. by rewrite ltin lein ltn_neqAle eq_sym. Qed.
 
-Next Obligation. by rewrite ltin lein ltn_neqAle eq_sym. Qed.
-Next Obligation. move=> ??; rewrite !lein => ?; exact/int_to_nat_inj/anti_leq. Qed.
-Next Obligation. move=> ???; rewrite !lein; exact/leq_trans. Qed.
-Next Obligation. by move=> ??; rewrite !lein leq_total. Qed.
+Fact int_le_anti : antisymmetric leb.
+Proof. move=> ??; rewrite !lein => ?; exact/int_to_nat_inj/anti_leq. Qed.
 
-Canonical int_porderType :=
-  POrderType Order.NatOrder.nat_display int int63_orderMixin.
+Fact int_le_trans : transitive leb.
+Proof. move=> ???; rewrite !lein; exact/leq_trans. Qed.
+
+Fact int_le_total : total leb.
+Proof. by move=> ??; rewrite !lein leq_total. Qed.
+
+HB.instance Definition _ :=
+  Order.isOrder.Build Order.NatOrder.nat_display int int_lt_def
+    (fun _ _ => erefl) (fun _ _ => erefl) int_le_anti int_le_trans int_le_total.
 
 (* ------------------------------------------------------------------------ *)
 
@@ -163,43 +170,8 @@ move: (int_thresholdP x); rewrite -[X in x < X](prednK int_threshold0).
 exact/ltnSE.
 Qed.
 
-Canonical int_bPOrderType := BPOrderType int (BottomMixin le0int).
-Canonical int_tPOrderType := TPOrderType int (TopMixin leintT).
-Canonical int_tbPOrderType := [tbPOrderType of int].
-Canonical int_meetSemilatticeType := MeetSemilatticeType int int63_orderMixin.
-Canonical int_bMeetSemilatticeType := [bMeetSemilatticeType of int].
-Canonical int_tMeetSemilatticeType := [tMeetSemilatticeType of int].
-Canonical int_tbMeetSemilatticeType := [tbMeetSemilatticeType of int].
-Canonical int_joinSemilatticeType := JoinSemilatticeType int int63_orderMixin.
-Canonical int_bJoinSemilatticeType := [bJoinSemilatticeType of int].
-Canonical int_tJoinSemilatticeType := [tJoinSemilatticeType of int].
-Canonical int_tbJoinSemilatticeType := [tbJoinSemilatticeType of int].
-Canonical int_latticeType := [latticeType of int].
-Canonical int_bLatticeType := [bLatticeType of int].
-Canonical int_tLatticeType := [tLatticeType of int].
-Canonical int_tbLatticeType := [tbLatticeType of int].
-Canonical int_distrLatticeType := DistrLatticeType int int63_orderMixin.
-Canonical int_bDistrLatticeType := [bDistrLatticeType of int].
-Canonical int_tDistrLatticeType := [tDistrLatticeType of int].
-Canonical int_tbDistrLatticeType := [tbDistrLatticeType of int].
-Canonical int_orderType := OrderType int int63_orderMixin.
-Canonical int_bOrderType := [bOrderType of int].
-Canonical int_tOrderType := [tOrderType of int].
-Canonical int_tbOrderType := [tbOrderType of int].
-Canonical int_finPOrderType := [finPOrderType of int].
-Canonical int_finBPOrderType := [finBPOrderType of int].
-Canonical int_finTPOrderType := [finTPOrderType of int].
-Canonical int_finTBPOrderType := [finTBPOrderType of int].
-Canonical int_finMeetSemilatticeType := [finMeetSemilatticeType of int].
-Canonical int_finBMeetSemilatticeType := [finBMeetSemilatticeType of int].
-Canonical int_finJoinSemilatticeType := [finJoinSemilatticeType of int].
-Canonical int_finTJoinSemilatticeType := [finTJoinSemilatticeType of int].
-Canonical int_finLatticeType :=  [finLatticeType of int].
-Canonical int_finTBLatticeType :=  [finTBLatticeType of int].
-Canonical int_finDistrLatticeType :=  [finDistrLatticeType of int].
-Canonical int_finTBDistrLatticeType :=  [finTBDistrLatticeType of int].
-Canonical int_finOrderType := [finOrderType of int].
-Canonical int_finTBOrderType := [finTBOrderType of int].
+HB.instance Definition _ := Order.hasBottom.Build _ int le0int.
+HB.instance Definition _ := Order.hasTop.Build _ int leintT.
 
 (* -------------------------------------------------------------------- *)
 
@@ -226,7 +198,7 @@ rewrite ltEint_nat nat_to_intK ?inE ?ltn_predL ?int_threshold0 //.
 move=> c_int; rewrite /int_to_nat succ_spec Zdiv.Zmod_small; last first; try split.
 - rewrite Znat.Z2Nat.inj_add; [by case: (to_Z_bounded c)|exact:BinInt.Z.le_0_1|].
   by rewrite /= Pnat.Pos2Nat.inj_1 PeanoNat.Nat.add_1_r.
-- apply/Ztac.add_le; [by case: (to_Z_bounded c)|exact:BinInt.Z.le_0_1].
+- apply/BinInt.Z.add_nonneg_nonneg; [by case: (to_Z_bounded c)|exact:BinInt.Z.le_0_1].
 - move: c_int; rewrite /int_threshold; unlock.
   rewrite /int_to_nat -ltnS prednK ?expn_gt0 //.
   move/ssrnat.ltP/Znat.inj_lt; rewrite /wB Znat.Nat2Z.inj_succ.

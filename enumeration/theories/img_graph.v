@@ -1,9 +1,21 @@
 From mathcomp Require Import all_ssreflect all_algebra finmap.
-From Coq Require Import Uint63 PArray.
+From Stdlib Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc.
 Require Import graph high_graph extra_array extra_int refinement.
 Require Import NArith.BinNat NArith.BinNatDef.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -150,7 +162,7 @@ End ImgGraphEquiv.
 
 Section ImageGraphStructure.
 
-Definition high_vtx_morph morph (Gl Gr : graph [choiceType of int]) := all (fun x=> morph.[x] \in vertices Gr) (vertices Gl).
+Definition high_vtx_morph morph (Gl Gr : graph (int : choiceType)) := all (fun x=> morph.[x] \in vertices Gr) (vertices Gl).
 
 Lemma vtx_morph_check_struct morph: 
   (rel_structure =~> rel_structure =~> eq)
@@ -160,7 +172,7 @@ move=> gl Gl glGl gr Gr grGr; rewrite /vertex_morph_check (@rel_struct_all _ _ _
 by apply/eq_all=> i; rewrite (rel_struct_vtx grGr).
 Qed.
 
-Definition high_vtx_inv morph morph' (Gl Gr : graph [choiceType of int]) :=
+Definition high_vtx_inv morph morph' (Gl Gr : graph (int : choiceType)) :=
   all (fun x=> (morph'.[x] \in vertices Gl) && (morph.[morph'.[x]] == x)) (vertices Gr).
 
 Lemma vtx_inv_check_struct morph morph':
@@ -185,7 +197,7 @@ case/andP=> /allP morph_in /allP morph_surj; apply/fsetP=> z; apply/idP/idP.
 - by case/imfsetP=> z' /= /morph_in ? ->.
 Qed.
 
-Definition high_nei (morph : array int) (Gl Gr : graph [choiceType of int]) := 
+Definition high_nei (morph : array int) (Gl Gr : graph (int : choiceType)) := 
   all (fun x=> 
     all (fun y=> (morph.[x] != morph.[y]) ==> (edges Gr morph.[x] morph.[y])) (successors Gl x))
   (vertices Gl).
@@ -203,7 +215,7 @@ congr implb; apply/idP/idP.
   by rewrite -(rel_struct_edge grGr) // moigr.
 Qed.
 
-Definition high_no_loop (morph : array int) (Gl Gr : graph [choiceType of int]):=
+Definition high_no_loop (morph : array int) (Gl Gr : graph (int : choiceType)):=
   all (fun x=> (morph.[x] \in vertices Gr) &&
     ~~ (edges Gr morph.[x] morph.[x])) (vertices Gl).
 
@@ -442,7 +454,7 @@ End ImgLabelRel.
 
 (* Section GraphStruct.
 
-Definition to_graph_struct (g : graph.graph) : high_graph.graph [choiceType of int] :=
+Definition to_graph_struct (g : graph.graph) : high_graph.graph (int : choiceType) :=
   mk_graph [fset i | i in irange0 (graph_length g)] (mem_edge g).
 
 Lemma to_graph_vtx (g : graph.graph) x: 

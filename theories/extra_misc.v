@@ -777,11 +777,11 @@ Canonical fsubset_fset0.
 Canonical fsubset_setU.
 Canonical fsubset_bigU.
 Canonical fsubset_filter.
+HB.reexport.
 End Exports.
 End FSubset.
 
 Export FSubset.Exports.
-HB.export FSubset.
 
 Notation "'{fsubset'  S '}'" := (FSubset.fsubset_t S) (at level 2).
 Notation "A %:fsub" := (FSubset.fsubset_of (Phantom {fset _} A)) (at level 0).

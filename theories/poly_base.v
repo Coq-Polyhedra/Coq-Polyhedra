@@ -338,9 +338,12 @@ Qed.
 (*Canonical poly_base_repr_baseP (P : 'poly[R]_n) := PolyBase (repr_baseP P).*)
 
 End BaseQuotient.
+
+Module Exports. HB.reexport. End Exports.
 End BaseQuotient.
 
-HB.export BaseQuotient.
+Export BaseQuotient.Exports.
+
 
 Notation "\repr_base P" := (BaseQuotient.repr_base P) (at level 40).
 Notation "\repr P" := (BaseQuotient.repr_poly_base P) (at level 40).

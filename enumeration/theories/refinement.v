@@ -1,15 +1,27 @@
 (* ------------------------------------------------------------------------------------------------ *)
-From Coq      Require Import PArray Uint63.
+From Stdlib      Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 
 From Polyhedra Require Import extra_misc vector_order inner_product.
 From PolyhedraHirsch Require Import extra_int extra_array graph high_graph.
 
 Require Import NArith.BinNat NArith.BinNatDef.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
 Import Order.Theory.
 
 (* ------------------------------------------------------------------------------------------------ *)
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -259,7 +271,6 @@ rewrite !map_rcons !zip_rcons ?size_map // !foldl_rcons /=.
 apply/h_in_IH; last apply/IH; rewrite ?mem_rcons ?inE ?eqxx //.
 by move=> i it; apply/h_in_IH; rewrite mem_rcons inE it orbT.
 Qed.
-
 
 Lemma rel_array_eq {t T : Type} (r : t -> T -> Prop)
   (rel_t : rel t) (rel_T : rel T):
@@ -782,7 +793,6 @@ move=> r_eq; apply/rel_equiv_func2;
 apply/rel_comp_func2; [apply/rel_array_eq/r_eq|exact:rel_cV_inj].
 Qed.
 
-
 Lemma rel_point_cV_scal (n : nat) (mul_t : t -> t -> t):
   (r =~> r =~> r) mul_t (fun x y=> (x * y)%R) ->
   (r =~> @rel_point_cV n =~> @rel_point_cV n) (fun l a=> arr_map (fun x=> mul_t l x) a) (fun L A=> (L *: A)%R).
@@ -817,7 +827,6 @@ move=> fF x Y [X xX XY]; apply/idP/idP.
   move=> /(_ (erefl _) x.[i] (Y ord0 (Ordinal i_n))) ->; last exact/h.
   by rewrite -(rel_rV_nth XY) int_to_natK; apply/(rel_array_r xX).
 Qed.
-
 
 Definition rel_point_mx_col (m n: nat) := rel_array (rel_array r) |~ @rel_mx_col R m n.
 Definition rel_point_mx_row (m n: nat) := rel_array (rel_array r) |~ @rel_mx_row R m n.
@@ -1017,7 +1026,7 @@ Definition precond_struct (g : graph.graph) :=
     forall j, (j < nb_neighbours g i)%O -> 
       mem_vertex g (neighbours g i).[j] /\ (neighbours g i).[j] != i).
 
-Definition rel_structure g (G : graph [choiceType of Uint63.int]):=
+Definition rel_structure g (G : graph (Uint63.int : choiceType)):=
   [/\   
     precond_struct g,
     (forall i, mem_vertex g i = (i \in vertices G))&
@@ -1172,7 +1181,6 @@ move: VG; rewrite -(gisof_vtx GL_G)=> /imfsetP [/= j jG] V_eq.
 move: iV; rewrite V_eq; apply/r_injr/(rel_array_r lL).
 by rewrite -(len_gl).
 Qed.
-
 
 Lemma rel_graph_r_all f F gl G:
   (forall i V, mem_vertex gl.1 i -> V \in vertices G -> r gl.2.[i] V -> f i = F V) ->
@@ -1464,11 +1472,11 @@ by apply:spec_func_couple;
 Qed.
 
 Definition high_lbl_to_final {T : choiceType} 
-  (GL : high_graph.graph [choiceType of Uint63.int] * array T):=
+  (GL : high_graph.graph (Uint63.int : choiceType) * array T):=
   (fun x=> GL.2.[x]) @/ GL.1.
 
 Definition precond_high_to_final {T : choiceType} 
-  (GL : high_graph.graph [choiceType of Uint63.int] *
+  (GL : high_graph.graph (Uint63.int : choiceType) *
         array T):=
   (forall x, x \in vertices GL.1 = (x < length GL.2)%O) /\
   {in irange0 (length GL.2) &, injective (get GL.2)}.

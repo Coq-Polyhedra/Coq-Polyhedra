@@ -1,12 +1,24 @@
-Require Import Setoid PArray Uint63.
+Require Import Setoid Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From mathcomp Require Import all_ssreflect all_algebra.
 Require Import PArith.BinPos PArith.BinPosDef.
 Require Import NArith.BinNat NArith.BinNatDef.
 From Bignums Require Import BigQ.
 From Polyhedra Require Import extra_misc inner_product vector_order.
 Require Import graph extra_array extra_int array_set rat_bigQ diameter img_graph refinement.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
 Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -138,7 +150,7 @@ Lemma lex_graph_formatE Po g l:
 Proof.
 rewrite /FC.lex_graph_format pre_graph_computationE; repeat congr andb.
 - by rewrite !rel_sortedP; apply/(sorted_rel_equiv)=> //;
-  [move => ??; apply/erefl|move=> ???? -> ->; rewrite lt_array_intE].
+  move=> ???? -> ->; rewrite lt_array_intE.
 - apply/eq_all=> ?; congr andb.
   + by rewrite /FC.basis_format pre_arr_set_computationE.
   + by rewrite /FC.point_format pre_mx_computationE.
@@ -153,7 +165,7 @@ Lemma vert_graph_formatE Po g l:
 Proof.
 rewrite /FC.vert_graph_format pre_graph_computationE; repeat congr andb.
 - by rewrite !rel_sortedP; apply/(sorted_rel_equiv)=> //;
-    [move=> ??; apply/erefl|move=> ???? -> ->; rewrite BQltx_orderE].
+    move=> ???? -> ->; rewrite BQltx_orderE.
 - by apply/eq_all=> ?; rewrite eqEint.
 Qed.
 

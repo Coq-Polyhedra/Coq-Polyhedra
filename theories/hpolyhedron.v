@@ -505,9 +505,9 @@ Notation "''hpoly_' n" := ('hpoly[_]_n).
 Notation "P .`c" := (hpoly_c P).
 Notation "P .`A" := (hpoly_A P).
 Notation "P .`b" := (hpoly_b P).
+HB.reexport.
 End Exports.
 End HPolyhedron.
 
 Export HPolyhedron.Exports.
-HB.export HPolyhedron.
 Coercion mem_hpoly := HPolyhedron.mem_hpoly.

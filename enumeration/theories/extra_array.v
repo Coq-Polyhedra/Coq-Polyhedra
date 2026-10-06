@@ -1,12 +1,24 @@
 (* -------------------------------------------------------------------- *)
 From mathcomp Require Import all_ssreflect.
-From Coq Require Import PArray Uint63.
+From Stdlib Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc.
 Require Import PArith.BinPos PArith.BinPosDef.
 Require Import NArith.BinNat NArith.BinNatDef.
 Require Import extra_int.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -746,8 +758,11 @@ exists (Order.meet j_xy j_yz); split.
     by case: ltgtP=> // -> _.
   + move=> eq_j; move: r_xy_lt r_yz_lt.
     rewrite !compare_def_spec /compare_def -ltEint !eqEint.
-    case: ltgtP=> // + _; rewrite eq_j=> xy_lt.
-    by case: ltgtP=> // + _; move/(lt_trans xy_lt)=> ->.
+    (* Avoid `done`/`//` here: its `trivial` step diverges in this context. *)
+    case: ltgtP; [move=> + _ | move=> _ e; discriminate e | move=> _ e; discriminate e].
+    rewrite eq_j=> xy_lt.
+    case: ltgtP; [move=> + _ | move=> _ e; discriminate e | move=> _ e; discriminate e].
+    move/(lt_trans xy_lt)=> ->; reflexivity.
 Qed.
 
 Lemma lt_array_int_neq a b: lt_array_int a b -> 

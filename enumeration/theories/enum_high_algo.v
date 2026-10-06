@@ -1,9 +1,21 @@
 From mathcomp Require Import all_ssreflect all_algebra finmap.
-From Coq Require Import Uint63 PArray.
+From Stdlib Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc inner_product extra_matrix vector_order affine row_submx barycenter.
 From Polyhedra Require Import lrel polyhedron poly_base simplex.
 Require Import enum_algo enum_proof enum_equiv graph high_graph img_graph extra_array extra_int rat_bigQ diameter refinement.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -63,8 +75,9 @@ rewrite /Simplex.is_basis /=; apply/row_freeP.
 exists X_inv; rewrite /X_inv -scalemxAr -[X in X *m _]trmxK -trmx_mul tr_col'.
 apply/matrixP=> p q; rewrite !mxE.
 under eq_bigr => [k _] do rewrite !mxE. 
-move: A_Ix=> /matrixP /(_ p (lift ord0 (enum_val q))); rewrite mxE.
-under eq_bigr=> [k _] do rewrite mxE GRing.mulrC; move=> ->.
+move: A_Ix=> /matrixP /(_ p (lift ord0 (enum_val q))); rewrite mxE => hA.
+under eq_bigr=> [k _] do rewrite GRing.mulrC -row_submx_mxE.
+rewrite hA.
 rewrite !mxE; case: splitP.
 - move=> j /=; rewrite (ord1_eq0 j) /= => /esym /eqP.
   by rewrite (negPf (neq_bump _ _)).
@@ -216,7 +229,7 @@ Context (m' n' : nat).
 Local Notation m := m'.+1.
 Local Notation n := n'.+1.
 
-Context (G_lex : graph (enum_type m' n')) (G_vert : graph [choiceType of 'cV[rat]_n]).
+Context (G_lex : graph (enum_type m' n')) (G_vert : graph ('cV[rat]_n : choiceType)).
 
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 
@@ -341,7 +354,7 @@ Local Notation n := n'.+1.
 
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 
-Context (G_lex : graph (enum_type m' n')) (G_vert : graph [choiceType of 'cV[rat]_n]).
+Context (G_lex : graph (enum_type m' n')) (G_vert : graph ('cV[rat]_n : choiceType)).
 
 Hypothesis enum_h : high_enum_algo A b G_lex.
 Hypothesis img_h : G_vert = ((@phi m' n') @/ G_lex).

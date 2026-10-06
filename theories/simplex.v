@@ -2247,12 +2247,11 @@ Qed.
 End ExtraEdge.
 
 Module Exports.
-
+HB.reexport.
 End Exports.
 
 End Simplex.
 Export Simplex.Exports.
-HB.export Simplex.
 Coercion set_of_prebasis := Simplex.set_of_prebasis.
 Coercion prebasis_of_basis := Simplex.prebasis_of_basis.
 Coercion basis_of_feasible_basis := Simplex.basis_of_feasible_basis.
