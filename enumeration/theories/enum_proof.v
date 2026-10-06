@@ -4,6 +4,7 @@ From Polyhedra Require Import lrel polyhedron poly_base.
 From Polyhedra Require Import simplex fsetmin.
 Require Import enum_algo graph high_graph.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -769,14 +770,14 @@ apply/in_segmP; exists (1 - lambda);
   last by (congr (_ + _); congr (_ *: _); rewrite opprB addrC -addrA addNr addr0).
 move: z_base; rewrite feasE inE mulmxDr -!scalemxAr=> /forallP h.
 case: (x_eq_base)=> i Aix Aiy; case: (y_eq_base)=> j Ajy Ajx.
-rewrite subr_ge0 ler_subl_addl ler_addr; apply/andP; split.
+rewrite subr_ge0 lerBlDl lerDr; apply/andP; split.
 - move: (h i); rewrite 2!mxE [X in _ + X]mxE.
-  move: Aix; rewrite -row_mul mxE=> ->; rewrite -ler_subl_addl.
+  move: Aix; rewrite -row_mul mxE=> ->; rewrite -lerBlDl.
   rewrite -{1}[b i 0]mul1r -mulrBl -subr_ge0 -mulrBr.
   rewrite pmulr_lge0 ?subr_ge0 // subr_gt0; move: Aiy.
   by rewrite -row_mul mxE.
 - move: (h j); rewrite 2!mxE [X in _ + X]mxE.
-  move: Ajy; rewrite -row_mul mxE=> ->; rewrite -ler_subl_addr.
+  move: Ajy; rewrite -row_mul mxE=> ->; rewrite -lerBlDr.
   rewrite -{1}[b j 0]mul1r -mulrBl opprB addrCA addrN addr0.
   rewrite -subr_ge0 -mulrBr pmulr_lge0 //; move: Ajx.
   by rewrite -row_mul mxE subr_gt0.
@@ -800,7 +801,7 @@ apply/poly_eqP=> z; apply/idP/idP.
     move: (Simplex.lex_feasible_basis_is_feasible J); rewrite inE=> /forallP /(_ i).
     move: (Simplex.lex_feasible_basis_is_feasible I); rewrite inE=> /forallP /(_ i).
     move: mu1; rewrite -subr_ge0=> mu1.
-    move=> /(ler_wpmul2l mu1) + /(ler_wpmul2l mu0); move=> /ler_add /[apply].
+    move=> /(ler_wpM2l mu1) + /(ler_wpM2l mu0); move=> /lerD /[apply].
     by rewrite -mulrDl -addrA addNr addr0 mul1r.
 - exact: fset_active_edge_to_segm. 
 Qed.
@@ -849,7 +850,7 @@ Lemma fset_gap_gt0 G: G \in fset_gap -> 0 < G.
 Proof.
 case/imfsetP=> /= z; rewrite inE=> /andP [z_vtx /andP [c'_xz zny] ->].
 rewrite /gap.
-rewrite ltr_ndivl_mulr // mul0r vdotDr vdotNr subr_lt0.
+rewrite ltr_ndivlMr // mul0r vdotDr vdotNr subr_lt0.
 apply/(argmin_sep (P:=P)).
 - by move: (P_compact c); rewrite boundedE.
 - by move/eqP: (xchooseP c_def)=> <-; rewrite in_segml.
@@ -877,19 +878,19 @@ have fset_gap_n0: fset_gap != fset0 by
   apply/fset0Pn; exists (gap z); apply/in_imfset=> /=; rewrite !inE z_vtx c'_xz zny.
 move/(fset_minP 1): fset_gap_n0; move: min_epsilon_gt0; rewrite /min_epsilon.
 set F := fset_min _ _.
-rewrite ltr_pdivl_mulr ?ltr0Sn // mul0r => F_gt0.
+rewrite ltr_pdivlMr ?ltr0Sn // mul0r => F_gt0.
 case=> F_in /(_ (gap z)); rewrite in_imfset ?inE ?z_vtx ?c'_xz ?zny //.
-move/(_ isT); rewrite -ltr_pdivl_mulr ?invr_gt0 ?ltr0Sn // invrK.
-move/le_lt_trans; apply; rewrite ltr_pmulr ?fset_gap_gt0 ?in_imfset ?inE ?z_vtx ?c'_xz ?zny //.
+move/(_ isT); rewrite -ltr_pdivlMr ?invr_gt0 ?ltr0Sn // invrK.
+move/le_lt_trans; apply; rewrite ltr_pMr ?fset_gap_gt0 ?in_imfset ?inE ?z_vtx ?c'_xz ?zny //.
 by rewrite ltr1n.
 Qed.
 
 Lemma obj_func_min_xy: '[obj_func (min_epsilon), y] < '[obj_func (min_epsilon), x].
 Proof.
-rewrite /obj_func !vdotDl !vdotZl; apply/ler_lt_add.
+rewrite /obj_func !vdotDl !vdotZl; apply/ler_ltD.
 - apply/(argmin_lower_bound (P:=P)); last exact/vertex_set_subset/(adj_vtxl edge_xy).
   move/eqP: (xchooseP c_def)=> <-; exact: in_segmr.
-- rewrite (ltr_pmul2l min_epsilon_gt0).
+- rewrite (ltr_pM2l min_epsilon_gt0).
   apply/(argmin_sep (P:=P)).
   + by move: (P_compact c'); rewrite boundedE.
   + by move/eqP: (xchooseP c'_def)=> <-; rewrite in_pt.
@@ -902,7 +903,7 @@ Lemma obj_func_min_out z: z \in vertex_set P -> z \notin [fset x; y] ->
 Proof.
 move=> z_vtx; rewrite !inE negb_or=> /andP [znx zny].
 rewrite /obj_func !vdotDl !vdotZl.
-rewrite -ltr_subr_addr -addrA -mulrBr -ltr_subl_addl.
+rewrite -ltrBrDr -addrA -mulrBr -ltrBlDl.
 rewrite -!vdotBr; case: (ger0P '[c', z - x]).
 - rewrite -(pmulr_rge0 _ min_epsilon_gt0)=> /lt_le_trans; apply.
   rewrite vdotBr subr_lt0; apply/(argmin_sep (P:=P)).
@@ -914,7 +915,7 @@ rewrite -!vdotBr; case: (ger0P '[c', z - x]).
     by rewrite vertex_set_segm !inE (negbTE znx) (negbTE zny).
   + exact/vertex_set_subset.
   (*TODO:same proof as in fset_gap_gt0*)
-- move=> c'_zx; rewrite -ltr_ndivl_mulr //.
+- move=> c'_zx; rewrite -ltr_ndivlMr //.
   exact/min_epsilon_ltgap.
 Qed.
 

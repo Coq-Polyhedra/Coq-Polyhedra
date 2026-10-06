@@ -23,6 +23,7 @@ Import Order.Theory.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 (* Code CoqEAL *)
 
@@ -175,7 +176,7 @@ Qed.
 
 Lemma Z2int_lt x y : (Z2int x < Z2int y)%R <-> BinInt.Z.lt x y.
 Proof.
-rewrite -lez_addr1 -[GRing.one _]/(Z2int BinInt.Z.one) -Z2int_add Z2int_le.
+rewrite -lezD1 -[GRing.one _]/(Z2int BinInt.Z.one) -Z2int_add Z2int_le.
 rewrite /BinInt.Z.one BinInt.Z.add_1_r; exact: BinInt.Z.le_succ_l.
 Qed.
 
@@ -601,8 +602,8 @@ Proof.
 move=> y x z /ltx_array_relP [len_xy +] /ltx_array_relP [len_yz +].
 case=> j [j_lenx xy_i_eq xy_j_lt] [j'] [j'_leny yz_i_eq yz_j_lt].
 apply/ltx_array_relP; split; rewrite ?len_xy //.
-exists (Order.min j j'); split; rewrite ?lt_minl ?j'_leny ?orbT //.
-- move=> i; rewrite lt_minr=> /andP [/xy_i_eq + /yz_i_eq].
+exists (Order.min j j'); split; rewrite ?gt_min ?j'_leny ?orbT //.
+- move=> i; rewrite lt_min=> /andP [/xy_i_eq + /yz_i_eq].
   by case: BigQ.compare_spec=> // ->.
 - case: ltgtP.
   + by move/yz_i_eq; case: BigQ.compare_spec=> // <-.

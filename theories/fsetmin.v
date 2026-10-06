@@ -29,7 +29,7 @@ case: ((S `\ a) =P fset0) => [h|{}/ih ih].
 case: ih; rewrite ?fproperD1 // => x x_SDa ih.
 exists (Num.min a x); first case: lerP => // _.
 - by move: x_SDa; rewrite !inE => /andP[].
-- move=> y yS; rewrite le_minl; case: lerP => //=.
+- move=> y yS; rewrite ge_min; case: lerP => //=.
   move/lt_eqF=> /negbT ne_ya; apply: ih.
   by rewrite !inE ne_ya yS.
 Qed.
@@ -65,7 +65,7 @@ have S'0: [fset -x | x in S] != fset0 by
 case: (fset_minP x0 S'0)=> /imfsetP /= [max] maxS ->; rewrite GRing.opprK maxS.
 move=> max_def; split=> // y yS.
 move: (max_def (-y)); rewrite in_imfset //=; move/(_ isT).
-by rewrite ler_oppl GRing.opprK.
+by rewrite lerNl GRing.opprK.
 Qed.
 
 Lemma fset_max0 x0: fset_max x0 fset0 = x0.

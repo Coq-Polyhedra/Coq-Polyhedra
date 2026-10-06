@@ -6,6 +6,7 @@ From Bignums Require Import BigQ.
 From Polyhedra Require Import extra_misc inner_product vector_order.
 Require Import graph extra_array extra_int array_set rat_bigQ diameter img_graph refinement.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.

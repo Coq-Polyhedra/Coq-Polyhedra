@@ -11,6 +11,7 @@ From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra 
 From mathcomp Require Import fingroup perm.
 Require Import extra_misc inner_product vector_order extra_matrix.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.

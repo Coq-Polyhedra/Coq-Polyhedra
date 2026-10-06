@@ -386,7 +386,7 @@ Proof.
 apply/fsetP=> x; rewrite in_fsetE !mem_coffinsupp fconicwE.
 have := ge0_fconic w1 x; rewrite le_eqVlt => /orP[].
 + by move/eqP=> <-; rewrite ltxx add0r.
-+ by move=> gt0_w1; rewrite gt0_w1 ltr_paddr // ge0_fconic.
++ by move=> gt0_w1; rewrite gt0_w1 ltr_wpDr // ge0_fconic.
 Qed.
 
 Lemma ge0_cofweight w : 0 <= weight w.
@@ -482,7 +482,7 @@ Lemma le1_fconvex w x : w x <= 1.
 Proof.
 case: finsuppP => // xw; rewrite -(wgt1_fconvex w) weightE.
 rewrite -(big_seq_fsetE _ _ predT) /= -(fsetD1K xw).
-rewrite big_fsetU1 ?fsetD11 //= ler_addl.
+rewrite big_fsetU1 ?fsetD11 //= lerDl.
 by apply: sumr_ge0=> i _; apply: ge0_fconvex.
 Qed.
 
@@ -566,7 +566,7 @@ Lemma ge0_1Bclamp a : 0 <= 1 - clamp a.
 Proof. by rewrite subr_ge0 le1_clamp. Qed.
 
 Lemma le1_1Bclamp a : 1 - clamp a <= 1.
-Proof. by rewrite ler_subl_addr ler_addl ge0_clamp. Qed.
+Proof. by rewrite lerBlDr lerDl ge0_clamp. Qed.
 
 Lemma fseg_r a x y :
   @convex L R [fsfun z in [fset x; y]%fset =>

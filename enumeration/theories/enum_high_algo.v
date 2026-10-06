@@ -9,6 +9,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.Theory Num.Theory.
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Local Notation "a .[ i ]" := (PArray.get a i).
 
@@ -271,7 +272,7 @@ Proof.
 rewrite /max_bound.
 have: i \in index_enum (ordinal_finType n) by rewrite mem_index_enum.
 elim: (index_enum _)=> // h t IH.
-rewrite in_cons big_cons le_maxr; case/orP.
+rewrite in_cons big_cons le_max; case/orP.
 - by move/eqP=> ->; rewrite lexx.
 - by move/IH=> ->; rewrite orbT.
 Qed.
@@ -292,10 +293,10 @@ move=> c; rewrite -(boundedE); move: c; apply/compactP.
   move=> x_i_ge; rewrite [X in _ <= X]row_vdot mul_scalar_mx GRing.scaleN1r mxE.
   move=> x_i_le; apply/(le_trans _ (max_boundP i)).
   rewrite ler_norml; apply/andP; split.
-  + rewrite ler_oppl le_maxr; apply/orP; left.
-    by rewrite vdotNl ler_oppl GRing.opprK.
-  + rewrite le_maxr; apply/orP; right.
-    by rewrite vdotNl ler_oppr.
+  + rewrite lerNl le_max; apply/orP; left.
+    by rewrite vdotNl lerNl GRing.opprK.
+  + rewrite le_max; apply/orP; right.
+    by rewrite vdotNl lerNr.
 Qed.
 
 End BoundPoly.

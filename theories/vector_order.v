@@ -15,6 +15,7 @@ Import Order.Theory.
 
 Definition lte_anti := (=^~ @eq_le, @lt_asym, @lt_le_asym, @le_lt_asym).
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -43,19 +44,19 @@ Notation "x >=m y" := (y <=m x) (only parsing, at level 0) : ring_scope.
 Lemma lev_add2l x :
   {mono +%R x : y z / y <=m z}.
 Proof.
-by move => y z; apply: eq_forallb => i; rewrite !mxE ler_add2l.
+by move => y z; apply: eq_forallb => i; rewrite !mxE lerD2l.
 Qed.
 
 Lemma lev_add2r x :
   {mono +%R^~ x : y z / y <=m z}.
 Proof.
-by move => y z; apply: eq_forallb => i; rewrite !mxE ler_add2r.
+by move => y z; apply: eq_forallb => i; rewrite !mxE lerD2r.
 Qed.
 
 Lemma lev_opp2 :
   {mono -%R: x y /~ x <=m y}.
 Proof.
-by move => x y; apply: eq_forallb => i; rewrite !mxE ler_opp2.
+by move => x y; apply: eq_forallb => i; rewrite !mxE lerN2.
 Qed.
 
 (* Addition of vector inequalities retains order *)
@@ -63,13 +64,13 @@ Lemma lev_add x y (l1 l2 : 'cV[R]_n) :
   (l1 <=m x) -> (l2 <=m y) -> ((l1 + l2) <=m (x + y)).
 Proof.
   rewrite /lev; move => /forallP Hx /forallP Hy.
-  by apply/forallP => ?; rewrite !mxE ler_add //.
+  by apply/forallP => ?; rewrite !mxE lerD //.
 Qed.
 
 Lemma lev_pscalar (a : R) :
   0 < a -> {mono *:%R a : x y / x <=m y }.
 Proof.
-by move => Ha x y; apply: eq_forallb => i; rewrite !mxE ler_pmul2l.
+by move => Ha x y; apply: eq_forallb => i; rewrite !mxE ler_pM2l.
 Qed.
 
 Lemma lev_wpscalar a x y :
@@ -77,7 +78,7 @@ Lemma lev_wpscalar a x y :
 Proof.
 move => Ha /forallP Hxy.
 apply/forallP => i; rewrite !mxE.
-by apply: ler_wpmul2l.
+by apply: ler_wpM2l.
 Qed.
 
 Lemma gev0P x :
@@ -204,7 +205,7 @@ Qed.
 Lemma lev_maxl x y :
   (lev_max x y) >=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE le_maxr lexx.
+by apply/forallP => i; rewrite !mxE le_max lexx.
 Qed.
 
 Lemma lev_maxr x y :
@@ -216,7 +217,7 @@ Qed.
 Lemma lev_minl x y :
   (lev_min x y) <=m x.
 Proof.
-by apply/forallP => i; rewrite !mxE le_minl lexx.
+by apply/forallP => i; rewrite !mxE ge_min lexx.
 Qed.
 
 Lemma lev_minr x y :
@@ -405,7 +406,7 @@ Lemma lex_add2l x :
 Proof.
 move => y z; symmetry.
 apply: order_preserving_equiv => i.
-move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_add2l (x 0 i))) <-.
+move/(_ (y 0 i) (z 0 i)): (leW_mono (lerD2l (x 0 i))) <-.
 rewrite !mxE; split; first done.
 symmetry; apply/inj_eq; exact: GRing.addrI.
 Qed.
@@ -415,7 +416,7 @@ Lemma lex_add2r x :
 Proof.
 move => y z; symmetry.
 apply: order_preserving_equiv => i.
-move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_add2r (x 0 i))) <-.
+move/(_ (y 0 i) (z 0 i)): (leW_mono (lerD2r (x 0 i))) <-.
 rewrite !mxE; split; first done.
 symmetry; apply/(inj_eq (GRing.addIr _)).
 Qed.
@@ -426,7 +427,7 @@ Proof.
 move => Ha y z; symmetry.
 apply: order_preserving_equiv => i.
 rewrite !mxE.
-move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_pmul2l Ha)) <-.
+move/(_ (y 0 i) (z 0 i)): (leW_mono (ler_pM2l Ha)) <-.
 split; first done.
 symmetry; apply/inj_eq; apply/mulfI; exact: lt0r_neq0.
 Qed.
@@ -914,11 +915,11 @@ rewrite lex_eqOlt; case/orP.
     have [h_eq | min_ab | min_cd]: [\/ i_ab = i_cd, (i_ab < i_cd)%N | (i_ab > i_cd)%N] by
       case: ltngtP=> ?; [exact/Or32 | exact/Or33 | exact/Or31/val_inj].
     * have ->: (Ordinal min_abcd = i_ab) by apply/val_inj; rewrite /= h_eq minnn.
-      by apply/ltr_add=> //; rewrite h_eq.
+      by apply/ltrD=> //; rewrite h_eq.
     * have ->: (Ordinal min_abcd = i_ab) by exact/val_inj/minn_idPl/ltnW.
-      by rewrite j_cd_eq //; apply/ltr_le_add.
+      by rewrite j_cd_eq //; apply/ltr_leD.
     * have ->: (Ordinal min_abcd = i_cd) by exact/val_inj/minn_idPr/ltnW.
-      by rewrite j_ab_eq //; apply/ler_lt_add.
+      by rewrite j_ab_eq //; apply/ler_ltD.
 Qed.
 
 Lemma ltrlex_sum {p : nat} (A B : 'I_p -> 'rV[R]_n):

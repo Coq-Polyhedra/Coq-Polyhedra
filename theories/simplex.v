@@ -14,6 +14,7 @@ Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 
 Import Order.Theory.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -57,15 +58,15 @@ apply/(iffP idP) => [feasible_dir_d μ μ_ge0 | d_recession_dir].
   rewrite mxE in A_d_i_neq.
   set λ := ((A *m d) i 0 + b i 0 - (A *m x) i 0) * ((A *m d) i 0)^-1.
   have λ_ge_0: 0 <= λ.
-    rewrite ler_ndivl_mulr; last by rewrite -ltNge in A_d_i_neq.
-    rewrite mul0r ler_subl_addr.
-    apply: ler_add; last exact: ((forallP x_in) i).
+    rewrite ler_ndivlMr; last by rewrite -ltNge in A_d_i_neq.
+    rewrite mul0r lerBlDr.
+    apply: lerD; last exact: ((forallP x_in) i).
     apply: ltW.
     by rewrite -ltNge in A_d_i_neq.
   move: (forallP (d_recession_dir _  λ_ge_0) i) => b_i_ineq.
   rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in b_i_ineq;
     last by apply: ltr0_neq0; rewrite -ltNge in A_d_i_neq.
-  rewrite mulr1 [(A *m x) i 0 + _]addrC -3!ler_subl_addr opprK -addrA -opprB addNr in b_i_ineq.
+  rewrite mulr1 [(A *m x) i 0 + _]addrC -3!lerBlDr opprK -addrA -opprB addNr in b_i_ineq.
   by rewrite b_i_ineq in A_d_i_neq.
 Qed.
 
@@ -266,14 +267,14 @@ exists x; split.
 + apply/forallP => j.
   rewrite mulmxDr -scalemxAr mxE [X in _ + X]mxE.
   rewrite -[X in X <= _]addr0.
-  apply: ler_add; first by apply: (Hx0 _).
+  apply: lerD; first by apply: (Hx0 _).
   - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
-    by rewrite le_maxr lexx.
-+ rewrite vdotDr vdotZr -ltr_subr_addl.
-  rewrite -mulrC -ltr_ndivr_mull //.
-  rewrite lt_maxr; apply/orP; right.
-  rewrite -(ltr_nmul2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
-  by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10.
+    by rewrite le_max lexx.
++ rewrite vdotDr vdotZr -ltrBrDl.
+  rewrite -mulrC -ltr_ndivrMl //.
+  rewrite lt_max; apply/orP; right.
+  rewrite -(ltr_nM2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
+  by rewrite 2!mul1r ltD2r gtrDl ltrN10.
 Qed.
 
 End WeakDuality.

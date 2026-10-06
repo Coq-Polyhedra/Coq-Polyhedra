@@ -7,7 +7,8 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect finmap.
+From HB Require Import structures.
+From mathcomp Require Import boot order finmap.
 
 (* -------------------------------------------------------------------- *)
 Import Order.Theory.
@@ -20,38 +21,33 @@ Open Scope order_scope.
 Open Scope fset_scope.
 
 (* -------------------------------------------------------------------- *)
-Fact fset_display : unit. Proof. exact: tt. Qed.
+Fact fset_display : Order.disp_t. Proof. exact: Order.Disp tt tt. Qed.
 
 (* -------------------------------------------------------------------- *)
 Section BDistrLatticeType.
 Context {T : choiceType}.
 
-Program Definition fset_meetJoinMixin :=
-  @DistrMeetJoinMixin [choiceType of {fset T}]
-    fsubset fproper fsetI fsetU (fun _ _ => erefl _) _
-     (@fsetIC T) (@fsetUC T) (@fsetIA T) (@fsetUA T)
-     (fun x y => fsetKU y x) (fun x y => fsetKI y x) (@fsetIUl T) (@fsetIid T).
+Fact fset_lt_def (A B : {fset T}) : fproper A B = (B != A) && fsubset A B.
+Proof. by rewrite fproperEneq eq_sym. Qed.
 
-Next Obligation. Proof. by rewrite fproperEneq eq_sym. Qed.
+HB.instance Definition _ :=
+  Order.isMeetJoinDistrLattice.Build fset_display {fset T}
+    (fun _ _ => erefl _) fset_lt_def
+    (@fsetIC T) (@fsetUC T) (@fsetIA T) (@fsetUA T)
+    (fun x y => fsetKU y x) (fun x y => fsetKI y x) (@fsetIUl T) (@fsetIid T).
 
-Canonical fset_porderType := POrderType fset_display {fset T} fset_meetJoinMixin.
-Canonical fset_bPOrderType := BPOrderType {fset T} (BottomMixin (@fsub0set T)).
-Canonical fset_meetSemilatticeType := MeetSemilatticeType {fset T} fset_meetJoinMixin.
-Canonical fset_bMeetSemilatticeType := [bMeetSemilatticeType of {fset T}].
-Canonical fset_joinSemilatticeType := JoinSemilatticeType {fset T} fset_meetJoinMixin.
-Canonical fset_bJoinSemilatticeType := [bJoinSemilatticeType of {fset T}].
-Canonical fset_latticeType := [latticeType of {fset T}].
-Canonical fset_bLatticeType := [bLatticeType of {fset T}].
-Canonical fset_distrLatticeType := DistrLatticeType {fset T} fset_meetJoinMixin.
-Canonical fset_bDistrLatticeType := [bDistrLatticeType of {fset T}].
+HB.instance Definition _ :=
+  Order.hasBottom.Build fset_display {fset T} (@fsub0set T).
 
-Program Canonical fset_cbDistrLatticeType := CBDistrLatticeType {fset T}
-  (@CBDistrLatticeMixin _ _ fsetD _ (fun x y => fsetID y x)).
-
-Next Obligation. Proof.
+Fact fset_diffKI (A B : {fset T}) : B `&` (A `\` B) = \bot.
+Proof.
 rewrite (rwP eqP) -lex0; apply/fsubsetP.
 by move=> v; rewrite !inE => /and3P[->].
 Qed.
+
+HB.instance Definition _ :=
+  Order.BDistrLattice_hasSectionalComplement.Build fset_display {fset T}
+    fset_diffKI (fun x y => fsetID y x).
 End BDistrLatticeType.
 
 (* -------------------------------------------------------------------- *)
@@ -70,30 +66,13 @@ Proof. by rewrite !(inE, fsetTE) andbT. Qed.
 
 Definition inE := (inE, fsetTE, fsetCE).
 
-Program Canonical fset_tPOrderType :=
-  TPOrderType {fset T} (@TopMixin _ _ fsetT _).
+Fact fset_lex1 (A : {fset T}) : A `<=` fsetT.
+Proof. by apply/fsubsetP=> v _; rewrite inE. Qed.
 
-Next Obligation. Proof. by apply/fsubsetP=> v _; rewrite inE. Qed.
+HB.instance Definition _ :=
+  Order.hasTop.Build fset_display {fset T} fset_lex1.
 
-Canonical fset_tbPOrderType := [tbPOrderType of {fset T}].
-
-Canonical finPOrderType := [finPOrderType of {fset T}].
-Canonical finBPOrderType := [finBPOrderType of {fset T}].
-Canonical finTPOrderType := [finTPOrderType of {fset T}].
-Canonical finTBPOrderType := [finTBPOrderType of {fset T}].
-
-Canonical tLatticeType := [tLatticeType of {fset T}].
-Canonical tbLatticeType := [tbLatticeType of {fset T}].
-Canonical finLatticeType := [finLatticeType of {fset T}].
-Canonical finTBLatticeType := [finTBLatticeType of {fset T}].
-
-Canonical tDistrLatticeType := [tDistrLatticeType of {fset T}].
-Canonical tbDistrLatticeType := [tbDistrLatticeType of {fset T}].
-Canonical finDistrLatticeType := [finDistrLatticeType of {fset T}].
-Canonical finTBDistrLatticeType := [finTBDistrLatticeType of {fset T}].
-
-Program Canonical ctbDistrLatticeType := CTBDistrLatticeType {fset T}
-  (@CTBDistrLatticeMixin _ _ fsetD fsetC _).
-
-Canonical finCTBDistrLatticeType := [finCTBDistrLatticeType of {fset T}].
+HB.instance Definition _ :=
+  Order.CBDistrLattice_hasComplement.Build fset_display {fset T}
+    (fun A => erefl (fsetC A)).
 End FinLattice.

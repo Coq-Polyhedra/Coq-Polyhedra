@@ -6,6 +6,7 @@ From Polyhedra Require Import fsetmin extra_misc.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Open Scope fset.
 

@@ -12,6 +12,7 @@ Require Import extra_misc inner_product lrel.
 
 Import Order.Theory.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.

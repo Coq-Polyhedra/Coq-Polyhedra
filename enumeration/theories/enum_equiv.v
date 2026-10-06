@@ -11,6 +11,7 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.Theory Num.Theory.
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Local Notation "a .[ i ]" := (PArray.get a i).
 

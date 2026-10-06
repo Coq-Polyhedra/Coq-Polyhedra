@@ -7,14 +7,16 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum zmodp matrix finmap vector order.
-Require Import NArith.BinNat NArith.BinNatDef.
+From Stdlib Require Import NArith.BinNat NArith.BinNatDef PArith.Pnat NArith.Nnat.
 
 Import Order.Theory.
 
 Local Open Scope ring_scope.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -190,14 +192,9 @@ Qed.
 Lemma size_enum_predC1 (n : nat) (i : 'I_n) :
   size [seq i0 <- enum 'I_n | i0 != i] = n.-1.
 Proof.
-move/eqP: (count_predC (xpred1 i) (enum (ordinal_finType n))).
-rewrite size_enum_ord count_uniq_mem; last by apply: enum_uniq.
-rewrite mem_enum /= => ?.
-apply/eqP.
-rewrite size_filter -(eqn_add2r 1) addnC addn1 prednK //.
-apply: contraT.
-rewrite -(ltn0 i) -leqNgt => ?.
-by apply: (leq_trans (ltn_ord i)).
+rewrite size_filter; have := count_predC (pred1 i) (enum 'I_n).
+rewrite size_enum_ord count_uniq_mem ?enum_uniq // mem_enum /= add1n.
+by move=> /(congr1 predn) /= <-.
 Qed.
 
 Lemma predC1_take_enum (n : nat) (i : 'I_n) :
@@ -216,20 +213,21 @@ move => index_eq_j.
 by rewrite -(ltnn j) -{1}index_eq_j.
 Qed.
 
+Lemma map_val_predC1_enum (n : nat) (i : 'I_n) :
+  map val [seq i0 <- enum 'I_n | i0 != i] = iota 0 i ++ iota i.+1 (n - i.+1).
+Proof.
+have ->: [seq i0 <- enum 'I_n | i0 != i] =
+         [seq i0 <- enum 'I_n | preim val (predC1 (val i)) i0] by [].
+rewrite -filter_map val_enum_ord.
+have ->: iota 0 n = iota 0 i ++ iota i (n - i) by rewrite -iotaD subnKC // ltnW.
+rewrite -subnSK // filter_cat /= eqxx; congr (_ ++ _).
+- by apply/all_filterP/allP => j; rewrite mem_iota add0n /= => /ltn_eqF ->.
+- by apply/all_filterP/allP => j; rewrite mem_iota => /andP[ij _] /=; rewrite gtn_eqF.
+Qed.
+
 Lemma take_val_predC1_enum (n : nat) (i : 'I_n) :
   take i (map val [seq i0 <- enum 'I_n | i0 != i]) = iota 0 i.
-Proof.
-rewrite -[enum 'I_n](cat_take_drop i) filter_cat predC1_take_enum map_cat -map_take take_size_cat;
-  last by rewrite !size_map size_take -enumT size_enum_ord (ltn_ord i).
-apply: (@eq_from_nth _ 0%nat _ _ _).
-- by rewrite !size_map size_take -enumT size_enum_ord (ltn_ord i) size_iota.
-- move => k k_lt_size.
-  have k_lt_i: (k < i)%nat by rewrite !size_map size_take -enumT size_enum_ord (ltn_ord i) in k_lt_size.
-  rewrite (@nth_map _ i _ 0%nat); last by rewrite size_map in k_lt_size.
-  rewrite nth_iota // add0n (@nth_map _ i _ i); last by rewrite !size_map in k_lt_size.
-  rewrite nth_take //= -enumT nth_enum_ord //.
-  exact: (ltn_trans k_lt_i (ltn_ord i)).
-Qed.
+Proof. by rewrite map_val_predC1_enum take_size_cat ?size_iota. Qed.
 
 Lemma predC1_drop_enum (n : nat) (i : 'I_n) :
   [seq i0 <- drop i (enum 'I_n) | i0 != i] = drop i.+1 (enum 'I_n).
@@ -256,43 +254,28 @@ Qed.
 
 Lemma drop_enum_predC1 (n : nat) (i : 'I_n) :
   drop i (map val [seq i0 <- enum 'I_n | i0 != i]) = (iota i.+1 (n-i.+1)%nat).
-Proof.
-rewrite -[enum 'I_n](cat_take_drop i) filter_cat predC1_take_enum map_cat drop_size_cat;
-  last by rewrite !size_map size_take size_enum_ord (ltn_ord i).
-rewrite predC1_drop_enum map_drop val_enum_ord.
-apply: (@eq_from_nth _ 0%nat _ _ _).
-- by rewrite size_drop !size_iota.
-- move => k k_lt_size.
-  rewrite size_drop size_iota in k_lt_size.
-  rewrite nth_drop nth_iota; last by rewrite -ltn_subRL.
-  by rewrite add0n nth_iota //.
-Qed.
+Proof. by rewrite map_val_predC1_enum drop_size_cat ?size_iota. Qed.
 
 Lemma nth_predC1_enum (n k : nat) (i : 'I_n) :
   (k < n.-1)%nat ->
   (nat_of_ord (nth i [seq i0 <- enum 'I_n | i0 != i] k) = (i <= k) + k)%nat.
 Proof.
 move => k_lt_n_minus_1.
-rewrite -(@nth_map _ _ _ 0%nat); last by rewrite size_enum_predC1.
-have ->: map val [seq i0 <- enum 'I_n | i0 != i] = (iota 0 i) ++ (iota i.+1 (n-i.+1)%nat)
-  by rewrite -[LHS](cat_take_drop (val i)) take_val_predC1_enum drop_enum_predC1.
-rewrite nth_cat size_iota (leqNgt i k).
+rewrite -(@nth_map _ _ _ 0%nat) ?size_enum_predC1 //.
+rewrite [map _ _]map_val_predC1_enum nth_cat size_iota (leqNgt i k).
 case: (boolP (k < i)%nat) => [? /= | i_leq_k /=]; first by rewrite nth_iota.
 rewrite -leqNgt in i_leq_k.
-rewrite nth_iota; first by rewrite -addn1 [X in (X+_)%nat]addnC -addnA (subnKC i_leq_k).
-have k_lt_n: (k < n)%nat by apply: (leq_trans _ (leq_pred n)).
-rewrite -[X in (n - X)%nat]addn1 addnC subnDA subn1.
-apply: (ltn_sub2r _ k_lt_n_minus_1).
-by apply: (leq_ltn_trans i_leq_k).
+rewrite nth_iota ?addSn ?subnKC //.
+by rewrite subnS predn_sub ltn_sub2r // (leq_ltn_trans i_leq_k).
 Qed.
 
 Lemma predC1_enum (n : nat) (i : 'I_n) :
-  [seq i0 <- enum (ordinal_finType n) | i0 != i] = [seq lift i i0 | i0 <- enum (ordinal_finType n.-1)].
+  [seq i0 <- enum 'I_n | i0 != i] = [seq lift i i0 | i0 <- enum 'I_(n.-1)].
 Proof.
-have size_eq: size [seq i0 <- enum (ordinal_finType n) | i0 != i] = size [seq lift i i0 | i0 <- enum (ordinal_finType n.-1)]
+have size_eq: size [seq i0 <- enum 'I_n | i0 != i] = size [seq lift i i0 | i0 <- enum 'I_(n.-1)]
   by rewrite size_map size_enum_ord size_enum_predC1.
 apply: (@eq_from_nth _ i _ _ size_eq) => k k_lt_size.
-have k_lt_size': (k < size (enum (ordinal_finType n.-1)))%nat by rewrite size_eq size_map in k_lt_size.
+have k_lt_size': (k < size (enum 'I_(n.-1)))%nat by rewrite size_eq size_map in k_lt_size.
 have k_lt_n_minus_1: (k < n.-1)%nat by rewrite size_enum_ord in k_lt_size'.
 rewrite (@nth_map _ (Ordinal k_lt_n_minus_1) _ i (lift i) _ _ k_lt_size') /=.
 apply: ord_inj.
@@ -402,7 +385,7 @@ Qed.
 Lemma addr_ltr_le0 (x y : R) :
   x < 0 -> y <= 0 -> x + y < 0.
 Proof.
-by rewrite -{3}[0]addr0; apply: ltr_le_add.
+by rewrite -{3}[0]addr0; apply: ltr_leD.
 Qed.
 
 Lemma sumr_le0 I (r : seq I) (P : pred I) (F : I -> R) :
@@ -418,7 +401,7 @@ Lemma sumr_ltrP (I : finType) (F : I -> R) (G : I -> R) :
 Proof.
 move => F_le_G [i Fi_lt_Gi].
 rewrite [X in X < _](bigD1 i) //= [X in _ < X](bigD1 i) //=.
-by rewrite ltr_le_add // ler_sum.
+by rewrite ltr_leD // ler_sum.
 Qed.
 
 Fixpoint min_seq (S : seq R) (v : R) :=
@@ -435,10 +418,10 @@ elim: S => [ | x S' IH].
 - move => i; rewrite in_cons; move/orP => [/eqP -> | H].
   + rewrite /=.
     case H': S'; first by done.
-    * rewrite le_minl; apply/orP; left; done.
+    * rewrite ge_min; apply/orP; left; done.
   + rewrite /=; move: H.
     case H': S'; first by rewrite in_nil.
-    * by rewrite -H'; move => Hi; rewrite le_minl; apply/orP; right; apply: IH.
+    * by rewrite -H'; move => Hi; rewrite ge_min; apply/orP; right; apply: IH.
 Qed.
 
 Lemma min_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | min_seq S v == i] S.
@@ -484,7 +467,7 @@ Proof.
         rewrite /= => /andP [Hxp H_].
         have Hsp: 0 < min_seq S v by apply: Hx. rewrite {H_ Hx}.
         case Haf: (S); first by apply: Hxp.
-        by rewrite -Haf lt_minr Hxp.
+        by rewrite -Haf lt_min Hxp.
 Qed.
 
 Fixpoint max_seq (S : seq R) (v : R) :=
@@ -501,10 +484,10 @@ elim: S => [ /= | x S' IH].
 - move => i; rewrite inE => /orP [/eqP -> | H].
   + rewrite /=.
     case: S' IH => // [?? _ ].
-    by rewrite le_maxr lexx.
+    by rewrite le_max lexx.
   + rewrite /=; move: H.
     case H': S'; first by rewrite in_nil.
-    * by rewrite -H'; move => Hi; rewrite le_maxr; apply/orP; right; apply: IH.
+    * by rewrite -H'; move => Hi; rewrite le_max; apply/orP; right; apply: IH.
 Qed.
 
 Lemma max_seq_eq (S : seq R) (v : R) :  S != [::] -> has [pred i | max_seq S v == i] S.
@@ -650,7 +633,7 @@ Local Open Scope fset_scope.
 Variable (K : choiceType) (S : {fset K}).
 
 Structure tagged_fset := Tag { untag : {fset K} }.
-Local Coercion untag : tagged_fset >-> finset_of.
+Local Coercion untag : tagged_fset >-> finSet.
 
 Lemma untag_inj : injective untag.
 Proof.
@@ -663,18 +646,19 @@ Proof.
 by move => x; apply/untag_inj.
 Qed.
 
-Definition tagged_fset_eqMixin := CanEqMixin untagK.
-Canonical tagged_fset_eqType := Eval hnf in EqType tagged_fset tagged_fset_eqMixin.
-Definition tagged_fset_choiceMixin := CanChoiceMixin untagK.
-Canonical tagged_fset_choiceType := Eval hnf in ChoiceType tagged_fset tagged_fset_choiceMixin.
+#[export]
+HB.instance Definition _ := Equality.copy tagged_fset (can_type untagK).
+#[export]
+HB.instance Definition _ := Choice.copy tagged_fset (can_type untagK).
 
 Record fsubset_t := FSubset { tf : tagged_fset; _ : (tf `<=` S) }.
 Local Coercion tf : fsubset_t >-> tagged_fset.
-Canonical fsubset_subType := [subType for tf].
-Definition fsubset_eqMixin := Eval hnf in [eqMixin of fsubset_t by <:].
-Canonical fsubset_eqType := Eval hnf in EqType fsubset_t fsubset_eqMixin.
-Definition fsubset_choiceMixin := [choiceMixin of fsubset_t by <:].
-Canonical fsubset_choiceType := Eval hnf in ChoiceType fsubset_t fsubset_choiceMixin.
+#[export]
+HB.instance Definition _ := [isSub for tf].
+#[export]
+HB.instance Definition _ := [Equality of fsubset_t by <:].
+#[export]
+HB.instance Definition _ := [Choice of fsubset_t by <:].
 
 Definition fsetval_of_fsubset (A : fsubset_t) : {fset S} := [fset x : S | val x \in untag (val A)].
 
@@ -692,10 +676,10 @@ move/fsub_fsetval: (valP A) <-.
 exact: untag_inj.
 Qed.
 
-Definition fsubset_countMixin := CanCountMixin fsetval_of_fsubsetK.
-Canonical fsubset_countType := Eval hnf in CountType fsubset_t fsubset_countMixin.
-Definition fsubset_finMixin := CanFinMixin fsetval_of_fsubsetK.
-Canonical fsubset_finType := Eval hnf in FinType fsubset_t fsubset_finMixin.
+#[export]
+HB.instance Definition _ := CanIsCountable fsetval_of_fsubsetK.
+#[export]
+HB.instance Definition _ : isFinite fsubset_t := CanIsFinite fsetval_of_fsubsetK.
 
 Definition fsubset_of (A : fsubset_t) & (phantom {fset K} A) : fsubset_t := A.
 Notation "A %:fsub" := (fsubset_of (Phantom {fset K} A)) (at level 0).
@@ -785,15 +769,8 @@ End Test.
 End FSubset.
 
 Module Import Exports.
-Coercion untag : tagged_fset >-> finset_of.
+Coercion untag : tagged_fset >-> finSet.
 Coercion tf : fsubset_t >-> tagged_fset.
-Canonical tagged_fset_eqType.
-Canonical tagged_fset_choiceType.
-Canonical fsubset_subType.
-Canonical fsubset_eqType.
-Canonical fsubset_choiceType.
-Canonical fsubset_countType.
-Canonical fsubset_finType.
 Canonical tag6.
 Canonical fsubset_expose.
 Canonical fsubset_fset0.
@@ -804,6 +781,7 @@ End Exports.
 End FSubset.
 
 Export FSubset.Exports.
+HB.export FSubset.
 
 Notation "'{fsubset'  S '}'" := (FSubset.fsubset_t S) (at level 2).
 Notation "A %:fsub" := (FSubset.fsubset_of (Phantom {fset _} A)) (at level 0).
@@ -811,19 +789,15 @@ Notation "A %:fsub" := (FSubset.fsubset_of (Phantom {fset _} A)) (at level 0).
 (*
 Section Test.
 Local Open Scope fset_scope.
-
 Set Typeclasses Debug.
-
 Variable (K : realFieldType) (S : {fset K}).
 Check (fset0%:fsub) : {fsubset S}.
 Check (S %:fsub) : {fsubset S}.
-
 Variable A : {fset K}.
 Hypothesis (HA : (A `<=` S)).
 Check ((A %:fsub) : {fsubset S}).
 Goal (A `|` fset0)%:fsub = A%:fsub :> {fsubset S}.
 Abort.
-
 Variable A' : {fsubset S}.
 Goal (A' `|` fset0)%:fsub = A%:fsub.
 Abort.
@@ -907,6 +881,7 @@ Global Instance expose_funP (K : choiceType) (S : {fset K}) (T : Type) (P : pred
 (* TODO: strange that this cannot be implemented by adding a canonical. Apparently backtracking is not working *)
 Global Instance expose_setT (K : choiceType) (S : {fset K}) : expose (S `<=` S)%fset := Expose (fsubset_refl S).*)
 
+
 (*
 Section Test.
 
@@ -944,7 +919,7 @@ Qed.
 
 Lemma dim_leqn (R : realFieldType) (n : nat) (U : {vspace 'cV[R]_n}) : (\dim U <= n)%nat.
 Proof.
-by move/dimvS: (subvf U); rewrite dimvf /Vector.dim /= muln1.
+by move/dimvS: (subvf U); rewrite dimvf /dim /= muln1.
 Qed.
 
 End Vector.
@@ -955,7 +930,7 @@ Local Open Scope ring_scope.
 Import GRing.Theory Num.Theory.
 
 Inductive is_span_gen {K : fieldType} {vT : vectType K} : seq vT -> seq vT -> Prop :=
-  | NilSpan : is_span_gen [::] [::] 
+  | NilSpan : is_span_gen [::] [::]
   | SpanMemF x s S (_ : x \notin <<s>>%VS) (_ : is_span_gen s S): is_span_gen (x::s) (x::S)
   | SpanMemT x s S (_ : x \in <<s>>%VS) (_ : is_span_gen s S) : is_span_gen s (x::S).
 
@@ -1086,7 +1061,7 @@ by move=> ????; exists l; exists E2; split.
 Qed.
 
 Lemma max_basis_cons_cat {K : fieldType} {vT : vectType K}
-  (h v: vT) E1 E2 B: 
+  (h v: vT) E1 E2 B:
   basis_of <<v :: E1 ++ h :: E2>>%VS (h :: B) ->
   max_basis (h :: B) (v :: E1 ++ h :: E2) ->
   subseq B E2 -> (<<E2>> <= <<B>>)%VS ->
@@ -1235,7 +1210,7 @@ elim/last_ind: B1 {subB1y} baseB maxB ynB subB1 is_sgB => [|B1' x _].
       by case/and3P.
 Qed. *)
 
- 
+
 
 Fixpoint span_gen  {K : fieldType} {vT : vectType K} (S : seq vT) := match S with
   | [::] => [::]
@@ -1258,7 +1233,7 @@ Proof. by move/is_sgP: (span_genP S). Qed.
 
 Lemma span_gen_basis {K : fieldType} {vT : vectType K} (S : seq vT):
   basis_of <<S>>%VS (span_gen S).
-Proof. by case/is_sgP: (span_genP S). Qed. 
+Proof. by case/is_sgP: (span_genP S). Qed.
 
 Lemma span_gen_free {K : fieldType} {vT : vectType K} (S : seq vT) :
   free (span_gen S).
@@ -1328,7 +1303,7 @@ case/boolP: (n == size t).
   move=> free_t.
   suff/span_basis ->: basis_of fullv t by exact: memvf.
   rewrite basisEfree free_t subvf -t_eq_n dimvf /=.
-  by rewrite /Vector.dim /= mul1n leqnn.
+  by rewrite /dim /= mul1n leqnn.
 - move=> /negPf t_gt_n /ltnSE; rewrite leq_eqVlt t_gt_n /=.
   by move/IH=> ->; rewrite orbT.
 Qed.
@@ -1344,7 +1319,7 @@ case/boolP: (n == size t).
   move=> free_t.
   suff/span_basis ->: basis_of fullv t by exact: memvf.
   rewrite basisEfree free_t subvf -t_eq_n dimvf /=.
-  by rewrite /Vector.dim /= muln1 leqnn.
+  by rewrite /dim /= muln1 leqnn.
 - move=> /negPf t_gt_n /ltnSE; rewrite leq_eqVlt t_gt_n /=.
   by move/IH=> ->; rewrite orbT.
 Qed.
@@ -1413,8 +1388,8 @@ move: (erefl #|S|); case: {2}#|S|=> [S0| n Ssn].
   + move=> i; rewrite size_map size_enum_ord=> i_ltnS.
     rewrite !(nth_map (enum_val ord0S)) -?cardE //.
     rewrite (nth_map ord0S) ?size_enum_ord //.
-    rewrite (enum_val_nth (enum_val ord0S)); congr f; congr nth.
-    exact: nth_enum_ord.
+    apply: (congr1 f).
+    by rewrite [LHS](enum_val_nth (enum_val ord0S)) nth_enum_ord.
 Qed.
 
 End EnumValMap.
@@ -1466,7 +1441,7 @@ Qed.
 Lemma all_eq_same_mask {T1 T2 : Type} (p1 : pred T1) (p2 : pred T2)
   (s1 : seq T1) (s2 : seq T2) (m : bitseq) (x1 : T1) (x2 : T2):
   size s1 = size s2 -> size m = size s1 ->
-  (forall i, (i < size s1)%nat -> p1 (nth x1 s1 i) = p2 (nth x2 s2 i)) -> 
+  (forall i, (i < size s1)%nat -> p1 (nth x1 s1 i) = p2 (nth x2 s2 i)) ->
   all p1 (mask m s1) = all p2 (mask m s2).
 Proof.
 elim: m s1 s2=> //= h t IH.
@@ -1515,10 +1490,10 @@ Lemma nth_eq_dflt {T : Type} (x1 x2 : T) (s : seq T) i:
   nth x1 s i = nth x2 s i.
 Proof. by elim: s i=> //= h t IH []. Qed.
 
-Lemma sorted_rel_pair {T T' : Type} (s : seq T) (s' : seq T')  
+Lemma sorted_rel_pair {T T' : Type} (s : seq T) (s' : seq T')
   (r : T -> T' -> Prop) (le : rel T) (le' : rel T') (x : T) (x' : T'):
   (forall x y x' y', r x x' -> r y y' -> le x y = le' x' y') ->
-  size s = size s' -> 
+  size s = size s' ->
   (forall k, (k < size s)%nat -> r (nth x s k) (nth x' s' k)) ->
   sorted le s = sorted le' s'.
 Proof.
@@ -1541,7 +1516,7 @@ case/orP=> [/eqP xh|xt]; case/orP=> [/eqP yh|yt].
 - by rewrite xh=> f_hy; move: yt fh_not=> /(map_f f); rewrite -f_hy=> ->.
 - by rewrite yh=> f_xh; move: xt fh_not=> /(map_f f); rewrite f_xh=> ->.
 - exact/IH.
-Qed.  
+Qed.
 
 Lemma uniq_size_ltn {T : eqType} (s s': seq T):
   uniq s -> uniq s' -> (forall i, i \in s -> i \in s') -> (size s <= size s')%nat.
@@ -1556,19 +1531,17 @@ rewrite mem_rem_uniq // !inE=> ->; rewrite andbT.
 by move: xt; apply: contraTneq=> ->.
 Qed.
 
-Lemma big_rcons [R : Type] (idx : R) (op : Monoid.com_law idx) [I : Type] 
-  (r : seq I) (F : I -> R) (P : pred I) (t : I): 
-  \big[op/idx]_(i <- rcons r t | P i) F i = 
+Lemma big_rcons [R : Type] (idx : R) (op : Monoid.com_law idx) [I : Type]
+  (r : seq I) (F : I -> R) (P : pred I) (t : I):
+  \big[op/idx]_(i <- rcons r t | P i) F i =
   if (P t) then op (\big[op/idx]_(i <- r | P i) F i) (F t) else (\big[op/idx]_(i <- r | P i) F i).
 Proof.
-elim: r=> /=; first by rewrite big_nil BigOp.bigopE /= Monoid.mulmC.
-move=> h l IH; rewrite !big_cons IH.
-by case: ifP; case: ifP=> // _ _; rewrite Monoid.mulmA.
-Qed. 
+by rewrite -cats1 big_cat /= big_cons big_nil; case: ifP => _; rewrite ?Monoid.mulm1.
+Qed.
 
 Lemma iter0 {T : Type} (f : T -> T) (x : T): iter 0 f x = x.
 Proof. by []. Qed.
-  
+
 Lemma perm_foldl {T : eqType} {R : Type}
   (f : R -> T -> R) (x : R) (s s': seq T):
   perm_eq s s' ->
@@ -1592,13 +1565,13 @@ Proof. by move=> ff'; elim: s x=> //= a l IH x; rewrite ff' IH. Qed.
 
 Lemma sorted_cat {T : Type} (leT : rel T) (s t : seq T):
   transitive leT ->
-  reflect 
-  ([/\ sorted leT s, sorted leT t & allrel leT s t]) 
+  reflect
+  ([/\ sorted leT s, sorted leT t & allrel leT s t])
   (sorted leT (s ++ t)).
 Proof.
 move=> leT_trans; apply/(iffP idP).
 - elim: s t=> /= [t ->|]; rewrite ?allrel0l //.
-  move=> a l IH t /[dup] /path_sorted /IH [stt_l stt_t all_lt]. 
+  move=> a l IH t /[dup] /path_sorted /IH [stt_l stt_t all_lt].
   rewrite cat_path=> /andP [path_al path_alt].
   rewrite path_al stt_t; split=> //.
   rewrite allrel_consl all_lt andbT.
@@ -1615,10 +1588,10 @@ move=> leT_trans; apply/(iffP idP).
   move=> a' l' IH a t + _; rewrite allrel_consl=> /andP [] /[swap].
   exact/IH.
 Qed.
-  
 
-  
-End Foo. 
+
+
+End Foo.
 
 Section BinNatExtra.
 
@@ -1644,9 +1617,9 @@ Proof.
 rewrite /N.min; rewrite Nnat.N2Nat.inj_compare.
 case E: (PeanoNat.Nat.compare _ _).
 - by move/PeanoNat.Nat.compare_eq: E=> /Nnat.N2Nat.inj_iff ->; rewrite minnn.
-- move/Compare_dec.nat_compare_Lt_lt: E=> /ssrnat.ltP h.
+- move/PeanoNat.Nat.compare_lt_iff: E=> /ssrnat.ltP h.
   exact/esym/minn_idPl/ltnW/bar.
-- move/Compare_dec.nat_compare_Gt_gt: E=> /ssrnat.ltP h.
+- move/PeanoNat.Nat.compare_gt_iff: E=> /ssrnat.ltP h.
   exact/esym/minn_idPr/ltnW/bar.
 Qed.
 
@@ -1655,9 +1628,9 @@ Proof.
 rewrite /N.max; rewrite Nnat.N2Nat.inj_compare.
 case E: (PeanoNat.Nat.compare _ _).
 - by move/PeanoNat.Nat.compare_eq: E=> /Nnat.N2Nat.inj_iff ->; rewrite maxnn.
-- move/Compare_dec.nat_compare_Lt_lt: E=> /ssrnat.ltP h.
+- move/PeanoNat.Nat.compare_lt_iff: E=> /ssrnat.ltP h.
   exact/esym/maxn_idPr/ltnW/bar.
-- move/Compare_dec.nat_compare_Gt_gt: E=> /ssrnat.ltP h.
+- move/PeanoNat.Nat.compare_gt_iff: E=> /ssrnat.ltP h.
   exact/esym/maxn_idPl/ltnW/bar.
 Qed.
 
@@ -1726,7 +1699,7 @@ case: ifP; case: ifP=> [|/eqP ->]; rewrite ?eq_refl //.
 Qed.
 
 Lemma map_in_undup' {T T' : eqType} (s : seq T) (f : T -> T'):
-  {in s &, injective f} -> 
+  {in s &, injective f} ->
   undup' [seq f x | x <- s] = [seq f x | x <- undup' s].
 Proof.
 elim: s=> //= h t IH inj_f; congr cons.
@@ -1834,4 +1807,3 @@ Lemma leq_ltn_addn (a b c d : nat):
 Proof. by move/leq_add=> /[apply]; rewrite addnS. Qed.
 
 End Nat.
-

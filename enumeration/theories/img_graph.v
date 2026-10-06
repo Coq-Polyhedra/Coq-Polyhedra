@@ -11,6 +11,7 @@ Unset Printing Implicit Defensive.
 Local Notation "a .[ i ]" := (PArray.get a i).
 
 Import Order.Theory.
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Module ImgGraphComputation.
 

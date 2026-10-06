@@ -17,6 +17,7 @@ From mathcomp.bigenough Require Import bigenough.
 Import BigEnough.
 Import Order.Theory.
 
+Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -944,10 +945,10 @@ have ->: e.2 = \sum_(y : finsupp w) (w (fsval y)) * e.2.
 - by rewrite -mulr_suml -weightE wgt1_fconvex mul1r.
 apply/sumr_ltrP => [y|].
 - move/(_ _ (fsvalP y)): supp_sub_hs; rewrite in_hs.
-  rewrite vdotZr ler_pmul2l //.
+  rewrite vdotZr ler_pM2l //.
   by apply/gt0_fconvex.
 - exists [` x_in]%fset => /=.
-  rewrite vdotZr /=; rewrite ltr_pmul2l //.
+  rewrite vdotZr /=; rewrite ltr_pM2l //.
   by apply/gt0_fconvex.
 Qed.
 
@@ -1059,7 +1060,7 @@ pose E e := '[ e.1, d] / (e.2 - '[ e.1, x]).
 pose M   := \sum_(e : base) `|E (val e)|.
 have ge0_M: 0 <= M by rewrite sumr_ge0.
 pose ϵ := (1 + M)^-1; exists ϵ.
-- by apply/invr_neq0/lt0r_neq0/(lt_le_trans ltr01); rewrite ler_addl.
+- by apply/invr_neq0/lt0r_neq0/(lt_le_trans ltr01); rewrite lerDl.
 - set y := x + ϵ *: d.
   have y_in_hp: forall e, e \in ({eq P} : {fset _}) -> y \in [hp e].
   + move=> e e_in; move: d_in_dir; rewrite /pb_hull ifT // => d_in.
@@ -1076,11 +1077,11 @@ pose ϵ := (1 + M)^-1; exists ϵ.
         by rewrite aff_lt0x /pb_hull ifT.
   have y_in_hs: forall e, e \in (base `\` {eq P})%fset -> y \in [hs e].
   + move=> e /[dup] e_in /(fsubsetP (fsubsetDl _ _)) e_in_base.
-    rewrite in_hs vdotDr vdotZr -ler_subl_addl ler_pdivl_mull ?(lt_le_trans ltr01) ?ler_addl //.
-    rewrite -ler_ndivr_mulr.
-    * apply/(le_trans (y := M)); rewrite ?ler_addr //.
+    rewrite in_hs vdotDr vdotZr -lerBlDl ler_pdivlMl ?(lt_le_trans ltr01) ?lerDl //.
+    rewrite -ler_ndivrMr.
+    * apply/(le_trans (y := M)); rewrite ?lerDr //.
       apply/(le_trans (y := `|E e|)); rewrite ?ler_norm //.
-      rewrite /M (bigD1 [`e_in_base]%fset) //= ler_addl sumr_ge0 //.
+      rewrite /M (bigD1 [`e_in_base]%fset) //= lerDl sumr_ge0 //.
     * rewrite subr_lt0; rewrite -notin_hp ?relint_ptP //.
       by move/relint_pt_in: Pneq0 => /(poly_leP (poly_base_subset_hs _ e_in_base)).
   by rewrite [P]repr_active //; apply/in_polyEqP_fsub.
@@ -1397,8 +1398,8 @@ have μ_ge0: forall x, x \in P -> μ x >= 0.
   by rewrite in_hs /= -d_v.
 have μ_le_μ_w : forall x, x \in P -> μ x <= μ w.
 - move => x /(poly_leP (opt_value_lower_bound d_bounded')).
-  rewrite in_hs /= vdotNl ler_oppr -d_w => ?.
-  by apply/ler_wpmul2r; rewrite ?invr_ge0 ?vnorm_ge0 ?ler_add2r.
+  rewrite in_hs /= vdotNl lerNr -d_w => ?.
+  by apply/ler_wpM2r; rewrite ?invr_ge0 ?vnorm_ge0 ?lerD2r.
 have x_eq : forall x, x \in P -> x = v + μ x *: d.
 - move => x /subset_hull.
   rewrite hull_P => /in_lineP [μ_x x_eq].
@@ -1422,7 +1423,7 @@ have P_sub: P `<=` [segm v & w].
   + apply/andP; split; first by apply/divr_ge0 => //; apply/μ_ge0.
     case: (ler0P (μ w)) => [?| ?].
     * by rewrite /μ' μ_x_eq0 ?mul0r ?ler01.
-    * by rewrite lter_pdivr_mulr ?mul1r ?μ_le_μ_w.
+    * by rewrite lter_pdivrMr ?mul1r ?μ_le_μ_w.
 exists v; exists w.
 - apply/le_anti; apply/andP; split => //.
   by apply/conv_subset => x /fset2P; case => ->.
@@ -2047,7 +2048,7 @@ pose S := [seq '[c,x] | x <- (vertex_set P `\ v)%fset].
 pose α := min_seq S ('[c,v]+1%R).
 have v_notin: v \notin [hs [<c, α>]].
 - rewrite /α; case: min_seqP => [| ? [/mapP [z] z_in -> _]].
-  + by rewrite in_hs -ltNge cpr_add ltr01.
+  + by rewrite in_hs -ltNge cprD ltr01.
   + move: z_in; rewrite 2!inE => /andP [z_neq_v /vertex_set_subset z_in].
     have /(notin_argmin c_bounded z_in): z \notin argmin P c
       by rewrite -pt_eq in_pt.
@@ -2819,7 +2820,7 @@ suff slice_sub: (slice e P `<=` [hs [<c, '[ c, v]>]]).
   have {x_in_hp} /(poly_leP slice_sub) : x \in slice e P.
   - rewrite in_polyI /=; apply/andP; split; first by rewrite affE.
     by rewrite mem_poly_convex ?ltW_le ?vertex_set_subset.
-  rewrite !in_hs /= /x combine2C combine2_line vdotDr ler_addl.
+  rewrite !in_hs /= /x combine2C combine2_line vdotDr lerDl.
   rewrite vdotZr vdotBr pmulr_rge0 ?subr_ge0 //.
   by rewrite subr_cp0; move/andP: α01=> [].
 - rewrite [slice _ _]conv_vertex_set ?compact_slice //; apply/conv_subset=> z.
