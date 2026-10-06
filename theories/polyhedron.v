@@ -7,6 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum zmodp matrix mxalgebra vector finmap.
 
@@ -52,21 +53,12 @@ Canonical poly_equiv_equiv :=
     H.poly_equiv_refl H.poly_equiv_sym H.poly_equiv_trans.
 
 Definition type := {eq_quot H.poly_equiv}.
-Definition type_of of phant R := type.
 
-Notation  "''poly[' R ]" := (type_of (Phant R)).
+Notation  "''poly[' R ]" := type.
 
-Canonical poly_quotType := [quotType of type].
-Canonical poly_eqType := [eqType of type].
-Canonical poly_choiceType := [choiceType of type].
-Canonical poly_eqQuotType := [eqQuotType H.poly_equiv of type].
-
-Canonical poly_of_quotType := [quotType of 'poly[R]].
-Canonical poly_of_eqType := [eqType of 'poly[R]].
-Canonical poly_of_choiceType := [choiceType of 'poly[R]].
-Canonical poly_of_eqQuotType := [eqQuotType H.poly_equiv of 'poly[R]].
-
-Identity Coercion type_of_type : type_of >-> type.
+HB.instance Definition _ := Choice.on type.
+HB.instance Definition _ := Quotient.on type.
+HB.instance Definition _ := EqQuotient.on type.
 
 Definition mem_pred_sort (P : type) := (repr P) : {pred 'cV[R]_n}.
 Coercion mem_pred_sort : type >-> pred_sort.
@@ -77,34 +69,24 @@ End Def.
 Section Def.
 Context {R : realFieldType} (n : nat).
 
-Local Notation "''poly[' R ]_ n" := (type_of n (Phant R)).
+Local Notation "''poly[' R ]_ n" := (@type R n).
 
 Inductive poly_type : predArgType := Poly of 'poly[R]_n.
 
-Definition poly_of of phant R := poly_type.
-
-Identity Coercion type_of_poly : poly_of >-> poly_type.
-
 Definition polyval P := let: Poly t := P in t.
-Coercion polyval : poly_type >-> type_of.
+Coercion polyval : poly_type >-> type.
 
-Canonical poly_subType := Eval hnf in [newType for polyval].
-Definition poly_eqMixin := Eval hnf in [eqMixin of poly_type by <:].
-Canonical poly2_eqType := Eval hnf in EqType poly_type poly_eqMixin.
-Definition poly_choiceMixin := [choiceMixin of poly_type by <:].
-Canonical poly2_choiceType := Eval hnf in ChoiceType poly_type poly_choiceMixin.
+HB.instance Definition _ := [isNew for polyval].
+HB.instance Definition _ := [Equality of poly_type by <:].
+HB.instance Definition _ := [Choice of poly_type by <:].
 End Def.
 
 Section Def.
 Context (R : realFieldType) (n : nat).
 
-Notation "''poly[' R ]_ n" := (poly_of n (Phant R)).
+Notation "''poly[' R ]_ n" := (@poly_type R n).
 Notation "''poly[' R ]"    := ('poly[R]_(_)).
 Notation "''poly_' n"      := ('poly[_]_n).
-
-Canonical poly2_of_subType    := [subType    of 'poly[R]_n].
-Canonical poly2_of_eqType     := [eqType     of 'poly[R]_n].
-Canonical poly2_of_choiceType := [choiceType of 'poly[R]_n].
 
 Canonical poly2_predType :=
   PredType (@mem_pred_sort R n : 'poly[R]_n -> pred 'cV[R]_n).
@@ -112,7 +94,7 @@ Canonical poly2_predType :=
 Definition hrepr (P : 'poly[R]_n) := repr (polyval P).
 End Def.
 
-Notation "''poly[' R ]_ n" := (poly_of n (Phant R)).
+Notation "''poly[' R ]_ n" := (@poly_type R n).
 Notation "''poly[' R ]"    := 'poly[R]_(_).
 Notation "''poly_' n"      := 'poly[_]_n.
 
@@ -193,12 +175,8 @@ Local Lemma _poly_lt_def (x y : 'poly[R]_n) :
   _poly_lt x y = (y != x) && (poly_subset x y).
 Proof. by rewrite eq_sym. Qed.
 
-Definition poly_pOrderMixin :=
-  LePOrderMixin
-    _poly_lt_def _poly_subset_refl _poly_subset_anti _poly_subset_trans.
-
-Canonical poly_pOrderType :=
-  Eval hnf in POrderType polyh_display 'poly[R]_n poly_pOrderMixin.
+HB.instance Definition _ := Order.isPOrder.Build polyh_display 'poly[R]_n
+  _poly_lt_def _poly_subset_refl _poly_subset_anti _poly_subset_trans.
 
 Local Lemma _poly_0le P : poly_subset poly0 P.
 Proof. by apply/_poly_subsetP => x; rewrite mem_poly0. Qed.
@@ -206,12 +184,8 @@ Proof. by apply/_poly_subsetP => x; rewrite mem_poly0. Qed.
 Local Lemma _poly_leT P : poly_subset P polyT.
 Proof. by apply/_poly_subsetP => x; rewrite mem_polyT. Qed.
 
-Definition poly_bottomMixin := BottomMixin _poly_0le.
-Canonical poly_bPOrderType := BPOrderType 'poly[R]_n poly_bottomMixin.
-
-Definition poly_topMixin := TopMixin _poly_leT.
-Canonical poly_tPOrderType := TPOrderType 'poly[R]_n poly_topMixin.
-Canonical poly_tbPOrderType := [tbPOrderType of 'poly[R]_n].
+HB.instance Definition _ := Order.hasBottom.Build polyh_display 'poly[R]_n _poly_0le.
+HB.instance Definition _ := Order.hasTop.Build polyh_display 'poly[R]_n _poly_leT.
 
 Local Lemma _poly_meetC : commutative _polyI.
 Proof. by move=> P Q; apply/poly_eqP=> x; rewrite !mem_polyI andbC. Qed.
@@ -228,12 +202,8 @@ apply/_poly_subsetP/eqP => [sub|polyI_eq ?].
 - by rewrite -polyI_eq mem_polyI => /andP[].
 Qed.
 
-Definition poly_meetMixin := MeetMixin _poly_meetC _poly_meetA _poly_leEmeet.
-Canonical poly_meetSemilatticeType :=
-  Eval hnf in MeetSemilatticeType 'poly[R]_n poly_meetMixin.
-Canonical poly_bMeetOrderType := [bMeetSemilatticeType of 'poly[R]_n].
-Canonical poly_tMeetOrderType := [tMeetSemilatticeType of 'poly[R]_n].
-Canonical poly_tbMeetOrderType := [tbMeetSemilatticeType of 'poly[R]_n].
+HB.instance Definition _ := Order.POrder_Meet_isSemilattice.Build polyh_display
+  'poly[R]_n _poly_meetC _poly_meetA _poly_leEmeet.
 
 Notation "'[' 'poly0' ']'" := poly0.
 Notation "'[' 'polyT' ']'" := polyT.
@@ -403,7 +373,7 @@ Definition aff V : 'poly[R]_n :=
     \meet_(i < \dim V) ([hs U`_i] `&` [hs (- U`_i)]) (* define on sequence instead *)
   end.
 
-Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
+Notation "V %:PH" := (aff V) (at level 2, format "V %:PH").
 
 Lemma affE {V : 'affine[R]_n} : V %:PH =i V.
 Proof.
@@ -1014,7 +984,7 @@ Lemma in_poly_of_baseP (x : 'cV_n) (base : base_t) :
 Proof.
 rewrite in_poly_of_base. apply: (iffP forallP) => /= h.
 + by move=> b bb; apply: (h [` bb]%fset).
-+ by move=> b; apply: h.
++ by move=> b; apply/h/fsvalP.
 Qed.
 
 Lemma is_poly_of_base (P : 'poly[R]_n) :
@@ -1273,7 +1243,7 @@ Notation "'[' 'hs' b ']'" := (mk_hs b) : polyh_scope.
 Notation "'[' 'hline' c & Ω ']'" := (mk_hline c Ω) : polyh_scope.
 Notation "''P' ( base )" := (poly_of_base (base)%fset) : polyh_scope.
 Notation "''P^=' ( base ; I )" := (polyEq (base)%fset (I)%fset) : polyh_scope.
-Notation "V %:PH" := (aff V) (at level 2, left associativity, format "V %:PH").
+Notation "V %:PH" := (aff V) (at level 2, format "V %:PH").
 
 Definition inE := (@in_poly0, @in_polyT, @affE, @in_polyI, inE).
 
@@ -1984,7 +1954,7 @@ elim: base0 base1 => [//=| e base' /= h_ind base1].
 case: ifP => [ | _]; symmetry.
 - by rewrite /= !fset_of_cons !poly_of_baseU1 h_ind meet_r.
 - rewrite h_ind; apply/congr1.
-  by apply/fsetP => i; rewrite !inE /= orbCA.
+  by apply/fsetP => i; rewrite !(inE, mem_cat) /= orbCA.
 Qed.
 
 Lemma mk_nonredundant_base_subset (base0 base1 : seq lrel[R]_n) :
