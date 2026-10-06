@@ -270,7 +270,7 @@ Lemma max_boundP (i : 'I_n):
   max_bound_i i <= max_bound.
 Proof.
 rewrite /max_bound.
-have: i \in index_enum (ordinal_finType n) by rewrite mem_index_enum.
+have: i \in index_enum 'I_n by rewrite mem_index_enum.
 elim: (index_enum _)=> // h t IH.
 rewrite in_cons big_cons le_max; case/orP.
 - by move/eqP=> ->; rewrite lexx.

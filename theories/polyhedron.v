@@ -573,7 +573,7 @@ have neq0: '[e.1,z] - '[e.1, y] != 0 by rewrite subr_eq0 ltr_neq.
 exists α.
 - apply/andP; split.
   + by rewrite /α mulr_le0 // 1?invr_le0 subr_le0 // ?ltW.
-  + by rewrite lter_ndivrMr ?subr_lt0 // mul1r ltD2r.
+  + by rewrite lter_ndivrMr ?subr_lt0 // mul1r ltrD2r.
 - by rewrite in_hp vdotDr !vdotZr mulrBl mul1r addrAC -addrA -mulrBr divfK // addrCA addrN addr0.
 Qed.
 
@@ -1673,7 +1673,7 @@ Implicit Type (U : {vspace 'cV[R]_n}) (Ω : 'cV[R]_n).
 
 Lemma dim_cVn U : (\dim U <= n)%N.
 Proof.
-by move/dimvS: (subvf U); rewrite dimvf /Vector.dim /= muln1.
+by move/dimvS: (subvf U); rewrite dimvf /dim /= muln1.
 Qed.
 
 Lemma affine_subset_poly_of_base (base : base_t[R,n]) :

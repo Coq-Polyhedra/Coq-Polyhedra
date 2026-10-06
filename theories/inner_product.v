@@ -111,7 +111,7 @@ Qed.
 
 Lemma vdotBr u v w : '[u, v - w] = '[u, v] - '[u, w].
 Proof. by rewrite !(vdotC u) vdotBl. Qed.
-HB.instance Definition _ u := GRing.isAdditive.Build _ _ _ (vdotBr u).
+HB.instance Definition _ u := GRing.isZmodMorphism.Build _ _ _ (vdotBr u).
 
 Lemma vdot0r u : '[u,0] = 0.
 Proof. exact: raddf0. Qed.
@@ -216,7 +216,7 @@ Section Orthogonal.
 
 Context {R : realFieldType} {n : nat}.
 
-Let E := [vectType R of 'cV[R]_n].
+Let E : vectType R := 'cV[R]_n.
 
 Implicit Type (V : {vspace E}) (x : 'cV[R]_n).
 
@@ -227,13 +227,9 @@ Definition orth_fun0 V x := (* WARNING: this is not the orthogonal projection,
 
 Lemma orth_fun_lmorph V : linear (orth_fun0 V).
 Proof.
-Admitted.
-(*split.
-- move => x y; rewrite /orth_fun0.
-  by under eq_big do [ | rewrite vdotBr scalerBl]; rewrite sumrB.
-- move => x y; rewrite /orth_fun0.
-  by under eq_big do [ | rewrite vdotZr -scalerA]; rewrite scaler_sumr.
-Qed.*)
+move=> a x y; rewrite /orth_fun0 scaler_sumr -big_split; apply: eq_bigr => i _ /=.
+by rewrite vdotDr vdotZr scalerDl scalerA.
+Qed.
 
 Fact orth_fun_key : unit. Proof. by []. Qed.
 HB.instance Definition _ V := GRing.isLinear.Build _ _ _ _ _ (orth_fun_lmorph V).

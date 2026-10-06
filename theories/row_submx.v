@@ -65,7 +65,7 @@ by rewrite !mxE.
 Qed.
 
 Lemma row_submxT (m p : nat) (M : 'M[R]_(m,p)) :
-  row_submx M setT = castmx (esym (etrans (cardsT (ordinal_finType m)) (card_ord m)), erefl p) M.
+  row_submx M setT = castmx (esym (etrans (cardsT 'I_m) (card_ord m)), erefl p) M.
 Proof.
 apply/row_matrixP => i.
 rewrite row_castmx esymK castmx_id.

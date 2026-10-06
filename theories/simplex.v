@@ -8,6 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 Require Import Recdef.
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect.
 From mathcomp Require Import ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
@@ -274,7 +275,7 @@ exists x; split.
   rewrite -mulrC -ltr_ndivrMl //.
   rewrite lt_max; apply/orP; right.
   rewrite -(ltr_nM2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
-  by rewrite 2!mul1r ltD2r gtrDl ltrN10.
+  by rewrite 2!mul1r ltrD2r gtrDl ltrN10.
 Qed.
 
 End WeakDuality.
@@ -373,15 +374,14 @@ Section Prebasis.
 Inductive prebasis : predArgType := Prebasis (I : {set 'I_m}) of (#|I| == n)%N.
 
 Coercion set_of_prebasis bas := let: Prebasis s _ := bas in s.
-Canonical prebasis_subType := [subType for set_of_prebasis].
-Definition prebasis_eqMixin := Eval hnf in [eqMixin of prebasis by <:].
-Canonical prebasis_eqType := Eval hnf in EqType prebasis prebasis_eqMixin.
-Definition prebasis_choiceMixin := [choiceMixin of prebasis by <:].
-Canonical prebasis_choiceType := Eval hnf in ChoiceType prebasis prebasis_choiceMixin.
-Definition prebasis_countMixin := [countMixin of prebasis by <:].
-Canonical prebasis_countType := Eval hnf in CountType prebasis prebasis_countMixin.
-Canonical prebasis_subCountType := [subCountType of prebasis].
-
+#[export]
+HB.instance Definition _ := [isSub for set_of_prebasis].
+#[export]
+HB.instance Definition _ := [Equality of prebasis by <:].
+#[export]
+HB.instance Definition _ := [Choice of prebasis by <:].
+#[export]
+HB.instance Definition _ := [Countable of prebasis by <:].
 Lemma prebasis_card (bas : prebasis) : #|bas| = n.
 Proof.
 by move/eqP: (valP bas).
@@ -400,11 +400,8 @@ rewrite mem_pmap_sub mem_enum in_set.
 by move/eqP: (prebasis_card bas).
 Qed.
 
-Definition prebasis_finMixin :=
-  Eval hnf in UniqFinMixin prebasis_enum_uniq mem_prebasis_enum.
-Canonical prebasis_finType := Eval hnf in FinType prebasis prebasis_finMixin.
-Canonical prebasis_subFinType := Eval hnf in [subFinType of prebasis].
-
+#[export]
+HB.instance Definition _ := isFinite.Build prebasis (Finite.uniq_enumP prebasis_enum_uniq mem_prebasis_enum).
 Lemma prebasis_card_D1 (bas : prebasis) (i : 'I_m) :
   i \in bas -> (#|bas :\ i| = n-1)%N.
 Proof.
@@ -429,15 +426,14 @@ Qed.
 
 Inductive basis : predArgType := Basis (bas: prebasis) of is_basis bas.
 Coercion prebasis_of_basis bas := let: Basis s _ := bas in s.
-Canonical basis_subType := [subType for prebasis_of_basis].
-Definition basis_eqMixin := Eval hnf in [eqMixin of basis by <:].
-Canonical basis_eqType := Eval hnf in EqType basis basis_eqMixin.
-Definition basis_choiceMixin := [choiceMixin of basis by <:].
-Canonical basis_choiceType := Eval hnf in ChoiceType basis basis_choiceMixin.
-Definition basis_countMixin := [countMixin of basis by <:].
-Canonical basis_countType := Eval hnf in CountType basis basis_countMixin.
-Canonical basis_subCountType := [subCountType of basis].
-
+#[export]
+HB.instance Definition _ := [isSub for prebasis_of_basis].
+#[export]
+HB.instance Definition _ := [Equality of basis by <:].
+#[export]
+HB.instance Definition _ := [Choice of basis by <:].
+#[export]
+HB.instance Definition _ := [Countable of basis by <:].
 Lemma basis_is_basis (bas : basis) : is_basis bas.
 Proof.
 by apply: (valP bas).
@@ -457,11 +453,8 @@ apply/andP; split; last by apply: mem_prebasis_enum.
 by apply: basis_is_basis.
 Qed.
 
-Definition basis_finMixin :=
-  Eval hnf in UniqFinMixin basis_enum_uniq mem_basis_enum.
-Canonical basis_finType := Eval hnf in FinType basis basis_finMixin.
-Canonical basis_subFinType := Eval hnf in [subFinType of basis].
-
+#[export]
+HB.instance Definition _ := isFinite.Build basis (Finite.uniq_enumP basis_enum_uniq mem_basis_enum).
 Lemma mxrank_basis (bas : basis) : (mxrank (row_submx A bas) = n).
 Proof.
 apply/is_basisP_rank; exact: basis_is_basis.
@@ -539,15 +532,14 @@ Qed.
 Inductive feasible_basis : predArgType := FeasibleBasis (bas : basis) of is_feasible bas.
 
 Coercion basis_of_feasible_basis bas := let: FeasibleBasis s _ := bas in s.
-Canonical feasible_basis_subType := [subType for basis_of_feasible_basis].
-Definition feasible_basis_eqMixin := Eval hnf in [eqMixin of feasible_basis by <:].
-Canonical feasible_basis_eqType := Eval hnf in EqType feasible_basis feasible_basis_eqMixin.
-Definition feasible_basis_choiceMixin := [choiceMixin of feasible_basis by <:].
-Canonical feasible_basis_choiceType := Eval hnf in ChoiceType feasible_basis feasible_basis_choiceMixin.
-Definition feasible_basis_countMixin := [countMixin of feasible_basis by <:].
-Canonical feasible_basis_countType := Eval hnf in CountType feasible_basis feasible_basis_countMixin.
-Canonical feasible_basis_subCountType := [subCountType of feasible_basis].
-
+#[export]
+HB.instance Definition _ := [isSub for basis_of_feasible_basis].
+#[export]
+HB.instance Definition _ := [Equality of feasible_basis by <:].
+#[export]
+HB.instance Definition _ := [Choice of feasible_basis by <:].
+#[export]
+HB.instance Definition _ := [Countable of feasible_basis by <:].
 Lemma feasible_basis_is_feasible (bas : feasible_basis) :
   is_feasible bas.
 Proof.
@@ -568,11 +560,8 @@ apply/andP; split; last by apply: mem_basis_enum.
 by apply: feasible_basis_is_feasible.
 Qed.
 
-Definition feasible_basis_finMixin :=
-  Eval hnf in UniqFinMixin feasible_basis_enum_uniq mem_feasible_basis_enum.
-Canonical feasible_basis_finType := Eval hnf in FinType feasible_basis feasible_basis_finMixin.
-Canonical feasible_basis_subFinType := Eval hnf in [subFinType of feasible_basis].
-
+#[export]
+HB.instance Definition _ := isFinite.Build feasible_basis (Finite.uniq_enumP feasible_basis_enum_uniq mem_feasible_basis_enum).
 Lemma basis_subset_of_active_ineq (bas : basis) :
    (bas \subset (active_lex_ineq A b (point_of_basis b bas))).
 Proof.
@@ -1501,7 +1490,6 @@ move/lex_ltrW/lex_ord0.
 by rewrite -!matrix_vdot !rel_points_of_basis row_id trmxK.
 Qed.
 
-
 Definition phase2_res bas0 := last bas0 (phase2_exec bas0).
 
 Lemma basic_step_final bas0 : forall fin_res,
@@ -1535,7 +1523,6 @@ apply: phase2_exec_rect; rewrite /P /= /bas1.
 - move=> bas bas' basic_eq IH.
   by rewrite phase2_equation basic_eq.
 Qed.
-
 
 End Phase2.
 
@@ -2261,31 +2248,11 @@ End ExtraEdge.
 
 Module Exports.
 
-Canonical prebasis_subType.
-Canonical prebasis_eqType.
-Canonical prebasis_choiceType.
-Canonical prebasis_countType.
-Canonical prebasis_subCountType.
-Canonical prebasis_finType.
-Canonical prebasis_subFinType.
-Canonical basis_subType.
-Canonical basis_eqType.
-Canonical basis_choiceType.
-Canonical basis_countType.
-Canonical basis_subCountType.
-Canonical basis_finType.
-Canonical basis_subFinType.
-Canonical feasible_basis_subType.
-Canonical feasible_basis_eqType.
-Canonical feasible_basis_choiceType.
-Canonical feasible_basis_countType.
-Canonical feasible_basis_subCountType.
-Canonical feasible_basis_finType.
-Canonical feasible_basis_subFinType.
 End Exports.
 
 End Simplex.
 Export Simplex.Exports.
+HB.export Simplex.
 Coercion set_of_prebasis := Simplex.set_of_prebasis.
 Coercion prebasis_of_basis := Simplex.prebasis_of_basis.
 Coercion basis_of_feasible_basis := Simplex.basis_of_feasible_basis.

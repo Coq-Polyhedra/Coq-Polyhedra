@@ -7,6 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product lrel.
 
@@ -117,7 +118,7 @@ Reserved Notation "x `<=` y ?= 'iff' c :> T"
        format "x '[hv'  `<=`  y '/'  ?=  'iff'  c  :> T ']'").
 
 (* -------------------------------------------------------------------- *)
-Fact polyh_display : unit. Proof. exact: tt. Qed.
+Fact polyh_display : Order.disp_t. Proof. exact: Order.Disp tt tt. Qed.
 
 Notation poly_0    := (@Order.bottom polyh_display) (only parsing).
 Notation poly_1    := (@Order.top polyh_display) (only parsing).
@@ -309,12 +310,14 @@ Variable (R : realFieldType) (n : nat).
 
 Definition be_lift0 (x: 'cV[R]_n) := fun v => [<v, '[v,x]>].
 
-Lemma be_lift0_linear x : lmorphism (be_lift0 x).
+Lemma be_lift0_linear x : linear (be_lift0 x).
 Proof.
-by split; move => v w; rewrite /be_lift0 ?beaddE ?bescaleE ?vdotBl ?vdotZl.
+by move=> a v w; rewrite /be_lift0 beaddE bescaleE vdotDl vdotZl.
 Qed.
 
-Definition be_lift x := linfun (Linear (be_lift0_linear x)).
+HB.instance Definition _ x := GRing.isLinear.Build R _ _ _ (be_lift0 x) (be_lift0_linear x).
+
+Definition be_lift x := linfun (be_lift0 x).
 
 Lemma befstE x : (befst \o (be_lift x) = \1)%VF.
 Proof.
@@ -356,8 +359,6 @@ Variant type :=
 | Affine0
 | Affine (I : {vspace lrel[R]_n}) of is_sat I.
 
-Definition type_of of phant R := type.
-Notation  "''affine[' R ]" := (type_of (Phant R)).
 
 Definition eq_vect V :=
   match V with
@@ -370,7 +371,6 @@ Definition affine V :=
     Affine H
   else Affine0.
 
-Definition affine_of (phR : phant R) := affine : _ -> type_of phR.
 
 Lemma eq_vectK : cancel eq_vect affine.
 Proof.
@@ -387,14 +387,10 @@ case: V.
   by apply/congr1/bool_irrelevance.
 Qed.
 
-Definition affine_eqMixin := (CanEqMixin eq_vectK).
-Canonical affine_eqType := EqType type affine_eqMixin.
-Definition affine_choiceMixin := (CanChoiceMixin eq_vectK).
-Canonical affine_choiceType := ChoiceType type affine_choiceMixin.
-
-Identity Coercion type_of_type : type_of >-> type.
-Canonical affine_of_eqType := [eqType of 'affine[R]].
-Canonical affine_of_choiceType := [choiceType of 'affine[R]].
+#[export]
+HB.instance Definition _ := Equality.copy type (can_type eq_vectK).
+#[export]
+HB.instance Definition _ := Choice.copy type (can_type eq_vectK).
 
 Definition affine_pred_sort (S : type) : {pred 'cV[R]_n} :=
   match S with
@@ -406,18 +402,15 @@ End Core.
 
 Module Import Exports.
 Coercion affine_pred_sort : type >-> pred_sort.
-Canonical affine_eqType.
-Canonical affine_choiceType.
-Canonical affine_of_eqType.
-Canonical affine_of_choiceType.
 End Exports.
 End Core.
 
 Export Core.Exports.
-Notation "''affine[' R ]_ n" := (Core.type_of n (Phant R)).
+HB.export Core.
+Notation "''affine[' R ]_ n" := (@Core.type R n).
 Notation "''affine[' R ]"    := 'affine[R]_(_).
 Notation "''affine_' n"      := 'affine[_]_n.
-Notation "[ 'affine' I ]"    := (@Core.affine_of _ _ (Phant _) I%VS).
+Notation "[ 'affine' I ]"    := (@Core.affine _ _ I%VS).
 Notation "'eq_vect'"         := Core.eq_vect (at level 8).
 
 Section Specs.
@@ -446,7 +439,7 @@ Qed.
 Lemma in_affineE U x :
   (x \in [affine U]) = sat U x.
 Proof.
-rewrite /Core.affine_of /Core.affine.
+rewrite /Core.affine.
 case: {-}_/idP => [// | /negP/is_satPn ->].
 by rewrite in_affine0.
 Qed.
@@ -466,7 +459,7 @@ Proof.
 case: V => [| U U_sat].
 - rewrite eq_refl; constructor.
 - have ->: (Core.Affine U_sat) = [affine U].
-    rewrite /Core.affine_of /Core.affine; case: {-}_/idP => // ?.
+    rewrite /Core.affine; case: {-}_/idP => // ?.
     apply/congr1; exact: bool_irrelevance.
   suff h: exists x, x \in [affine U].
     have /negbTE ->: [affine U] != affine0 by apply/affineN0.
@@ -478,7 +471,7 @@ Qed.
 Lemma affine_is_sat U :
   [affine U] != affine0 = is_sat U.
 Proof.
-rewrite /Core.affine_of /Core.affine; case: {-}_/idP.
+rewrite /Core.affine; case: {-}_/idP.
 - move => is_sat; rewrite is_sat.
   by apply/eqP.
 - move/negP/negbTE ->.
@@ -644,8 +637,8 @@ End Specs.
 
 Notation "[ 'affine' W & Ω ]" := (mk_affine W Ω) : polyh_scope.
 
-Module Order.
-Section Order.
+Module AffineOrder.
+Section AffineOrder.
 
 Context {R : realFieldType} {n : nat}.
 
@@ -668,48 +661,32 @@ move => ? ? ? /affine_leP subset1 /affine_leP subset2.
 by apply/affine_leP => ? ?; apply/subset2/subset1.
 Qed.
 
-Definition affine_LtPOrderMixin :=
-  LePOrderMixin (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
+#[export]
+HB.instance Definition _ := Order.isPOrder.Build polyh_display 'affine[R]_n
+  (fun _ _ => erefl _) affine_le_refl affine_le_anti affine_le_trans.
 
-Canonical affine_POrderType :=
-  Eval hnf in POrderType polyh_display 'affine[R]_n affine_LtPOrderMixin.
+Fact affine_le0x V : (affine0 <= V)%O.
+Proof. by apply/affine_leP => v; rewrite in_affine0. Qed.
 
-Program Definition affine_bottomMixin :=
-  @BottomMixin polyh_display [porderType of 'affine[R]_n] affine0 _.
+#[export]
+HB.instance Definition _ := Order.hasBottom.Build polyh_display 'affine[R]_n affine_le0x.
 
-Next Obligation.
-by apply/affine_leP => v; rewrite in_affine0.
-Qed.
+Fact affineIC : commutative (@affineI R n).
+Proof. by move => V V'; apply/affine_eqP => x; rewrite !in_affineI andbC. Qed.
 
-Program Canonical affine_PBOrderType :=
-  Eval hnf in BPOrderType 'affine[R]_n affine_bottomMixin.
+Fact affineIA : associative (@affineI R n).
+Proof. by move => V1 V2 V3; apply/affine_eqP => x; rewrite !in_affineI andbA. Qed.
 
-Program Definition affine_meetMixin :=
-  @MeetMixin _ _ affineI _ _ _.
+Fact affine_leEmeet V V' : (V <= V')%O = (affineI V V' == V).
+Proof. exact: eq_sym. Qed.
 
-Next Obligation.
-by move => V V'; apply/affine_eqP => x; rewrite !in_affineI andbC.
-Qed.
+#[export]
+HB.instance Definition _ := Order.POrder_Meet_isSemilattice.Build polyh_display
+  'affine[R]_n affineIC affineIA affine_leEmeet.
+End AffineOrder.
+End AffineOrder.
 
-Next Obligation.
-by move => V1 V2 V3; apply/affine_eqP => x; rewrite !in_affineI andbA.
-Qed.
-
-Canonical affine_MeetSemilatticeType :=
-  Eval hnf in MeetSemilatticeType 'affine[R]_n affine_meetMixin.
-
-Canonical affine_bMeetSemilatticeType := [bMeetSemilatticeType of 'affine[R]_n].
-End Order.
-
-Module Import Exports.
-Canonical affine_POrderType.
-Canonical affine_PBOrderType.
-Canonical affine_MeetSemilatticeType.
-Canonical affine_bMeetSemilatticeType.
-End Exports.
-End Order.
-
-Export Order.Exports.
+HB.export AffineOrder.
 
 Notation "'[' 'affine0' ']'" := affine0.
 
@@ -732,7 +709,7 @@ Qed.
 Lemma dir_affine U :
   [affine U] `>` [affine0] -> dir [affine U] = (befst @: U)^OC%VS.
 Proof. (* RK *)
-move/andP => [? _].
+rewrite lt_def => /andP [? _].
 have aff_U_neq0: exists x : 'cV_n, x \in [affine U] by apply/affineN0.
 move: aff_U_neq0 => [? in_aff_U].
 apply/vspaceP => d; rewrite (in_dirP in_aff_U).
@@ -744,7 +721,6 @@ apply/idP/orthvP => [/in_affineP in_aff ? /memv_imgP [u u_in_U] ->| H].
   suff ->: '[ u.1, d] = 0 by rewrite addr0.
   by apply/H/memv_imgP; exists u; [exact: u_in_U | rewrite lfunE].
 Qed.
-
 
 Lemma affine_proper0P V :
   reflect (exists x, x \in V) (V `>` [affine0]).
@@ -830,16 +806,10 @@ have nullv_in_affineT : 0 \in affineT by rewrite in_affineT.
 by apply/vspaceP => ?; rewrite memvf (in_dirP nullv_in_affineT) in_affineT.
 Qed.
 
-Program Definition affine_topMixin :=
-  @TopMixin polyh_display [porderType of 'affine[R]_n] affineT _.
+Fact affine_lex1 V : (V <= affineT)%O.
+Proof. by apply/affine_leP=> ? _; rewrite in_affineT. Qed.
 
-Next Obligation. by apply/affine_leP=> ? _; rewrite in_affineT. Qed.
-
-Canonical affine_tPOrderType := TPOrderType 'affine[R]_n affine_topMixin.
-Canonical affine_tbPOrderType := [tbPOrderType of 'affine[R]_n].
-
-Canonical affine_tMeetSemilatticeType := [tMeetSemilatticeType of 'affine[R]_n].
-Canonical affine_tbMeetSemilatticeType := [tbMeetSemilatticeType of 'affine[R]_n].
+HB.instance Definition _ := Order.hasTop.Build polyh_display 'affine[R]_n affine_lex1.
 
 Lemma in_big_affineIP (I : finType) (P : pred I) (F : I -> 'affine[R]_n) x :
   reflect (forall i : I, P i -> x \in (F i)) (x \in \meet_(i | P i) (F i)).
@@ -994,7 +964,7 @@ Qed.
 Lemma adim_affine_lt V V' :
   (V `<` V') -> (adim V < adim V')%N.
 Proof. (* RK *)
-move/andP => [V'_neq_V ?].
+rewrite lt_def => /andP [V'_neq_V ?].
 rewrite ltn_neqAle; apply/andP; split; last by apply/adimS.
 move: V'_neq_V; apply/contra_neqN => /eqP ?; symmetry.
 by apply/sub_eq_adim.
@@ -1112,7 +1082,7 @@ Proof. (* RK *)
 apply/contraTT; rewrite -ltnNge lt0x negbK => dimU.
 have {dimU} -> : U = fullv
   by apply/eqP; rewrite eqEdim; apply/andP; split;
-    [exact: subvf | rewrite dimvf /Vector.dim /= addn1].
+    [exact: subvf | rewrite dimvf /dim /= addn1].
 apply/eqP/affine_eqP => x; rewrite in_affine0; apply/negbTE/negP.
 pose e := [<0, 1>]: lrel[R]_n.
 have e_in_U: e \in fullv by rewrite memvf.
@@ -1123,7 +1093,7 @@ Qed.
 Lemma adimT : (adim affineT = n.+1)%N.
 Proof. (* RK *)
 rewrite /adim ifF.
-- by rewrite dir_affineT dimvf /Vector.dim /= muln1.
+- by rewrite dir_affineT dimvf /dim /= muln1.
 - apply/(contraFF _ (erefl false)).
   move/eqP/affine_eqP => aff_eq.
   by move: (aff_eq 0); rewrite in_affine0 in_affineT.
@@ -1143,7 +1113,7 @@ move => hp_neq0.
 rewrite /adim ifF; last by apply/negbTE; move/andP: hp_neq0 => [? _].
 case: (boolP (e.1 == 0)) => [/eqP e1_eq0 | e1_neq0].
 - suff ->: [hp e] = affineT
-    by rewrite dir_affineT dimvf /Vector.dim /= muln1 add1n.
+    by rewrite dir_affineT dimvf /dim /= muln1 add1n.
   apply/affine_eqP => ?; rewrite in_affineT in_hp e1_eq0 vdot0l.
   move/affineN0: (proj1 (andP hp_neq0)) => [?].
   by rewrite in_hp e1_eq0 vdot0l => ?.

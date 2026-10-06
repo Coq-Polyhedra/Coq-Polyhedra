@@ -7,6 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product vector_order.
 
@@ -96,8 +97,8 @@ Let addfC := let: And4 _ h _ _ := fsfun_zmod in h.
 Let add0f := let: And4 _ _ h _ := fsfun_zmod in h.
 Let addNf := let: And4 _ _ _ h := fsfun_zmod in h.
 
-Definition fsfun_zmodMixin := ZmodMixin addfA addfC add0f addNf.
-Canonical fsfun_zmodType := Eval hnf in ZmodType {fsfun T ~> R} fsfun_zmodMixin.
+HB.instance Definition _ :=
+  GRing.isZmodule.Build {fsfun T ~> R} addfA addfC add0f addNf.
 
 Lemma supp_fs0 : finsupp 0%R = fset0.
 Proof. by rewrite finsupp0. Qed.
@@ -159,10 +160,9 @@ Let scale_fsfun1  := let: And4 _ h _ _ := fsfun_lmod in h.
 Let scale_fsfunDr := let: And4 _ _ h _ := fsfun_lmod in h.
 Let scale_fsfunDl := let: And4 _ _ _ h := fsfun_lmod in h.
 
-Definition fsfun_lmodMixin :=
-  LmodMixin scale_fsfunA scale_fsfun1 scale_fsfunDr scale_fsfunDl.
-Canonical fsfun_lmodType :=
-  Eval hnf in LmodType R {fsfun T ~> R} fsfun_lmodMixin.
+HB.instance Definition _ :=
+  GRing.Zmodule_isLmodule.Build R {fsfun T ~> R}
+    scale_fsfunA scale_fsfun1 scale_fsfunDr scale_fsfunDl.
 End FsFunLmod.
 
 (* -------------------------------------------------------------------- *)
@@ -298,32 +298,19 @@ Context {T : choiceType} {R : numDomainType}.
 Record conicFun := mkConicFun
   { conic_val :> {fsfun T ~> R}; _ : conic conic_val }.
 
-Canonical conicfun_subType := Eval hnf in [subType for conic_val].
-Definition conicfun_eqMixin := [eqMixin of conicFun by <:].
-Canonical conicfun_eqType := Eval hnf in EqType conicFun conicfun_eqMixin.
-Definition conicfun_choiceMixin := [choiceMixin of conicFun by <:].
-Canonical conicfun_choiceType :=
-  Eval hnf in ChoiceType conicFun conicfun_choiceMixin.
-
-Definition conicfun_of (_ : phant T) (_ : phant R) := conicFun.
-Identity Coercion type_of_conicfun : conicfun_of >-> conicFun.
+HB.instance Definition _ := [isSub for conic_val].
+HB.instance Definition _ := [Choice of conicFun by <:].
 End SubConic.
 
-Notation "{ 'conic' T ~> R }" :=
-  (conicfun_of (Phant T) (Phant R)) : type_scope.
+Notation "{ 'conic' T ~> R }" := (@conicFun T R) : type_scope.
 
 Bind Scope conicfun_scope with conicFun.
-Bind Scope conicfun_scope with conicfun_of.
 
 Delimit Scope conicfun_scope with cof.
 
 (* -------------------------------------------------------------------- *)
 Section SubConicTheory.
 Context {T : choiceType} {R : realDomainType}.
-
-Canonical conicfun_of_subType    := Eval hnf in [subType    of {conic T ~> R}].
-Canonical conicfun_of_eqType     := Eval hnf in [eqType     of {conic T ~> R}].
-Canonical conicfun_of_choiceType := Eval hnf in [choiceType of {conic T ~> R}].
 
 Implicit Types (w : {conic T ~> R}).
 
@@ -371,8 +358,8 @@ Let add0p := let: And4 _ h _ _ := conic_comoid_r in h.
 Let addp0 := let: And4 _ _ h _ := conic_comoid_r in h.
 Let addpC := let: And4 _ _ _ h := conic_comoid_r in h.
 
-Canonical conic_monoid := Monoid.Law addpA add0p addp0.
-Canonical conic_comoid := Monoid.ComLaw addpC.
+HB.instance Definition _ :=
+  Monoid.isComLaw.Build {conic T ~> R} \0%:PFS%cof conicfD addpA addpC add0p.
 
 Lemma mem_coffinsupp w x : (x \in finsupp w) = (0 < w x).
 Proof. by rewrite mem_finsupp lt_neqAle eq_sym ge0_fconic andbT. Qed.
@@ -428,32 +415,19 @@ Context {T : choiceType} {R : numDomainType}.
 Record convexFun := mkConvexfun
   { convex_val :> {fsfun T ~> R}; _ : convex convex_val }.
 
-Canonical convexfun_subType := Eval hnf in [subType for convex_val].
-Definition convexfun_eqMixin := [eqMixin of convexFun by <:].
-Canonical convexfun_eqType := Eval hnf in EqType convexFun convexfun_eqMixin.
-Definition convexfun_choiceMixin := [choiceMixin of convexFun by <:].
-Canonical convexfun_choiceType :=
-  Eval hnf in ChoiceType convexFun convexfun_choiceMixin.
-
-Definition convexfun_of (_ : phant T) (_ : phant R) := convexFun.
-Identity Coercion type_of_convexfun : convexfun_of >-> convexFun.
+HB.instance Definition _ := [isSub for convex_val].
+HB.instance Definition _ := [Choice of convexFun by <:].
 End SubConvex.
 
-Notation "{ 'convex' T ~> R }" :=
-  (convexfun_of (Phant T) (Phant R)) : type_scope.
+Notation "{ 'convex' T ~> R }" := (@convexFun T R) : type_scope.
 
 Bind Scope convexfun_scope with convexFun.
-Bind Scope convexfun_scope with convexfun_of.
 
 Delimit Scope convexfun_scope with cvf.
 
 (* -------------------------------------------------------------------- *)
 Section SubConvexTheory.
 Context {T : choiceType} {R : realDomainType}.
-
-Canonical convexfun_of_subType    := Eval hnf in [subType    of {convex T ~> R}].
-Canonical convexfun_of_eqType     := Eval hnf in [eqType     of {convex T ~> R}].
-Canonical convexfun_of_choiceType := Eval hnf in [choiceType of {convex T ~> R}].
 
 Implicit Types (w : {convex T ~> R}).
 
@@ -576,10 +550,10 @@ Proof. apply/convexP; split=> /=.
   by rewrite addr_ge0 // mulr_ge0 // (ler0n, ge0_clamp, ge0_1Bclamp).
 + rewrite (@weightwE _ _ [fset x; y]%fset) ?finsupp_sub //.
   case: (x =P y) => [->|/eqP ne_xy]; first rewrite fsetUid big_fset1.
-  - by rewrite fsfunE /= fset11 eqxx !mul1r addrNK.
+  - by rewrite fsfunE /= fset11 eqxx !mul1r subrK.
   rewrite -(big_seq_fsetE _ _ predT) /= big_fsetU1 ?in_fset1 //=.
   rewrite big_seq_fset1 !fsfunE !(fset21, fset22) [y == x]eq_sym.
-  by rewrite !(eqxx, negbTE ne_xy) !Monoid.simpm /= addrNK.
+  by rewrite !(eqxx, negbTE ne_xy) !Monoid.simpm /= addr0 subrK.
 Qed.
 
 Definition fseg : _ -> _ -> _ -> {convex L ~> R} :=
@@ -834,6 +808,6 @@ rewrite (weightwE (finsupp_vect_to_fsfun _)) -(rwP eqP).
 move: Σc_eq_1; rewrite vdotC vdotr_const_mx1 => <-.
 rewrite (reindex (@frank _ _)) /=; first by apply/onW_bij/bij_frank.
 apply: eq_bigr=> i _; rewrite fsfun_ffun insubT //=.
-by move=> hin; rewrite fsetsubE.
+by move=> hin; congr (c (frank _) 0); apply: val_inj.
 Qed.
 End VectToFsFunTheory.

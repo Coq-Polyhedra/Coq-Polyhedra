@@ -7,6 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product row_submx barycenter vector_order.
 
@@ -44,7 +45,7 @@ Variant base_elt_type : predArgType := BaseElt of ('cV[R]_n * R).
 
 Coercion base_elt_val b := let: BaseElt b := b in b.
 
-Canonical base_elt_subType := Eval hnf in [newType for base_elt_val].
+HB.instance Definition _ := [isNew for base_elt_val].
 End Base.
 
 Notation "'lrel' [ R ]_ n" := (@base_elt_type R n).
@@ -54,26 +55,10 @@ Notation "'base_t'" := (base_t[_,_]).
 Notation "[< A , b >]" := (BaseElt (A, b)).
 
 (* -------------------------------------------------------------------- *)
-Definition be_eqMixin (R : eqType) n :=
-  Eval hnf in [eqMixin of lrel[R]_n by <:].
-Canonical be_eqType (R : eqType) n:=
-  Eval hnf in EqType lrel[R]_n  (be_eqMixin R n).
-Definition be_choiceMixin (R : choiceType) n :=
-  [choiceMixin of lrel[R]_n by <:].
-Canonical be_choiceType (R : choiceType) n :=
-  Eval hnf in ChoiceType lrel[R]_n (be_choiceMixin R n).
-Definition be_countMixin (R : countType) n :=
-  [countMixin of lrel[R]_n by <:].
-Canonical be_countType (R : countType) n :=
-  Eval hnf in CountType lrel[R]_n (be_countMixin R n).
-Canonical be_subCountType (R : countType) n :=
-  Eval hnf in [subCountType of lrel[R]_n].
-Definition be_finMixin (R : finType) n :=
-  [finMixin of lrel[R]_n by <:].
-Canonical be_finType (R : finType) n :=
-  Eval hnf in FinType lrel[R]_n (be_finMixin R n).
-Canonical be_subFinType (R : finType) n :=
-  Eval hnf in [subFinType of lrel[R]_n].
+HB.instance Definition _ (R : eqType) n := [Equality of lrel[R]_n by <:].
+HB.instance Definition _ (R : choiceType) n := [Choice of lrel[R]_n by <:].
+HB.instance Definition _ (R : countType) n := [Countable of lrel[R]_n by <:].
+HB.instance Definition _ (R : finType) n := [Finite of lrel[R]_n by <:].
 
 (* -------------------------------------------------------------------- *)
 Section BaseTheory.
@@ -163,8 +148,8 @@ Let beaddC  := let: And4 _ h _ _ := be_zmod_mixin in h.
 Let beadd0r := let: And4 _ _ h _ := be_zmod_mixin in h.
 Let beaddNr := let: And4 _ _ _ h := be_zmod_mixin in h.
 
-Definition be_zmodMixin := ZmodMixin beaddA beaddC beadd0r beaddNr.
-Canonical be_zmodType := Eval hnf in ZmodType lrel be_zmodMixin.
+HB.instance Definition _ :=
+  GRing.isZmodule.Build lrel[R]_n beaddA beaddC beadd0r beaddNr.
 
 Lemma beaddE b1 b2 : b1 + b2 = [< b1.1 + b2.1, b1.2 + b2.2 >].
 Proof. by []. Qed.
@@ -177,13 +162,14 @@ End BaseZmod.
 Section BaseEltEncodingZmodMorph.
 Context {R : zmodType} {n : nat}.
 
-Lemma base_elt_to_col_is_additive : additive (@base_elt_to_col R n).
+Lemma base_elt_to_col_is_additive : zmod_morphism (@base_elt_to_col R n).
 Proof.
 move=> /= b1 b2; apply/colP=> i; rewrite !mxE.
 by case: splitP'=> j _; rewrite !mxE.
 Qed.
 
-Canonical base_elt_to_col_additive := Additive base_elt_to_col_is_additive.
+HB.instance Definition _ :=
+  GRing.isZmodMorphism.Build _ _ (@base_elt_to_col R n) base_elt_to_col_is_additive.
 End BaseEltEncodingZmodMorph.
 
 (* -------------------------------------------------------------------- *)
@@ -211,8 +197,8 @@ Let bescale1  := let: And4 _ h _ _ := be_lmod_mixin in h.
 Let bescaleDr := let: And4 _ _ h _ := be_lmod_mixin in h.
 Let bescaleDl := let: And4 _ _ _ h := be_lmod_mixin in h.
 
-Definition be_lmodMixin := LmodMixin bescaleA bescale1 bescaleDr bescaleDl.
-Canonical be_lmodType := Eval hnf in LmodType R lrel be_lmodMixin.
+HB.instance Definition _ :=
+  GRing.Zmodule_isLmodule.Build R lrel[R]_n bescaleA bescale1 bescaleDr bescaleDl.
 
 Lemma bescaleE c b : c *: b = [< c *: b.1, c * b.2 >].
 Proof. by []. Qed.
@@ -228,7 +214,8 @@ move=> c b /=; apply/colP=> i; rewrite !mxE.
 by case: splitP'=> j _; rewrite !mxE.
 Qed.
 
-Canonical base_elt_to_col_scalable := AddLinear base_elt_to_col_is_scalable.
+HB.instance Definition _ :=
+  GRing.isScalable.Build R _ _ *:%R (@base_elt_to_col R n) base_elt_to_col_is_scalable.
 End BaseEltEncodingLmodMorph.
 
 (* -------------------------------------------------------------------- *)
@@ -265,8 +252,7 @@ exists f.
     * by rewrite /f mxE col_mxEu !mxE.
     * by rewrite /f mxE col_mxEd mxE [i']ord1_eq0 mulr1n /= mxE.
 Qed.
-Definition be_vectMixin := VectMixin be_vect_iso.
-Canonical be_vectType := VectType R lrel[R]_n be_vectMixin.
+HB.instance Definition _ := Lmodule_hasFinDim.Build R lrel[R]_n be_vect_iso.
 
 Lemma base_vect_subset (I I' : base_t[R,n]) :
   (I `<=` I')%fset -> (<< I >> <= << I' >>)%VS.
@@ -287,10 +273,13 @@ Proof.
 by rewrite -span_seq1; apply/eq_span => x; rewrite !inE.
 Qed.
 
-Lemma fst_lmorph : lmorphism (fst : lrel[R]_n -> 'cV_n).
-by [].
-Qed.
+Definition befst0 (b : lrel[R]_n) : 'cV[R]_n := b.1.
 
-Definition befst := linfun (Linear fst_lmorph).
+Lemma fst_lmorph : linear befst0.
+Proof. by []. Qed.
+
+HB.instance Definition _ := GRing.isLinear.Build R _ _ _ befst0 fst_lmorph.
+
+Definition befst := linfun befst0.
 
 End BaseVect.

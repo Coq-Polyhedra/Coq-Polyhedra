@@ -7,6 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
+From HB Require Import structures.
 From mathcomp Require Import all_ssreflect all_algebra finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter lrel.
@@ -89,7 +90,7 @@ rewrite (weightwE (finsupp_vect_to_fsfun _)) -(rwP eqP).
 move: Σc_eq_1; rewrite vdotC vdotr_const_mx1 => <-.
 rewrite (reindex (@frank _ _)) /=; last by apply/onW_bij/bij_frank.
 apply: eq_bigr=> i _; rewrite fsfun_ffun insubT //=.
-by move=> hin; rewrite fsetsubE.
+by move=> hin; congr (c (frank _) 0); apply: val_inj.
 Qed.
 End VectToFsFunTheory.
 
@@ -103,14 +104,15 @@ Lemma combineb1E w : (finsupp w `<=` base)%fset ->
   (combine w).1 = \sum_(v : base) w (val v) *: (val v).1.
 Proof.
 move=> le_wb; rewrite (combinewE le_wb).
-by apply (big_morph (fst \o val) beadd_p1E).
+by rewrite (big_morph (fun b : lrel[R]_n => b.1) beadd_p1E (erefl _)).
 Qed.
 
 Lemma combineb2E w : (finsupp w `<=` base)%fset ->
   (combine w).2 = \sum_(v : base) w (val v) * (val v).2.
 Proof.
 move=> le_wb; rewrite (combinewE le_wb).
-by apply (big_morph (snd \o val) beadd_p2E). Qed.
+by rewrite (big_morph (fun b : lrel[R]_n => b.2) beadd_p2E (erefl _)).
+Qed.
 
 Definition combinebE w (h : (finsupp w `<=` base)%fset) :=
   (@combineb1E w h, @combineb2E w h).
@@ -158,10 +160,10 @@ Proof.
 by move => [m A b]; rewrite /matrix_from_hpoly /hpoly_from_matrix.
 Qed.
 
-Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
-Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
-Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
-Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
+#[export]
+HB.instance Definition _ := Equality.copy 'hpoly[R]_n (can_type matrix_from_hpolyK).
+#[export]
+HB.instance Definition _ := Choice.copy 'hpoly[R]_n (can_type matrix_from_hpolyK).
 
 End Choice.
 
@@ -498,8 +500,6 @@ Qed.
 End Lift.
 
 Module Import Exports.
-Canonical hpoly_eqType.
-Canonical hpoly_choiceType.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n).
 Notation "''hpoly_' n" := ('hpoly[_]_n).
 Notation "P .`c" := (hpoly_c P).
@@ -509,4 +509,5 @@ End Exports.
 End HPolyhedron.
 
 Export HPolyhedron.Exports.
+HB.export HPolyhedron.
 Coercion mem_hpoly := HPolyhedron.mem_hpoly.
