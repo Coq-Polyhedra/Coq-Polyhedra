@@ -23,7 +23,6 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.Theory Num.Theory.
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Local Notation "a .[ i ]" := (PArray.get a i).
 
@@ -373,7 +372,7 @@ Lemma sat_ineq_equiv i V:
     (fun k lA lb=> leqlex (row_mx lb%:M (row k (-1%:M))) (lA *m V.2)).
 Proof.
 move=> ig VG iV k K kK la LA laLA lb LB lbLB.
-rewrite sat_ineqP; last first.
+rewrite sat_ineqP.
 - move/rel_lex_vert_point: iV=> /rel_point_mx_col_length h.
   apply/int_to_nat_inj; rewrite -h (rel_Po_r_m Po_Ab).
   by rewrite length_succ.
@@ -423,8 +422,8 @@ Lemma regularity_test_equiv i V:
 Proof.
 move=> ig VG iV.
 rewrite /regularity_test /reg_verification (rel_graph_r_succ_card _ gl_G ig) //.
-+ by move: (rel_Po_r_n Po_Ab); rewrite /Com.n=> ->.
 + exact:rel_lex_vert_spec.
++ by move: (rel_Po_r_n Po_Ab); rewrite /Com.n=> ->.
 Qed.
 
 Lemma vertex_consistent_equiv:
@@ -661,11 +660,11 @@ split.
   rewrite (tnth_nth L.[origin]) /= /s=> [:i_n].
   rewrite (nth_map L.[origin]) ?(nth_map 0%uint63) 
     ?size_map ?size_arr_to_seq ?size_irange ?subn0 -?len_map;
-    [ |abstract:i_n; by rewrite {10}size_s ltn_ord|exact:i_n|exact:i_n].
+    [abstract:i_n; by rewrite {10}size_s ltn_ord|exact:i_n|exact:i_n| ].
   rewrite nth_irange ?subn0 -?len_map // addn0 trmx_sub.
   move: (inv_eq (nat_to_int i)); rewrite mem_irangeE le0x /=. 
   rewrite ltEint_nat -len_map nat_to_intK ?i_n; 
-    last (rewrite inE; apply/(ltn_trans i_n); rewrite len_map; exact/int_thresholdP).
+    first (rewrite inE; apply/(ltn_trans i_n); rewrite len_map; exact/int_thresholdP).
   move=> /(_ isT)/eqP.
   move/(congr1 (castmx ((erefl _), size_s))); rewrite castmx_mul castmx_id.
   by move=> ->; apply/matrixP=> p q; rewrite castmxE !mxE /=.

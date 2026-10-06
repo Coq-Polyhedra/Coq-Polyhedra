@@ -23,7 +23,6 @@ Unset Printing Implicit Defensive.
 Local Notation "a .[ i ]" := (PArray.get a i).
 
 Import Order.Theory.
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Module ImgGraphComputation.
 
@@ -404,7 +403,7 @@ apply/graphE; split.
     rewrite vtx_img_graph=> /imfsetP /= [i igl ->] ->.
     case/imfsetP=> j /= jgl -> ->.
     rewrite -(gisof_edge final_g) /= ?(vtx_img_graph); 
-      [|by apply/imfsetP; exists i|by apply/imfsetP; exists j].
+      [by apply/imfsetP; exists i|by apply/imfsetP; exists j|].
     case/edge_img_graph=> morph_neq [i'] [j'] [ii' jj' /[dup]].
     case/edge_vtxlr=> i'gl j'gl ij'gl; rewrite -ii' -jj'.
     move: (h _ i'gl) (h _ j'gl)=> /eqP <- /eqP <-.
@@ -686,7 +685,7 @@ Lemma repr_graph_card_succ: repr_graph->
   forall i, mem_vertex g i-> #|` successors G (conv i)| = nb_neighbours g i.
 Proof.
 move=> gG stt_h nei_h i ig.
-rewrite (repr_graph_succ gG ig) card_in_imfset /=; last first.
+rewrite (repr_graph_succ gG ig) card_in_imfset /=.
   move=> x y; rewrite !inE /= => /andP [+ _] /andP [+ _]; exact: (repr_graph_conv_inj gG).
 rewrite card_imfset //=.
 set S := [seq _ <- _ | _ & _]; suff: perm_eq S (arr_to_seq (neighbours g i)) by

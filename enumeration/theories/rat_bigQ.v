@@ -35,7 +35,6 @@ Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 (* Code CoqEAL *)
 
@@ -94,21 +93,21 @@ case: x; case: y=> //=.
   + move=> ->; by rewrite GRing.addrN.
   + move=> /[dup] /Pnat.Pos2Nat.inj_lt + /Pnat.Pos2Nat.inj_sub ->. 
     rewrite !minusE=> /ssrnat.ltP pq.
-    rewrite -subzn; last exact: ltnW.
+    rewrite -subzn; first exact: ltnW.
     by rewrite GRing.opprB.
   + move=> /[dup] /Pnat.Pos2Nat.inj_lt + /Pnat.Pos2Nat.inj_sub ->. 
     rewrite !minusE=> /ssrnat.ltP pq.
-    by rewrite -subzn; last exact: ltnW.
+    by rewrite -subzn; first exact: ltnW.
 - by move=> ?; rewrite GRing.addr0.
 - move=> q p; rewrite BinInt.Z.pos_sub_spec.
   case: BinPos.Pos.compare_spec=> /=.
   + by move=> ->; rewrite GRing.addNr //.
   + move=> /[dup] /Pnat.Pos2Nat.inj_lt + /Pnat.Pos2Nat.inj_sub ->. 
     rewrite !minusE=> /ssrnat.ltP pq.
-    rewrite -subzn ?GRing.opprB; last exact: ltnW.
+    rewrite -subzn ?GRing.opprB; first exact: ltnW.
     by rewrite GRing.addrC.
   + move=> /[dup] /Pnat.Pos2Nat.inj_lt /ssrnat.ltP pq /Pnat.Pos2Nat.inj_sub ->. 
-    rewrite -subzn; last exact: ltnW.
+    rewrite -subzn; first exact: ltnW.
     by rewrite GRing.addrC.
 - move=> p q; rewrite Pnat.Pos2Nat.inj_add plusE PoszD.
   by rewrite -GRing.opprB GRing.opprK GRing.addrC.
@@ -142,7 +141,7 @@ case: Nat.divmod => q r /(_ (le_n _)) [].
 rewrite Nat.mul_0_r Nat.sub_diag !Nat.add_0_r Nat.mul_comm => + Hr /=.
 rewrite multE minusE plusE => /(f_equal (fun x => divn x y.+1)) ->.
 rewrite divnMDl // divn_small ?addn0 //.
-rewrite ltn_subLR; [|exact/ssrnat.leP].
+rewrite ltn_subLR; [exact/ssrnat.leP|].
   by rewrite -addSnnS addnC addnS ltnS leq_addr.
 Qed.
 
@@ -282,7 +281,7 @@ case: x => [|x|//] _; [by rewrite /= lcm0n|].
 case: y => [|y|//] _; [by rewrite /= lcmn0|].
 rewrite /BinInt.Z.lcm Z2int_abs Z2int_mul Z2int_div //.
 rewrite ZgcdE' abszM; apply: f_equal; apply/eqP.
-rewrite -(@eqn_pmul2r (gcdn `|Z2int (Zpos x)| `|Z2int (Zpos y)|)); last first.
+rewrite -(@eqn_pmul2r (gcdn `|Z2int (Zpos x)| `|Z2int (Zpos y)|)).
 { rewrite gcdn_gt0; apply/orP; left; rewrite absz_gt0 /= eqz_nat.
   exact/lt0n_neq0/ssrnat.ltP/Pos2Nat.is_pos. }
 rewrite muln_lcm_gcd.
@@ -339,8 +338,8 @@ case: g => [|g|g].
   { rewrite Num.Theory.normr_eq0.
     case: d' posd' {coprime_n'_d'} => // d' _.
     exact: Z2int_Zpos_neq0. }
-  rewrite !Z2int_mul abszM PoszM gez0_abs; [|by rewrite -[0%R]/(Z2int Z0) Z2int_le].
-  rewrite fracqMM ?Posz_nat_of_pos_neq0 ?abszE; last exact: Z2int_Zpos_neq0.
+  rewrite !Z2int_mul abszM PoszM gez0_abs; [by rewrite -[0%R]/(Z2int Z0) Z2int_le|].
+  rewrite fracqMM ?Posz_nat_of_pos_neq0 ?abszE; first exact: Z2int_Zpos_neq0.
   move: (@valq_frac (Z2int n', `|Z2int d'|%R) d'n0).
   rewrite scalqE // GRing.mul1r => [[neq deq]].
   have -> : Pos.to_nat (BinInt.Z.to_pos d') = `|Z2int d'|%R :> ssrint.int.
@@ -390,9 +389,9 @@ rewrite /BigQ.to_Q ifF ?BigN.spec_eqb ?BinInt.Z.eqb_neq //.
 rewrite Qcanon.Qred_iff ZgcdE -[Zpos 1]/(BinInt.Z.of_nat 1%nat) => /Znat.Nat2Z.inj.
 rewrite /QArith_base.Qnum /QArith_base.Qden nat_of_pos_Z_to_pos => /eqP ny_dy_coprime.
 move=> /eqP; rewrite rat_eqE !coprimeq_num // !coprimeq_den //=.
-rewrite !Num.Theory.gtr0_sg //; last exact/ssrnat.ltP/Pos2Nat.is_pos.
+rewrite !Num.Theory.gtr0_sg //; first exact/ssrnat.ltP/Pos2Nat.is_pos.
 rewrite !GRing.mul1r => /andP[/eqP <-].
-rewrite ifF; [|exact/eqP/eqP/Num.Theory.lt0r_neq0/ssrnat.ltP/Pos2Nat.is_pos].
+rewrite ifF; [exact/eqP/eqP/Num.Theory.lt0r_neq0/ssrnat.ltP/Pos2Nat.is_pos|].
 rewrite -!abszE !absz_nat => /eqP[<-]; split=> [//|].
 rewrite -[LHS]/(Z2int (Zpos (BinInt.Z.to_pos (BigN.to_Z dy)))) BinInt.Z2Pos.id //.
 exact: BigQ.N_to_Z_pos.
@@ -434,9 +433,9 @@ case: (BigQ.to_Q p) => np dp {p}.
 case: (BigQ.to_Q q) => nq dq {q}.
 rewrite !Z2int_Qred.
 rewrite Num.Theory.ltr_pdivrMr ?ltr0z /=;
-  last exact/ssrnat.ltP/Pos2Nat.is_pos.
+  first exact/ssrnat.ltP/Pos2Nat.is_pos.
 rewrite GRing.mulrAC Num.Theory.ltr_pdivlMr ?ltr0z; 
-  last exact/ssrnat.ltP/Pos2Nat.is_pos.
+  first exact/ssrnat.ltP/Pos2Nat.is_pos.
 rewrite !nat_of_pos_Z_to_pos.
 rewrite !gez0_abs /=; try apply/ltnW/ssrnat.ltP/Pos2Nat.is_pos.
 rewrite -!intrM ltr_int.
@@ -458,16 +457,16 @@ apply/idP/idP.
 - move/eqP; case: (BigQ.to_Q x)=> xn xd.
   case: (BigQ.to_Q y)=> yn yd /=; rewrite !Z2int_Qred /=.
   move/eqP; rewrite GRing.eqr_div.
-  + move/eqP=> h; apply/QArith_base.Qeq_bool_iff.
-    rewrite /QArith_base.Qeq /=.
-    apply/Z2int_inj; rewrite !Z2int_mul /=.
-    by move:h; rewrite -!intrM; move/intr_inj.
   + apply/negP=> /eqP; rewrite -rat0.
     move/intr_inj; move: (Pos2Nat.is_pos xd).
     by elim: (Pos.to_nat xd)=> // /Nat.lt_irrefl.
   + apply/negP=> /eqP; rewrite -rat0.
     move/intr_inj; move: (Pos2Nat.is_pos yd).
     by elim: (Pos.to_nat yd)=> // /Nat.lt_irrefl.
+  + move/eqP=> h; apply/QArith_base.Qeq_bool_iff.
+    rewrite /QArith_base.Qeq /=.
+    apply/Z2int_inj; rewrite !Z2int_mul /=.
+    by move:h; rewrite -!intrM; move/intr_inj.
 Qed.
 
 Lemma rat_bigQ_injr: rel_spec rat_bigQ eq.
@@ -758,10 +757,10 @@ apply: (rel_array_fold_pair_in (r':=r')); [exact:len_eq| |exact:vV|exact:aA| ].
   move=> /(_ i_len) viVI.
   move: (rel_array_r aA)=> /(_ i); rewrite (rel_array_length aA) -len_eq.
   move=> /(_ i_len) aiAI; move: (BQR_array_scal viVI aiAI)=> avAV.
-  have:= (BQR_array_add _ zZ avAV); rewrite length_arr_map (len_z i); last
+  have:= (BQR_array_add _ zZ avAV); rewrite length_arr_map (len_z i); first
     by rewrite -len_eq.
   move=> /(_ (erefl _))=> rel_res; split=> //.
-  by move=> k k_len; rewrite length_arr_mk_fun; [exact/len_z|rewrite leEint; exact: leb_length].
+  by move=> k k_len; rewrite length_arr_mk_fun; [rewrite leEint; exact: leb_length|exact/len_z].
 - split; first by (move=> i i_len; rewrite length_make leb_length (len_ai i)).
   move: (rel_array_r aA); rewrite (rel_array_length aA).
   move=> /(_ _ len_A_gt0)=> /rel_array_length -> /=.
@@ -790,7 +789,7 @@ move=> x X xX y Y yY; apply/idP/idP.
 - case/eq_array_relP=> len_xy xy_i; apply/eqP/matrixP=> p q.
   rewrite ord1 -(rel_cV_nth xX p) -(rel_cV_nth yY p).
   apply/eqP/xy_i=> [:len_x]; rewrite ltEint_nat nat_to_intK;
-    first by (abstract:len_x; rewrite -(rel_cV_length xX)).
+    last by (abstract:len_x; rewrite -(rel_cV_length xX)).
   rewrite inE; exact/(ltn_trans len_x)/int_thresholdP.
 - move/eqP/matrixP=> XY; apply/eq_array_relP=> [:len_xy]; split.
   + abstract:len_xy; apply/int_to_nat_inj.
@@ -819,10 +818,10 @@ Lemma rel_rV_rat_add:
 Proof.
 move=> x X xX y Y yY; split; rewrite ?length_arr_mk_fun ?leEint ?leb_length ?(rel_cV_length xX) //.
 move=> i; rewrite !mxE nth_arr_mk_fun ?leEint ?leb_length // ?ltEint_nat.
-- by move:(rel_rV_nth xX) (rel_rV_nth yY)=> /(_ i) -> /(_ i) ->.
 - rewrite -(rel_cV_length xX); rewrite nat_to_intK //.
   rewrite !inE; apply/(ltn_trans (ltn_ord _)). 
   rewrite {1}(rel_cV_length xX); exact/int_thresholdP.
+- by move:(rel_rV_nth xX) (rel_rV_nth yY)=> /(_ i) -> /(_ i) ->.
 Qed.
 
 Lemma rel_rV_rat_scal lambda:
@@ -904,11 +903,11 @@ exists (make (Uint63.succ n) 0%R).[0%uint63 <- B].[succ k <- X].
   by move/(rel_array_write 0%uint63 bB)/(rel_array_write (succ k) xX).
 - move=> [: n_len]; split.
   + rewrite !length_set; abstract: n_len; rewrite length_make.
-    rewrite -leEint leEint_nat !succ_intE; last exact/lt_trans/max_length_lt.
-    rewrite -ltEint_nat n_max succ_intE; last exact/lt_trans/max_length_lt.
+    rewrite -leEint leEint_nat !succ_intE; first exact/lt_trans/max_length_lt.
+    rewrite -ltEint_nat n_max succ_intE; first exact/lt_trans/max_length_lt.
     by rewrite nN.
   + move=> i; case/boolP: (nat_to_int i == (succ k)).
-    * move/eqP=> i_k [: k_len]; rewrite i_k get_set_same.
+    * move/eqP=> i_k [: k_len]; rewrite i_k get_set_same; last first.
       { 
         rewrite !mxE; case: splitP.
         - move=> j /(congr1 nat_to_int); rewrite i_k (ord1_eq0 j).
@@ -920,9 +919,9 @@ exists (make (Uint63.succ n) 0%R).[0%uint63 <- B].[succ k <- X].
         -  move=> k' /(congr1 nat_to_int); rewrite i_k.
           rewrite add1n -nat_to_intS=> /(congr1 pred); rewrite !pred_succ.
           move/(congr1 int_to_nat); rewrite nat_to_intK.
-          + by rewrite -kK=> /val_inj <-; rewrite !mxE eqxx. 
           + rewrite inE; apply/(ltn_trans (ltn_ord k')).
             rewrite nN; exact:int_thresholdP.
+          + by rewrite -kK=> /val_inj <-; rewrite !mxE eqxx.
       }
       { 
         rewrite length_set -ltEint ltEint_nat -n_len succ_intE //.
@@ -937,6 +936,12 @@ exists (make (Uint63.succ n) 0%R).[0%uint63 <- B].[succ k <- X].
       }
       {
         move=> in0; rewrite get_set_other ?get_make ?mxE.
+        - move/(congr1 int_to_nat)=> /esym.
+          rewrite nat_to_intK; last (move=> i0; move/eqP: in0; case; exact/val_inj).
+          apply/(ltn_trans (ltn_ord _)); rewrite nN.
+          apply/(@leq_ltn_trans max_length); rewrite -?ltEint_nat //.
+          apply/(@ltn_trans max_int_); rewrite -?ltEint_nat ?max_length_lt //.
+          exact/int_thresholdP.
         - case: splitP.
           + move=> j; rewrite (ord1_eq0 j) /= => ?.
             by move/eqP: in0; case; apply/val_inj.
@@ -945,12 +950,6 @@ exists (make (Uint63.succ n) 0%R).[0%uint63 <- B].[succ k <- X].
             apply/negbTE/eqP=> /(congr1 val)/(congr1 succn).
             rewrite kK -[in RHS]add1n -i_j=> /(congr1 nat_to_int).
             by rewrite -(nat_to_intS) int_to_natK.
-        - move/(congr1 int_to_nat)=> /esym.
-          rewrite nat_to_intK; first (move=> i0; move/eqP: in0; case; exact/val_inj).
-          apply/(ltn_trans (ltn_ord _)); rewrite nN.
-          apply/(@leq_ltn_trans max_length); rewrite -?ltEint_nat //.
-          apply/(@ltn_trans max_int_); rewrite -?ltEint_nat ?max_length_lt //.
-          exact/int_thresholdP.
           }
 Qed.
 
@@ -975,10 +974,10 @@ exists (make n 0%R).[i <- X].
     rewrite -nN -iI; exact/ltn_ord.
   + move=> IK; rewrite /= GRing.mulr0n get_set_other ?get_make //.
     move/(congr1 int_to_nat); rewrite -iI nat_to_intK ?inE.
-    * by move/val_inj/eqP; rewrite /= (negPf IK).
     * apply/(ltn_trans (ltn_ord _)); rewrite nN.
       apply/(@leq_ltn_trans max_length); first rewrite -?leEint_nat ?n_max //.
       exact/int_thresholdP.
+    * by move/val_inj/eqP; rewrite /= (negPf IK).
 Qed.
 
 Lemma rel_rV_bqr_delta_bis n N i:
@@ -1117,7 +1116,7 @@ move=> bqr_av bqr_bw; apply/(iffP idP).
   case: bqr_bw=> len_b /(_ i).
   case: bqr_av=> len_a /(_ i).
   move: (eqb_i (nat_to_int i)).
-  rewrite ltEint_nat nat_to_intK ?inE; last (apply/(@ltn_trans n)=> //; rewrite len_a; exact/int_thresholdP).
+  rewrite ltEint_nat nat_to_intK ?inE; first (apply/(@ltn_trans n)=> //; rewrite len_a; exact/int_thresholdP).
   rewrite -len_a ltn_ord=> /(_ isT) /BigQ.eqb_eq /[swap] /eqP/rat_bigQEl /[apply] + /eqP.
   exact/rat_bigQ_injr.
 - move=> vw; move: bqr_av bqr_bw; rewrite vw.
@@ -1180,7 +1179,7 @@ case/rat_bigQ_cVP=> + bqr_a_v /rat_bigQ_cVP [+ bqr_b_w].
 move=> /[dup] n_int /(congr1 nat_to_int) + /(congr1 nat_to_int).
 rewrite !int_to_natK=> len_a len_b.
 rewrite /bigQ_dot /arr_fold_pair  zip_arr_to_seq -?len_a //.
-rewrite irange0_iota nat_to_intK; rewrite ?n_int ?inE; last exact/int_thresholdP.
+rewrite irange0_iota nat_to_intK; rewrite ?n_int ?inE; first exact/int_thresholdP.
 rewrite /vdot (eq_bigl (fun k => (val k < n)%nat)); last by (move=> k; rewrite ltn_ord).
 move: {1 16 19}n (leqnn n); elim=> [|k IH]; first by rewrite big_pred0_eq.
 move=> k_n; rewrite iotaS_rcons add0n !map_rcons foldl_rcons /=.
@@ -1207,7 +1206,7 @@ case=> len_a bqr_av [len_b bqr_bw]; apply/idP/idP.
   split.
   + move=> i /= i_j; move/(_ (nat_to_int i)): j_lt_eq bqr_av bqr_bw.
     rewrite ltEint_nat nat_to_intK ?i_j ?inE; 
-      last (apply/(ltn_trans i_j)/(@ltn_trans (length a)); [by rewrite -?ltEint_nat //|exact/int_thresholdP]).
+      first (apply/(ltn_trans i_j)/(@ltn_trans (length a)); [by rewrite -?ltEint_nat //|exact/int_thresholdP]).
     move/(_ isT); case: BigQ.compare_spec=> // + _ /(_ i) /eqP + /(_ i) /eqP.
     move=> /[swap] /rat_bigQEl /[apply]; exact: rat_bigQ_injr.
   + move: (bqr_av (Ordinal j_n)) (bqr_bw (Ordinal j_n))=> /= /eqP + /eqP.

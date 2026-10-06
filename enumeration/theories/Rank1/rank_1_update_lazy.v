@@ -18,7 +18,6 @@ Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, 
 (* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
 (* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
 Unset Universe Minimization ToSet.
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 Set Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.

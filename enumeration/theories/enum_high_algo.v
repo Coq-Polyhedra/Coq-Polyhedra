@@ -21,7 +21,6 @@ Unset Strict Implicit.
 Unset Printing Implicit Defensive.
 
 Import Order.Theory Num.Theory.
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Local Notation "a .[ i ]" := (PArray.get a i).
 
@@ -171,13 +170,13 @@ move=> x xG; apply/eqP; rewrite eqEfcard; apply/andP; split.
   rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges G_lex_n0 G_lex_vtx G_lex_edge xG yG).
   by rewrite -in_succE => /[swap] ->.
 + rewrite lex_graph_regular ?vtx_mk_graph ?inE // ?card_in_imfset /=.
-  * move/allP: G_lex_reg=> /(_ x xG). 
-    by rewrite /reg_verification=> /eqP ->.
-  * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
-    exact:to_feas_bas_inj.
   * apply/Simplex.feasibleP. 
     exists (Simplex.point_of_basis b (I0 G_lex_n0 G_lex_vtx)).
     exact: Simplex.lex_feasible_basis_is_feasible.
+  * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
+    exact:to_feas_bas_inj.
+  * move/allP: G_lex_reg=> /(_ x xG). 
+    by rewrite /reg_verification=> /eqP ->.
 Qed.
 
 End RegGraph.

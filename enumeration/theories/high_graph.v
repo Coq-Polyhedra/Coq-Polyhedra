@@ -10,7 +10,6 @@ Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 
 Open Scope fset.
 
@@ -100,7 +99,7 @@ Program Definition mk_graph (V : {fset T}) (E : rel T) : graph T :=
   @Graph _ [fsfun v in V => Some ([fset w | w in V & E v w] `\ v) | None] _.
 Next Obligation.
 apply/codom_subP=> x x_in.
-rewrite fsfunE ifT /=; last by move: x_in; apply/fsubsetP/finsupp_sub.
+rewrite fsfunE ifT /=; first by move: x_in; apply/fsubsetP/finsupp_sub.
 apply/fsubsetP=> y; rewrite !inE /= => /and3P [yx yV Exy].
 by rewrite mem_finsupp fsfunE yV yx.
 Qed.
@@ -1113,8 +1112,8 @@ exists (gisof_epath G2G1 fp); apply/epath_inj/gpath_inj; split.
 - rewrite /=; move: (@mem_walk _ _ fp).
   elim: (walk fp)=> //= h t IH mem_ht.
   rewrite gf_can ?IH //.
-  + by move=> z zt; apply/mem_ht; rewrite inE zt orbT.
   + by rewrite (gisof_vtx G1G2); apply/mem_ht; rewrite inE eqxx.
+  + by move=> z zt; apply/mem_ht; rewrite inE zt orbT.
 Qed.
 
 Lemma size_epath_gisof {T1 T2 : choiceType}

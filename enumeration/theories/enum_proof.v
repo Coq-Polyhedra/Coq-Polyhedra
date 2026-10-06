@@ -4,7 +4,6 @@ From Polyhedra Require Import lrel polyhedron poly_base.
 From Polyhedra Require Import simplex fsetmin.
 Require Import enum_algo graph high_graph.
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 (* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
 (* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
 Unset Universe Minimization ToSet.
@@ -640,12 +639,12 @@ Lemma fset_active_edge_card_befst:
   #|` befst @` (fset_active I `&` fset_active J)|%fset = n.-1.
 Proof.
 rewrite fset_active_edge_eq card_in_imfset /=.
-- rewrite card_in_imfset /= -?cardE; first by move/eqP: edge_IJ.
-  move=> i j; rewrite !inE=> /andP [iI _] /andP [jI _]. 
-  by case=> /trmx_inj /(A_inj_bas iI jI).
 - move=> e f /imfsetP /= [i + ->] /imfsetP /= [j + ->].
   rewrite !inE=> /andP [iI _] /andP [jI _].
   by rewrite !lfunE /= => /trmx_inj /(A_inj_bas iI jI) ->.
+- rewrite card_in_imfset /= -?cardE; last by move/eqP: edge_IJ.
+  move=> i j; rewrite !inE=> /andP [iI _] /andP [jI _]. 
+  by case=> /trmx_inj /(A_inj_bas iI jI).
 Qed.
 
 Lemma A_IJ_rank : \rank (row_submx A (I :&: J)) = n.-1.

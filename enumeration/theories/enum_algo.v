@@ -15,7 +15,6 @@ Require Import graph extra_array extra_int array_set rat_bigQ diameter img_graph
 Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
 Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
-Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
 (* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
 (* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
 Unset Universe Minimization ToSet.

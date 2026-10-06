@@ -22,7 +22,6 @@ Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Unset SsrOldRewriteGoalsOrder.
 
 Local Open Scope positive_scope.
 Import Order.Theory.
