@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 From Polyhedra Require Import extra_misc inner_product extra_matrix vector_order affine row_submx.
 From Polyhedra Require Import lrel polyhedron poly_base.
 From Polyhedra Require Import simplex fsetmin.

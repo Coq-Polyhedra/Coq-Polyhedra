@@ -1,7 +1,7 @@
 (* -------------------------------------------------------------------- *)
-Require Import Recdef.
+From Stdlib Require Import Recdef.
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 From Polyhedra Require Import fsetmin extra_misc.
 
 (* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)

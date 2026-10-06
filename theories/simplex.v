@@ -7,9 +7,9 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-Require Import Recdef.
+From Stdlib Require Import Recdef.
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import boot order.
 From mathcomp Require Import ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 

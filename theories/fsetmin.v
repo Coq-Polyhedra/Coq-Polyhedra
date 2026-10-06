@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 
 (* -------------------------------------------------------------------- *)
 Set   Implicit Arguments.

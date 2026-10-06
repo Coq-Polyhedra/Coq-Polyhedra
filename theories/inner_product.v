@@ -14,7 +14,7 @@
 (* ==================================================================== *)
 
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import boot order.
 From mathcomp Require Import bigop ssralg ssrnum zmodp matrix vector fingroup perm order.
 Require Import extra_matrix.
 Import Order.Theory.

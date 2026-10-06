@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 From Stdlib Require Import Uint63.
 From Stdlib Require PArray.
 (* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
@@ -8,7 +8,7 @@ Import PArray(array, make, get, set, length, copy, default, max_length,
   get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc.
 Require Import graph high_graph extra_array extra_int refinement.
-Require Import NArith.BinNat NArith.BinNatDef.
+From Stdlib Require Import NArith.BinNat NArith.BinNatDef.
 (* PArray notations, at MathComp's level for "_ .[ _ ]". *)
 Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
 Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").

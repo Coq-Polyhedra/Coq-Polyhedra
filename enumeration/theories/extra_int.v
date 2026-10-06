@@ -2,7 +2,7 @@
 From Stdlib   Require Import Uint63 BinNat.
 From Stdlib   Require Znat Zdiv Zpower Zorder Pnat.
 From HB       Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import boot order.
 From Polyhedra Require Import extra_misc.
 
 (* -------------------------------------------------------------------- *)

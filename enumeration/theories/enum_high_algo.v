@@ -1,4 +1,4 @@
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 From Stdlib Require Import Uint63.
 From Stdlib Require PArray.
 (* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)

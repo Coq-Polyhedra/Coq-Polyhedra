@@ -9,7 +9,7 @@
 
 (* -------------------------------------------------------------------- *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrnum ssrint.
+From mathcomp Require Import boot order ssralg ssrnum ssrint.
 Require Import extra_misc.
 
 Import Order.
@@ -492,10 +492,10 @@ Section IntervalBLattice.
 Context (d : disp_t) (L : latticeType d) (a b : L) (a_le_b : expose (a <= b)).
 
 Fact le0R (x : interval_of a b) : Interval (intervalL a_le_b) <= x.
-Proof. by rewrite leEsub /=; case/intervalP: (valP x). Qed.
+Proof. by rewrite -le_val /=; case/intervalP: (valP x). Qed.
 
 Fact leR1 (x : interval_of a b) : x <= Interval (intervalR a_le_b).
-Proof. by rewrite leEsub /=; case/intervalP: (valP x). Qed.
+Proof. by rewrite -le_val /=; case/intervalP: (valP x). Qed.
 
 HB.instance Definition _ := hasBottom.Build d (interval_of a b) le0R.
 HB.instance Definition _ := hasTop.Build d (interval_of a b) leR1.
@@ -533,7 +533,7 @@ Proof. by rewrite /vrank subnn. Qed.
 
 Lemma homo_intv_rank (x y : '[< a; b >]) : x < y -> (vrank x < vrank y)%N.
 Proof.
-rewrite ltEsub /vrank => /homo_rank h; rewrite ltn_sub2r //.
+rewrite -lt_val /vrank => /homo_rank h; rewrite ltn_sub2r //.
 by rewrite (leq_trans _ h) // ltnS intv_rankL.
 Qed.
 
@@ -544,7 +544,7 @@ rewrite /vrank -subSn ?intv_rankL // ltn_subLR; last first.
 + by rewrite (leq_trans (intv_rankL x)).
 rewrite subnKC ?intv_rankL // => /graded_rank h /h [z rg_z].
 exists (insubd (0 : '[< a; b >]) z).
-rewrite !ltEsub /insubd insubT //= intervalE.
+rewrite -!lt_val /insubd insubT //= intervalE.
 rewrite (le_trans (intervalPL (valP x))) //=; last by apply: ltW; case/andP: rg_z.
 by rewrite (le_trans _ (intervalPR (valP y))) //= ltW //; case/andP: rg_z.
 Qed.

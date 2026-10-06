@@ -8,7 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 Require Import extra_misc inner_product vector_order.
 
 Import Order.Theory.
@@ -127,7 +127,7 @@ End FsFunZmod.
 
 (* -------------------------------------------------------------------- *)
 Section FsFunLmod.
-Context {T : choiceType} {R : ringType}.
+Context {T : choiceType} {R : nzRingType}.
 
 Implicit Types (c : R) (f g h : {fsfun T ~> R}).
 
@@ -186,7 +186,7 @@ Definition fsfunwE := (@fs0E, @fsaddE, @fsoppE, @fsscaleE).
 
 (* -------------------------------------------------------------------- *)
 Section Combine.
-Context {R : ringType} {L : lmodType R}.
+Context {R : nzRingType} {L : lmodType R}.
 
 Implicit Types (f g h : {fsfun L ~> R}).
 
@@ -323,12 +323,14 @@ Proof. by rewrite conic_finsuppE // (valP w). Qed.
 Lemma ge0_fconic w x : 0 <= w x.
 Proof. by move/conicwP: (valP w); apply. Qed.
 
-(* We have to lock the definitions *)
+(* We have to lock the definitions (simpl never) *)
 Definition conicf0 : {conic T ~> R} :=
-  nosimpl (mkConicFun conic0).
+  mkConicFun conic0.
+#[global] Arguments conicf0 : simpl never.
 
 Definition conicfD : _ -> _ -> {conic T ~> R} :=
-  nosimpl (fun w1 w2 => mkConicFun (conicD (valP w1) (valP w2))).
+  fun w1 w2 => mkConicFun (conicD (valP w1) (valP w2)).
+#[global] Arguments conicfD : simpl never.
 
 Notation "\0 %:PFS" := conicf0 : conicfun_scope.
 Notation "f + g" := (conicfD f g) : conicfun_scope.
@@ -396,7 +398,8 @@ by rewrite fsfunE ifT.
 Qed.
 
 Definition fconicu : {fset T} -> {conic T ~> R} :=
-  nosimpl (fun S => mkConicFun (fconicu_r S)).
+  fun S => mkConicFun (fconicu_r S).
+#[global] Arguments fconicu : simpl never.
 
 Lemma fconicuE S x : fconicu S x = (x \in S)%:R.
 Proof. by rewrite fsfunE; case: ifP. Qed.
@@ -481,7 +484,8 @@ Proof. apply/convexP; split=> /=.
 Qed.
 
 Definition fcvx1 : T -> {convex T ~> R} :=
-  nosimpl (fun x => mkConvexfun (fcvx1_r x)).
+  fun x => mkConvexfun (fcvx1_r x).
+#[global] Arguments fcvx1 : simpl never.
 
 Lemma fcvx1E x y : fcvx1 x y = (y == x)%:R.
 Proof. by rewrite fsfunE in_fset1; case: ifP. Qed.
@@ -557,7 +561,8 @@ Proof. apply/convexP; split=> /=.
 Qed.
 
 Definition fseg : _ -> _ -> _ -> {convex L ~> R} :=
-  nosimpl (fun a x y => mkConvexfun (fseg_r a x y)).
+  fun a x y => mkConvexfun (fseg_r a x y).
+#[global] Arguments fseg : simpl never.
 
 Lemma fsegE a x y z :
   fseg a x y z = (z == x)%:R * (1 - clamp a) + (z == y)%:R * clamp a.
@@ -637,7 +642,8 @@ apply/convexP; split=> /=.
     by move: VProp0; rewrite -cardfs_gt0 -(ltr0n R); move/lt0r_neq0.
 Qed.
   
-Definition cvxuni := nosimpl (mkConvexfun cvxavg_r).
+Definition cvxuni := mkConvexfun cvxavg_r.
+#[global] Arguments cvxuni : simpl never.
 Definition cvxavg := combine cvxuni.
 
 Lemma cvxavg_fsavg : cvxavg = fsavg.
@@ -748,7 +754,7 @@ End ConvexPred.
 
 (* -------------------------------------------------------------------- *)
 Section VectToFsFun.
-Context {T : choiceType} {R : ringType}.
+Context {T : choiceType} {R : nzRingType}.
 
 Definition frank (S : {fset T}) (v : S) : 'I_#|`S| :=
   cast_ord (esym (cardfE _)) (enum_rank v).

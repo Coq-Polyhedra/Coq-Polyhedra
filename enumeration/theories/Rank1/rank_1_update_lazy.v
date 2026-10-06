@@ -7,7 +7,7 @@ Import PArray(array, make, get, set, length, copy, default, max_length,
   array_ext, default_make, default_set, get_make, get_out_of_bounds,
   get_set_other, get_set_same, leb_length, length_make, length_set).
 From Bignums Require Import BigQ.
-From mathcomp Require Import all_ssreflect all_algebra.
+From mathcomp Require Import boot order algebra.
 From Polyhedra Require Import extra_misc inner_product vector_order.
 Require Import graph extra_array extra_int array_set rat_bigQ diameter img_graph refinement enum_algo.
 (* PArray notations, at MathComp's level for "_ .[ _ ]". *)

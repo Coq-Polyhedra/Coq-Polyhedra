@@ -1,5 +1,5 @@
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import boot order.
 From Stdlib Require Import Uint63.
 From Stdlib Require PArray.
 (* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
@@ -7,8 +7,8 @@ From Stdlib Require PArray.
 Import PArray(array, make, get, set, length, copy, default, max_length,
   array_ext, default_make, default_set, get_make, get_out_of_bounds,
   get_set_other, get_set_same, leb_length, length_make, length_set).
-Require Import PArith.BinPos PArith.BinPosDef.
-Require Import NArith.BinNat NArith.BinNatDef.
+From Stdlib Require Import PArith.BinPos PArith.BinPosDef.
+From Stdlib Require Import NArith.BinNat NArith.BinNatDef.
 From Polyhedra Require Import extra_misc.
 Require Import extra_int extra_array.
 (* PArray notations, at MathComp's level for "_ .[ _ ]". *)

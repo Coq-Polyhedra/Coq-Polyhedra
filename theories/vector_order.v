@@ -7,7 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import boot order.
 From mathcomp Require Import bigop ssralg ssrnum zmodp matrix fingroup perm.
 Require Import extra_misc inner_product.
 

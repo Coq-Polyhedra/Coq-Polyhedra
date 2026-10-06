@@ -8,7 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 Require Import extra_misc inner_product row_submx barycenter vector_order.
 
 Import Order.Theory.
@@ -174,7 +174,7 @@ End BaseEltEncodingZmodMorph.
 
 (* -------------------------------------------------------------------- *)
 Section BaseLmod.
-Context {R : ringType} {n : nat}.
+Context {R : nzRingType} {n : nat}.
 
 Implicit Types (b : lrel[R]_n).
 
@@ -206,7 +206,7 @@ End BaseLmod.
 
 (* -------------------------------------------------------------------- *)
 Section BaseEltEncodingLmodMorph.
-Context {R : ringType} {n : nat}.
+Context {R : nzRingType} {n : nat}.
 
 Lemma base_elt_to_col_is_scalable : scalable (@base_elt_to_col R n).
 Proof.

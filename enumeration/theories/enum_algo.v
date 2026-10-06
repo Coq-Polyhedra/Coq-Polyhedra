@@ -1,13 +1,13 @@
-Require Import Setoid Uint63.
+From Stdlib Require Import Setoid Uint63.
 From Stdlib Require PArray.
 (* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
 (* only the names we need; the notations are redefined below.            *)
 Import PArray(array, make, get, set, length, copy, default, max_length,
   array_ext, default_make, default_set, get_make, get_out_of_bounds,
   get_set_other, get_set_same, leb_length, length_make, length_set).
-From mathcomp Require Import all_ssreflect all_algebra.
-Require Import PArith.BinPos PArith.BinPosDef.
-Require Import NArith.BinNat NArith.BinNatDef.
+From mathcomp Require Import boot order algebra.
+From Stdlib Require Import PArith.BinPos PArith.BinPosDef.
+From Stdlib Require Import NArith.BinNat NArith.BinNatDef.
 From Bignums Require Import BigQ.
 From Polyhedra Require Import extra_misc inner_product vector_order.
 Require Import graph extra_array extra_int array_set rat_bigQ diameter img_graph refinement.

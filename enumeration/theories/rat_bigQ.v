@@ -12,7 +12,7 @@
 (* Copyright (c) 2014  Vincent Siles                                    *)
 (* -------------------------------------------------------------------- *)
 
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 From Bignums Require Import BigQ.
 From Stdlib Require Import Uint63 PArith PeanoNat.
 From Stdlib Require PArray.

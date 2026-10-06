@@ -8,7 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From mathcomp Require Import boot order algebra finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter lrel.
 
@@ -31,7 +31,7 @@ Reserved Notation "''hpoly_' n" (at level 8, format "''hpoly_' n").
 
 (* -------------------------------------------------------------------- *)
 Section VectToFsFun.
-Context {T : choiceType} {R : ringType}.
+Context {T : choiceType} {R : nzRingType}.
 
 Definition frank (S : {fset T}) (v : S) : 'I_#|`S| :=
   cast_ord (esym (cardfE _)) (enum_rank v).

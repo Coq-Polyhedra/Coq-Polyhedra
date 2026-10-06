@@ -7,7 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
+From mathcomp Require Import boot order ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
 Require Import extra_misc.
 
 Set SsrOldRewriteGoalsOrder.  (* TODO: port to the new rewrite subgoal order (MathComp >= 2.6) *)
@@ -20,14 +20,14 @@ Import GRing.Theory Num.Theory.
 
 Section ExtraMx.
 
-Lemma col_mx0l (R : comRingType) (n : nat) (x : 'cV[R]_n) (y : 'cV[R]_0) : col_mx y x = x.
+Lemma col_mx0l (R : comNzRingType) (n : nat) (x : 'cV[R]_n) (y : 'cV[R]_0) : col_mx y x = x.
 Proof.
 apply/ colP => i; rewrite !mxE; case: splitP => [j | j i_eq_0j]; first by move: (valP j).
 suff <-: (i = j) by done.
   exact: ord_inj.
 Qed.
 
-Lemma col0P (R: comRingType) (m: nat) (u: 'cV[R]_m) : u^~ 0 =1 (fun _ => 0) <-> u = 0.
+Lemma col0P (R: comNzRingType) (m: nat) (u: 'cV[R]_m) : u^~ 0 =1 (fun _ => 0) <-> u = 0.
 Proof.
 split => H.
 - apply/colP => i; rewrite mxE.
@@ -36,7 +36,7 @@ split => H.
   by rewrite mxE.
 Qed.
 
-Lemma col_neq_0 (R: comRingType) (m: nat) (u: 'cV[R]_m) : (u != 0) = [exists i, u i 0 != 0].
+Lemma col_neq_0 (R: comNzRingType) (m: nat) (u: 'cV[R]_m) : (u != 0) = [exists i, u i 0 != 0].
 Proof.
 apply/idP/idP.
 - apply/contraR.
@@ -143,7 +143,7 @@ move/(H _) => H'; move/andP: (kermxK A) =>  [HA _]; move/andP: (kermxK B) =>  [_
 by apply: (submx_trans HA (submx_trans H' HB)).
 Qed.
 
-Lemma col_mul (R : comRingType) (p q r : nat) (j : 'I_r) (M : 'M[R]_(p,q)) (N : 'M_(q, r)) :
+Lemma col_mul (R : comNzRingType) (p q r : nat) (j : 'I_r) (M : 'M[R]_(p,q)) (N : 'M_(q, r)) :
   col j (M *m N) = M *m (col j N).
 Proof.
 have H: row j (N^T *m M^T) = row j N^T *m M^T.
@@ -152,19 +152,19 @@ rewrite -trmx_mul -!tr_col -trmx_mul in H.
 by apply: trmx_inj.
 Qed.
 
-Lemma col_mul_scalar (R : comRingType) (q r : nat) (j : 'I_r) (N : 'M_(q, r)) (a : R):
+Lemma col_mul_scalar (R : comNzRingType) (q r : nat) (j : 'I_r) (N : 'M_(q, r)) (a : R):
   col j (a *: N) = a *: (col j N).
 Proof.
 by apply/colP => i; rewrite !mxE.
 Qed.
 
-Lemma trmx_mul_scalar (R : comRingType) (q r : nat) (N : 'M_(q, r)) (a : R):
+Lemma trmx_mul_scalar (R : comNzRingType) (q r : nat) (N : 'M_(q, r)) (a : R):
   (a *: N)^T = a *: (N^T).
 Proof.
 by apply/matrixP => i j; rewrite !mxE.
 Qed.
 
-Lemma castmx_mul (R : ringType)
+Lemma castmx_mul (R : nzRingType)
   (m m' n p p': nat) (em : m = m') (ep : p = p')
   (M : 'M[R]_(m, n)) (N : 'M[R]_(n, p)) :
   castmx (em, ep) (M *m N) = castmx (em, erefl _) M *m castmx (erefl _, ep) N.
@@ -172,7 +172,7 @@ Proof.
 by case: m' / em; case: p' / ep.
 Qed.
 
-Lemma mulmx_cast (R : ringType)
+Lemma mulmx_cast (R : nzRingType)
   (m n n' p p' : nat) (en : n' = n) (ep : p' = p)
   (M : 'M[R]_(m, n)) (N : 'M[R]_(n', p')) :
   M *m (castmx (en, ep) N) =
@@ -195,7 +195,7 @@ move/(congr1 (castmx (esym em, esym en))).
 by rewrite 2!castmxK.
 Qed.
 
-Lemma mulmx_tr_row_perm (R: ringType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
+Lemma mulmx_tr_row_perm (R: nzRingType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
   (row_perm s A)^T *m (row_perm s B) = A^T *m B.
 Proof.
 rewrite tr_row_perm col_permE row_permE.

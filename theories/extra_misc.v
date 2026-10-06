@@ -8,7 +8,7 @@
 
 (* -------------------------------------------------------------------- *)
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect.
+From mathcomp Require Import boot order.
 From mathcomp Require Import ssralg ssrnum zmodp matrix finmap vector order.
 From Stdlib Require Import NArith.BinNat NArith.BinNatDef PArith.Pnat NArith.Nnat.
 

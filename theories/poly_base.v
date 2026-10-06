@@ -7,9 +7,9 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-Require Import Recdef.
+From Stdlib Require Import Recdef.
 From HB Require Import structures.
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp.
+From mathcomp Require Import boot order ssralg ssrnum zmodp.
 From mathcomp Require Import matrix mxalgebra vector finmap.
 Require Import extra_misc inner_product extra_matrix.
 Require Import xorder vector_order row_submx.
@@ -642,7 +642,7 @@ move=> F1 F2 F3; apply: val_inj; rewrite !SubK.
 by apply/poly_eqP=> x; rewrite !in_polyI andbA.
 Qed.
 
-Lemma fpII : idempotent fpI.
+Lemma fpII : idempotent_op fpI.
 Proof.
 move=> F; apply: val_inj; rewrite !SubK.
 by apply/poly_eqP=> x; rewrite !in_polyI andbb.
@@ -2535,7 +2535,7 @@ move=> T [g bij_g]; exists T.
 set h : _ -> face_set Q := fun (z : '[<x; 1>]) => f (z%:I_[< <~ y ; >]).
 have hcodom z : h z \in interval (f x%:I) 1.
 + rewrite intervalE lex1 andbT /h; apply: omorph_homo.
-  by rewrite leEsub /= (intervalPL (valP z)).
+  by rewrite -Order.le_val /= (intervalPL (valP z)).
 pose k (z : '[<x; 1>]) : face_set T := g (Interval (hcodom z)).
 have morph_k: omorphism k; first apply/omorphismP=> z1 z2.
 + rewrite -(omorphI g); congr (g _); apply: val_inj => /=.
@@ -2548,7 +2548,7 @@ have morph_k: omorphism k; first apply/omorphismP=> z1 z2.
   have hcodomI z : val (hI z) \in interval x 1.
   * rewrite intervalE lex1 andbT /hI.
     apply: (le_trans (y := (val x%:I_[< y; 1 >]))) => //.
-    rewrite -leEsub -(omorph_mono (bij_inj bij_f)).
+    rewrite Order.le_val -(omorph_mono (bij_inj bij_f)).
     by rewrite Kf (intervalPL (valP z)).
   exists (fun z => Interval (hcodomI z)).
   * by move=> z; apply: val_inj => /=; rewrite /hI /h /= fK.
@@ -2574,7 +2574,7 @@ set I : face_set Q := f y%:I; have cI: compact (val I).
 have gI (z : '[<x; y>]) : val (f z%:I_[< ; 1%O ~> >]) \in face_set (val I).
 + rewrite (face_set_of_face (valP (f y%:I))).
   set zc := _%:I_[< ; 1 ~> >]; have le_zy: zc <= y%:I.
-  - by rewrite leEsub /= (intervalPR (valP z)).
+  - by rewrite -Order.le_val /= (intervalPR (valP z)).
   rewrite 2!inE /=; apply/andP; split; first by apply: valP.
   by have := omorph_homo f le_zy; rewrite leEfaces.
 pose g (z : '[<x; y>]) := [` gI z]%fset.
