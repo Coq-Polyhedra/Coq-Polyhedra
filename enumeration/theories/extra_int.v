@@ -17,10 +17,6 @@ Unset SsrOldRewriteGoalsOrder.
 (* -------------------------------------------------------------------- *)
 Import Order.Theory.
 
-(* MathComp 1.x notations for bottom and top, still used throughout.     *)
-(* TODO: replace by \bot / \top and remove (see also xorder.v).        *)
-Notation "0" := Order.bottom : order_scope.
-Notation "1" := Order.top : order_scope.
 
 (* -------------------------------------------------------------------- *)
 Coercion int_to_nat (x : int) : nat :=
@@ -300,7 +296,7 @@ End SuccTheory.
 
 Section PredTheory.
 
-Lemma pred_intE (x : int) : (0 < x)%O -> Uint63.pred x = x.-1 :> nat.
+Lemma pred_intE (x : int) : (\bot < x)%O -> Uint63.pred x = x.-1 :> nat.
 Proof.
 move=> x0; rewrite /int_to_nat pred_spec Zdiv.Zmod_small; last first; try split.
 - rewrite Znat.Z2Nat.inj_sub; first exact:BinInt.Z.le_0_1.

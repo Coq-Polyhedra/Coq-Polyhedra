@@ -792,7 +792,7 @@ Lemma is_sorted_rel_E {T : Type} (a : array T) (r : rel T):
 Proof. by rewrite /PArrayUtils.is_sorted_rel_ arr_foldE. Qed. 
 
 Lemma rel_sorted_P {T : Type} (r : rel T) (a : array T): 
-  (0 < length a)%O -> 
+  (\bot < length a)%O -> 
   is_sorted_rel_ r a = 
   (rel_sorted r a, last (default a) (arr_to_seq a), false).
 Proof.

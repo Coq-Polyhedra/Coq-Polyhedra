@@ -22,10 +22,6 @@ Unset Printing Implicit Defensive.
 
 Local Open Scope order_scope.
 
-(* MathComp 1.x notations for bottom and top, still used throughout.     *)
-(* TODO: replace by \bot / \top and remove.                             *)
-Notation "0" := \bot : order_scope.
-Notation "1" := \top : order_scope.
 
 (* -------------------------------------------------------------------- *)
 Section Misc.
@@ -133,7 +129,7 @@ HB.structure Definition GradedFinLattice d :=
 Section GradedTheory.
 Context (d : disp_t) (L : gradedFinLatticeType d).
 
-Lemma rank0 : rank (0 : L) = 0%N.
+Lemma rank0 : rank (\bot : L) = 0%N.
 Proof. exact: rank0_subproof. Qed.
 
 Lemma homo_rank : {homo (@rank d L) : x y / x < y >-> (x < y)%N}.
@@ -145,30 +141,30 @@ Proof. by apply: (ltW_homo homo_rank). Qed.
 Lemma graded_rank (x y : L) : x <= y -> ((rank x).+1 < rank y)%N -> exists z, x < z < y.
 Proof. exact: graded_rank_subproof. Qed.
 
-Lemma rank_eq0 (x : L) : (rank x == 0) = (x == 0).
+Lemma rank_eq0 (x : L) : (rank x == 0%N) = (x == \bot).
 Proof.
 apply/eqP/eqP=> [zrk|->]; last by rewrite rank0.
 apply/contra_eq: zrk; rewrite -!(lt0x, lt0n).
 by move/homo_rank; rewrite rank0.
 Qed.
 
-Lemma rank_eq1 (x : L) : (rank x == rank ((1 : L))%O) = (x == 1).
+Lemma rank_eq1 (x : L) : (rank x == rank ((\top : L))%O) = (x == \top).
 Proof.
 apply/eqP/idP=> [eqrk|/eqP ->//].
 have := lex1 x; rewrite le_eqVlt => /orP[] //.
 by move/homo_rank; rewrite eqrk ltnn.
 Qed.
 
-Lemma rank_gt0 (x : L) : (0 < rank x)%N = (0 < x).
+Lemma rank_gt0 (x : L) : (0 < rank x)%N = (\bot < x).
 Proof.
 apply/idP/idP => [gt0_rank|/homo_rank]; last by rewrite rank0.
 by rewrite lt_neqAle le0x eq_sym -rank_eq0 andbT -lt0n.
 Qed.
 
-Lemma rank_le1 (x : L) : (rank x <= rank (1%O : L))%N.
+Lemma rank_le1 (x : L) : (rank x <= rank (\top%O : L))%N.
 Proof. by apply/le_homo_rank/lex1. Qed.
 
-Lemma rank_gt1 (x : L) : (rank x < rank (1 : L)%O)%N = (x < 1).
+Lemma rank_gt1 (x : L) : (rank x < rank (\top : L)%O)%N = (x < \top).
 Proof.
 apply/idP/idP => [lt1_rank|/homo_rank //].
 by rewrite lt_neqAle lex1 andbT -rank_eq1 ltn_eqF.
@@ -203,7 +199,7 @@ Lemma graded_rankS (x : L) :
 Proof.
 rewrite lt0n rank_eq0 => nz_x; case/boolP: (rank x < 2)%N.
 + rewrite ltnS leq_eqVlt ltnS leqn0 rank_eq0 (negbTE nz_x) orbF.
-  by move=> /eqP->; exists 0; rewrite ?(lt0x) // rank0.
+  by move=> /eqP->; exists \bot; rewrite ?(lt0x) // rank0.
 rewrite -leqNgt => gt1_rkx; case: (graded_rank (le0x x)).
 + by rewrite rank0.
 move=> y; move: {2}(rank x - rank y) (leqnn (rank x - rank y)).
@@ -212,7 +208,7 @@ move=> n; elim: n y => [|n ih] y.
   by case/andP=> _ /homo_rank; rewrite ltnNge le_rk_xy.
 rewrite leq_eqVlt => /orP[]; last by rewrite ltnS => /ih.
 move=> h; have {h}: rank x = ((rank y).+1 + n)%N.
-+ have: rank x - rank y != 0 by rewrite (eqP h).
++ have: rank x - rank y != \bot by rewrite (eqP h).
   rewrite subn_eq0 -ltnNge => lt_rk_yx.
   by rewrite addSnnS -(eqP h) addnC subnK // ltnW.
 case: (n =P 0)%N => [{ih}-> rkxE /andP[_ lt_yx]|].
@@ -297,7 +293,7 @@ Lemma rank_morph (f : L -> G) x :
   omorphism f -> injective f -> (rank x <= rank (f x))%N.
 Proof.
 move=> morph_f inj_f; elim/rank_ind: x => x ih.
-case: (x =P 0) => [->|]; first by rewrite rank0.
+case: (x =P \bot) => [->|]; first by rewrite rank0.
 move/eqP; rewrite -rank_eq0 -lt0n => /graded_rankS.
 case=> y lt_yx <-; apply: (leq_ltn_trans (ih _ _)).
 + by apply: homo_rank.
@@ -528,7 +524,7 @@ Proof. by apply/(ltW_homo (@homo_rank _ _)); case/intervalP: (valP x). Qed.
 Lemma intv_rankR (x : '[< a; b >]) : (rank (val x) <= rank b)%N.
 Proof. by apply/(ltW_homo (@homo_rank _ _)); case/intervalP: (valP x). Qed.
 
-Lemma vrank0 : vrank 0 = 0.
+Lemma vrank0 : vrank \bot = 0%N.
 Proof. by rewrite /vrank subnn. Qed.
 
 Lemma homo_intv_rank (x y : '[< a; b >]) : x < y -> (vrank x < vrank y)%N.
@@ -543,7 +539,7 @@ Proof.
 rewrite /vrank -subSn ?intv_rankL // ltn_subLR; last first.
 + by rewrite (leq_trans (intv_rankL x)).
 rewrite subnKC ?intv_rankL // => /graded_rank h /h [z rg_z].
-exists (insubd (0 : '[< a; b >]) z).
+exists (insubd (\bot : '[< a; b >]) z).
 rewrite -!lt_val /insubd insubT //= intervalE.
 rewrite (le_trans (intervalPL (valP x))) //=; last by apply: ltW; case/andP: rg_z.
 by rewrite (le_trans _ (intervalPR (valP y))) //= ltW //; case/andP: rg_z.
@@ -672,10 +668,10 @@ Section Atomic.
 Context (d : disp_t) (L : finTBLatticeType d).
 
 Definition atom (a : L) :=
-  (0 < a) && ~~ [exists x : L, 0 < x < a].
+  (\bot < a) && ~~ [exists x : L, \bot < x < a].
 
 Definition coatom (a : L) :=
-  (a < 1) && ~~ [exists x : L, a < x < 1].
+  (a < \top) && ~~ [exists x : L, a < x < \top].
 
 Definition atomistic (a : L) :=
   [exists S : {set L},
@@ -720,8 +716,8 @@ End AtomCoatom.
 Section AtomicTheory.
 Context (d : disp_t) (L : finTBLatticeType d).
 
-Lemma atomP (a : L) : 0 < a ->
-  reflect (forall x, x != 0 -> ~ (x < a)) (atom a).
+Lemma atomP (a : L) : \bot < a ->
+  reflect (forall x, x != \bot -> ~ (x < a)) (atom a).
 Proof.
 move=> gt0_a; apply: (iffP andP).
 + case=> _ /existsPn h x nz_x; move/(_ x): h.
@@ -730,7 +726,7 @@ move=> gt0_a; apply: (iffP andP).
   by case/andP=> gt0_x; apply/ata; rewrite gt_eqF.
 Qed.
 
-Lemma atom0n : ~ (atom (0 : L)).
+Lemma atom0n : ~ (atom (\bot : L)).
 Proof. by case/andP; rewrite ltxx. Qed.
 
 Lemma atomisticP (a : L) :
@@ -750,11 +746,11 @@ End AtomicTheory.
 Section CoatomicTheory.
 Context (d : disp_t) (L : finTBLatticeType d).
 
-Lemma coatom1n : ~ (coatom (1 : L)).
+Lemma coatom1n : ~ (coatom (\top : L)).
 Proof. by move=> /coatom_atom /atom0n. Qed.
 
-Lemma coatomP (a : L) : a < 1 ->
-  reflect (forall x, x != 1 -> ~ (a < x)) (coatom a).
+Lemma coatomP (a : L) : a < \top ->
+  reflect (forall x, x != \top -> ~ (a < x)) (coatom a).
 Proof.
 move=> gt1_a; apply: (iffP idP).
 + by move/coatom_atom/atomP=> -/(_ gt1_a); apply.
@@ -789,7 +785,7 @@ apply/idP/eqP.
   rewrite (rwP eqP) eqn_leq rank_gt0 gt0_a andbT.
   rewrite leqNgt; apply/negP; rewrite -[0%N](@rank0 _ L).
   by case/(graded_rank (le0x _)) => x /andP[]; rewrite lt0x => /h.
-+ move=> eq1_rk; have gt0_a: 0 < a by rewrite -rank_gt0 eq1_rk.
++ move=> eq1_rk; have gt0_a: \bot < a by rewrite -rank_gt0 eq1_rk.
   apply/atomP=> // x nz_x /homo_rank; rewrite eq1_rk ltnS.
   by rewrite leqn0 rank_eq0 (negbTE nz_x).
 Qed.
@@ -798,7 +794,7 @@ End GradedAtomicTheory.
 Section GradedCoAtomicTheory.
 Context (d : disp_t) (L : gradedFinLatticeType d).
 
-Lemma coatomE (a : L) : (coatom a) = (rank (1 : L) == (rank a).+1%N).
+Lemma coatomE (a : L) : (coatom a) = (rank (\top : L) == (rank a).+1%N).
 Proof.
 apply/idP/eqP.
 + have := lex1 a; rewrite le_eqVlt => /orP[/eqP-> /coatom1n //|].
@@ -806,7 +802,7 @@ apply/idP/eqP.
   rewrite (rwP eqP) eqn_leq => ->; rewrite andbT leqNgt.
   apply/negP => /(graded_rank (lex1 _)) [x].
   by rewrite andbC lt_neqAle -andbA => /and3P[/h].
-+ move=> h; have lt1_a: a < 1 by rewrite -rank_gt1 h.
++ move=> h; have lt1_a: a < \top by rewrite -rank_gt1 h.
   apply/coatomP=> // x neq1_x /homo_rank; rewrite -ltnS -h.
   by apply/negP; rewrite -leqNgt rank_gt1 lt_neqAle neq1_x lex1.
 Qed.

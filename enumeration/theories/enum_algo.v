@@ -110,7 +110,7 @@ Module FC := FormatComputation.
 Section FormatEquiv.
 
 Definition poly_format (Po : Com.polyType):=
-  [&& (0 < Com.m Po)%O, (0 < Com.n Po)%O,
+  [&& (\bot < Com.m Po)%O, (\bot < Com.n Po)%O,
     pre_length_computation Po.2 (Com.m Po) &
     pre_mx_computation Po.1 (Com.m Po) (Com.n Po)].
 
@@ -128,7 +128,7 @@ Definition lex_graph_format (Po : Com.polyType) (g : graph) (l : Com.lex_mapping
   pre_graph_computation (fun x y=> lt_array_int x.1 y.1)
   (fun x=> lex_vert_format Po x) g l.
 
-Definition lex_graph_n0 (g : graph) := (0 < length g)%O.
+Definition lex_graph_n0 (g : graph) := (\bot < length g)%O.
 
 Definition vert_graph_format (Po : Com.polyType) 
   (g : graph) (l : array (array bigQ)):=

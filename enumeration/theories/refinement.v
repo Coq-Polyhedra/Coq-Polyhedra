@@ -950,11 +950,11 @@ apply/rel_comp_func.
 Qed.
 
 Lemma rel_Po_r_n_temp (m n : nat):
-  ((@rel_Po_r m n) =~> rel_int) (fun ab=> if (length ab.1 > 0)%O then length ab.1.[0%uint63] else 0%uint63) (fun _=> n.+1).
+  ((@rel_Po_r m n) =~> rel_int) (fun ab=> if (length ab.1 > \bot)%O then length ab.1.[0%uint63] else 0%uint63) (fun _=> n.+1).
 Proof.
-pose g := fun x=> if (length x > 0)%O then length x.[0] else 0%uint63.
+pose g := fun x=> if (length x > \bot)%O then length x.[0] else 0%uint63.
 apply/rel_equiv_func; [exact:rel_equiv_refl|exact:rel_comp_eqL|].
-apply/(@rel_comp_func _ _ _ _ _ _ _ _ _ _ _ (fun AB=> if (length AB.1 > 0)%O then length AB.1.[0%uint63] else 0%uint63)).
+apply/(@rel_comp_func _ _ _ _ _ _ _ _ _ _ _ (fun AB=> if (length AB.1 > \bot)%O then length AB.1.[0%uint63] else 0%uint63)).
 - apply:(@rel_couple_func_fst _ _ _ _ _ _ _ _ _ (@g t) (@g R)).
   apply:rel_func_if=> // [x X /rel_array_length -> //|].
   by move=> x X + len_x; move/rel_array_r=> /(_ _ len_x) /rel_array_length.
