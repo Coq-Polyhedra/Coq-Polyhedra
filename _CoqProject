@@ -1,6 +1,6 @@
--R theories Polyhedra
+# Editor/tooling configuration only: the build is driven by dune
+# (`dune build`), which puts the compiled files under _build/default.
 -R _build/default/theories Polyhedra
--R enumeration/theories PolyhedraHirsch
 -R _build/default/enumeration/theories PolyhedraHirsch
 
 -arg -w -arg -notation-overridden
@@ -8,21 +8,3 @@
 -arg -w -arg -projection-no-head-constant
 -arg -w -arg -ambiguous-paths
 -arg -w -arg -uniform-inheritance
-
-theories/xorder.v
-theories/xfinmap.v
-theories/extra_misc.v
-theories/extra_matrix.v
-theories/inner_product.v
-theories/vector_order.v
-theories/row_submx.v
-theories/simplex.v
-theories/barycenter.v
-theories/hpolyhedron.v
-theories/polyhedron.v
-theories/poly_base.v
-theories/lrel.v
-theories/affine.v
-theories/fsetmin.v
-enumeration/theories/high_graph.v
-

@@ -22,5 +22,5 @@ license:
 
 # --------------------------------------------------------------------
 run-in-docker:
-	docker run --rm -ti -v $$PWD:/home/ci/project \
-	  coqpolyhedra/build-box opam config exec -- make -C project
+	docker run --rm -ti -v $$PWD:/project -w /project \
+	  coqpolyhedra/build-box opam exec -- make build

@@ -1,6 +1,11 @@
-(coq.theory
+(rocq.theory
   (name PolyhedraHirsch)
-  (theories Polyhedra)
+  ; Installed theories (and their transitive dependencies) must be listed.
+  (theories Polyhedra Bignums
+            Stdlib micromega_plugin elpi elpi_elpi HB
+            mathcomp.boot mathcomp.order mathcomp.ssreflect
+            mathcomp.finite_group mathcomp.algebra
+            mathcomp.finmap mathcomp.bigenough)
   (flags -w -notation-overridden
          -w -projection-no-head-constant
          -w -redundant-canonical-projection

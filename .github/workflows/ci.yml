@@ -2,29 +2,40 @@ name: CI
 
 on:
   push:
-    branches: [master, coq-8.20]
+    branches: [master]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - 'mathcomp/mathcomp:2.6.0-rocq-prover-9.1'
     steps:
       - uses: actions/checkout@v4
       - uses: coq-community/docker-coq-action@v1
         with:
-          coq_version: '8.20.1'
-          ocaml_version: '4.14.2-flambda'
-          custom_script: |
-            startGroup "Install the MathComp forks"
-              opam pin add -y -n coq-mathcomp-ssreflect https://github.com/Coq-Polyhedra/mathcomp.git#master
-              opam pin add -y -n coq-mathcomp-fingroup https://github.com/Coq-Polyhedra/mathcomp.git#master
-              opam pin add -y -n coq-mathcomp-algebra https://github.com/Coq-Polyhedra/mathcomp.git#master
-              opam pin add -y -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git#master
-              opam pin add -y -n coq-mathcomp-bigenough https://github.com/math-comp/bigenough.git#1.0.3
-              opam install -y -j 2 coq-mathcomp-algebra coq-mathcomp-finmap coq-mathcomp-bigenough
+          opam_file: 'coq-polyhedra.opam'
+          custom_image: ${{ matrix.image }}
+          install: |
+            startGroup "Install dependencies"
+              opam pin add -n -y -k path $PACKAGE $WORKDIR
+              opam update -y
+              opam install -y -j 2 $PACKAGE --deps-only
+              opam install -y -j 2 rocq-bignums  # for enumeration/ (PolyhedraHirsch)
             endGroup
-            startGroup "Build Coq-Polyhedra"
-              sudo chown -R coq:coq .
-              opam pin add -y -n coq-polyhedra .
-              opam install -y -j 2 coq-polyhedra
+          before_script: |
+            startGroup "Workaround permission issue"
+              sudo chown -R 1000:1000 .  # the container user is 1000:1000
+            endGroup
+          script: |
+            startGroup "Build the whole development (theories/ and enumeration/)"
+              dune build --display=short
+            endGroup
+            startGroup "Install the opam package"
+              opam install -y -v -j 2 $PACKAGE
+              opam list
             endGroup
