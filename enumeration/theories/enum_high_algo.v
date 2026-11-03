@@ -1,9 +1,21 @@
-From mathcomp Require Import all_ssreflect all_algebra finmap.
-From Coq Require Import Uint63 PArray.
+From mathcomp Require Import boot order algebra finmap.
+From Stdlib Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc inner_product extra_matrix vector_order affine row_submx barycenter.
 From Polyhedra Require Import lrel polyhedron poly_base simplex.
 Require Import enum_algo enum_proof enum_equiv graph high_graph img_graph extra_array extra_int rat_bigQ diameter refinement.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -62,8 +74,9 @@ rewrite /Simplex.is_basis /=; apply/row_freeP.
 exists X_inv; rewrite /X_inv -scalemxAr -[X in X *m _]trmxK -trmx_mul tr_col'.
 apply/matrixP=> p q; rewrite !mxE.
 under eq_bigr => [k _] do rewrite !mxE. 
-move: A_Ix=> /matrixP /(_ p (lift ord0 (enum_val q))); rewrite mxE.
-under eq_bigr=> [k _] do rewrite mxE GRing.mulrC; move=> ->.
+move: A_Ix=> /matrixP /(_ p (lift ord0 (enum_val q))); rewrite mxE => hA.
+under eq_bigr=> [k _] do rewrite GRing.mulrC -row_submx_mxE.
+rewrite hA.
 rewrite !mxE; case: splitP.
 - move=> j /=; rewrite (ord1_eq0 j) /= => /esym /eqP.
   by rewrite (negPf (neq_bump _ _)).
@@ -157,13 +170,13 @@ move=> x xG; apply/eqP; rewrite eqEfcard; apply/andP; split.
   rewrite in_succE=> /[dup] /edge_vtxr yG /(to_feas_bas_edges G_lex_n0 G_lex_vtx G_lex_edge xG yG).
   by rewrite -in_succE => /[swap] ->.
 + rewrite lex_graph_regular ?vtx_mk_graph ?inE // ?card_in_imfset /=.
-  * move/allP: G_lex_reg=> /(_ x xG). 
-    by rewrite /reg_verification=> /eqP ->.
-  * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
-    exact:to_feas_bas_inj.
   * apply/Simplex.feasibleP. 
     exists (Simplex.point_of_basis b (I0 G_lex_n0 G_lex_vtx)).
     exact: Simplex.lex_feasible_basis_is_feasible.
+  * move=> p q /(fsubsetP (sub_succ _ _)) + /(fsubsetP (sub_succ _ _)).
+    exact:to_feas_bas_inj.
+  * move/allP: G_lex_reg=> /(_ x xG). 
+    by rewrite /reg_verification=> /eqP ->.
 Qed.
 
 End RegGraph.
@@ -215,7 +228,7 @@ Context (m' n' : nat).
 Local Notation m := m'.+1.
 Local Notation n := n'.+1.
 
-Context (G_lex : graph (enum_type m' n')) (G_vert : graph [choiceType of 'cV[rat]_n]).
+Context (G_lex : graph (enum_type m' n')) (G_vert : graph ('cV[rat]_n : choiceType)).
 
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 
@@ -269,9 +282,9 @@ Lemma max_boundP (i : 'I_n):
   max_bound_i i <= max_bound.
 Proof.
 rewrite /max_bound.
-have: i \in index_enum (ordinal_finType n) by rewrite mem_index_enum.
+have: i \in index_enum 'I_n by rewrite mem_index_enum.
 elim: (index_enum _)=> // h t IH.
-rewrite in_cons big_cons le_maxr; case/orP.
+rewrite in_cons big_cons le_max; case/orP.
 - by move/eqP=> ->; rewrite lexx.
 - by move/IH=> ->; rewrite orbT.
 Qed.
@@ -292,10 +305,10 @@ move=> c; rewrite -(boundedE); move: c; apply/compactP.
   move=> x_i_ge; rewrite [X in _ <= X]row_vdot mul_scalar_mx GRing.scaleN1r mxE.
   move=> x_i_le; apply/(le_trans _ (max_boundP i)).
   rewrite ler_norml; apply/andP; split.
-  + rewrite ler_oppl le_maxr; apply/orP; left.
-    by rewrite vdotNl ler_oppl GRing.opprK.
-  + rewrite le_maxr; apply/orP; right.
-    by rewrite vdotNl ler_oppr.
+  + rewrite lerNl le_max; apply/orP; left.
+    by rewrite vdotNl lerNl GRing.opprK.
+  + rewrite le_max; apply/orP; right.
+    by rewrite vdotNl lerNr.
 Qed.
 
 End BoundPoly.
@@ -340,7 +353,7 @@ Local Notation n := n'.+1.
 
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 
-Context (G_lex : graph (enum_type m' n')) (G_vert : graph [choiceType of 'cV[rat]_n]).
+Context (G_lex : graph (enum_type m' n')) (G_vert : graph ('cV[rat]_n : choiceType)).
 
 Hypothesis enum_h : high_enum_algo A b G_lex.
 Hypothesis img_h : G_vert = ((@phi m' n') @/ G_lex).

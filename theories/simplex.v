@@ -7,8 +7,9 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-Require Import Recdef.
-From mathcomp Require Import all_ssreflect.
+From Stdlib Require Import Recdef.
+From HB Require Import structures.
+From mathcomp Require Import boot order.
 From mathcomp Require Import ssralg ssrnum zmodp fingroup perm matrix mxalgebra vector.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 
@@ -57,15 +58,15 @@ apply/(iffP idP) => [feasible_dir_d μ μ_ge0 | d_recession_dir].
   rewrite mxE in A_d_i_neq.
   set λ := ((A *m d) i 0 + b i 0 - (A *m x) i 0) * ((A *m d) i 0)^-1.
   have λ_ge_0: 0 <= λ.
-    rewrite ler_ndivl_mulr; last by rewrite -ltNge in A_d_i_neq.
-    rewrite mul0r ler_subl_addr.
-    apply: ler_add; last exact: ((forallP x_in) i).
+    rewrite ler_ndivlMr; first by rewrite -ltNge in A_d_i_neq.
+    rewrite mul0r lerBlDr.
+    apply: lerD; last exact: ((forallP x_in) i).
     apply: ltW.
     by rewrite -ltNge in A_d_i_neq.
   move: (forallP (d_recession_dir _  λ_ge_0) i) => b_i_ineq.
   rewrite mulmxDr -scalemxAr mxE [(λ *: (A *m d)) i 0]mxE -mulrA mulVf in b_i_ineq;
-    last by apply: ltr0_neq0; rewrite -ltNge in A_d_i_neq.
-  rewrite mulr1 [(A *m x) i 0 + _]addrC -3!ler_subl_addr opprK -addrA -opprB addNr in b_i_ineq.
+    first by apply: ltr0_neq0; rewrite -ltNge in A_d_i_neq.
+  rewrite mulr1 [(A *m x) i 0 + _]addrC -3!lerBlDr opprK -addrA -opprB addNr in b_i_ineq.
   by rewrite b_i_ineq in A_d_i_neq.
 Qed.
 
@@ -79,8 +80,8 @@ by rewrite /pointed -mxrank_tr row_leq_rank -kermx_eq0.
 apply/(iffP rowV0Pn) => [[v] /sub_kermxP Hv Hv'| [d [Hd Hd' Hd'']]].
 - move/(congr1 trmx): Hv; rewrite trmx0 trmx_mul trmxK => Hv.
   exists v^T; split; try by rewrite inE ?mulmxN Hv ?oppr0 lev_refl.
-  + by rewrite -trmx0 inj_eq; last exact: trmx_inj.
-- exists d^T; last by rewrite -trmx0 inj_eq; last exact: trmx_inj.
+  + by rewrite -trmx0 inj_eq; first exact: trmx_inj.
+- exists d^T; last by rewrite -trmx0 inj_eq; first exact: trmx_inj.
   + apply/sub_kermxP; rewrite -trmx_mul -trmx0.
     apply: congr1; apply: lev_antisym; apply/andP.
     by rewrite !inE mulmxN oppv_ge0 in Hd' Hd''.
@@ -215,12 +216,12 @@ Lemma duality_gap_eq0_compl_slack_cond x u :
 Proof.
 rewrite !inE.
 move => Hx /andP [/eqP Hu Hu'] /eqP; rewrite (duality_gap_def x) // /vdot psumr_eq0.
-- move/allP => H; apply/forallP => i.
-  move/(_ i (mem_index_enum _))/implyP/(_ isT): H.
-  by rewrite mulf_eq0 inE mxE [in X in _ + X]mxE subr_eq0.
 - move => i _; apply: mulr_ge0.
   + by move/forallP/(_ i): Hu'; rewrite mxE.
   + by rewrite mxE [in X in _ + X]mxE subr_ge0; move/forallP: Hx.
+- move/allP => H; apply/forallP => i.
+  move/(_ i (mem_index_enum _))/implyP/(_ isT): H.
+  by rewrite mulf_eq0 inE mxE [in X in _ + X]mxE subr_eq0.
 Qed.
 
 Lemma compl_slack_cond_duality_gap_eq0 x u :
@@ -266,14 +267,14 @@ exists x; split.
 + apply/forallP => j.
   rewrite mulmxDr -scalemxAr mxE [X in _ + X]mxE.
   rewrite -[X in X <= _]addr0.
-  apply: ler_add; first by apply: (Hx0 _).
+  apply: lerD; first by apply: (Hx0 _).
   - apply: mulr_ge0; last by move/(_ j): Hd; rewrite mxE.
-    by rewrite le_maxr lexx.
-+ rewrite vdotDr vdotZr -ltr_subr_addl.
-  rewrite -mulrC -ltr_ndivr_mull //.
-  rewrite lt_maxr; apply/orP; right.
-  rewrite -(ltr_nmul2l Hcd) 2!mulrA mulfV; last by apply: ltr0_neq0.
-  by rewrite 2!mul1r ltr_add2r gtr_addl ltrN10.
+    by rewrite le_max lexx.
++ rewrite vdotDr vdotZr -ltrBrDl.
+  rewrite -mulrC -ltr_ndivrMl //.
+  rewrite lt_max; apply/orP; right.
+  rewrite -(ltr_nM2l Hcd) 2!mulrA mulfV; first by apply: ltr0_neq0.
+  by rewrite 2!mul1r ltrD2r gtrDl ltrN10.
 Qed.
 
 End WeakDuality.
@@ -372,15 +373,14 @@ Section Prebasis.
 Inductive prebasis : predArgType := Prebasis (I : {set 'I_m}) of (#|I| == n)%N.
 
 Coercion set_of_prebasis bas := let: Prebasis s _ := bas in s.
-Canonical prebasis_subType := [subType for set_of_prebasis].
-Definition prebasis_eqMixin := Eval hnf in [eqMixin of prebasis by <:].
-Canonical prebasis_eqType := Eval hnf in EqType prebasis prebasis_eqMixin.
-Definition prebasis_choiceMixin := [choiceMixin of prebasis by <:].
-Canonical prebasis_choiceType := Eval hnf in ChoiceType prebasis prebasis_choiceMixin.
-Definition prebasis_countMixin := [countMixin of prebasis by <:].
-Canonical prebasis_countType := Eval hnf in CountType prebasis prebasis_countMixin.
-Canonical prebasis_subCountType := [subCountType of prebasis].
-
+#[export]
+HB.instance Definition _ := [isSub for set_of_prebasis].
+#[export]
+HB.instance Definition _ := [Equality of prebasis by <:].
+#[export]
+HB.instance Definition _ := [Choice of prebasis by <:].
+#[export]
+HB.instance Definition _ := [Countable of prebasis by <:].
 Lemma prebasis_card (bas : prebasis) : #|bas| = n.
 Proof.
 by move/eqP: (valP bas).
@@ -399,11 +399,8 @@ rewrite mem_pmap_sub mem_enum in_set.
 by move/eqP: (prebasis_card bas).
 Qed.
 
-Definition prebasis_finMixin :=
-  Eval hnf in UniqFinMixin prebasis_enum_uniq mem_prebasis_enum.
-Canonical prebasis_finType := Eval hnf in FinType prebasis prebasis_finMixin.
-Canonical prebasis_subFinType := Eval hnf in [subFinType of prebasis].
-
+#[export]
+HB.instance Definition _ := isFinite.Build prebasis (Finite.uniq_enumP prebasis_enum_uniq mem_prebasis_enum).
 Lemma prebasis_card_D1 (bas : prebasis) (i : 'I_m) :
   i \in bas -> (#|bas :\ i| = n-1)%N.
 Proof.
@@ -428,15 +425,14 @@ Qed.
 
 Inductive basis : predArgType := Basis (bas: prebasis) of is_basis bas.
 Coercion prebasis_of_basis bas := let: Basis s _ := bas in s.
-Canonical basis_subType := [subType for prebasis_of_basis].
-Definition basis_eqMixin := Eval hnf in [eqMixin of basis by <:].
-Canonical basis_eqType := Eval hnf in EqType basis basis_eqMixin.
-Definition basis_choiceMixin := [choiceMixin of basis by <:].
-Canonical basis_choiceType := Eval hnf in ChoiceType basis basis_choiceMixin.
-Definition basis_countMixin := [countMixin of basis by <:].
-Canonical basis_countType := Eval hnf in CountType basis basis_countMixin.
-Canonical basis_subCountType := [subCountType of basis].
-
+#[export]
+HB.instance Definition _ := [isSub for prebasis_of_basis].
+#[export]
+HB.instance Definition _ := [Equality of basis by <:].
+#[export]
+HB.instance Definition _ := [Choice of basis by <:].
+#[export]
+HB.instance Definition _ := [Countable of basis by <:].
 Lemma basis_is_basis (bas : basis) : is_basis bas.
 Proof.
 by apply: (valP bas).
@@ -456,11 +452,8 @@ apply/andP; split; last by apply: mem_prebasis_enum.
 by apply: basis_is_basis.
 Qed.
 
-Definition basis_finMixin :=
-  Eval hnf in UniqFinMixin basis_enum_uniq mem_basis_enum.
-Canonical basis_finType := Eval hnf in FinType basis basis_finMixin.
-Canonical basis_subFinType := Eval hnf in [subFinType of basis].
-
+#[export]
+HB.instance Definition _ := isFinite.Build basis (Finite.uniq_enumP basis_enum_uniq mem_basis_enum).
 Lemma mxrank_basis (bas : basis) : (mxrank (row_submx A bas) = n).
 Proof.
 apply/is_basisP_rank; exact: basis_is_basis.
@@ -491,14 +484,14 @@ Definition point_of_basis (bas : basis) :=
 Lemma row_submx_point_of_basis (bas : basis) :
   (row_submx A bas) *m (point_of_basis bas) = row_submx b bas.
 Proof.
-by rewrite qmulKVmx; last exact: basis_is_basis.
+by rewrite qmulKVmx; first exact: basis_is_basis.
 Qed.
 
 Lemma is_point_of_basis (bas : basis) x :
   (row_submx A bas) *m x = row_submx b bas -> x = point_of_basis bas.
 Proof.
 move/(congr1 (mulmx (qinvmx (prebasis_card bas) (row_submx A bas)))).
-by rewrite qmulKmx; last exact: basis_is_basis.
+by rewrite qmulKmx; first exact: basis_is_basis.
 Qed.
 
 Lemma is_point_of_basis_active (bas : basis) x : (* TO BE IMPROVED ?
@@ -532,21 +525,20 @@ Lemma row_submx_is_feasible (bas : basis) :
     is_feasible bas.
 Proof.
 apply.
-by rewrite qmulKVmx; last exact: basis_is_basis bas.
+by rewrite qmulKVmx; first exact: basis_is_basis bas.
 Qed.
 
 Inductive feasible_basis : predArgType := FeasibleBasis (bas : basis) of is_feasible bas.
 
 Coercion basis_of_feasible_basis bas := let: FeasibleBasis s _ := bas in s.
-Canonical feasible_basis_subType := [subType for basis_of_feasible_basis].
-Definition feasible_basis_eqMixin := Eval hnf in [eqMixin of feasible_basis by <:].
-Canonical feasible_basis_eqType := Eval hnf in EqType feasible_basis feasible_basis_eqMixin.
-Definition feasible_basis_choiceMixin := [choiceMixin of feasible_basis by <:].
-Canonical feasible_basis_choiceType := Eval hnf in ChoiceType feasible_basis feasible_basis_choiceMixin.
-Definition feasible_basis_countMixin := [countMixin of feasible_basis by <:].
-Canonical feasible_basis_countType := Eval hnf in CountType feasible_basis feasible_basis_countMixin.
-Canonical feasible_basis_subCountType := [subCountType of feasible_basis].
-
+#[export]
+HB.instance Definition _ := [isSub for basis_of_feasible_basis].
+#[export]
+HB.instance Definition _ := [Equality of feasible_basis by <:].
+#[export]
+HB.instance Definition _ := [Choice of feasible_basis by <:].
+#[export]
+HB.instance Definition _ := [Countable of feasible_basis by <:].
 Lemma feasible_basis_is_feasible (bas : feasible_basis) :
   is_feasible bas.
 Proof.
@@ -567,11 +559,8 @@ apply/andP; split; last by apply: mem_basis_enum.
 by apply: feasible_basis_is_feasible.
 Qed.
 
-Definition feasible_basis_finMixin :=
-  Eval hnf in UniqFinMixin feasible_basis_enum_uniq mem_feasible_basis_enum.
-Canonical feasible_basis_finType := Eval hnf in FinType feasible_basis feasible_basis_finMixin.
-Canonical feasible_basis_subFinType := Eval hnf in [subFinType of feasible_basis].
-
+#[export]
+HB.instance Definition _ := isFinite.Build feasible_basis (Finite.uniq_enumP feasible_basis_enum_uniq mem_feasible_basis_enum).
 Lemma basis_subset_of_active_ineq (bas : basis) :
    (bas \subset (active_lex_ineq A b (point_of_basis b bas))).
 Proof.
@@ -686,7 +675,7 @@ rewrite mulmxA [X in _ + X]row_mul mulmx_row_cV_rV.
 case: (boolP (cand_idx j)) => [j_is_cand | j_is_not_cand].
 - have Hj: ((A *m d) j 0)^-1 < 0
     by rewrite inE -invr_lt0 in j_is_cand.
-  rewrite lex_subr_addr (lex_negscalar _ _ Hj) scalerA mulVf; last by apply: ltr0_neq0; by rewrite -invr_lt0.
+  rewrite lex_subr_addr (lex_negscalar _ _ Hj) scalerA mulVf; first by apply: ltr0_neq0; by rewrite -invr_lt0.
   rewrite scale1r.
   exact: (argmin_gapP.2 j j_is_cand).
 - rewrite -[(row j b)]addr0.
@@ -715,7 +704,7 @@ Qed.
 Fact argmin_gap_rank :
   (\rank (row_submx A (argmin_gap |: I)) = (\rank (row_submx A I)).+1)%N.
 Proof.
-rewrite row_submx_spanU1; last exact: argmin_gap_not_in_I.
+rewrite row_submx_spanU1; first exact: argmin_gap_not_in_I.
 set j := argmin_gap.
 set Aj := row j A.
 set AI := row_submx A I.
@@ -754,7 +743,7 @@ move/setU1P => [-> | i_in_I];
           rewrite mulmxA [X in _ + X]row_mul mulmx_row_cV_rV.
 - move: (argmin_gapP.1) => Hargmin_gap.
   rewrite inE in Hargmin_gap.
-  rewrite eq_sym addrC -subr_eq /min_gap /gap scalerA mulfV; last by apply: ltr0_neq0.
+  rewrite eq_sym addrC -subr_eq /min_gap /gap scalerA mulfV; first by apply: ltr0_neq0.
   by rewrite scale1r.
 - suff ->: (A *m d) i 0 = 0.
     rewrite scale0r addr0.
@@ -911,7 +900,7 @@ Fact direction_neq0 : d != 0.
 Proof.
 apply/eqP.
 move/(congr1 (mulmx (row_submx A bas))).
-rewrite qmulKVmx; last exact: basis_is_basis.
+rewrite qmulKVmx; first exact: basis_is_basis.
 rewrite mulmx0.
 move/colP/(_ i); rewrite 2!mxE 2!eq_refl /=.
 by move/eqP; rewrite pnatr_eq0.
@@ -922,7 +911,7 @@ Fact mulmx_direction_entries_in_bas (j : 'I_m) :
 Proof.
 move => Hj.
 suff ->: (A *m d) j 0 = ((row_submx A bas) *m d) (enum_rank_in Hj j) 0.
-- rewrite qmulKVmx; last exact: basis_is_basis.
+- rewrite qmulKVmx; first exact: basis_is_basis.
   rewrite mxE andbT; do 2![apply: congr1].
   apply/eqP/eqP.
   + exact: (canRL_in (enum_rankK_in Hj)).
@@ -957,7 +946,7 @@ Fact lex_rule_card : #|lex_rule_set| == n.
 Proof.
 rewrite cardsU1.
 move: (argmin_gap_not_in_I x d_infeas_dir mulmx_direction) => -> /=.
-rewrite prebasis_card_D1; last exact: enum_valP.
+rewrite prebasis_card_D1; first exact: enum_valP.
 rewrite add1n subn1.
 apply/eqP; apply: (prednK n_is_pos).
 Qed.
@@ -1038,8 +1027,8 @@ Definition reduced_cost_of_basis :=
 Definition reduced_cost_of_basis_def :
   (row_submx A bas)^T *m reduced_cost_of_basis = c.
 Proof.
-rewrite /reduced_cost_of_basis trmx_qinv; last exact: basis_is_basis.
-by rewrite qmulKVmx; last exact: basis_trmx_row_free.
+rewrite /reduced_cost_of_basis trmx_qinv; first exact: basis_is_basis.
+by rewrite qmulKVmx; first exact: basis_trmx_row_free.
 Qed.
 
 Definition ext_reduced_cost_of_basis :=
@@ -1085,11 +1074,11 @@ Fact ext_reduced_cost_of_basis_def :
 Proof.
 apply/colP => i; rewrite !mxE.
 rewrite (bigID (fun j => j \in bas)) /= [X in _ + X]big1;
-  last by move => j /ext_reduced_cost_of_basis_notin_bas ->; rewrite mulr0.
+  first by move => j /ext_reduced_cost_of_basis_notin_bas ->; rewrite mulr0.
 rewrite addr0.
 rewrite (reindex (@enum_val _ (mem bas))) /=;
-  last by apply: (enum_val_bij_in (enum_valP (cast_ord (esym (prebasis_card bas)) i))).
-rewrite (eq_bigl predT) /=; last by move => k /=; apply: (enum_valP k).
+  first by apply: (enum_val_bij_in (enum_valP (cast_ord (esym (prebasis_card bas)) i))).
+rewrite (eq_bigl predT) /=; first by move => k /=; apply: (enum_valP k).
 move/colP/(_ i): reduced_cost_of_basis_def; rewrite !mxE => <-.
 apply: eq_bigr => j _.
 rewrite (ext_reduced_cost_of_basis_in_bas (enum_valP j)) enum_valK_in.
@@ -1166,8 +1155,8 @@ Fact obj_of_basis_reduced_cost (bas : feasible_basis b) :
     (reduced_cost_of_basis c bas) >=m 0.
 Proof.
 rewrite /reduced_cost_of_basis /obj_of_basis.
-rewrite trmx_qinv; last exact: basis_is_basis.
-rewrite qmulKmx; last exact: basis_trmx_row_free.
+rewrite trmx_qinv; first exact: basis_is_basis.
+rewrite qmulKmx; first exact: basis_trmx_row_free.
 apply/gev0P => i; by rewrite mxE ler01.
 Qed.
 
@@ -1270,7 +1259,7 @@ set k := enum_rank_in j_in_bas j.
 have Hk: j = enum_val (A := mem bas) k
   by rewrite (enum_rankK_in j_in_bas).
 have j_is_not_cand: (row_submx A bas *m d) k 0 >= 0.
-  rewrite mulmxA qmulmxV; last exact: basis_is_basis; rewrite mul1mx mxE.
+  rewrite mulmxA qmulmxV; first exact: basis_is_basis; rewrite mul1mx mxE.
   by apply: ler0n.
 rewrite -row_submx_mul row_submx_mxE -{}Hk in j_is_not_cand.
 move: (argmin_gapP b_pert x d_infeas_dir) => [j_is_cand _].
@@ -1306,7 +1295,7 @@ case: (boolP (z == 0)) => [/eqP z_eq_0 | z_neq_0].
 - by rewrite z_eq_0 mulmx0 eq_refl.
 - move: z_neq_0; apply: contraNeq; rewrite eqb_id.
   move/negPn/eqP/(congr1 (mulmx (row_submx A bas')))/eqP.
-  by rewrite qmulKVmx; last exact: basis_is_basis; rewrite mulmx0.
+  by rewrite qmulKVmx; first exact: basis_is_basis; rewrite mulmx0.
 Qed.
 
 Fact eq_pert_point_imp_eq_bas (bas' bas'' : basis) :
@@ -1500,7 +1489,6 @@ move/lex_ltrW/lex_ord0.
 by rewrite -!matrix_vdot !rel_points_of_basis row_id trmxK.
 Qed.
 
-
 Definition phase2_res bas0 := last bas0 (phase2_exec bas0).
 
 Lemma basic_step_final bas0 : forall fin_res,
@@ -1535,7 +1523,6 @@ apply: phase2_exec_rect; rewrite /P /= /bas1.
   by rewrite phase2_equation basic_eq.
 Qed.
 
-
 End Phase2.
 
 End LexSimplex.
@@ -1552,7 +1539,7 @@ Definition dual_set0 := [set (rshift (n+n) i) | i in [set: 'I_m] ].
 
 Lemma dual_set0_card : (#| dual_set0 | == m)%N.
 Proof.
-rewrite card_imset; last exact: rshift_inj.
+rewrite card_imset; first exact: rshift_inj.
 by rewrite cardsT card_ord eq_refl.
 Qed.
 
@@ -2190,7 +2177,7 @@ apply/subsetP=> k; rewrite J_eq inE.
 case/orP.
 - rewrite !inE; move/eqP=> ->.
   rewrite row_mul mulmxDr [X in _ + X]mulmxA -[in X in _ + X]row_mul.
-  rewrite /gap -scalemxAr mulmx_row_cV_rV scalerA mulVf; last exact/j_dir.
+  rewrite /gap -scalemxAr mulmx_row_cV_rV scalerA mulVf; first exact/j_dir.
   by rewrite row_mul scale1r addrCA subrr addr0.
 - move=> /[dup] kIi; rewrite !inE; case/andP=> k_i kI; rewrite row_mul mulmxDr.
   move: (kI); rewrite (active_ineq_pert_exact I) inE row_mul=> /eqP ->.
@@ -2210,7 +2197,7 @@ Qed.
 Lemma xJ_gtlex_i:
   ((row (enum_val i) A) *m (point_of_basis b' J)) >lex (row (enum_val i) b').
 Proof.
-rewrite -row_mul lex_polyhedron_gtP; last exact: feasible_basis_is_feasible.
+rewrite -row_mul lex_polyhedron_gtP; first exact: feasible_basis_is_feasible.
 rewrite -active_ineq_pert_exact ?J_eq ?K_eq !inE ?enum_valP ?eqxx /= orbF.
 apply/contraT; rewrite negbK=> /eqP.
 by move: j_n_I=> /[swap] <-; rewrite enum_valP.
@@ -2245,7 +2232,7 @@ have: k \notin J.
 - rewrite J_eq !inE (negPf k_n_j).
   by rewrite (negPf (lex_ent_var_not_in_basis infeas_dir)) andbF.
 rewrite active_ineq_pert_exact -lex_polyhedron_gtP;
-  last exact:feasible_basis_is_feasible.
+  first exact:feasible_basis_is_feasible.
 rewrite adj_same_point_of_basis row_mul mulmxDr; move/lex_ltrW.
 rewrite lex_subr_addr [X in _ <=lex X]mulmxA.
 rewrite [_ *m direction _]mx11_scalar -!row_mul mxE mul_scalar_mx.
@@ -2259,28 +2246,7 @@ Qed.
 End ExtraEdge.
 
 Module Exports.
-
-Canonical prebasis_subType.
-Canonical prebasis_eqType.
-Canonical prebasis_choiceType.
-Canonical prebasis_countType.
-Canonical prebasis_subCountType.
-Canonical prebasis_finType.
-Canonical prebasis_subFinType.
-Canonical basis_subType.
-Canonical basis_eqType.
-Canonical basis_choiceType.
-Canonical basis_countType.
-Canonical basis_subCountType.
-Canonical basis_finType.
-Canonical basis_subFinType.
-Canonical feasible_basis_subType.
-Canonical feasible_basis_eqType.
-Canonical feasible_basis_choiceType.
-Canonical feasible_basis_countType.
-Canonical feasible_basis_subCountType.
-Canonical feasible_basis_finType.
-Canonical feasible_basis_subFinType.
+HB.reexport.
 End Exports.
 
 End Simplex.

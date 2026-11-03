@@ -7,7 +7,8 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From HB Require Import structures.
+From mathcomp Require Import boot order algebra finmap.
 Require Import extra_misc inner_product vector_order extra_matrix row_submx.
 Require Import simplex barycenter lrel.
 
@@ -29,7 +30,7 @@ Reserved Notation "''hpoly_' n" (at level 8, format "''hpoly_' n").
 
 (* -------------------------------------------------------------------- *)
 Section VectToFsFun.
-Context {T : choiceType} {R : ringType}.
+Context {T : choiceType} {R : nzRingType}.
 
 Definition frank (S : {fset T}) (v : S) : 'I_#|`S| :=
   cast_ord (esym (cardfE _)) (enum_rank v).
@@ -86,9 +87,9 @@ Proof.
 move=> ge0_c Σc_eq_1; rewrite /convex conic_vect_to_fsfun //=.
 rewrite (weightwE (finsupp_vect_to_fsfun _)) -(rwP eqP).
 move: Σc_eq_1; rewrite vdotC vdotr_const_mx1 => <-.
-rewrite (reindex (@frank _ _)) /=; last by apply/onW_bij/bij_frank.
+rewrite (reindex (@frank _ _)) /=; first by apply/onW_bij/bij_frank.
 apply: eq_bigr=> i _; rewrite fsfun_ffun insubT //=.
-by move=> hin; rewrite fsetsubE.
+by move=> hin; congr (c (frank _) 0); apply: val_inj.
 Qed.
 End VectToFsFunTheory.
 
@@ -102,14 +103,15 @@ Lemma combineb1E w : (finsupp w `<=` base)%fset ->
   (combine w).1 = \sum_(v : base) w (val v) *: (val v).1.
 Proof.
 move=> le_wb; rewrite (combinewE le_wb).
-by apply (big_morph (fst \o val) beadd_p1E).
+by rewrite (big_morph (fun b : lrel[R]_n => b.1) beadd_p1E (erefl _)).
 Qed.
 
 Lemma combineb2E w : (finsupp w `<=` base)%fset ->
   (combine w).2 = \sum_(v : base) w (val v) * (val v).2.
 Proof.
 move=> le_wb; rewrite (combinewE le_wb).
-by apply (big_morph (snd \o val) beadd_p2E). Qed.
+by rewrite (big_morph (fun b : lrel[R]_n => b.2) beadd_p2E (erefl _)).
+Qed.
 
 Definition combinebE w (h : (finsupp w `<=` base)%fset) :=
   (@combineb1E w h, @combineb2E w h).
@@ -157,10 +159,10 @@ Proof.
 by move => [m A b]; rewrite /matrix_from_hpoly /hpoly_from_matrix.
 Qed.
 
-Definition hpoly_eqMixin := CanEqMixin matrix_from_hpolyK.
-Canonical hpoly_eqType := Eval hnf in EqType 'hpoly[R]_n hpoly_eqMixin.
-Definition hpoly_choiceMixin := CanChoiceMixin matrix_from_hpolyK.
-Canonical hpoly_choiceType := Eval hnf in ChoiceType 'hpoly[R]_n hpoly_choiceMixin.
+#[export]
+HB.instance Definition _ := Equality.copy 'hpoly[R]_n (can_type matrix_from_hpolyK).
+#[export]
+HB.instance Definition _ := Choice.copy 'hpoly[R]_n (can_type matrix_from_hpolyK).
 
 End Choice.
 
@@ -427,12 +429,12 @@ Lemma combinemE w :
 Proof.
 rewrite (combinewE (finsupp_vect_to_fsfun _)).
 pose h (i : 'I_m) := [`fnthP i]%fset.
-rewrite (reindex h) /=; last first.
+rewrite (reindex h) /=.
 + by apply/onW_bij/(Bijective (@frankK _ _) (@fnthK _ _)).
 apply: (can_inj (@col_to_base_eltK _ _)) => /=.
 rewrite base_elt_to_colM raddf_sum /= mulmx_sum_col.
 apply: eq_bigr=> i _; rewrite linearZ /=.
-rewrite /vect_to_fsfun fsfun_ffun insubT /=; first by apply: fnthP.
+rewrite /vect_to_fsfun fsfun_ffun insubT /=; last by apply: fnthP.
 move=> hin; rewrite [hin](bool_irrelevance _ (fnthP i)) frankK.
 rewrite tr_row_mx col_col_mx; apply/colP=> j.
 rewrite /base_elt_to_col !fnth_baseE /=.
@@ -497,13 +499,12 @@ Qed.
 End Lift.
 
 Module Import Exports.
-Canonical hpoly_eqType.
-Canonical hpoly_choiceType.
 Notation "''hpoly[' R ]_ n" := (@hpoly R n).
 Notation "''hpoly_' n" := ('hpoly[_]_n).
 Notation "P .`c" := (hpoly_c P).
 Notation "P .`A" := (hpoly_A P).
 Notation "P .`b" := (hpoly_b P).
+HB.reexport.
 End Exports.
 End HPolyhedron.
 

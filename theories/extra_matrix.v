@@ -7,7 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
+From mathcomp Require Import boot order ssralg ssrnum zmodp matrix mxalgebra vector fingroup perm.
 Require Import extra_misc.
 
 Set Implicit Arguments.
@@ -19,14 +19,14 @@ Import GRing.Theory Num.Theory.
 
 Section ExtraMx.
 
-Lemma col_mx0l (R : comRingType) (n : nat) (x : 'cV[R]_n) (y : 'cV[R]_0) : col_mx y x = x.
+Lemma col_mx0l (R : comNzRingType) (n : nat) (x : 'cV[R]_n) (y : 'cV[R]_0) : col_mx y x = x.
 Proof.
 apply/ colP => i; rewrite !mxE; case: splitP => [j | j i_eq_0j]; first by move: (valP j).
 suff <-: (i = j) by done.
   exact: ord_inj.
 Qed.
 
-Lemma col0P (R: comRingType) (m: nat) (u: 'cV[R]_m) : u^~ 0 =1 (fun _ => 0) <-> u = 0.
+Lemma col0P (R: comNzRingType) (m: nat) (u: 'cV[R]_m) : u^~ 0 =1 (fun _ => 0) <-> u = 0.
 Proof.
 split => H.
 - apply/colP => i; rewrite mxE.
@@ -35,7 +35,7 @@ split => H.
   by rewrite mxE.
 Qed.
 
-Lemma col_neq_0 (R: comRingType) (m: nat) (u: 'cV[R]_m) : (u != 0) = [exists i, u i 0 != 0].
+Lemma col_neq_0 (R: comNzRingType) (m: nat) (u: 'cV[R]_m) : (u != 0) = [exists i, u i 0 != 0].
 Proof.
 apply/idP/idP.
 - apply/contraR.
@@ -142,7 +142,7 @@ move/(H _) => H'; move/andP: (kermxK A) =>  [HA _]; move/andP: (kermxK B) =>  [_
 by apply: (submx_trans HA (submx_trans H' HB)).
 Qed.
 
-Lemma col_mul (R : comRingType) (p q r : nat) (j : 'I_r) (M : 'M[R]_(p,q)) (N : 'M_(q, r)) :
+Lemma col_mul (R : comNzRingType) (p q r : nat) (j : 'I_r) (M : 'M[R]_(p,q)) (N : 'M_(q, r)) :
   col j (M *m N) = M *m (col j N).
 Proof.
 have H: row j (N^T *m M^T) = row j N^T *m M^T.
@@ -151,19 +151,19 @@ rewrite -trmx_mul -!tr_col -trmx_mul in H.
 by apply: trmx_inj.
 Qed.
 
-Lemma col_mul_scalar (R : comRingType) (q r : nat) (j : 'I_r) (N : 'M_(q, r)) (a : R):
+Lemma col_mul_scalar (R : comNzRingType) (q r : nat) (j : 'I_r) (N : 'M_(q, r)) (a : R):
   col j (a *: N) = a *: (col j N).
 Proof.
 by apply/colP => i; rewrite !mxE.
 Qed.
 
-Lemma trmx_mul_scalar (R : comRingType) (q r : nat) (N : 'M_(q, r)) (a : R):
+Lemma trmx_mul_scalar (R : comNzRingType) (q r : nat) (N : 'M_(q, r)) (a : R):
   (a *: N)^T = a *: (N^T).
 Proof.
 by apply/matrixP => i j; rewrite !mxE.
 Qed.
 
-Lemma castmx_mul (R : ringType)
+Lemma castmx_mul (R : nzRingType)
   (m m' n p p': nat) (em : m = m') (ep : p = p')
   (M : 'M[R]_(m, n)) (N : 'M[R]_(n, p)) :
   castmx (em, ep) (M *m N) = castmx (em, erefl _) M *m castmx (erefl _, ep) N.
@@ -171,7 +171,7 @@ Proof.
 by case: m' / em; case: p' / ep.
 Qed.
 
-Lemma mulmx_cast (R : ringType)
+Lemma mulmx_cast (R : nzRingType)
   (m n n' p p' : nat) (en : n' = n) (ep : p' = p)
   (M : 'M[R]_(m, n)) (N : 'M[R]_(n', p')) :
   M *m (castmx (en, ep) N) =
@@ -194,7 +194,7 @@ move/(congr1 (castmx (esym em, esym en))).
 by rewrite 2!castmxK.
 Qed.
 
-Lemma mulmx_tr_row_perm (R: ringType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
+Lemma mulmx_tr_row_perm (R: nzRingType) (m n p: nat) (s: 'S_n) (A: 'M[R]_(n,m)) (B: 'M[R]_(n,p)):
   (row_perm s A)^T *m (row_perm s B) = A^T *m B.
 Proof.
 rewrite tr_row_perm col_permE row_permE.
@@ -332,7 +332,7 @@ suff ->: \sum_(j0 < n.-1) (col' i A) j j0 * (row' i B) j0 h = \sum_(j0 < n | j0 
 have ->: \sum_(j0 < n.-1) (col' i A) j j0 * (row' i B) j0 h = \sum_(j0 < n.-1) (A j (lift i j0)) * (B (lift i j0) h).
   by apply: eq_bigr => k _; rewrite !mxE.
 rewrite -[RHS]big_filter.
-suff ->: [seq i0 <- index_enum (ordinal_finType n) | i0 != i] = map (lift i) [seq _ <- index_enum (ordinal_finType n.-1) | true]
+suff ->: [seq i0 <- index_enum 'I_n | i0 != i] = map (lift i) [seq _ <- index_enum 'I_n.-1 | true]
   by rewrite big_map big_filter.
 rewrite filter_predT /index_enum -!enumT.
 exact: predC1_enum.
@@ -373,7 +373,7 @@ Proof.
 apply: (castmx_inj (em := emn) (en := (erefl m))).
 rewrite castmx_mul castmx_id.
 rewrite -[X in X *m _](castmx_id (erefl _, erefl _)) -castmx_mul.
-rewrite mulmxV; last exact: qinvmx_unitmx.
+rewrite mulmxV; first exact: qinvmx_unitmx.
 apply/matrixP => i j.
 - rewrite 2!castmxE /= 2!cast_ord_id esymK 2!mxE.
   do 2![apply: congr1]; apply/eqP/eqP => [-> | <-];
@@ -383,7 +383,7 @@ Qed.
 Lemma qmulVmx : qinvmx *m M = 1%:M.
 Proof.
 rewrite -[X in _ *m X](castmx_id (erefl _, erefl _)) -mulmx_cast.
-by rewrite mulVmx; last exact: qinvmx_unitmx.
+by rewrite mulVmx; first exact: qinvmx_unitmx.
 Qed.
 
 Lemma qmulKmx (p: nat) (x: 'M_(n,p)) : qinvmx *m (M *m x) = x.
@@ -549,7 +549,7 @@ End ExtraKer.
 Section SpanMatrix.
 
 Lemma vbasis_mat {k n : nat} {R : realFieldType} (S : k.-tuple 'rV[R]_n):
-  (\matrix_i tnth S i == 
+  (\matrix_i tnth S i ==
   \matrix_i tnth (vbasis <<S>>) i)%MS.
 Proof.
 apply/rV_eqP=> u; apply/idP/idP.
@@ -581,11 +581,11 @@ Lemma span_matrix_cV {n k : nat} {R : realFieldType} (S : k.-tuple 'cV[R]_n):
   \dim (span S) = \rank (\matrix_(i < n, j < k) tnth S j i 0).
 Proof.
 set A := matrix_of_fun _ _.
-have ->: A = (\matrix_i tnth (map_tuple trmx S) i)^T by 
+have ->: A = (\matrix_i tnth (map_tuple trmx S) i)^T by
   apply/matrixP=> i j; rewrite !mxE tnth_map !mxE.
 rewrite mxrank_tr -span_matrix_rV /=.
 set St := map _ _.
-have ->: St = [seq (linfun trmx) i | i <- S] by 
+have ->: St = [seq (linfun trmx) i | i <- S] by
   under eq_map=> x do rewrite lfunE /=.
 rewrite -limg_span limg_dim_eq //=.
 suff ->: lker (linfun trmx) = 0%VS by rewrite capv0.
