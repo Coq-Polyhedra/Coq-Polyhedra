@@ -1,11 +1,11 @@
 opam-version: "2.0"
 version: "dev"
 
-synopsis: "A formalization of convex polyhedra in Coq"
+synopsis: "A formalization of convex polyhedra in Rocq"
 description: """
 Coq-Polyhedra is a Mathematical Components-based formalization of convex
 polyhedra.  This package installs the contents of the theories directory under
-the logical Coq namespace Polyhedra.
+the logical Rocq namespace Polyhedra.
 """
 
 maintainer: [
@@ -19,18 +19,19 @@ authors: [
 license: "CECILL-B"
 homepage: "https://github.com/Coq-Polyhedra/Coq-Polyhedra"
 bug-reports: "https://github.com/Coq-Polyhedra/Coq-Polyhedra/issues"
-dev-repo: "git+https://github.com/Coq-Polyhedra/Coq-Polyhedra.git#coq-8.20"
+dev-repo: "git+https://github.com/Coq-Polyhedra/Coq-Polyhedra.git"
 
 depends: [
-  "coq" {>= "8.20" & < "8.21"}
-  "coq-mathcomp-algebra"
-  "coq-mathcomp-finmap"
-  "coq-mathcomp-bigenough"
+  "dune" {>= "3.21"}
+  "rocq-core" {>= "9.1" & < "9.2~"}
+  "rocq-stdlib"
+  "rocq-hierarchy-builder" {>= "1.10"}
+  "rocq-mathcomp-algebra" {>= "2.6" & < "2.7~"}
+  "rocq-mathcomp-finmap" {>= "2.2"}
+  "rocq-mathcomp-bigenough" {>= "1.0.4"}
 ]
 
 build: [
-  ["coq_makefile" "-f" "_CoqProject" "-o" "Makefile.coq"]
-  [make "-f" "Makefile.coq" "-j%{jobs}%"]
+  ["dune" "subst"] {dev}
+  ["dune" "build" "-p" name "-j" jobs]
 ]
-
-install: [make "-f" "Makefile.coq" "install"]

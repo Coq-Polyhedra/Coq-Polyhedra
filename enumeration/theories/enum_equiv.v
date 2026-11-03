@@ -1,11 +1,23 @@
-From mathcomp Require Import all_ssreflect all_algebra finmap.
-From Coq Require Import Uint63 PArray.
+From mathcomp Require Import boot order algebra finmap.
+From Stdlib Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
 From Polyhedra Require Import extra_misc inner_product extra_matrix vector_order affine row_submx barycenter.
 From Polyhedra Require Import lrel polyhedron poly_base simplex.
 Require Import enum_algo enum_proof graph high_graph img_graph extra_array extra_int rat_bigQ array_set diameter refinement.
-Require Import NArith.BinNat NArith.BinNatDef.
+From Stdlib Require Import NArith.BinNat NArith.BinNatDef.
 From Bignums Require Import BigQ.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -24,7 +36,7 @@ Definition rel_basis (m' : nat) :=
   @rel_arr_set_r _ _ (@rel_int_ord m') (fun x y=> ltn (val x) (val y)).
 
 Definition rel_point (m' n' : nat):=
-  @rel_point_mx_col _ [realFieldType of rat] rat_bigQ n' (m'.+1).
+  @rel_point_mx_col _ (rat : realFieldType) rat_bigQ n' (m'.+1).
 
 Definition rel_lex_vert (m' n' : nat):=
   rel_couple (@rel_basis m') (@rel_point m' n').
@@ -36,7 +48,7 @@ Definition rel_lex_graph (m' n' : nat):=
   @rel_graph_r _ _ (@rel_lex_vert m' n').
 
 Definition rel_poly (m' n' : nat):= 
-  @rel_Po_r _ [realFieldType of rat] rat_bigQ m' n'.
+  @rel_Po_r _ (rat : realFieldType) rat_bigQ m' n'.
 
 Definition rel_vert (n' : nat):= @rel_point_cV _ _ rat_bigQ n'.
 
@@ -267,9 +279,9 @@ Local Notation n := n'.+1.
 Context (A : 'M[rat]_(m,n)) (b : 'cV[rat]_m).
 Local Notation b_pert := (Simplex.b_pert b).
 
-Definition set_Im : choiceType := [choiceType of {set 'I_m}].
-Definition M_n := [choiceType of 'M[rat]_(n,1+m)].
-Definition enum_type := [choiceType of (set_Im * M_n)%type].
+Definition set_Im : choiceType := ({set 'I_m} : choiceType).
+Definition M_n := ('M[rat]_(n,1+m) : choiceType).
+Definition enum_type := ((set_Im * M_n)%type : choiceType).
  
 Context (G : graph enum_type).
 
@@ -360,7 +372,7 @@ Lemma sat_ineq_equiv i V:
     (fun k lA lb=> leqlex (row_mx lb%:M (row k (-1%:M))) (lA *m V.2)).
 Proof.
 move=> ig VG iV k K kK la LA laLA lb LB lbLB.
-rewrite sat_ineqP; last first.
+rewrite sat_ineqP.
 - move/rel_lex_vert_point: iV=> /rel_point_mx_col_length h.
   apply/int_to_nat_inj; rewrite -h (rel_Po_r_m Po_Ab).
   by rewrite length_succ.
@@ -410,8 +422,8 @@ Lemma regularity_test_equiv i V:
 Proof.
 move=> ig VG iV.
 rewrite /regularity_test /reg_verification (rel_graph_r_succ_card _ gl_G ig) //.
-+ by move: (rel_Po_r_n Po_Ab); rewrite /Com.n=> ->.
 + exact:rel_lex_vert_spec.
++ by move: (rel_Po_r_n Po_Ab); rewrite /Com.n=> ->.
 Qed.
 
 Lemma vertex_consistent_equiv:
@@ -466,7 +478,7 @@ Context (G_lex : high_graph.graph (enum_type m' n')).
 Hypothesis gG_lex : rel_lex_graph (g_lex, l_lex) G_lex.
 
 Context (g_vert : graph.graph) (l_vert : array (array (BigQ.bigQ))).
-Context (G_vert : high_graph.graph ([choiceType of 'cV[rat]_n'.+1])).
+Context (G_vert : high_graph.graph (('cV[rat]_n'.+1 : choiceType))).
 
 Hypothesis gG_vert : rel_vert_graph (g_vert, l_vert) G_vert.
 
@@ -613,9 +625,9 @@ Context (m' n' : nat).
 Local Notation m := (m'.+1).
 Local Notation n := (n'.+1).
 
-Context (G : high_graph.graph [choiceType of Uint63.int]).
+Context (G : high_graph.graph (Uint63.int : choiceType)).
 Context (L : array 'cV[rat]_n).
-Context (G' : high_graph.graph [choiceType of 'cV[rat]_n]).
+Context (G' : high_graph.graph ('cV[rat]_n : choiceType)).
 Hypothesis GLG' : rel_final_graph (G,L) G'.
 Hypothesis GL_length : forall x, x \in vertices G = (x < length L)%O.
 
@@ -648,11 +660,11 @@ split.
   rewrite (tnth_nth L.[origin]) /= /s=> [:i_n].
   rewrite (nth_map L.[origin]) ?(nth_map 0%uint63) 
     ?size_map ?size_arr_to_seq ?size_irange ?subn0 -?len_map;
-    [ |abstract:i_n; by rewrite {10}size_s ltn_ord|exact:i_n|exact:i_n].
+    [abstract:i_n; by rewrite {10}size_s ltn_ord|exact:i_n|exact:i_n| ].
   rewrite nth_irange ?subn0 -?len_map // addn0 trmx_sub.
   move: (inv_eq (nat_to_int i)); rewrite mem_irangeE le0x /=. 
   rewrite ltEint_nat -len_map nat_to_intK ?i_n; 
-    last (rewrite inE; apply/(ltn_trans i_n); rewrite len_map; exact/int_thresholdP).
+    first (rewrite inE; apply/(ltn_trans i_n); rewrite len_map; exact/int_thresholdP).
   move=> /(_ isT)/eqP.
   move/(congr1 (castmx ((erefl _), size_s))); rewrite castmx_mul castmx_id.
   by move=> ->; apply/matrixP=> p q; rewrite castmxE !mxE /=.
@@ -674,7 +686,7 @@ Context (inv : array (array bigQ)) (Inv : 'M[rat]_n).
 Hypothesis invInv: rel_inv inv Inv.
 
 Context (g : graph.graph) (l : BQvert_mapping).
-Context (G : high_graph.graph [choiceType of 'cV[rat]_n]).
+Context (G : high_graph.graph ('cV[rat]_n : choiceType)).
 Hypothesis glG : rel_vert_graph (g,l) G.
 
 Lemma dim_full_vtx_graph :
@@ -733,7 +745,7 @@ move=> g G gG; apply/idP/idP.
 Qed.
 
 Context {g : graph.graph} (l : array (array bigQ)).
-Context (G : graph [choiceType of 'cV[rat]_n]).
+Context (G : graph ('cV[rat]_n : choiceType)).
 Hypothesis gG: rel_vert_graph (g,l) G.
 Context (x : int).
 

@@ -1,8 +1,12 @@
 (* -------------------------------------------------------------------- *)
-Require Import Recdef.
-From mathcomp Require Import all_ssreflect all_algebra finmap.
+From Stdlib Require Import Recdef.
+From HB Require Import structures.
+From mathcomp Require Import boot order algebra finmap.
 From Polyhedra Require Import fsetmin extra_misc.
 
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
@@ -51,31 +55,16 @@ Record graph :=
 
 Coercion graph_val (G : graph) := let: Graph g _ := G in g.
 
-Canonical graph_subType := Eval hnf in [subType for graph_val].
+HB.instance Definition _ := [isSub for graph_val].
 
-Definition graph_eqMixin :=
-  Eval hnf in [eqMixin of graph by <:].
-Canonical graph_eqType :=
-  Eval hnf in EqType graph graph_eqMixin.
-Definition graph_choiceMixin :=
-  [choiceMixin of graph by <:].
-Canonical graph_choiceType :=
-  Eval hnf in ChoiceType graph graph_choiceMixin.
+HB.instance Definition _ := [Equality of graph by <:].
+HB.instance Definition _ := [Choice of graph by <:].
 
-Definition graph_of of phant T := graph.
-Identity Coercion type_graph_of : graph_of >-> graph.
 End GraphDef.
 
 (* -------------------------------------------------------------------- *)
-Notation "{ 'graph' T }" := (graph_of (Phant T)) (at level 0).
+Notation "{ 'graph' T }" := (@graph T) (at level 0).
 
-Section GraphOf.
-Context (T : choiceType).
-
-Canonical graph_of_subType    := Eval hnf in [subType    of {graph T}].
-Canonical graph_of_eqType     := Eval hnf in [eqType     of {graph T}].
-Canonical graph_of_choiceType := Eval hnf in [choiceType of {graph T}].
-End GraphOf.
 
 (* -------------------------------------------------------------------- *)
 Section GraphBasics.
@@ -110,7 +99,7 @@ Program Definition mk_graph (V : {fset T}) (E : rel T) : graph T :=
   @Graph _ [fsfun v in V => Some ([fset w | w in V & E v w] `\ v) | None] _.
 Next Obligation.
 apply/codom_subP=> x x_in.
-rewrite fsfunE ifT /=; last by move: x_in; apply/fsubsetP/finsupp_sub.
+rewrite fsfunE ifT /=; first by move: x_in; apply/fsubsetP/finsupp_sub.
 apply/fsubsetP=> y; rewrite !inE /= => /and3P [yx yV Exy].
 by rewrite mem_finsupp fsfunE yV yx.
 Qed.
@@ -174,7 +163,6 @@ Qed.
 Lemma edge_vtxlr (G : graph T) (x y : T):
   edges G x y -> x \in vertices G /\ y \in vertices G.
 Proof. by move=> /[dup] /edge_vtxl -> /edge_vtxr ->. Qed.
-
 
 Lemma sub_succ (G : graph T) (x : T):
   successors G x `<=` vertices G.
@@ -264,7 +252,6 @@ Qed.
 Lemma size_path_le (p : epath) : size_path p <= #|` vertices G|.
 Proof. by apply/uniq_leq_size; [by case/andP:(@uniq_walk p)|exact:mem_walk]. Qed.
 
-
 Lemma mem_dst (p : epath) : dst p \in vertices G.
 Proof. 
 rewrite -last_dst; case E: (walk p)=> [|h t]; rewrite ?mem_src //.
@@ -282,7 +269,6 @@ rewrite !(last_nth (src p)) size_belast.
 suff ->: nth (src p) [:: src p, a & l] (size l) = nth (src p) (src p :: belast a l) (size l) by [].
 by move: {1 3}(src p); move: (src p) a; elim: l=> //=.
 Qed.
-
 
 Section FinType.
 
@@ -306,17 +292,11 @@ rewrite (bool_irrelevance sG sG') (bool_irrelevance pathG pathG').
 by rewrite (bool_irrelevance last_eq last_eq').
 Qed.
 
-Definition gpath_eqMixin := PcanEqMixin walk_of_can.
-Canonical gpath_eqType := Equality.Pack gpath_eqMixin.
+HB.instance Definition _ := Choice.copy gpath (pcan_type walk_of_can).
 
-Definition gpath_choiceMixin := PcanChoiceMixin walk_of_can.
-Canonical gpath_choiceType := ChoiceType _ gpath_choiceMixin.
-
-Canonical epath_subType := Eval hnf in [subType for p].
-Definition epath_eqMixin := Eval hnf in [eqMixin of epath by <:].
-Canonical epath_eqType := Eval hnf in EqType epath epath_eqMixin.
-Definition epath_choiceMixin := Eval hnf in [choiceMixin of epath by <:].
-Canonical epath_choiceType := Eval hnf in ChoiceType epath epath_choiceMixin.
+HB.instance Definition _ := [isSub for p].
+HB.instance Definition _ := [Equality of epath by <:].
+HB.instance Definition _ := [Choice of epath by <:].
 
 Definition U (P : 'I_#|` vertices G|) :=  P.-tuple (vertices G).
 Definition foo := {P : 'I_#|` vertices G| & U P}.
@@ -350,7 +330,6 @@ move: (in_ht h); rewrite !inE eq_refl /= => /(_ isT) h_vtx.
 case: {-}_/idP=> [|/(_ h_vtx)] //= h_vtx2.
 by rewrite IH // => y yt; apply/in_ht; rewrite inE yt orbT.
 Qed.
-
 
 Lemma size_epath_vtx (x : epath): size (walk_vtx (walk x)) < #|` vertices G|.
 Proof.
@@ -392,17 +371,15 @@ move: py_uniq; rewrite -p_xy=> px_uniq2.
 by rewrite (bool_irrelevance px_uniq px_uniq2).
 Qed.
 
-Lemma can_epath_foo3: cancel (epath_foo3 : epath -> [finType of foo3]) epath_make.
+Lemma can_epath_foo3: cancel (epath_foo3 : epath -> (foo3 : finType)) epath_make.
 Proof.
 move=> x; apply/epath_inj/gpath_inj=> /=; split=> //.
 - by rewrite /walk_of_foo /= walk_vtxP last_dst.
 - rewrite /walk_of_foo /=; exact/walk_vtxP.
 Qed.
 
-Definition epath_countMixin := CanCountMixin can_epath_foo3.
-Canonical epath_countType := (CountType epath epath_countMixin).
-Definition epath_finMixin := CanFinMixin can_epath_foo3.
-Canonical epath_finType := FinType epath epath_finMixin.
+HB.instance Definition _ := CanIsCountable can_epath_foo3.
+HB.instance Definition _ : isFinite epath := CanIsFinite can_epath_foo3.
 
 End FinType.
 
@@ -851,7 +828,6 @@ Section NotEmpty.
 Hypothesis S1_neq0 : S1 != fset0.
 Let x1 := [` xchooseP (fset0Pn _ S1_neq0) ].
 
-
 Lemma tmp : f (val x1) \in S2. Proof. exact/in_imfset/valP. Qed.
 Definition fS : S1 -> S2 := fun x=> insubd [` tmp] (f (val x)).
 Lemma has_inv (y : S2) : exists x, fS x == y.
@@ -1082,7 +1058,6 @@ apply/idP/idP.
   by exists x'',y''; rewrite !fghC // -fxx'' -fyy''.
 Qed.
 
-
 Section GisofPath.
 
 Context {T1 T2 : choiceType} (G1 : graph T1) (G2 : graph T2) (f : T1 -> T2).
@@ -1137,8 +1112,8 @@ exists (gisof_epath G2G1 fp); apply/epath_inj/gpath_inj; split.
 - rewrite /=; move: (@mem_walk _ _ fp).
   elim: (walk fp)=> //= h t IH mem_ht.
   rewrite gf_can ?IH //.
-  + by move=> z zt; apply/mem_ht; rewrite inE zt orbT.
   + by rewrite (gisof_vtx G1G2); apply/mem_ht; rewrite inE eqxx.
+  + by move=> z zt; apply/mem_ht; rewrite inE zt orbT.
 Qed.
 
 Lemma size_epath_gisof {T1 T2 : choiceType}
@@ -1146,6 +1121,5 @@ Lemma size_epath_gisof {T1 T2 : choiceType}
   (G1G2 : gisof G1 G2 f) (p1 : epath G1):
   size_path p1 = size_path (gisof_epath G1G2 p1).
 Proof. by rewrite /size_path /= size_map. Qed. 
-
 
 End GisoTheory.

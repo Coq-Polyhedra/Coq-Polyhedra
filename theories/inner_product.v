@@ -13,7 +13,8 @@
 (* (c) Copyright 2015, CRI, MINES ParisTech, PSL Research University    *)
 (* ==================================================================== *)
 
-From mathcomp Require Import all_ssreflect.
+From HB Require Import structures.
+From mathcomp Require Import boot order.
 From mathcomp Require Import bigop ssralg ssrnum zmodp matrix vector fingroup perm order.
 Require Import extra_matrix.
 Import Order.Theory.
@@ -67,8 +68,8 @@ Proof.
     by rewrite !mxE mulrDl -mulrA.
 Qed.
 
-Canonical vdotr_additive u := Additive (vdotr_is_linear u).
-Canonical vdotr_linear   u := Linear   (vdotr_is_linear u).
+(*HB.instance Definition _ u := GRing.isZmodMorphism.Build _ _ _ (vdotr_is_linear u).*)
+HB.instance Definition _ u := GRing.isLinear.Build _ _ _ _ _ (vdotr_is_linear u).
 
 Lemma vdot0l u : '[0,u] = 0.
 Proof. by rewrite -vdotrE linear0. Qed.
@@ -109,7 +110,7 @@ Qed.
 
 Lemma vdotBr u v w : '[u, v - w] = '[u, v] - '[u, w].
 Proof. by rewrite !(vdotC u) vdotBl. Qed.
-Canonical vdot_additive u := Additive (vdotBr u).
+HB.instance Definition _ u := GRing.isZmodMorphism.Build _ _ _ (vdotBr u).
 
 Lemma vdot0r u : '[u,0] = 0.
 Proof. exact: raddf0. Qed.
@@ -214,7 +215,7 @@ Section Orthogonal.
 
 Context {R : realFieldType} {n : nat}.
 
-Let E := [vectType R of 'cV[R]_n].
+Let E : vectType R := 'cV[R]_n.
 
 Implicit Type (V : {vspace E}) (x : 'cV[R]_n).
 
@@ -223,17 +224,15 @@ Definition orth_fun0 V x := (* WARNING: this is not the orthogonal projection,
   let B := vbasis V in
   \sum_(i < \dim V) '[B`_i, x] *: B`_i.
 
-Lemma orth_fun_lmorph V : lmorphism (orth_fun0 V).
+Lemma orth_fun_lmorph V : linear (orth_fun0 V).
 Proof.
-split.
-- move => x y; rewrite /orth_fun0.
-  by under eq_big do [ | rewrite vdotBr scalerBl]; rewrite sumrB.
-- move => x y; rewrite /orth_fun0.
-  by under eq_big do [ | rewrite vdotZr -scalerA]; rewrite scaler_sumr.
+move=> a x y; rewrite /orth_fun0 scaler_sumr -big_split; apply: eq_bigr => i _ /=.
+by rewrite vdotDr vdotZr scalerDl scalerA.
 Qed.
 
 Fact orth_fun_key : unit. Proof. by []. Qed.
-Definition orth_fun V := linfun (Linear (orth_fun_lmorph V)).
+HB.instance Definition _ V := GRing.isLinear.Build _ _ _ _ _ (orth_fun_lmorph V).
+Definition orth_fun V := linfun (orth_fun0 V).
 
 Definition orthv V := lker (orth_fun V).
 
@@ -270,10 +269,10 @@ Lemma limg_orthv_fun V : limg (orth_fun V) = V.
 Proof.
 have h: (orth_fun V @: V = V)%VS.
 - apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
-  + by rewrite (limg_dim_eq (direct_orthvP _)).
   + apply/subvP => x /memv_imgP [y _ ->].
     rewrite lfunE /=; apply/memv_suml => i _.
     apply/memvZ/vbasis_mem/mem_nth; by rewrite size_tuple.
+  + by rewrite (limg_dim_eq (direct_orthvP _)).
 - apply/subv_anti; apply/andP; split.
   + apply/subvP => x /memv_imgP [y _ ->].
     rewrite lfunE /=; apply/memv_suml => i _.
@@ -284,7 +283,7 @@ Qed.
 Lemma dim_orthv V : (\dim V^OC = n - \dim V)%N.
 Proof.
 move: (limg_ker_dim (orth_fun V) (fullv)).
-rewrite capfv dimvf /Vector.dim /= muln1 limg_orthv_fun => {2}<-.
+rewrite capfv dimvf /dim /= muln1 limg_orthv_fun => {2}<-.
 by rewrite addnK.
 Qed.
 
@@ -300,10 +299,10 @@ Qed.
 Lemma orthK : involutive orthv.
 Proof.
 move => V; symmetry; apply/eqP; rewrite -(geq_leqif (dimv_leqif_eq _)).
-- rewrite 2!dim_orthv subKn //.
-  by move: (dimvS (subvf V)); rewrite dimvf /Vector.dim /= muln1.
 - apply/subvP => x x_in_V; apply/orthvP => y /orthvP/(_ _ x_in_V).
   by rewrite vdotC.
+- rewrite 2!dim_orthv subKn //.
+  by move: (dimvS (subvf V)); rewrite dimvf /dim /= muln1.
 Qed.
 
 Lemma orthS : {mono orthv : V W /~ (V <= W)%VS }.

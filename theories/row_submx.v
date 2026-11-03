@@ -7,7 +7,7 @@
  * -------------------------------------------------------------------- *)
 
 (* -------------------------------------------------------------------- *)
-From mathcomp Require Import all_ssreflect ssralg ssrnum zmodp matrix mxalgebra vector.
+From mathcomp Require Import boot order ssralg ssrnum zmodp matrix mxalgebra vector.
 From mathcomp Require Import fingroup perm.
 Require Import extra_misc inner_product vector_order extra_matrix.
 
@@ -64,7 +64,7 @@ by rewrite !mxE.
 Qed.
 
 Lemma row_submxT (m p : nat) (M : 'M[R]_(m,p)) :
-  row_submx M setT = castmx (esym (etrans (cardsT (ordinal_finType m)) (card_ord m)), erefl p) M.
+  row_submx M setT = castmx (esym (etrans (cardsT 'I_m) (card_ord m)), erefl p) M.
 Proof.
 apply/row_matrixP => i.
 rewrite row_castmx esymK castmx_id.
@@ -265,7 +265,7 @@ Lemma liftf_inj : injective liftf.
 Proof.
 move => i i'.
 move/(congr1 enum_val).
-do 2![rewrite enum_rankK_in; last exact: (imset_f _ (enum_valP _))].
+do 2![rewrite enum_rankK_in; first exact: (imset_f _ (enum_valP _))].
 move/injf; exact: enum_val_inj.
 Qed.
 
@@ -292,7 +292,7 @@ Variable perm_idx : 'S_m.
 
 Definition perm_card : #|I| = #|perm_idx @: I|.
 Proof.
-by rewrite card_imset; last exact: perm_inj.
+by rewrite card_imset; first exact: perm_inj.
 Qed.
 
 Lemma row_submx_perm :
@@ -305,7 +305,7 @@ Proof.
 apply/matrixP => i j.
 rewrite row_submx_mxE mxE.
 rewrite !mxE castmxE /= cast_ord_id row_submx_mxE.
-by rewrite permE cast_ordK enum_rankK_in; last exact: (imset_f _ (enum_valP _)).
+by rewrite permE cast_ordK enum_rankK_in; first exact: (imset_f _ (enum_valP _)).
 Qed.
 
 End RowSubmxPerm.
@@ -462,10 +462,10 @@ set s2 := (X in _ ++ X).
 have ->: s1 = [::].
 - rewrite /s1 filter_map.
   rewrite (@eq_filter _ _ pred0).
-  + by rewrite filter_pred0 /=.
   + move => j; rewrite !inE.
     apply: (introF imsetP); move => [j' _].
     apply: (elimN eqP); exact: lrshift_distinct.
+  + by rewrite filter_pred0 /=.
 rewrite cat0s.
 have ->: s2 = [seq (rshift m i) | i <- enum J].
 - rewrite /s2 filter_map {2}/enum_mem -enumT.
@@ -501,8 +501,8 @@ set I' := (@lshift m n) @: I.
 set J' := (@rshift m n) @: J.
 move/leqifP: (leq_card_setU I' J').
 rewrite lrshift_disjoint => /eqP ->.
-rewrite card_imset; last exact (@lshift_inj m n).
-by rewrite card_imset; last exact (@rshift_inj m n).
+rewrite card_imset; first exact (@lshift_inj m n).
+by rewrite card_imset; first exact (@rshift_inj m n).
 Qed.
 
 Lemma lshift_enum_valC (i: 'I_#|I|):
@@ -627,7 +627,7 @@ Variable I: {set 'I_m}.
 
 Lemma cast_card : #|I| = #|(cast_ord em @: I)|.
 Proof.
-by rewrite card_imset; last exact: cast_ord_inj.
+by rewrite card_imset; first exact: cast_ord_inj.
 Qed.
 
 Lemma cast_ord_enum :

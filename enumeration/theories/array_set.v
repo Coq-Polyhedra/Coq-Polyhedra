@@ -1,19 +1,30 @@
 (* -------------------------------------------------------------------- *)
-From Coq      Require Import PArray Uint63.
-From mathcomp Require Import all_ssreflect finmap.
+From Stdlib      Require Import Uint63.
+From Stdlib Require PArray.
+(* PArray's notations clash with MathComp's reserved "_ .[ _ ]": import   *)
+(* only the names we need; the notations are redefined below.            *)
+Import PArray(array, make, get, set, length, copy, default, max_length,
+  array_ext, default_make, default_set, get_make, get_out_of_bounds,
+  get_set_other, get_set_same, leb_length, length_make, length_set).
+From mathcomp Require Import boot order finmap.
 
 From Polyhedra Require Import extra_misc.
 Require Import refinement.
 
 Require Import extra_int extra_array.
-Require Import NArith.BinNat NArith.BinNatDef.
-Require Import PArith.BinPos PArith.BinPosDef.
+From Stdlib Require Import NArith.BinNat NArith.BinNatDef.
+From Stdlib Require Import PArith.BinPos PArith.BinPosDef.
+(* PArray notations, at MathComp's level for "_ .[ _ ]". *)
+Notation "t .[ i ]" := (PArray.get t i) (at level 1, left associativity, format "t .[ i ]").
+Notation "t .[ i <- a ]" := (PArray.set t i a) (at level 1, left associativity, format "t .[ i  <-  a ]").
 
 (* -------------------------------------------------------------------- *)
+(* Stdlib's PArray axioms live in a fixed universe: do not let definitions *)
+(* over arrays of Set-typed elements (rat, bigQ, int) be minimized to Set. *)
+Unset Universe Minimization ToSet.
 Set   Implicit Arguments.
 Unset Strict Implicit.
 Unset Printing Implicit Defensive.
-Unset SsrOldRewriteGoalsOrder.
 
 (* -------------------------------------------------------------------- *)
 Import Order.Theory.
@@ -503,7 +514,7 @@ move: le_aia_bib; rewrite le_eqVlt orbC.
 case: ltP => /= [lt_aia_bib _|_ /eqP eq_aia_bib].
 - do! split=> //; try (by apply: ltW || by move=> _; rewrite !(lt_iaS, lt_ibS)).
   - rewrite leEint_nat (succ_int_ltE lt_ia_a) // -ltEint_nat //.
-  - by apply/(le_trans le_c); rewrite le_maxl !le_maxr lexx (ltW lt_iaS) /= orbT.
+  - by apply/(le_trans le_c); rewrite ge_max !le_max lexx (ltW lt_iaS) /= orbT.
   exists (A :\ a.[ia]), B; split => //.
   - exact: array_set_succ.
   - rewrite setDDr setDv set0U; apply: disjoint_setI0.
@@ -518,7 +529,7 @@ case: ltP => /= [lt_aia_bib _|_ /eqP eq_aia_bib].
     set M := (Order.max (length a) (length b)).
     suff ? : (Order.max ia ib < M)%O by 
       rewrite -(@succ_int_lt_mono _ _ M M) //; exact/(le_lt_trans le_c).
-    by rewrite lt_maxl !lt_maxr lt_ia_a lt_ib_b /= orbT.
+    by rewrite gt_max !lt_max lt_ia_a lt_ib_b /= orbT.
   exists (A :\ a.[ia]), (B :\ b.[ib]); split.
   - exact: array_set_succ. (* OK: a is uniq and we remove the first element *)
   - exact: array_set_succ. (* OK: b is uniq and we remove the first element *)
@@ -530,7 +541,7 @@ case: ltP => /= [lt_aia_bib _|_ /eqP eq_aia_bib].
     by rewrite !inE=> /andP [_ /eqP ->]; rewrite eq_aia_bib eqxx.
   - set M := (Order.max (length a) (length b)).
     rewrite (@succ_int_ltE _ M); first apply/(le_lt_trans le_c). 
-    - by rewrite lt_maxl !lt_maxr lt_ia_a lt_ib_b /= orbT.
+    - by rewrite gt_max !lt_max lt_ia_a lt_ib_b /= orbT.
     rewrite -addn1; congr (_ + _).
     rewrite [X in (X :&: _)](_ : _ = [set a.[ia]]).
     - rewrite setDDr setDv set0U; apply/setIidPr/subsetP=> x.

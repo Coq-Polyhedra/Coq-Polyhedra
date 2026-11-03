@@ -1,19 +1,17 @@
 # Coq-Polyhedra
 
-Formalizing convex polyhedra in Coq
+Formalizing convex polyhedra in Rocq
 
 ## Installation
 
 ### Prerequisites
 
-  * [Coq](https://coq.inria.fr) (>= 8.12)
-  * The [Mathematical Components](https://github.com/math-comp/math-comp) library (= local-branch)
-  * The [Mathematical Components Finite Map](https://github.com/math-comp/finmap) library (= local-branch)
-
-For the development packages, these source (git) are known to work:
-
-  * Mathematical Components: https://github.com/Coq-Polyhedra/mathcomp.git 
-  * Mathematical Components Finite Map: https://github.com/Coq-Polyhedra/finmap.git
+  * [Rocq](https://rocq-prover.org) (9.1)
+  * The [Mathematical Components](https://github.com/math-comp/math-comp) library (2.6)
+  * The [Mathematical Components Finite Map](https://github.com/math-comp/finmap) library (>= 2.2)
+  * The [Mathematical Components Bigenough](https://github.com/math-comp/bigenough) library (>= 1.0.4)
+  * [Hierarchy Builder](https://github.com/math-comp/hierarchy-builder) (>= 1.10)
+  * [Bignums](https://github.com/rocq-community/bignums) (only for `enumeration/`)
 
 ### Installing prerequisites from opam
 
@@ -22,34 +20,28 @@ via the opam OCaml packages manager.
 
   * Optionally, switch to a dedicated compiler:
 
-        $> opam switch create ocaml-base-compiler.$OVERSION coq-polyhedra
+        $> opam switch create coq-polyhedra ocaml-base-compiler.$OVERSION
 
-     where $OVERSION is a valid OCaml version (e.g. 4.07.1)
+     where $OVERSION is a valid OCaml version (e.g. 5.4.1)
 
-  * Add the Coq repository:
+  * Add the Rocq repository:
 
-        $> opam repo add coq-released https://coq.inria.fr/opam/released
-        $> opam repo add coq-core-dev https://coq.inria.fr/opam/core-dev
-        $> opam repo add coq-extra-dev https://coq.inria.fr/opam/extra-dev
-        $> opam pin add -n https://github.com/Coq-Polyhedra/mathcomp.git
-        $> opam pin add -n coq-mathcomp-finmap https://github.com/Coq-Polyhedra/finmap.git
+        $> opam repo add rocq-released https://rocq-prover.org/opam/released
         $> opam update
 
   * Installing the dependencies:
 
-        $> opam install dune coq coq-mathcomp-field coq-mathcomp-finmap
+        $> opam install dune rocq-core.9.1.1 rocq-mathcomp-algebra rocq-mathcomp-finmap rocq-mathcomp-bigenough rocq-hierarchy-builder rocq-bignums
 
 Opam can be easily installed from source or via your packages manager:
 
   * On Ubuntu and derivatives:
-  
-        $> add-apt-repository ppa:avsm/ppa
-        $> apt-get update
-        $> apt-get install ocaml ocaml-native-compilers camlp4-extra opam
-        
+
+        $> apt-get install opam
+
   * On MacOSX using brew:
 
-        $> brew install ocaml opam
+        $> brew install opam
 
 See [https://opam.ocaml.org/doc/Install.html] for how to install opam.
 
