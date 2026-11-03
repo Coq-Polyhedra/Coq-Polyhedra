@@ -1,5 +1,7 @@
 # Coq-Polyhedra
 
+**[Link to pre-print: Click here](https://arxiv.org/pdf/1706.10269.pdf)**
+
 Formalizing convex polyhedra in Rocq
 
 ## Installation
